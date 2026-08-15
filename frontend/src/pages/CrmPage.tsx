@@ -468,7 +468,7 @@ const CrmPage: React.FC = () => {
             render: (u: any) => u ? <Tag color="blue">{u.full_name || u.username}</Tag> : '-'
         },
         {
-            title: 'Khách Hàng', dataIndex: 'name',
+            title: 'Khách Hàng', dataIndex: 'name', width: 280,
             render: (t: any, r: any) => (
                 <Space>
                     <Avatar style={{ backgroundColor: '#1890ff', verticalAlign: 'middle' }} size="small">
@@ -506,7 +506,7 @@ const CrmPage: React.FC = () => {
             }
         },
         {
-            title: 'Ghi chú gần nhất', dataIndex: 'history', ellipsis: true,
+            title: 'Ghi chú gần nhất', dataIndex: 'history', ellipsis: true, width: 200,
             render: (h: any[]) => h && h.length > 0 ? (
                 <Tooltip title={h[0].note}>
                     <span><ClockCircleOutlined style={{ fontSize: 10, marginRight: 5 }} /> {h[0].note}</span>
@@ -686,6 +686,7 @@ const CrmPage: React.FC = () => {
                                             dataSource={getFilteredData(dateFilteredLeads)}
                                             columns={leadColumns}
                                             rowKey="id"
+                                            scroll={{ x: 1300 }}
                                             pagination={{ pageSize: 8, showTotal: (total) => `Tổng ${total} leads` }}
                                         />
                                     )}
