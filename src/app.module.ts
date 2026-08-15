@@ -176,14 +176,17 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('DB_HOST') || 'localhost',
-        port: configService.get<number>('DB_PORT') || 5432,
-        username: configService.get<string>('DB_USERNAME') || 'erp4u_user',
-        password: configService.get<string>('DB_PASSWORD') || 'erp4u_password',
-        database: configService.get<string>('DB_DATABASE') || 'erp4u_db',
-        entities: [
+      useFactory: (configService: ConfigService) => {
+        const dbUrl = configService.get<string>('POSTGRES_URL') || 
+                      configService.get<string>('PRISMA_DATABASE_URL') || 
+                      configService.get<string>('DATABASE_URL');
+
+        if (dbUrl) {
+          return {
+            type: 'postgres',
+            url: dbUrl,
+            ssl: { rejectUnauthorized: false },
+            entities: [
           Product, Material, BOM, ProductComponent, ProductRouting, ProductLogistics, ProductPattern,
           SalesOrder, SalesOrderItem, ProductSample, SalesDelivery, SalesDeliveryItem, SalesComment,
           SalesChecklist, SalesChecklistItem,
@@ -222,9 +225,64 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
           AiMessage,
           CustomerLogo, PrintDesign, PrintSample
         ],
-        synchronize: configService.get<string>('NODE_ENV') !== 'production',
-        subscribers: [],
-      }),
+        ],
+            synchronize: true,
+            subscribers: [],
+          };
+        }
+
+        return {
+          type: 'postgres',
+          host: configService.get<string>('DB_HOST') || 'localhost',
+          port: configService.get<number>('DB_PORT') || 5432,
+          username: configService.get<string>('DB_USERNAME') || 'erp4u_user',
+          password: configService.get<string>('DB_PASSWORD') || 'erp4u_password',
+          database: configService.get<string>('DB_DATABASE') || 'erp4u_db',
+          entities: [
+          Product, Material, BOM, ProductComponent, ProductRouting, ProductLogistics, ProductPattern,
+          SalesOrder, SalesOrderItem, ProductSample, SalesDelivery, SalesDeliveryItem, SalesComment,
+          SalesChecklist, SalesChecklistItem,
+          PriceList, PriceListRule, SalesOrderVersion, SalesTarget,
+          PurchaseOrder, PurchaseOrderItem, GoodsReceipt, GoodsReceiptItem,
+          StockHistory, InventoryStock, ShippingCarrier, SampleTransaction, SampleTransactionItem,
+          GoodsIssue, GoodsIssueItem, SupplierStock, SupplierTransaction,
+          ProductionOrder, WorkOrder, WorkOrderStep, OutsourcingAssignment,
+          QualityInspection, QCDefectItem,
+          Transaction, TransactionCategory,
+          Task, TaskTimeLog, Notification,
+          Project, Milestone, Discussion, DiscussionComment,
+          Supplier, SupplierMaterial, SupplierContact,
+          Customer, CustomerContact, CustomerComment, CustomerCredit,
+          ProductionFulfillmentOrder, PfoMaterialRequirement, PfoMilestone, PfoQcRecord, Process, Category,
+          User, UserGroup, GroupPermission,
+          SystemConfig, ActivityLog, ApiToken,
+          BlogPost,
+          Employee, Attendance, LeaveRequest, LeaveEntitlement, AssetAssignment, Payslip, TrainingPlan, WorkShift,
+          JobPost, Candidate, Assessment, Interview,
+          ReviewQuestion, ReviewCampaign, EmployeeReview,
+          // Website Config & Templates
+          ProductWebsiteConfig, ContractTemplate, EmailTemplate, WebsitePolicy, WizardConfig,
+          // Social & Marketing
+          SocialChannel, SocialOrder, SocialProductMapping,
+          MarketingCampaign, CustomerSegment, AutomationWorkflow,
+          // Announcements
+          Announcement, AnnouncementRead,
+          // Website
+          WebProject,
+          // Portal
+          PortalOtp, PortalSession,
+          // Promotions
+          Promotion,
+          AnalyticsVisitor,
+          AiMessage,
+          CustomerLogo, PrintDesign, PrintSample
+        ],
+        ],
+          synchronize: configService.get<string>('NODE_ENV') !== 'production',
+          subscribers: [],
+        };
+      },
+    }),
     }),
     UsersModule, AuthModule,
     ProductsModule, MaterialsModule, BomModule, SalesModule,
