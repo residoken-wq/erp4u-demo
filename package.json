@@ -16,6 +16,7 @@
     "qa": "node scripts/qa.js",
     "sync:demo": "node scripts/sync_to_demo.js",
     "sync:demo:commit": "node scripts/sync_to_demo.js --commit",
+    "sync:watch": "node scripts/watch_sync.js",
     "seed": "ts-node src/database/seeds/seed-runner.ts",
     "seed:reset": "ts-node src/database/seeds/seed-runner.ts --reset"
   },
