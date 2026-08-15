@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import { DataSource, DeepPartial } from 'typeorm';
 import { Supplier, SupplierType } from '../../suppliers/supplier.entity';
 import { SupplierContact } from '../../suppliers/supplier-contact.entity';
 
@@ -56,7 +56,7 @@ export async function seedSuppliers(dataSource: DataSource) {
     let sup = await supRepo.findOne({ where: { code: s.code } });
     if (!sup) {
       const { contacts, ...supFields } = s;
-      sup = supRepo.create(supFields as any);
+      sup = supRepo.create(supFields as DeepPartial<Supplier>);
       sup = await supRepo.save(sup);
 
       if (contacts && contacts.length > 0) {

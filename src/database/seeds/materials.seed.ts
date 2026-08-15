@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import { DataSource, DeepPartial } from 'typeorm';
 import { Material } from '../../materials/material.entity';
 
 export async function seedMaterials(dataSource: DataSource) {
@@ -27,7 +27,7 @@ export async function seedMaterials(dataSource: DataSource) {
   for (const m of materials) {
     let mat = await matRepo.findOne({ where: { code: m.code } });
     if (!mat) {
-      mat = matRepo.create(m as any);
+      mat = matRepo.create(m as DeepPartial<Material>);
       await matRepo.save(mat);
     }
   }

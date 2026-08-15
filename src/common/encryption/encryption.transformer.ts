@@ -7,7 +7,7 @@ import * as crypto from 'crypto';
  * and automatically decrypts upon retrieval.
  */
 export class EncryptionTransformer implements ValueTransformer {
-  private algorithm = 'aes-256-gcm';
+  private algorithm: crypto.CipherGCMTypes = 'aes-256-gcm';
   private key: Buffer;
 
   constructor() {

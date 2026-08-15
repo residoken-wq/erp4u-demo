@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import { DataSource, DeepPartial } from 'typeorm';
 import { Employee, Gender } from '../../hr/entities/employee.entity';
 import { WorkShift } from '../../hr/entities/work-shift.entity';
 import { User } from '../../users/entities/user.entity';
@@ -17,7 +17,7 @@ export async function seedEmployees(dataSource: DataSource) {
       end_time: '17:00',
       break_duration_minutes: 60,
       is_night_shift: false,
-    } as any);
+    } as DeepPartial<WorkShift>);
     defaultShift = await shiftRepo.save(defaultShift);
   }
 
@@ -49,7 +49,7 @@ export async function seedEmployees(dataSource: DataSource) {
         user_id: user?.id,
         hire_date: new Date('2024-01-15'),
         is_active: true,
-      } as any);
+      } as DeepPartial<Employee>);
       await empRepo.save(emp);
     }
   }

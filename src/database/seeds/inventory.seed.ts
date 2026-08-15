@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import { DataSource, DeepPartial } from 'typeorm';
 import { InventoryStock } from '../../inventory/inventory-stock.entity';
 import { Material } from '../../materials/material.entity';
 import { Product } from '../../products/product.entity';
@@ -20,7 +20,7 @@ export async function seedInventory(dataSource: DataSource) {
         item_id: m.id,
         warehouse_code: 'KHO_NVL_TONG',
         quantity: Math.floor(Math.random() * 2000) + 500,
-      } as any);
+      } as DeepPartial<InventoryStock>);
       await stockRepo.save(stock);
     }
   }
@@ -33,7 +33,7 @@ export async function seedInventory(dataSource: DataSource) {
         item_id: p.id,
         warehouse_code: 'KHO_THANH_PHAM',
         quantity: Math.floor(Math.random() * 1500) + 200,
-      } as any);
+      } as DeepPartial<InventoryStock>);
       await stockRepo.save(stock);
     }
   }

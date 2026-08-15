@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import { DataSource, DeepPartial } from 'typeorm';
 import { Product } from '../../products/product.entity';
 import { Category } from '../../categories/category.entity';
 import { BOM } from '../../bom/bom.entity';
@@ -29,7 +29,7 @@ export async function seedProducts(dataSource: DataSource) {
   for (const p of productsData) {
     let prod = await prodRepo.findOne({ where: { sku: p.sku } });
     if (!prod) {
-      prod = prodRepo.create(p as any);
+      prod = prodRepo.create(p as DeepPartial<Product>);
       prod = await prodRepo.save(prod);
 
       // Create Sample BOM
@@ -37,19 +37,19 @@ export async function seedProducts(dataSource: DataSource) {
         const matCorr = matMap.get('MAT-CORRUGATED-3L') || allMats[0];
         const matInk = matMap.get('MAT-INK-BLACK') || allMats[1];
         if (matCorr) {
-          await bomRepo.save(bomRepo.create({ product: prod, material: matCorr, quantity: 0.35, unit: 'm2' } as any));
+          await bomRepo.save(bomRepo.create({ product: prod, material: matCorr, quantity: 0.35, unit: 'm2' } as DeepPartial<BOM>));
         }
         if (matInk) {
-          await bomRepo.save(bomRepo.create({ product: prod, material: matInk, quantity: 0.005, unit: 'Kg' } as any));
+          await bomRepo.save(bomRepo.create({ product: prod, material: matInk, quantity: 0.005, unit: 'Kg' } as DeepPartial<BOM>));
         }
       } else if (p.sku.startsWith('PRD-BAG')) {
         const matPaper = matMap.get('MAT-KRAFT-180') || allMats[0];
         const matRope = matMap.get('MAT-ROPE-COTTON') || allMats[1];
         if (matPaper) {
-          await bomRepo.save(bomRepo.create({ product: prod, material: matPaper, quantity: 0.08, unit: 'Kg' } as any));
+          await bomRepo.save(bomRepo.create({ product: prod, material: matPaper, quantity: 0.08, unit: 'Kg' } as DeepPartial<BOM>));
         }
         if (matRope) {
-          await bomRepo.save(bomRepo.create({ product: prod, material: matRope, quantity: 0.8, unit: 'Mét' } as any));
+          await bomRepo.save(bomRepo.create({ product: prod, material: matRope, quantity: 0.8, unit: 'Mét' } as DeepPartial<BOM>));
         }
       }
     }

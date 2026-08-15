@@ -1,4 +1,5 @@
 import * as crypto from 'crypto';
+import * as fs from 'fs';
 
 if (!global.crypto) {
   (global as any).crypto = crypto;

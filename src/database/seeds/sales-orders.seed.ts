@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import { DataSource, DeepPartial } from 'typeorm';
 import { SalesOrder, SalesOrderStatus, PaymentStatus } from '../../sales/sales-order.entity';
 import { SalesOrderItem } from '../../sales/sales-order-item.entity';
 import { Customer } from '../../customers/customer.entity';
@@ -65,7 +65,7 @@ export async function seedSalesOrders(dataSource: DataSource) {
         total_amount: totalAmount,
         final_amount: totalAmount,
         user_id: salesUser?.id,
-      } as any);
+      } as DeepPartial<SalesOrder>);
       order = await orderRepo.save(order);
 
       for (let idx = 0; idx < o.items.length; idx++) {
@@ -82,7 +82,7 @@ export async function seedSalesOrders(dataSource: DataSource) {
           unit_price: item.unit_price,
           subtotal: sub,
           total_price: sub,
-        } as any);
+        } as DeepPartial<SalesOrderItem>);
         await itemRepo.save(orderItem);
       }
     }
