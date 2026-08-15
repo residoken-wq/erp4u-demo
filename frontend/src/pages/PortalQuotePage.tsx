@@ -416,7 +416,7 @@ const PortalQuotePage: React.FC = () => {
         <!-- HEADER -->
         <div class="header">
             <div class="header-left">
-                <img src="${window.location.origin}/b2b_header_banner.png" alt="Company" style="width: 100%; object-fit: contain; object-position: left center;" onerror="this.src='${window.location.origin}/company_header.png';" />
+                <div style="color: #1e3a8a; font-family: 'Outfit', sans-serif; font-size: 36px; font-weight: bold; margin-bottom: 10px;">erp4you</div>
             </div>
             <div class="header-right">
                 <div class="doc-title">${docTitle}</div>
@@ -432,11 +432,11 @@ const PortalQuotePage: React.FC = () => {
         <div class="parties">
             <div class="party-box party-a">
                 <div class="party-label">Bên bán</div>
-                <div class="party-row"><b>CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ TƯỜNG LINH</b></div>
-                <div class="party-row">📍 74/21/24 Nguyễn Khuyến, P. Bình Thạnh, TP. HCM, VN</div>
-                <div class="party-row">📞 0983.882210 - 0983.796654</div>
-                <div class="party-row">MST: <b>0311.874.522</b></div>
-                <div class="party-row">Email: <b>nemmanonerp4u@gmail.com</b></div>
+                <div class="party-row"><b>CÔNG TY TNHH ERP4YOU</b></div>
+                <div class="party-row">📍 123 Đường Ảo, Phường Fake, TP. HCM, VN</div>
+                <div class="party-row">📞 0999.999.999</div>
+                <div class="party-row">MST: <b>0311.999.999</b></div>
+                <div class="party-row">Email: <b>contact@erp4you.com</b></div>
                 <div class="party-row">Sale Agent: <b>${data.assigned_to?.full_name || data.assigned_to?.name || data.sale_agent?.name || data.sale_name || data.created_by?.full_name || data.created_by?.name || '...'}</b> - ${data.assigned_to?.phone || data.sale_agent?.phone || data.sale_phone || data.created_by?.phone || '...'}</div>
             </div>
             <div class="party-box party-b">
@@ -584,7 +584,7 @@ const PortalQuotePage: React.FC = () => {
                     <div class="bank-info">
                         <div><b>NH:</b> ACB - TP.HCM</div>
                         <div><b>STK:</b> 141847859</div>
-                        <div><b>Chủ TK:</b> CTY TNHH TM DV TƯỜNG LINH</div>
+                        <div><b>Chủ TK:</b> CTY TNHH ERP4YOU</div>
                         <div><b>ND CK:</b> <b style="color:#0050b3;">${data.order_code}</b></div>
                     </div>
                 </div>
@@ -606,7 +606,7 @@ const PortalQuotePage: React.FC = () => {
                 <div class="sig-space"></div>
             </div>
             <div class="sig-col">
-                <div class="sig-role">Đại diện Cty Tường Linh</div>
+                <div class="sig-role">Đại diện Cty ERP4YOU</div>
                 <div class="sig-note">(Ký, đóng dấu)</div>
                 <div class="sig-space"></div>
             </div>
@@ -1076,7 +1076,7 @@ const PortalQuotePage: React.FC = () => {
                             <div style={{ fontSize: 13, lineHeight: 1.6 }}>
                                 <div><b>ACB - TP.HCM</b></div>
                                 <div>STK: <span style={{ fontFamily: 'monospace', background: '#f0f0f0', padding: '0 4px' }}>141847859</span></div>
-                                <div>Chủ TK: CTY TNHH TM DV TƯỜNG LINH</div>
+                                <div>Chủ TK: CTY TNHH ERP4YOU</div>
                                 <div>Nội dung: <b>{data.order_code}</b></div>
                             </div>
                         </Card>
