@@ -46,7 +46,7 @@ export async function seedSystem(dataSource: DataSource) {
     }
 
     for (const mod of modules) {
-      let perm = await permRepo.findOne({ where: { module_code: mod, user_group_id: group.id } as any });
+      let perm = await permRepo.findOne({ where: { module_code: mod, group_id: group.id } });
       if (!perm) {
         const isAdmin = g.name === 'Admin';
         const isSales = g.name === 'Kinh Doanh' && ['SALES', 'PRODUCT', 'CUSTOMER'].includes(mod);
@@ -58,12 +58,13 @@ export async function seedSystem(dataSource: DataSource) {
 
         perm = permRepo.create({
           module_code: mod,
-          user_group_id: group.id,
-          can_read: canAccess,
+          group_id: group.id,
+          can_view: canAccess,
           can_create: isAdmin || isSales || isWarehouse || isFinance || isHr,
           can_update: isAdmin || isSales || isWarehouse || isFinance || isHr,
           can_delete: isAdmin,
-        } as any);
+          view_cost_price: isAdmin || isFinance || isWarehouse,
+        });
         await permRepo.save(perm);
       }
     }
