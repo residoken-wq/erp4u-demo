@@ -70,7 +70,7 @@ export default function PortalB2BOrderModal({ isOpen, onClose, onSuccess, slug, 
 
         setIsSubmitting(true);
         try {
-            const apiUrl = (import.meta as any).env?.VITE_API_URL || 'https://localhost:3000/api';
+            const apiUrl = (import.meta as any).env?.VITE_API_URL || ((import.meta as any).env?.DEV ? 'http://localhost:3000/api' : '/api');
             const res = await fetch(`${apiUrl}/public/portal/custom-order/${slug}`, {
                 method: 'POST',
                 headers: { 

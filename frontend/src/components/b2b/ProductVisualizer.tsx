@@ -4,7 +4,7 @@ import { resolveGoogleDriveUrl } from './utils';
 import LogoMockupTool from './LogoMockupTool';
 
 const getApiBaseUrl = () => {
-    const base = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:3000';
+    const base = (import.meta as any).env?.VITE_API_BASE_URL || ((import.meta as any).env?.DEV ? 'http://localhost:3000' : '');
     return base.endsWith('/api') ? base.replace(/\/api$/, '') : base;
 };
 
@@ -60,7 +60,7 @@ export default function ProductVisualizer({ subcategory, selectedOptions, stepSe
     // Fetch B2B watermark config
     const [wmConfig, setWmConfig] = useState<WatermarkConfig | null>(null);
     useEffect(() => {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:3000/api';
+        const apiUrl = (import.meta as any).env?.VITE_API_URL || ((import.meta as any).env?.DEV ? 'http://localhost:3000/api' : '/api');
         fetch(`${apiUrl}/upload/watermark/b2b/config`)
             .then(res => res.json())
             .then(data => setWmConfig(data))
