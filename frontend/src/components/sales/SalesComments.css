@@ -1,0 +1,305 @@
+/* SalesComments.css - Styling for chat & mentions */
+
+/* ========================================
+   QUILL MENTION DROPDOWN
+   ======================================== */
+.ql-mention-list-container {
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 9999;
+}
+
+.ql-mention-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.ql-mention-list-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+
+.ql-mention-list-item:hover,
+.ql-mention-list-item.selected {
+  background: #e6f7ff;
+}
+
+.ql-mention-list-item .mention-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* ========================================
+   MENTION BADGE IN EDITOR & MESSAGES
+   ======================================== */
+.mention {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white !important;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-block;
+  margin: 0 2px;
+}
+
+.mention:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
+
+/* Mention in Quill editor */
+.ql-editor .mention {
+  user-select: none;
+}
+
+/* ========================================
+   CHAT MESSAGE LIST
+   ======================================== */
+.sales-comments-container {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.comments-list {
+  max-height: 350px;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #e8e8e8;
+}
+
+.comment-item {
+  background: white;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s;
+}
+
+.comment-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.comment-item.staff {
+  border-left: 3px solid #1890ff;
+}
+
+.comment-item.customer {
+  border-left: 3px solid #52c41a;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.comment-sender {
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.comment-time {
+  font-size: 11px;
+  color: #999;
+}
+
+.comment-content {
+  color: #333;
+  line-height: 1.6;
+}
+
+.comment-content img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+.comment-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+/* ========================================
+   EDITOR SECTION
+   ======================================== */
+.editor-section {
+  margin-bottom: 12px;
+}
+
+.editor-section .ql-container {
+  min-height: 100px;
+  border-radius: 0 0 8px 8px;
+  font-size: 14px;
+}
+
+.editor-section .ql-toolbar {
+  border-radius: 8px 8px 0 0;
+  background: #fafafa;
+}
+
+.editor-section .ql-editor {
+  min-height: 80px;
+}
+
+/* Placeholder styling */
+.editor-section .ql-editor.ql-blank::before {
+  color: #bfbfbf;
+  font-style: normal;
+}
+
+/* ========================================
+   MENTIONED USERS PREVIEW
+   ======================================== */
+.mentioned-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #f0f5ff;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.mentioned-preview .label {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+.mentioned-preview .user-tag {
+  background: #e6f7ff;
+  color: #1890ff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* ========================================
+   ACTION BUTTONS
+   ======================================== */
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ========================================
+   TAB STYLES
+   ======================================== */
+.chat-tabs .ant-tabs-tab {
+  padding: 8px 16px;
+}
+
+.chat-tabs .ant-tabs-tab-active {
+  font-weight: 600;
+}
+
+/* Internal tab indicator */
+.chat-tabs .ant-tabs-ink-bar {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
+/* ========================================
+   MOBILE RESPONSIVE
+   ======================================== */
+@media (max-width: 768px) {
+  .comments-list {
+    max-height: 250px;
+    padding: 8px;
+  }
+
+  .comment-item {
+    padding: 10px 12px;
+  }
+
+  .editor-section .ql-toolbar {
+    padding: 4px;
+  }
+
+  .editor-section .ql-toolbar button {
+    width: 24px;
+    height: 24px;
+  }
+
+  .ql-mention-list-container {
+    max-width: calc(100vw - 32px);
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-buttons button {
+    width: 100%;
+  }
+}
+
+/* ========================================
+   MENTIONS INPUT WRAPPER
+   ======================================== */
+.mentions-input-wrapper {
+  background: linear-gradient(135deg, #f0f5ff 0%, #e6f0ff 100%);
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px dashed #91caff;
+}
+
+.mentions-input-wrapper .ant-mentions {
+  border-radius: 6px;
+}
+
+.mentions-input-wrapper .ant-mentions:hover,
+.mentions-input-wrapper .ant-mentions:focus-within {
+  border-color: #1890ff;
+}
+
+/* ========================================
+   LOADING STATE
+   ======================================== */
+.comments-loading {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  color: #999;
+}
+
+/* ========================================
+   EMPTY STATE
+   ======================================== */
+.comments-empty {
+  text-align: center;
+  padding: 30px;
+  color: #bfbfbf;
+}
+
+.comments-empty .icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}

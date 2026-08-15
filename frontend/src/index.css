@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+    --accent: 280 65% 60%;
+  }
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+}
+
+h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: 'Outfit', sans-serif;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  border-radius: 12px;
+}
+
+/* Notification deep link highlight animation */
+.highlight-row td {
+    background-color: #e6f7ff !important;
+    animation: highlight-pulse 0.5s ease-in-out 2;
+}
+
+@keyframes highlight-pulse {
+    0% {
+        background-color: #e6f7ff;
+    }
+
+    50% {
+        background-color: #91d5ff;
+    }
+
+    100% {
+        background-color: #e6f7ff;
+    }
+}
+
+/* Nâng cấp chiều rộng các modal chức năng lên 80% trên Desktop (trừ các modal confirm/alert nhỏ) */
+@media (min-width: 992px) {
+    .ant-modal-wrap:not(:has(.ant-modal-confirm)) .ant-modal,
+    .ant-modal-root .ant-modal:not(.ant-modal-confirm) {
+        width: 80% !important;
+        max-width: 1600px !important;
+    }
+}
