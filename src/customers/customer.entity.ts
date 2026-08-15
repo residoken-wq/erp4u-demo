@@ -1,9 +1,9 @@
+import { EncryptionTransformer } from '../common/encryption/encryption.transformer';
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { SalesOrder } from '../sales/sales-order.entity';
 import { CustomerContact } from './customer-contact.entity';
 import { CustomerCredit } from './customer-credit.entity';
 import { User } from '../users/entities/user.entity';
-import { EncryptionTransformer } from '../common/encryption/encryption.transformer';
 
 export enum CustomerType {
   LEAD = 'LEAD',
@@ -44,38 +44,39 @@ export class Customer {
 
   @Column({ nullable: true })
   assigned_to_id: number;
+  // ------------------
 
   // --- QUAN HỆ KHÁCH HÀNG (CHA - CON) ---
   @ManyToOne(() => Customer, (customer) => customer.children, { nullable: true })
   @JoinColumn({ name: 'parent_id' })
-  parent: Customer;
+  parent: Customer; // Công ty mẹ / Trụ sở chính
 
   @Column({ nullable: true })
   parent_id: number;
 
   @OneToMany(() => Customer, (customer) => customer.parent)
-  children: Customer[];
+  children: Customer[]; // Các chi nhánh / Công ty con
+  // -------------------------------------
 
   // --- DANH SÁCH LIÊN HỆ ---
   @OneToMany(() => CustomerContact, (contact) => contact.customer, { cascade: true })
   contacts: CustomerContact[];
+  // -------------------------
 
-  // --- PHÁP NHÂN (ENCRYPTED) ---
-  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() })
-  legal_name: string;
+  // --- PHÁP NHÂN ---
+  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() }) legal_name: string;
 
-  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() })
-  legal_address: string;
+  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() }) legal_address: string;
 
-  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() })
-  legal_representative: string; // Người đại diện
+  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() }) legal_representative: string; // Người đại diện
 
-  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() })
-  einvoice_email: string; // Email nhận hóa đơn
+  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() }) einvoice_email: string; // Email nhận hóa đơn
+  // -----------------
 
-  // --- THÔNG TIN GIAO HÀNG ---
+  // --- THÔNG TIN GIAO HÀNG (MANG TÍNH CHẤT LIST CHI NHÁNH) ---
   @Column('jsonb', { nullable: true, default: [] })
-  delivery_addresses: any[];
+  delivery_addresses: any[]; // [{ name: 'CN1', address: '...' }]
+  // -----------------------------------------------------------
 
   @Column('jsonb', { nullable: true, default: [] })
   history: any;
@@ -86,16 +87,13 @@ export class Customer {
   // --- GHI CHÚ CHÂN DUNG 360 (CKEditor HTML) ---
   @Column({ type: 'text', nullable: true })
   portrait_notes: string;
+  // ----------------------------------------------
 
-  // --- LIÊN HỆ & THUẾ (ENCRYPTED) ---
-  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() })
-  tax_code: string;
+  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() }) tax_code: string;
 
-  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() })
-  phone: string;
+  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() }) phone: string;
 
-  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() })
-  email: string;
+  @Column({ type: 'text', nullable: true, transformer: new EncryptionTransformer() }) email: string;
 
   @Column({ nullable: true })
   facebook: string;
@@ -119,7 +117,7 @@ export class Customer {
   current_debt: number;
 
   @Column('decimal', { precision: 15, scale: 2, default: 0 })
-  credit_balance: number;
+  credit_balance: number; // Tiền khách trả dư / cấn trừ
 
   @OneToMany(() => CustomerCredit, (credit) => credit.customer)
   credits: CustomerCredit[];

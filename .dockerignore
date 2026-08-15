@@ -1,0 +1,16 @@
+node_modules
+dist
+frontend
+hula-web
+docs
+backups
+scripts
+.vscode
+.vs
+.agent
+Dockerfile
+docker-compose.yml
+.git
+uploads
+postgres_data
+.env*
