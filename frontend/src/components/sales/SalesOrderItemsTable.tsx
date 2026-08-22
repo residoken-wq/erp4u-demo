@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Table, Select, Input, InputNumber, Tag, Popover, Button, Space, Tooltip } from 'antd';
-import { MenuOutlined, DeleteOutlined, GiftOutlined, TagsOutlined } from '@ant-design/icons';
+import { MenuOutlined, DeleteOutlined, GiftOutlined, TagsOutlined, FileTextOutlined, LockOutlined, SaveOutlined } from '@ant-design/icons';
 import { DndContext, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -57,6 +57,8 @@ interface OrderItem {
     booking_status?: string;
     booked_quantity?: number;
     price_ranges?: { quantity: number; unit_price: number }[];
+    customer_note?: string;
+    internal_note?: string;
 }
 
 const PriceRangesEditor = ({ ranges, onChange }: { ranges?: { quantity: number; unit_price: number }[], onChange: (r: any[]) => void }) => {
@@ -95,6 +97,48 @@ const PriceRangesEditor = ({ ranges, onChange }: { ranges?: { quantity: number; 
             </div>
             <Button type="dashed" block size="small" style={{ marginTop: 8 }} onClick={handleAdd}>Thêm mốc giá</Button>
         </div>
+    );
+};
+
+// Component Ghi chú Popup
+const NotePopover = ({ title, placeholder, value, icon, onChange, color }: { title: string, placeholder: string, value?: string, icon: React.ReactNode, onChange: (val: string) => void, color?: string }) => {
+    const [open, setOpen] = useState(false);
+    const [tempValue, setTempValue] = useState(value || '');
+
+    const handleSave = () => {
+        onChange(tempValue);
+        setOpen(false);
+    };
+
+    return (
+        <Popover
+            open={open}
+            onOpenChange={(v) => {
+                setOpen(v);
+                if (v) setTempValue(value || '');
+            }}
+            trigger="click"
+            title={title}
+            content={
+                <div style={{ width: 300 }}>
+                    <Input.TextArea
+                        rows={4}
+                        placeholder={placeholder}
+                        value={tempValue}
+                        onChange={(e) => setTempValue(e.target.value)}
+                        style={{ marginBottom: 10 }}
+                    />
+                    <div style={{ textAlign: 'right' }}>
+                        <Button size="small" onClick={() => setOpen(false)} style={{ marginRight: 8 }}>Hủy</Button>
+                        <Button size="small" type="primary" onClick={handleSave} icon={<SaveOutlined />}>Lưu</Button>
+                    </div>
+                </div>
+            }
+        >
+            <Tooltip title={value ? value : title}>
+                <Button size="small" style={{ fontSize: 10, color: value ? color || '#1890ff' : '#999', borderColor: value ? color || '#1890ff' : '#d9d9d9' }} icon={icon} />
+            </Tooltip>
+        </Popover>
     );
 };
 
@@ -202,6 +246,23 @@ const SalesOrderItemsTable: React.FC<Props> = ({
                             <ImageLinkCell
                                 value={finalLink || ''}
                                 onChange={(newVal) => onItemChange(index, 'image_url', newVal)}
+                            />
+                            
+                            <NotePopover 
+                                title="Ghi chú KH (Hiển thị Báo giá)" 
+                                placeholder="Nhập ghi chú cho Khách hàng thấy..." 
+                                value={record.customer_note} 
+                                icon={<FileTextOutlined />} 
+                                onChange={(v) => onItemChange(index, 'customer_note', v)} 
+                                color="#fa8c16"
+                            />
+                            <NotePopover 
+                                title="Ghi chú Nội bộ (Gửi Xưởng GC)" 
+                                placeholder="Nhập ghi chú gửi xưởng (không hiện báo giá)..." 
+                                value={record.internal_note} 
+                                icon={<LockOutlined />} 
+                                onChange={(v) => onItemChange(index, 'internal_note', v)} 
+                                color="#cf1322"
                             />
                         </div>
                     </div>
@@ -373,7 +434,25 @@ const SalesOrderItemsTable: React.FC<Props> = ({
                                         <TagsOutlined /> {record.price_ranges && record.price_ranges.length > 0 ? `${record.price_ranges.length} mốc giá` : 'Mốc giá'}
                                     </Button>
                                 </Popover>
-                                <ImageLinkCell value={finalLink || ''} onChange={(newVal) => onItemChange(index, 'image_url', newVal)} />
+                                <Space>
+                                    <NotePopover 
+                                        title="Ghi chú KH (Hiển thị Báo giá)" 
+                                        placeholder="Nhập ghi chú cho Khách hàng thấy..." 
+                                        value={record.customer_note} 
+                                        icon={<FileTextOutlined />} 
+                                        onChange={(v) => onItemChange(index, 'customer_note', v)} 
+                                        color="#fa8c16"
+                                    />
+                                    <NotePopover 
+                                        title="Ghi chú Nội bộ (Gửi Xưởng GC)" 
+                                        placeholder="Nhập ghi chú gửi xưởng (không hiện báo giá)..." 
+                                        value={record.internal_note} 
+                                        icon={<LockOutlined />} 
+                                        onChange={(v) => onItemChange(index, 'internal_note', v)} 
+                                        color="#cf1322"
+                                    />
+                                    <ImageLinkCell value={finalLink || ''} onChange={(newVal) => onItemChange(index, 'image_url', newVal)} />
+                                </Space>
                             </div>
                         </div>
                     );

@@ -11,6 +11,7 @@ import { ProductWebsiteConfig } from '../products/entities/product-website-confi
 import { BOM } from '../bom/bom.entity';
 import { ProductComponent } from '../products/product-component.entity';
 import { Customer } from '../customers/customer.entity';
+import { Supplier } from '../suppliers/supplier.entity';
 import { BlogPost } from '../blogs/blog-post.entity';
 import { WebProject } from '../website-projects/entities/web-project.entity';
 import { SystemConfig } from '../system/system-config.entity';
@@ -19,7 +20,7 @@ import { SystemConfig } from '../system/system-config.entity';
   imports: [
     TypeOrmModule.forFeature([
       Product, ProductWebsiteConfig, BOM, ProductComponent,
-      Customer, BlogPost, WebProject, SystemConfig
+      Customer, Supplier, BlogPost, WebProject, SystemConfig
     ]),
     MaterialsModule,
     ProductsModule,

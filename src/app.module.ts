@@ -176,20 +176,13 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const dbUrl = configService.get<string>('POSTGRES_URL') || configService.get<string>('PRISMA_DATABASE_URL') || configService.get<string>('DATABASE_URL');
-        return {
-          type: 'postgres',
-          ...(dbUrl ? { 
-            url: dbUrl, 
-            ssl: { rejectUnauthorized: false } 
-          } : {
-            host: configService.get<string>('DB_HOST') || 'localhost',
-            port: configService.get<number>('DB_PORT') || 5432,
-            username: configService.get<string>('DB_USERNAME') || 'erp4u_user',
-            password: configService.get<string>('DB_PASSWORD') || 'erp4u_password',
-            database: configService.get<string>('DB_DATABASE') || 'erp4u_db',
-          }),
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('DB_HOST') || 'localhost',
+        port: configService.get<number>('DB_PORT') || 5432,
+        username: configService.get<string>('DB_USERNAME') || 'erp4u_user',
+        password: configService.get<string>('DB_PASSWORD') || 'erp4u_password',
+        database: configService.get<string>('DB_DATABASE') || 'erp4u_db',
         entities: [
           Product, Material, BOM, ProductComponent, ProductRouting, ProductLogistics, ProductPattern,
           SalesOrder, SalesOrderItem, ProductSample, SalesDelivery, SalesDeliveryItem, SalesComment,
@@ -231,8 +224,7 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
         ],
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
         subscribers: [],
-      };
-    },
+      }),
     }),
     UsersModule, AuthModule,
     ProductsModule, MaterialsModule, BomModule, SalesModule,

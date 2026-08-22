@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Steps, Card, Table, Button, Select, InputNumber, Row, Col, Space, message, Upload, Divider, Switch, Tabs, Input, Tag, Alert, Modal, List } from 'antd';
-import { UploadOutlined, FilePdfOutlined, FileImageOutlined, PlusOutlined, DeleteOutlined, SaveOutlined, CopyOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
+import { UploadOutlined, FilePdfOutlined, FileImageOutlined, PlusOutlined, DeleteOutlined, SaveOutlined, CopyOutlined, LockOutlined, UnlockOutlined, SearchOutlined } from '@ant-design/icons';
 import { Stage, Layer, Rect as KonvaRect, Image as KonvaImage, Transformer, Group, Text as KonvaText, Arrow as KonvaArrow, Line as KonvaLine } from 'react-konva';
 import useImage from 'use-image';
 import jsPDF from 'jspdf';
@@ -303,6 +303,10 @@ const UnifiedDesignWorkflow: React.FC<UnifiedDesignWorkflowProps> = ({ standalon
             : null
     );
     const [loadingPo, setLoadingPo] = useState(false);
+    
+    // --- Step 1 Filter Data ---
+    const [searchQuery, setSearchQuery] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
 
     // --- Copy Design Modal Data ---
     const [isCopyModalVisible, setIsCopyModalVisible] = useState(false);
@@ -923,37 +927,34 @@ const UnifiedDesignWorkflow: React.FC<UnifiedDesignWorkflowProps> = ({ standalon
 
     // --- RENDER STEPS ---
     const renderStep1 = () => {
-        const expandedRowRender = (po: any) => {
-            const items = po.items.filter((item: any) => {
-                const name = (item.description || item.product?.name || item.material?.name || '').toLowerCase();
-                return name.includes('gia công in');
+        // Extract unique categories from items
+        const categories = new Set<string>();
+        poList.forEach(po => {
+            po.items?.forEach((item: any) => {
+                if (item.product?.category) categories.add(item.product.category);
+                else if (item.product?.category_link?.name) categories.add(item.product.category_link.name);
             });
-            
-            const columns = [
-                { title: 'Tên Sản phẩm / Mã hàng', dataIndex: 'description', render: (t: any, r: any) => r.product?.name || r.material?.name || t },
-                { title: 'Số lượng yêu cầu', dataIndex: 'quantity', render: (v: any) => <b>{v}</b> },
-                { title: 'Trạng thái', render: (r: any) => {
-                     return r.print_design ? <Tag color="success">Đã làm Sơ đồ</Tag> : <Tag color="warning">Chưa làm</Tag>;
-                }},
-                { title: 'Ghi chú', dataIndex: 'note' },
-                {
-                    title: 'Thao tác', render: (r: any) => {
-                        return (
-                            <Button
-                                type={selectedItem?.id === r.id ? 'primary' : 'default'}
-                                onClick={() => {
-                                    setSelectedPo(po);
-                                    setSelectedItem(r);
-                                }}
-                            >
-                                Chọn để làm Sơ đồ
-                            </Button>
-                        )
-                    }
-                }
-            ];
-            return <Table columns={columns} dataSource={items} pagination={false} rowKey="id" size="small" />;
-        };
+        });
+        const uniqueCategories = Array.from(categories).filter(Boolean);
+
+        // Filter logic
+        const filteredPoList = poList.map(po => {
+            const filteredItems = (po.items || []).filter((item: any) => {
+                const name = (item.description || item.product?.name || item.material?.name || '').toLowerCase();
+                if (!name.includes('gia công in')) return false;
+
+                // Search by SKU or Name
+                const sku = (item.product?.sku || item.material?.code || '').toLowerCase();
+                const matchesSearch = !searchQuery || name.includes(searchQuery.toLowerCase()) || sku.includes(searchQuery.toLowerCase());
+                
+                // Filter by category
+                const cat = item.product?.category || item.product?.category_link?.name || '';
+                const matchesCategory = categoryFilter === 'ALL' || cat === categoryFilter;
+
+                return matchesSearch && matchesCategory;
+            });
+            return { ...po, filteredItems };
+        }).filter(po => po.filteredItems.length > 0);
 
         const poColumns = [
             { title: 'Mã PO', dataIndex: 'po_code', render: (t: any, r: any) => <b>{t}</b> },
@@ -962,35 +963,111 @@ const UnifiedDesignWorkflow: React.FC<UnifiedDesignWorkflowProps> = ({ standalon
                 if (!customerName && r.plan?.sales_orders?.length > 0) {
                     customerName = Array.from(new Set(r.plan.sales_orders.map((so: any) => so?.customer?.name || so?.customer_name).filter(Boolean))).join(', ');
                 }
-                return customerName || '-';
+                return <span style={{ color: '#555', fontWeight: 500 }}>{customerName || '-'}</span>;
             }},
-            { title: 'Nhà GC', dataIndex: ['supplier', 'name'] },
-            { title: 'Trạng thái', dataIndex: 'status', render: (t: string) => <Tag color="blue">{t}</Tag> },
+            { title: 'Nhà GC', dataIndex: ['supplier', 'name'], render: (t: string) => <span style={{ color: '#1890ff', fontWeight: 500 }}>{t}</span> },
+            { title: 'Trạng thái', dataIndex: 'status', render: (t: string) => <Tag color="blue" style={{ borderRadius: 12 }}>{t}</Tag> },
             { title: 'Tiến độ Sơ đồ', render: (r: any) => {
-                const items = r.items || [];
-                let total = 0;
-                let done = 0;
-                items.forEach((item: any) => {
-                     const name = (item.description || item.product?.name || item.material?.name || '').toLowerCase();
-                     if (name.includes('gia công in')) {
-                         total++;
-                         if (item.print_design) done++;
-                     }
-                });
+                const items = r.filteredItems || [];
+                let total = items.length;
+                let done = items.filter((i: any) => i.print_design).length;
                 if (total === 0) return <span style={{ color: '#aaa' }}>-</span>;
-                return <span style={{ fontWeight: 'bold', color: done === total ? '#52c41a' : '#fa8c16' }}>{done}/{total}</span>;
+                return <span style={{ fontWeight: 'bold', color: done === total ? '#52c41a' : '#fa8c16' }}>{done} / {total}</span>;
             }}
         ];
 
+        const expandedRowRender = (po: any) => {
+            return (
+                <div style={{ padding: '16px 24px', background: '#fafafa', borderRadius: 12, border: '1px solid #f0f0f0' }}>
+                    <List
+                        grid={{ gutter: 16, xs: 1, sm: 1, md: 2, lg: 2, xl: 3, xxl: 4 }}
+                        dataSource={po.filteredItems}
+                        renderItem={(r: any) => {
+                            const isDone = !!r.print_design;
+                            return (
+                                <List.Item>
+                                    <Card 
+                                        size="small" 
+                                        hoverable 
+                                        style={{ 
+                                            borderRadius: 12, 
+                                            border: isDone ? '1px solid #b7eb8f' : '1px solid #ffe58f',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                                        }}
+                                        bodyStyle={{ padding: 16 }}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                                            <Tag color={isDone ? 'success' : 'warning'} style={{ borderRadius: 12, margin: 0 }}>
+                                                {isDone ? 'Đã Sơ đồ' : 'Chưa Sơ đồ'}
+                                            </Tag>
+                                            <span style={{ color: '#888', fontSize: 12, fontWeight: 'bold' }}>SL: {r.quantity}</span>
+                                        </div>
+                                        <div style={{ marginBottom: 4, fontWeight: 'bold', fontSize: 14 }}>
+                                            {r.product?.name || r.material?.name || r.description}
+                                        </div>
+                                        <div style={{ color: '#666', fontSize: 13, marginBottom: 16 }}>
+                                            SKU: {r.product?.sku || r.material?.code || '-'}
+                                        </div>
+                                        
+                                        <Button
+                                            type={selectedItem?.id === r.id ? 'primary' : 'default'}
+                                            shape="round"
+                                            block
+                                            onClick={() => {
+                                                setSelectedPo(po);
+                                                setSelectedItem(r);
+                                            }}
+                                            style={{
+                                                background: selectedItem?.id === r.id ? 'linear-gradient(90deg, #1890ff, #096dd9)' : undefined,
+                                                borderColor: selectedItem?.id === r.id ? 'transparent' : '#d9d9d9',
+                                                color: selectedItem?.id === r.id ? '#fff' : undefined
+                                            }}
+                                        >
+                                            {selectedItem?.id === r.id ? 'Đang chọn' : 'Chọn Thiết kế'}
+                                        </Button>
+                                    </Card>
+                                </List.Item>
+                            );
+                        }}
+                    />
+                </div>
+            );
+        };
+
         return (
             <div>
+                <div style={{ marginBottom: 24, display: 'flex', gap: 16, alignItems: 'center', background: '#fff', padding: '16px 24px', borderRadius: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+                    <Input 
+                        prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />} 
+                        placeholder="Tìm theo SKU hoặc Tên sản phẩm..." 
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        style={{ width: 300, borderRadius: 8 }}
+                        size="large"
+                        allowClear
+                    />
+                    <Select
+                        showSearch
+                        placeholder="Lọc theo Danh mục"
+                        value={categoryFilter}
+                        onChange={setCategoryFilter}
+                        style={{ width: 250 }}
+                        size="large"
+                        options={[{ value: 'ALL', label: 'Tất cả danh mục' }, ...uniqueCategories.map(c => ({ value: c, label: c }))]}
+                    />
+                    <div style={{ marginLeft: 'auto', color: '#888' }}>
+                        Hiển thị <b>{filteredPoList.length}</b> Đơn hàng
+                    </div>
+                </div>
+
                 <Table 
                     columns={poColumns} 
-                    dataSource={poList} 
+                    dataSource={filteredPoList} 
                     rowKey="id" 
-                    expandable={{ expandedRowRender, defaultExpandAllRows: false }}
+                    expandable={{ expandedRowRender, defaultExpandAllRows: true }}
                     loading={loadingPo}
                     pagination={{ pageSize: 10 }}
+                    style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}
                 />
             </div>
         );

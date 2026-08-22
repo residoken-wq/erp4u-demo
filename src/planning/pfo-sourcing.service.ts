@@ -289,7 +289,7 @@ export class PfoSourcingService {
             let defaultBackColor = '';
             
             // Build map for all products in SO items
-            const soItemProductMap = new Map<number, { frontColor: string, backColor: string }>();
+            const soItemProductMap = new Map<number, { frontColor: string, backColor: string, internalNote: string }>();
             if (pfo.sales_order?.items) {
                 for (const item of pfo.sales_order.items) {
                     if (item.product?.id) {
@@ -303,7 +303,7 @@ export class PfoSourcingService {
                             frontColor = attr?.front_color || '';
                             backColor = attr?.back_color || '';
                         }
-                        soItemProductMap.set(item.product.id, { frontColor, backColor });
+                        soItemProductMap.set(item.product.id, { frontColor, backColor, internalNote: item.internal_note || '' });
                         
                         if (item === firstSoItem) {
                             defaultFrontColor = frontColor;
@@ -356,7 +356,9 @@ export class PfoSourcingService {
                         
                         const rawProdId = ms.product_id ? Number(ms.product_id) : (firstSoItem?.product?.id || null);
                         const prodId = (rawProdId && !isNaN(rawProdId) && rawProdId > 0) ? rawProdId : null;
-                        const colors = (prodId ? soItemProductMap.get(prodId) : null) || { frontColor: defaultFrontColor, backColor: defaultBackColor };
+                        const productInfo = prodId ? soItemProductMap.get(prodId) : null;
+                        const colors = productInfo || { frontColor: defaultFrontColor, backColor: defaultBackColor, internalNote: '' };
+                        const internalNote = productInfo?.internalNote || firstSoItem?.internal_note || '';
 
                         return this.poItemRepo.create({
                             purchase_order: gcPo,
@@ -364,6 +366,7 @@ export class PfoSourcingService {
                             product_id: prodId,
                             front_color: colors.frontColor || '',
                             back_color: colors.backColor || '',
+                            internal_note: internalNote,
                             description: `Gia công: ${ms.step_name || ms.milestone_type || 'Gia công'}${prodDesc}`,
                             quantity: qty,
                             raw_quantity: qty,
@@ -422,6 +425,7 @@ export class PfoSourcingService {
                             product_id: pId,
                             front_color: fColor,
                             back_color: bColor,
+                            internal_note: item.internal_note || '',
                             description: `Gia công tổng hợp SP: ${item.product?.name || item.product?.sku || ''}`,
                             quantity: qty,
                             raw_quantity: qty,

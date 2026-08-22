@@ -6,9 +6,11 @@ import { SalesService } from '../sales/sales.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from '../products/product.entity';
+import { Material } from '../materials/material.entity';
 import { BOM } from '../bom/bom.entity';
 import { ProductComponent } from '../products/product-component.entity';
 import { Customer, CustomerType } from '../customers/customer.entity';
+import { Supplier, SupplierType } from '../suppliers/supplier.entity';
 import { SystemConfig } from '../system/system-config.entity';
 
 @Injectable()
@@ -21,13 +23,71 @@ export class UploadService {
     @InjectRepository(BOM) private bomRepo: Repository<BOM>,
     @InjectRepository(ProductComponent) private componentRepo: Repository<ProductComponent>,
     @InjectRepository(Customer) private customerRepo: Repository<Customer>,
+    @InjectRepository(Supplier) private supplierRepo: Repository<Supplier>,
     @InjectRepository(SystemConfig) private configRepo: Repository<SystemConfig>,
   ) { }
 
-  private normalizeRow(row: any) {
-    const newRow = {};
-    Object.keys(row).forEach(key => { newRow[key.toLowerCase().trim()] = row[key]; });
+  private removeDiacritics(str: string): string {
+    return (str || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D');
+  }
+
+  private normalizeRow(row: any): Record<string, any> {
+    const newRow: Record<string, any> = {};
+    if (!row || typeof row !== 'object') return newRow;
+    Object.keys(row).forEach(key => {
+      if (key) {
+        const rawKey = key.toString().trim();
+        // Lowercase trim
+        newRow[rawKey.toLowerCase()] = row[key];
+        // Cleaned key: remove diacritics, spaces, punctuation
+        const cleanKey = this.removeDiacritics(rawKey)
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '');
+        newRow[cleanKey] = row[key];
+      }
+    });
     return newRow;
+  }
+
+  private parseNumber(val: any, defaultVal = 0): number {
+    if (val === undefined || val === null || val === '') return defaultVal;
+    if (typeof val === 'number') return isNaN(val) ? defaultVal : val;
+    let str = val.toString().trim();
+    // Handle Vietnamese format: 1.000.000 or 1,000,000 or 1.5
+    if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(str)) {
+      str = str.replace(/\./g, '').replace(',', '.');
+    } else if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(str)) {
+      str = str.replace(/,/g, '');
+    } else if (str.includes(',') && !str.includes('.')) {
+      str = str.replace(',', '.');
+    }
+    const num = Number(str);
+    return isNaN(num) ? defaultVal : num;
+  }
+
+  private parseDate(val: any): Date {
+    if (!val) return new Date();
+    if (val instanceof Date) return isNaN(val.getTime()) ? new Date() : val;
+    if (typeof val === 'number') {
+      // Excel serial date to JS Date
+      const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+      return isNaN(date.getTime()) ? new Date() : date;
+    }
+    const str = val.toString().trim();
+    const dmyMatch = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (dmyMatch) {
+      const d = parseInt(dmyMatch[1], 10);
+      const m = parseInt(dmyMatch[2], 10) - 1;
+      const y = parseInt(dmyMatch[3], 10);
+      const parsed = new Date(y, m, d);
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+    const parsed = new Date(str);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
   }
 
   // 0. UPLOAD IMAGE
@@ -477,241 +537,424 @@ export class UploadService {
   async importMaterials(buffer: Buffer) {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-    let count = 0; const errors = [];
+    let count = 0;
+    const errors: any[] = [];
+    let rowIdx = 1;
+
     for (const rawRow of data) {
+      rowIdx++;
       const row = this.normalizeRow(rawRow);
       try {
-        const code = row['code'] || row['ma'];
+        const code = row['code'] || row['ma'] || row['manl'] || row['manguyenlieu'] || row['materialcode'];
         if (!code) continue;
-        const mat = {
+
+        const unit = (row['unit'] || row['dvt'] || row['dvttieuhao'] || row['donvitinh'] || 'pcs').toString().trim();
+        const purchaseUnit = (row['purchaseunit'] || row['purchase_unit'] || row['dvtmua'] || row['dvtmuahang'] || unit).toString().trim();
+        const conversionFactor = this.parseNumber(row['conversionfactor'] || row['conversion_factor'] || row['heso'] || row['hesoquydoi'] || row['quydoi'], 1);
+        const costPerUnit = this.parseNumber(row['costperunit'] || row['cost_per_unit'] || row['price'] || row['gia'] || row['dongia'] || row['giamua'], 0);
+        const costPrice = this.parseNumber(row['costprice'] || row['cost_price'] || row['giavon'] || row['gia_von'], costPerUnit);
+        const qtyInStock = this.parseNumber(row['quantityinstock'] || row['qty'] || row['ton'] || row['tonkho'] || row['soluong'], 0);
+        const supplierName = (row['supplier'] || row['suppliername'] || row['supplier_name'] || row['ncc'] || row['nhacungcap'] || '').toString().trim() || null;
+
+        const matData: Partial<Material> = {
           code: code.toString().trim(),
-          name: row['name'] || row['ten'] || 'No Name',
-          category: row['category'] || row['nhom'] || 'General',
-          material_type: row['type'] || row['loai'] || 'General',
-          unit: row['unit'] || row['dvt'] || 'pcs',
-          cost_per_unit: row['price'] || row['gia'] || 0,
-          quantity_in_stock: row['qty'] || row['ton'] || 0,
-          supplier_name: 'Import Excel'
+          name: (row['name'] || row['ten'] || row['tennguyenlieu'] || 'No Name').toString().trim(),
+          category: (row['category'] || row['nhom'] || row['nhomnguyenlieu'] || 'General').toString().trim(),
+          material_type: (row['materialtype'] || row['material_type'] || row['type'] || row['loai'] || row['loainguyenlieu'] || 'General').toString().trim(),
+          unit: unit,
+          purchase_unit: purchaseUnit,
+          conversion_factor: conversionFactor,
+          cost_per_unit: costPerUnit,
+          cost_price: costPrice,
+          quantity_in_stock: qtyInStock,
+          supplier_name: supplierName
         };
-        const existing = await this.materialsService.findOneByCode(mat.code);
-        if (existing) { await this.materialsService.materialRepo.update(existing.id, mat); }
-        else { await this.materialsService.materialRepo.save(mat); }
+
+        const existing = await this.materialsService.findOneByCode(matData.code);
+        if (existing) {
+          await this.materialsService.materialRepo.update(existing.id, matData);
+        } else {
+          await this.materialsService.materialRepo.save(matData);
+        }
         count++;
-      } catch (e) { errors.push({ row, error: e.message }); }
+      } catch (e: any) {
+        errors.push({ row: rowIdx, code: rawRow['Code'] || rawRow['Mã'] || rawRow['code'], error: e.message });
+      }
     }
-    return { message: 'Done', count, errors };
+    return { message: `Imported ${count} nguyên liệu`, count, errors };
   }
 
   // 2. IMPORT SAN PHAM
   async importProducts(buffer: Buffer) {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-    let count = 0; const errors = [];
+    let count = 0;
+    const errors: any[] = [];
+    let rowIdx = 1;
 
     for (const rawRow of data) {
+      rowIdx++;
       const row = this.normalizeRow(rawRow);
       try {
-        const sku = row['sku'] || row['ma'];
+        const sku = row['sku'] || row['ma'] || row['masp'] || row['masanpham'] || row['productsku'];
         if (!sku) continue;
 
         const attributes = {
-          color: row['color'] || row['mau'] || '',
-          size: row['size'] || row['kichthuoc'] || '',
-          fabric: row['fabric'] || row['chatlieu'] || ''
+          color: (row['color'] || row['mau'] || row['mausac'] || '').toString().trim(),
+          size: (row['size'] || row['kichthuoc'] || row['quycachsize'] || '').toString().trim(),
+          fabric: (row['fabric'] || row['chatlieu'] || row['vai'] || '').toString().trim()
         };
 
-        const productData = {
+        const rawTags = row['tags'] || row['tag'] || row['the'];
+        let tags: string[] = [];
+        if (Array.isArray(rawTags)) {
+          tags = rawTags;
+        } else if (typeof rawTags === 'string') {
+          tags = rawTags.split(',').map(t => t.trim()).filter(Boolean);
+        }
+
+        const basePrice = this.parseNumber(row['baseprice'] || row['base_price'] || row['price'] || row['gia'] || row['giaban'] || row['dongia'], 0);
+        const costPrice = this.parseNumber(row['costprice'] || row['cost_price'] || row['giavon'] || row['gia_von'], 0);
+        const profitMargin = this.parseNumber(row['profitmargin'] || row['profit_margin'] || row['loinhuan'] || row['margin'], 0);
+        const qtyInStock = this.parseNumber(row['quantityinstock'] || row['qty'] || row['ton'] || row['tonkho'] || row['soluong'], 0);
+
+        const customerDesc = (row['customerdescription'] || row['customer_description'] || row['motakhachhang'] || row['motabaogia'] || row['mota'] || '').toString().trim() || null;
+        const processingDesc = (row['processingdescription'] || row['processing_description'] || row['motagiacong'] || row['quycachgiacong'] || '').toString().trim() || null;
+        const vatDesc = (row['vatdescription'] || row['vat_description'] || row['motavat'] || row['tenvat'] || '').toString().trim() || null;
+        const imageUrl = (row['imageurl'] || row['image_url'] || row['image'] || row['hinhanh'] || row['anh'] || '').toString().trim() || null;
+        const websiteDisplayName = (row['websitedisplayname'] || row['website_display_name'] || row['tenwebsite'] || '').toString().trim() || null;
+
+        const productData: any = {
           sku: sku.toString().trim(),
-          name: row['name'] || row['ten'] || 'No Name',
-          category: row['category'] || row['nhom'] || 'General',
-          product_type: row['type'] || row['loai'] || 'General',
-          unit: row['unit'] || row['dvt'] || 'cai',
-          base_price: row['price'] || row['gia'] || 0,
+          name: (row['name'] || row['ten'] || row['tensp'] || row['tensanpham'] || 'No Name').toString().trim(),
+          category: (row['category'] || row['nhom'] || row['nhomsp'] || 'General').toString().trim(),
+          product_type: (row['producttype'] || row['product_type'] || row['type'] || row['loai'] || row['loaisp'] || 'Finished').toString().trim(),
+          unit: (row['unit'] || row['dvt'] || row['donvitinh'] || 'cai').toString().trim(),
+          base_price: basePrice,
+          cost_price: costPrice,
+          profit_margin: profitMargin > 0 ? profitMargin : null,
+          quantity_in_stock: qtyInStock,
+          customer_description: customerDesc,
+          processing_description: processingDesc,
+          vat_description: vatDesc,
+          image_url: imageUrl,
+          tags: tags,
           attributes: attributes,
           is_active: true
         };
 
+        if (websiteDisplayName) productData.website_display_name = websiteDisplayName;
+
         const existing = await this.productsService.findOneBySku(productData.sku);
-        if (existing) { await this.productRepo.update(existing.id, productData); }
-        else { await this.productRepo.save(productData); }
+        if (existing) {
+          await this.productRepo.update(existing.id, productData);
+        } else {
+          await this.productRepo.save(productData);
+        }
         count++;
-      } catch (e) { errors.push({ sku: row['sku'], error: e.message }); }
+      } catch (e: any) {
+        errors.push({ row: rowIdx, sku: rawRow['SKU'] || rawRow['Mã'] || rawRow['sku'], error: e.message });
+      }
     }
-    return { message: 'Done', count, errors };
+    return { message: `Imported ${count} sản phẩm`, count, errors };
   }
 
   // 3. IMPORT BOM
   async importBoms(buffer: Buffer) {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-    let count = 0; const errors = [];
+    let count = 0;
+    const errors: any[] = [];
+    let rowIdx = 1;
+
     for (const rawRow of data) {
+      rowIdx++;
       const row = this.normalizeRow(rawRow);
       try {
-        const sku = row['productsku'] || row['masp'];
-        const matCode = row['materialcode'] || row['manl'];
-        const qty = row['quantity'] || row['sl'];
-        if (!sku || !matCode) continue;
+        const sku = (row['productsku'] || row['masp'] || row['sku'] || row['masanpham'] || '').toString().trim();
+        const matCode = (row['materialcode'] || row['manl'] || row['code'] || row['manguyenlieu'] || '').toString().trim();
+        const qty = this.parseNumber(row['quantity'] || row['sl'] || row['dinhmuc'] || row['soluong'], 0);
+        const waste = this.parseNumber(row['waste'] || row['haohut'] || row['wastepercent'] || row['waste_percent'] || row['tylehaohut'], 0);
+        const note = (row['note'] || row['ghichu'] || row['diengiai'] || '').toString().trim() || null;
+
+        if (!sku || !matCode) {
+          errors.push({ row: rowIdx, error: 'Thiếu Mã SP (ProductSKU) hoặc Mã NL (MaterialCode)' });
+          continue;
+        }
+
         const product = await this.productsService.findOneBySku(sku);
+        if (!product) {
+          errors.push({ row: rowIdx, error: `Không tìm thấy sản phẩm với SKU: ${sku}` });
+          continue;
+        }
+
         const material = await this.materialsService.findOneByCode(matCode);
-        if (!product || !material) continue;
+        if (!material) {
+          errors.push({ row: rowIdx, error: `Không tìm thấy nguyên liệu với Mã: ${matCode}` });
+          continue;
+        }
+
         const existingBom = await this.bomRepo.findOne({ where: { product_id: product.id, material_id: material.id } });
         if (existingBom) {
-          existingBom.quantity = qty; existingBom.waste_percent = row['waste'] || 0;
+          existingBom.quantity = qty;
+          existingBom.waste_percent = waste;
+          if (note !== null) existingBom.note = note;
           await this.bomRepo.save(existingBom);
         } else {
-          const newBom = new BOM(); newBom.product = product; newBom.material = material;
-          newBom.quantity = qty; newBom.waste_percent = row['waste'] || 0;
+          const newBom = new BOM();
+          newBom.product = product;
+          newBom.product_id = product.id;
+          newBom.material = material;
+          newBom.material_id = material.id;
+          newBom.quantity = qty;
+          newBom.waste_percent = waste;
+          newBom.note = note;
           await this.bomRepo.save(newBom);
         }
         count++;
-      } catch (e) { errors.push({ row, error: e.message }); }
+      } catch (e: any) {
+        errors.push({ row: rowIdx, error: e.message });
+      }
     }
-    return { message: 'Done', count, errors };
+    return { message: `Imported ${count} dòng định mức BOM`, count, errors };
   }
 
   // 4. IMPORT COMBOS
   async importCombos(buffer: Buffer) {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-    let count = 0; const errors = [];
+    let count = 0;
+    const errors: any[] = [];
+    let rowIdx = 1;
+
     for (const rawRow of data) {
+      rowIdx++;
       const row = this.normalizeRow(rawRow);
       try {
-        const parentSku = row['parentsku'] || row['mabosp'];
-        const childSku = row['childsku'] || row['maspcon'];
-        const qty = row['quantity'] || row['sl'];
-        if (!parentSku || !childSku) continue;
+        const parentSku = (row['parentsku'] || row['mabosp'] || row['maspcha'] || row['mame'] || row['mabocombo'] || '').toString().trim();
+        const childSku = (row['childsku'] || row['maspcon'] || row['macon'] || row['mathanhphan'] || '').toString().trim();
+        const qty = this.parseNumber(row['quantity'] || row['sl'] || row['soluong'], 1);
+        const sortOrder = this.parseNumber(row['sortorder'] || row['sort_order'] || row['thutu'] || row['order'], 0);
+
+        if (!parentSku || !childSku) {
+          errors.push({ row: rowIdx, error: 'Thiếu Mã Combo (ParentSKU) hoặc Mã SP con (ChildSKU)' });
+          continue;
+        }
+
         const parent = await this.productsService.findOneBySku(parentSku);
+        if (!parent) {
+          errors.push({ row: rowIdx, error: `Không tìm thấy SP cha/bộ với SKU: ${parentSku}` });
+          continue;
+        }
+
         const child = await this.productsService.findOneBySku(childSku);
-        if (!parent || !child) continue;
-        const existing = await this.componentRepo.findOne({ where: { parent_product: { id: parent.id }, child_product: { id: child.id } } });
-        if (existing) { existing.quantity = qty; await this.componentRepo.save(existing); }
-        else { const newComp = new ProductComponent(); newComp.parent_product = parent; newComp.child_product = child; newComp.quantity = qty; await this.componentRepo.save(newComp); }
+        if (!child) {
+          errors.push({ row: rowIdx, error: `Không tìm thấy SP con với SKU: ${childSku}` });
+          continue;
+        }
+
+        const existing = await this.componentRepo.findOne({
+          where: { parent_product: { id: parent.id }, child_product: { id: child.id } }
+        });
+
+        if (existing) {
+          existing.quantity = qty;
+          existing.sort_order = sortOrder;
+          await this.componentRepo.save(existing);
+        } else {
+          const newComp = new ProductComponent();
+          newComp.parent_product = parent;
+          newComp.child_product = child;
+          newComp.quantity = qty;
+          newComp.sort_order = sortOrder;
+          await this.componentRepo.save(newComp);
+        }
         count++;
-      } catch (e) { errors.push({ row, error: e.message }); }
+      } catch (e: any) {
+        errors.push({ row: rowIdx, error: e.message });
+      }
     }
-    return { message: 'Done', count, errors };
+    return { message: `Imported ${count} thành phần Combo`, count, errors };
   }
 
   // 5. IMPORT CUSTOMERS (CRM)
   async importCustomers(buffer: Buffer) {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-    let count = 0; const errors = [];
+    let count = 0;
+    const errors: any[] = [];
+    let rowIdx = 1;
 
     for (const rawRow of data) {
+      rowIdx++;
       const row = this.normalizeRow(rawRow);
       try {
-        const code = row['code'] || row['ma'];
+        const code = (row['code'] || row['ma'] || row['makh'] || row['makhachhang'] || '').toString().trim();
         if (!code) continue;
 
-        // Chuan hoa Type: LEAD hoac CUSTOMER
+        // Chuẩn hóa Type: LEAD hoặc CUSTOMER
         let type = CustomerType.LEAD;
         const rawType = (row['type'] || row['loai'] || '').toString().toUpperCase();
-        if (rawType.includes('CUST') || rawType.includes('KHACH')) type = CustomerType.CUSTOMER;
+        if (rawType.includes('CUST') || rawType.includes('KHACH') || rawType.includes('KH')) {
+          type = CustomerType.CUSTOMER;
+        }
 
-        const customerData = {
-          code: code.toString().trim(),
-          name: row['name'] || row['ten'],
-          phone: row['phone'] || row['sdt'],
-          email: row['email'] || '',
-          address: row['address'] || row['diachi'],
-          tax_code: row['tax'] || row['mst'],
-          credit_limit: Number(row['limit'] || row['hanmuc']) || 0,
+        const customerData: Partial<Customer> = {
+          code: code,
+          name: (row['name'] || row['ten'] || row['tenkh'] || row['tenkhachhang'] || 'No Name').toString().trim(),
           type: type,
-          current_debt: 0
+          lead_status: (row['leadstatus'] || row['lead_status'] || row['trangthai'] || '').toString().trim() || null,
+          lead_source: (row['leadsource'] || row['lead_source'] || row['nguon'] || '').toString().trim() || null,
+          phone: (row['phone'] || row['sdt'] || row['dienthoai'] || '').toString().trim() || null,
+          email: (row['email'] || '').toString().trim() || null,
+          address: (row['address'] || row['diachi'] || '').toString().trim() || null,
+          province: (row['province'] || row['tinh'] || row['thanhpho'] || row['tinhthanh'] || '').toString().trim() || null,
+          district: (row['district'] || row['huyen'] || row['quanhuyen'] || row['quan'] || '').toString().trim() || null,
+          tax_code: (row['taxcode'] || row['tax_code'] || row['tax'] || row['mst'] || row['masothue'] || '').toString().trim() || null,
+          legal_name: (row['legalname'] || row['legal_name'] || row['tenphapnhan'] || row['tencongty'] || '').toString().trim() || null,
+          legal_address: (row['legaladdress'] || row['legal_address'] || row['diachiphapnhan'] || row['diachixuathd'] || '').toString().trim() || null,
+          legal_representative: (row['legalrepresentative'] || row['legal_representative'] || row['nguoidaidien'] || '').toString().trim() || null,
+          einvoice_email: (row['einvoiceemail'] || row['einvoice_email'] || row['emailhoadon'] || row['emailhd'] || '').toString().trim() || null,
+          credit_limit: this.parseNumber(row['creditlimit'] || row['credit_limit'] || row['limit'] || row['hanmuc'] || row['hanmucno'], 0),
+          facebook: (row['facebook'] || row['fb'] || '').toString().trim() || null,
+          website: (row['website'] || row['web'] || '').toString().trim() || null,
         };
 
         const existing = await this.customerRepo.findOne({ where: { code: customerData.code } });
-        if (existing) { await this.customerRepo.update(existing.id, customerData); }
-        else { await this.customerRepo.save(customerData); }
+        if (existing) {
+          await this.customerRepo.update(existing.id, customerData);
+        } else {
+          customerData.current_debt = 0;
+          await this.customerRepo.save(customerData);
+        }
         count++;
-      } catch (e) { errors.push({ code: row['code'], error: e.message }); }
+      } catch (e: any) {
+        errors.push({ row: rowIdx, code: rawRow['Code'] || rawRow['Mã'] || rawRow['code'], error: e.message });
+      }
     }
-    return { message: 'Import Khách hàng thành công', count, errors };
+    return { message: `Imported ${count} khách hàng`, count, errors };
   }
 
-  // 6. TEMPLATE (UPDATE)
-  getTemplate(type: string): Buffer {
-    let headers = [];
-    let sampleData = [];
+  // 6. IMPORT SUPPLIERS
+  async importSuppliers(buffer: Buffer) {
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+    let count = 0;
+    const errors: any[] = [];
+    let rowIdx = 1;
 
-    if (type === 'materials') {
-      headers = ['Category', 'Type', 'Code', 'Name', 'Unit', 'Price', 'Qty'];
-      sampleData = [{ Category: 'Vải', Type: 'Cotton', Code: 'VAI_THUN', Name: 'Vải Thun Lạnh', Unit: 'm', Price: 35000, Qty: 1000 }];
-    } else if (type === 'products') {
-      headers = ['Category', 'Type', 'SKU', 'Name', 'Color', 'Size', 'Fabric', 'Unit', 'Price'];
-      sampleData = [{ Category: 'Nệm', Type: 'Mầm Non', SKU: 'NMN_XANH', Name: 'Nệm MN Xanh', Color: 'Xanh', Size: '120x60', Fabric: 'Cara', Unit: 'cai', Price: 180000 }];
-    } else if (type === 'boms') {
-      headers = ['ProductSKU', 'MaterialCode', 'Quantity', 'Waste'];
-      sampleData = [{ ProductSKU: 'NMN_XANH', MaterialCode: 'VAI_CARA_XANH', Quantity: 1.6, Waste: 2 }];
-    } else if (type === 'combos') {
-      headers = ['ParentSKU', 'ChildSKU', 'Quantity'];
-      sampleData = [{ ParentSKU: 'BO_NEM_GOI', ChildSKU: 'NMN_XANH', Quantity: 1 }];
-    } else if (type === 'customers') {
-      // --- TEMPLATE KHACH HANG ---
-      headers = ['Code', 'Name', 'Type', 'Phone', 'Email', 'Address', 'Tax', 'Limit'];
-      sampleData = [
-        { Code: 'KH001', Name: 'Công ty ABC', Type: 'CUSTOMER', Phone: '0909123456', Email: 'abc@gmail.com', Address: 'HCM', Tax: '030123456', Limit: 50000000 },
-        { Code: 'LEAD01', Name: 'Chị Lan', Type: 'LEAD', Phone: '0918...', Email: '', Address: '', Tax: '', Limit: 0 }
-      ];
-    } else if (type === 'sales') {
-      // --- TEMPLATE DON HANG ---
-      headers = ['CustomerCode', 'OrderDate', 'ProductSKU', 'Quantity', 'UnitPrice', 'Notes'];
-      sampleData = [
-        { CustomerCode: 'KH001', OrderDate: '2026-01-01', ProductSKU: 'PRD-001', Quantity: 10, UnitPrice: 50000, Notes: 'Giao gấp' },
-        { CustomerCode: 'KH001', OrderDate: '2026-01-01', ProductSKU: 'PRD-002', Quantity: 5, UnitPrice: 75000, Notes: '' }
-      ];
-    } else {
-      throw new BadRequestException('Loai template khong hop le');
+    for (const rawRow of data) {
+      rowIdx++;
+      const row = this.normalizeRow(rawRow);
+      try {
+        const code = (row['code'] || row['ma'] || row['mancc'] || row['manhacungcap'] || '').toString().trim();
+        if (!code) continue;
+
+        let type = SupplierType.MATERIAL;
+        const rawType = (row['type'] || row['loai'] || '').toString().toUpperCase();
+        if (rawType.includes('PROCESS') || rawType.includes('GIA CONG') || rawType.includes('GIACONG')) type = SupplierType.PROCESSING;
+        else if (rawType.includes('LOGISTIC') || rawType.includes('VAN CHUYEN')) type = SupplierType.LOGISTICS;
+        else if (rawType.includes('SERVICE') || rawType.includes('DICH VU')) type = SupplierType.SERVICE;
+        else if (rawType.includes('MIX')) type = SupplierType.MIX;
+        else if (rawType.includes('OTHER') || rawType.includes('KHAC')) type = SupplierType.OTHER;
+
+        const supplierData: Partial<Supplier> = {
+          code: code,
+          name: (row['name'] || row['ten'] || row['tenncc'] || row['tennhacungcap'] || 'No Name').toString().trim(),
+          type: type,
+          phone: (row['phone'] || row['sdt'] || row['dienthoai'] || '').toString().trim() || null,
+          email: (row['email'] || '').toString().trim() || null,
+          address: (row['address'] || row['diachi'] || '').toString().trim() || null,
+          tax_code: (row['taxcode'] || row['tax_code'] || row['tax'] || row['mst'] || row['masothue'] || '').toString().trim() || null,
+          legal_name: (row['legalname'] || row['legal_name'] || row['tenphapnhan'] || row['tencongty'] || '').toString().trim() || null,
+          vat_address: (row['vataddress'] || row['vat_address'] || row['diachivat'] || row['diachixuathd'] || '').toString().trim() || null,
+          note: (row['note'] || row['ghichu'] || row['ghi_chu'] || '').toString().trim() || null,
+          debt: this.parseNumber(row['debt'] || row['congno'] || row['du_no'], 0)
+        };
+
+        const existing = await this.supplierRepo.findOne({ where: { code: supplierData.code } });
+        if (existing) {
+          await this.supplierRepo.update(existing.id, supplierData);
+        } else {
+          await this.supplierRepo.save(supplierData);
+        }
+        count++;
+      } catch (e: any) {
+        errors.push({ row: rowIdx, code: rawRow['Code'] || rawRow['Mã'] || rawRow['code'], error: e.message });
+      }
     }
-
-    const ws = XLSX.utils.json_to_sheet(sampleData, { header: headers });
-    return XLSX.write({ Sheets: { Sheet1: ws }, SheetNames: ['Sheet1'] }, { type: 'buffer', bookType: 'xlsx' });
+    return { message: `Imported ${count} nhà cung cấp`, count, errors };
   }
 
-  // 7. IMPORT SALES ORDERS NEW
+  // 7. IMPORT SALES ORDERS
   async importSalesOrders(buffer: Buffer) {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
     const ordersMap = new Map();
-    const errors = [];
+    const errors: any[] = [];
     let count = 0;
+    let rowIdx = 1;
 
-    // Group rows by CustomerCode + OrderDate to create single order with multiple items
+    // Group rows by CustomerCode + OrderDate + ShippingAddress to create single order with multiple items
     for (const rawRow of data) {
+      rowIdx++;
       const row = this.normalizeRow(rawRow);
       try {
-        const customerCode = row['customercode'] || row['makh'];
+        const customerCode = (row['customercode'] || row['makh'] || row['makhachhang'] || '').toString().trim();
         if (!customerCode) continue;
 
-        const orderDateStr = row['orderdate'] || row['ngaydat'];
-        const notes = row['notes'] || row['ghichu'] || '';
+        const orderDate = this.parseDate(row['orderdate'] || row['ngaydat'] || row['ngay_dat'] || row['ngay']);
+        const deliveryDateVal = row['deliverydate'] || row['ngaygiao'] || row['ngay_giao'] || row['ngayhengiao'];
+        const deliveryDate = deliveryDateVal ? this.parseDate(deliveryDateVal) : null;
 
-        const sku = row['productsku'] || row['masp'];
-        const qty = Number(row['quantity'] || row['sl']) || 0;
-        const price = Number(row['unitprice'] || row['dongia']) || 0;
+        const sku = (row['productsku'] || row['masp'] || row['sku'] || row['masanpham'] || '').toString().trim();
+        const qty = this.parseNumber(row['quantity'] || row['sl'] || row['soluong'], 0);
+        const price = this.parseNumber(row['unitprice'] || row['dongia'] || row['gia'] || row['price'], 0);
 
         if (!sku || qty <= 0) {
-          errors.push({ row, error: 'SKU or Quantity invalid' });
+          errors.push({ row: rowIdx, error: `Dòng ${rowIdx}: SKU (${sku}) hoặc Số lượng (${qty}) không hợp lệ` });
           continue;
         }
 
-        const key = `${customerCode}_${orderDateStr || 'today'}_${notes}`;
+        const receiverName = (row['receivername'] || row['nguoinhan'] || row['tennguoinhan'] || '').toString().trim() || null;
+        const receiverPhone = (row['receiverphone'] || row['sdtnhan'] || row['dienthoainhan'] || '').toString().trim() || null;
+        const shippingAddress = (row['shippingaddress'] || row['diachigiao'] || row['diachi_giao'] || '').toString().trim() || null;
+        const discountRate = this.parseNumber(row['discountrate'] || row['discount'] || row['chietkhau'] || row['ck'], 0);
+        const vatRate = this.parseNumber(row['vatrate'] || row['vat'] || row['thuevat'] || row['thue'], 0);
+        const orderNotes = (row['ordernote'] || row['notes'] || row['ghichu'] || row['ghichudon'] || '').toString().trim();
+
+        const variantColor = (row['variantcolor'] || row['color'] || row['mau'] || row['mausac'] || '').toString().trim() || null;
+        const itemNote = (row['itemnote'] || row['ghichusp'] || row['customernote'] || '').toString().trim() || null;
+        const vatContent = (row['vatcontent'] || row['noidungvat'] || '').toString().trim() || null;
+
+        const key = `${customerCode}_${orderDate.toISOString().slice(0, 10)}_${shippingAddress || ''}_${orderNotes}`;
 
         if (!ordersMap.has(key)) {
           ordersMap.set(key, {
             customerCode,
-            orderDate: orderDateStr ? new Date(orderDateStr) : new Date(),
-            notes,
+            orderDate,
+            deliveryDate,
+            receiverName,
+            receiverPhone,
+            shippingAddress,
+            discountRate,
+            vatRate,
+            notes: orderNotes,
             items: []
           });
         }
 
-        ordersMap.get(key).items.push({ sku, qty, price });
-      } catch (e) {
-        errors.push({ row, error: e.message });
+        ordersMap.get(key).items.push({
+          sku,
+          quantity: qty,
+          unit_price: price,
+          price: price,
+          variant_color: variantColor,
+          customer_note: itemNote,
+          vat_content: vatContent
+        });
+      } catch (e: any) {
+        errors.push({ row: rowIdx, error: e.message });
       }
     }
 
@@ -720,29 +963,258 @@ export class UploadService {
       try {
         const customer = await this.customerRepo.findOne({ where: { code: orderData.customerCode } });
         if (!customer) {
-          errors.push({ key, error: `Customer ${orderData.customerCode} not found` });
+          errors.push({ key, error: `Không tìm thấy khách hàng với mã: ${orderData.customerCode}` });
           continue;
         }
 
-        // Create Order
+        // Create Order via SalesService
         const newOrder = await this.salesService.createOrder({
           customer_id: customer.id,
+          customer_name: customer.name,
           order_date: orderData.orderDate,
-          note: orderData.notes, // Map 'notes' to 'note' as per SalesService
-          items: orderData.items.map(i => ({
-            sku: i.sku, // SalesService expects 'sku'
-            quantity: i.qty,
-            price: i.price
-          }))
+          delivery_date: orderData.deliveryDate,
+          receiver_name: orderData.receiverName || customer.name,
+          receiver_phone: orderData.receiverPhone || customer.phone,
+          shipping_address: orderData.shippingAddress || customer.address,
+          discount_rate: orderData.discountRate,
+          vat_rate: orderData.vatRate,
+          note: orderData.notes,
+          items: orderData.items
         });
 
         if (newOrder) count++;
-
-      } catch (e) {
+      } catch (e: any) {
         errors.push({ key, error: e.message });
       }
     }
 
-    return { message: `Imported ${count} orders`, count, errors };
+    return { message: `Đã tạo thành công ${count} đơn hàng`, count, errors };
+  }
+
+  // 8. TEMPLATES
+  getTemplate(type: string): Buffer {
+    let headers: string[] = [];
+    let sampleData: any[] = [];
+
+    if (type === 'materials') {
+      headers = ['Code', 'Name', 'Category', 'Type', 'Unit', 'PurchaseUnit', 'ConversionFactor', 'CostPerUnit', 'CostPrice', 'Qty', 'Supplier'];
+      sampleData = [
+        {
+          Code: 'VAI_COTTON_TRANG',
+          Name: 'Vải Cotton Trắng Cao Cấp',
+          Category: 'Vải chính',
+          Type: 'Cotton 100%',
+          Unit: 'm',
+          PurchaseUnit: 'Cuộn',
+          ConversionFactor: 100,
+          CostPerUnit: 35000,
+          CostPrice: 35000,
+          Qty: 500,
+          Supplier: 'Công ty Dệt May Việt Thắng'
+        },
+        {
+          Code: 'GON_TAM_2P',
+          Name: 'Gòn Tấm 2cm',
+          Category: 'Gòn',
+          Type: 'Gòn tấm',
+          Unit: 'm',
+          PurchaseUnit: 'Cuộn',
+          ConversionFactor: 50,
+          CostPerUnit: 25000,
+          CostPrice: 25000,
+          Qty: 200,
+          Supplier: 'NCC Gòn Hoàng Gia'
+        }
+      ];
+    } else if (type === 'products') {
+      headers = ['SKU', 'Name', 'Category', 'Type', 'Unit', 'BasePrice', 'CostPrice', 'Qty', 'Color', 'Size', 'Fabric', 'CustomerDescription', 'ProcessingDescription', 'VatDescription', 'Tags', 'ImageUrl'];
+      sampleData = [
+        {
+          SKU: 'NMN_XANH_120X60',
+          Name: 'Nệm Mầm Non Xanh 120x60',
+          Category: 'Nệm Mầm Non',
+          Type: 'Finished',
+          Unit: 'cai',
+          BasePrice: 180000,
+          CostPrice: 115000,
+          Qty: 50,
+          Color: 'Xanh dương',
+          Size: '120x60x5cm',
+          Fabric: 'Vải Cara',
+          CustomerDescription: 'Nệm mầm non chần gòn êm ái, bọc vải Cara chống thấm, thoáng mát.',
+          ProcessingDescription: 'May viền 4 cạnh bo góc, chần gòn ô vuông 10x10cm, khóa kéo giọt nước ẩn mặt đáy.',
+          VatDescription: 'Nệm nằm trẻ em kích thước 120x60cm',
+          Tags: 'Mầm non, Nệm, Cara',
+          ImageUrl: 'https://drive.google.com/uc?id=example_file_id'
+        },
+        {
+          SKU: 'GOI_NAM_MN',
+          Name: 'Gối Nằm Mầm Non 30x40',
+          Category: 'Gối Trẻ Em',
+          Type: 'Finished',
+          Unit: 'cai',
+          BasePrice: 45000,
+          CostPrice: 28000,
+          Qty: 100,
+          Color: 'Xanh dương',
+          Size: '30x40cm',
+          Fabric: 'Cotton Cara',
+          CustomerDescription: 'Gối nằm êm ái, ruột gòn bi trắng kháng khuẩn.',
+          ProcessingDescription: 'May lồng ruột gối, có khóa kéo giọt nước.',
+          VatDescription: 'Gối nằm trẻ em kích thước 30x40cm',
+          Tags: 'Mầm non, Gối',
+          ImageUrl: ''
+        }
+      ];
+    } else if (type === 'boms') {
+      headers = ['ProductSKU', 'MaterialCode', 'Quantity', 'Waste', 'Note'];
+      sampleData = [
+        {
+          ProductSKU: 'NMN_XANH_120X60',
+          MaterialCode: 'VAI_COTTON_TRANG',
+          Quantity: 1.5,
+          Waste: 2,
+          Note: 'Vải chính may 2 mặt nệm'
+        },
+        {
+          ProductSKU: 'NMN_XANH_120X60',
+          MaterialCode: 'GON_TAM_2P',
+          Quantity: 1.2,
+          Waste: 3,
+          Note: 'Ruột gòn tấm chần trong'
+        }
+      ];
+    } else if (type === 'combos') {
+      headers = ['ParentSKU', 'ChildSKU', 'Quantity', 'SortOrder'];
+      sampleData = [
+        {
+          ParentSKU: 'BO_NEM_GOI_MN',
+          ChildSKU: 'NMN_XANH_120X60',
+          Quantity: 1,
+          SortOrder: 1
+        },
+        {
+          ParentSKU: 'BO_NEM_GOI_MN',
+          ChildSKU: 'GOI_NAM_MN',
+          Quantity: 1,
+          SortOrder: 2
+        }
+      ];
+    } else if (type === 'customers') {
+      headers = ['Code', 'Name', 'Type', 'LeadStatus', 'LeadSource', 'Phone', 'Email', 'Address', 'Province', 'District', 'TaxCode', 'LegalName', 'LegalAddress', 'LegalRepresentative', 'EinvoiceEmail', 'CreditLimit', 'Facebook', 'Website'];
+      sampleData = [
+        {
+          Code: 'KH001',
+          Name: 'Trường Mầm Non Hướng Dương',
+          Type: 'CUSTOMER',
+          LeadStatus: 'WON',
+          LeadSource: 'REFERRAL',
+          Phone: '0909123456',
+          Email: 'huongduong.school@gmail.com',
+          Address: '123 Nguyễn Văn Cừ, Phường 4',
+          Province: 'TP. Hồ Chí Minh',
+          District: 'Quận 5',
+          TaxCode: '0301234567',
+          LegalName: 'Công Ty Cổ Phần Giáo Dục Hướng Dương',
+          LegalAddress: '123 Nguyễn Văn Cừ, Phường 4, Quận 5, TP. Hồ Chí Minh',
+          LegalRepresentative: 'Nguyễn Văn A',
+          EinvoiceEmail: 'ketoan@huongduong.edu.vn',
+          CreditLimit: 50000000,
+          Facebook: 'fb.com/mamnonhuongduong',
+          Website: 'mamnonhuongduong.edu.vn'
+        },
+        {
+          Code: 'LEAD001',
+          Name: 'Trường Mầm Non Sao Mai',
+          Type: 'LEAD',
+          LeadStatus: 'QUALIFIED',
+          LeadSource: 'FACEBOOK',
+          Phone: '0988776655',
+          Email: 'saomai.preschool@gmail.com',
+          Address: '45 Lê Lợi',
+          Province: 'Bình Dương',
+          District: 'Thủ Dầu Một',
+          TaxCode: '',
+          LegalName: '',
+          LegalAddress: '',
+          LegalRepresentative: '',
+          EinvoiceEmail: '',
+          CreditLimit: 0,
+          Facebook: 'fb.com/saomaipreschool',
+          Website: ''
+        }
+      ];
+    } else if (type === 'suppliers') {
+      headers = ['Code', 'Name', 'Type', 'Phone', 'Email', 'Address', 'TaxCode', 'LegalName', 'VatAddress', 'Debt', 'Note'];
+      sampleData = [
+        {
+          Code: 'NCC001',
+          Name: 'Công ty Dệt May Việt Thắng',
+          Type: 'MATERIAL',
+          Phone: '0283899999',
+          Email: 'sales@vietthangtextile.vn',
+          Address: 'Khu phố 1, Linh Trung, TP. Thủ Đức',
+          TaxCode: '0300123456',
+          LegalName: 'Tổng Công Ty Cổ Phần Dệt May Thắng Lợi',
+          VatAddress: 'Khu phố 1, Linh Trung, TP. Thủ Đức, TP. Hồ Chí Minh',
+          Debt: 0,
+          Note: 'Cung cấp vải Cotton, Cara, TC định lượng cao'
+        },
+        {
+          Code: 'NCC002',
+          Name: 'Xưởng Thêu Vi Tính Minh Phát',
+          Type: 'PROCESSING',
+          Phone: '0912345678',
+          Email: 'theuminhphat@gmail.com',
+          Address: 'Tân Bình, TP. Hồ Chí Minh',
+          TaxCode: '0312987654',
+          LegalName: 'Hộ Kinh Doanh Xưởng Thêu Minh Phát',
+          VatAddress: 'Tân Bình, TP. Hồ Chí Minh',
+          Debt: 0,
+          Note: 'Chuyên thêu logo đồng phục, nệm trường học'
+        }
+      ];
+    } else if (type === 'sales') {
+      headers = ['CustomerCode', 'OrderDate', 'DeliveryDate', 'ProductSKU', 'Quantity', 'UnitPrice', 'VariantColor', 'ReceiverName', 'ReceiverPhone', 'ShippingAddress', 'DiscountRate', 'VatRate', 'ItemNote', 'OrderNote'];
+      sampleData = [
+        {
+          CustomerCode: 'KH001',
+          OrderDate: '2026-08-25',
+          DeliveryDate: '2026-09-01',
+          ProductSKU: 'NMN_XANH_120X60',
+          Quantity: 30,
+          UnitPrice: 180000,
+          VariantColor: 'Xanh dương',
+          ReceiverName: 'Cô Mai (Hiệu Trưởng)',
+          ReceiverPhone: '0909123456',
+          ShippingAddress: '123 Nguyễn Văn Cừ, P.4, Q.5, TP.HCM',
+          DiscountRate: 5,
+          VatRate: 8,
+          ItemNote: 'Thêu logo trường ở góc trên bên phải',
+          OrderNote: 'Giao trong giờ hành chính trước ngày khai giảng'
+        },
+        {
+          CustomerCode: 'KH001',
+          OrderDate: '2026-08-25',
+          DeliveryDate: '2026-09-01',
+          ProductSKU: 'GOI_NAM_MN',
+          Quantity: 30,
+          UnitPrice: 45000,
+          VariantColor: 'Xanh dương',
+          ReceiverName: 'Cô Mai (Hiệu Trưởng)',
+          ReceiverPhone: '0909123456',
+          ShippingAddress: '123 Nguyễn Văn Cừ, P.4, Q.5, TP.HCM',
+          DiscountRate: 5,
+          VatRate: 8,
+          ItemNote: 'Kèm bao gối',
+          OrderNote: 'Giao trong giờ hành chính trước ngày khai giảng'
+        }
+      ];
+    } else {
+      throw new BadRequestException('Loại template không hợp lệ: ' + type);
+    }
+
+    const ws = XLSX.utils.json_to_sheet(sampleData, { header: headers });
+    return XLSX.write({ Sheets: { Sheet1: ws }, SheetNames: ['Sheet1'] }, { type: 'buffer', bookType: 'xlsx' });
   }
 }

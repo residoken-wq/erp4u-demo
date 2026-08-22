@@ -3,7 +3,7 @@ import { WizardCustomizationStep, WizardOption } from './types';
 import { resolveGoogleDriveUrl } from './utils';
 
 const getApiBaseUrl = () => {
-    const base = (import.meta as any).env?.VITE_API_BASE_URL || ((import.meta as any).env?.DEV ? 'http://localhost:3000' : '');
+    const base = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:3000';
     return base.endsWith('/api') ? base.replace(/\/api$/, '') : base;
 };
 

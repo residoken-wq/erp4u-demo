@@ -208,6 +208,11 @@ const SuppliersPage: React.FC = () => {
                     items: [
                         { key: 'price', label: 'Bảng giá & Lịch sử', icon: <DollarOutlined />, onClick: () => openPriceList(r) },
                         { key: 'debt', label: 'Quản lý công nợ', icon: <BankOutlined />, onClick: () => openDebtModal(r) },
+                        { key: 'portal', label: 'Copy Link Portal', icon: <LinkOutlined />, onClick: () => {
+                            if (!r.uuid) return message.warning('Nhà cung cấp chưa có Link Portal (cần cập nhật uuid)');
+                            navigator.clipboard.writeText(`${window.location.origin}/portal/supplier/${r.uuid}`);
+                            message.success('Đã copy link Portal NCC!');
+                        }},
                         { type: 'divider' },
                         {
                             key: 'edit', label: 'Chỉnh sửa', icon: <EditOutlined />, onClick: () => {

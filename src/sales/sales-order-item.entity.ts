@@ -80,4 +80,11 @@ export class SalesOrderItem {
 
   @Column('json', { nullable: true })
   price_ranges: any;
+
+  // --- MỚI: Ghi chú KH và Nội bộ ---
+  @Column('text', { nullable: true })
+  customer_note: string;
+
+  @Column('text', { nullable: true })
+  internal_note: string;
 }

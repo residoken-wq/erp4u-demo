@@ -1,53 +1,1338 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Form, Input, InputNumber, Button, Switch, message, Spin, Row, Col, Divider, Alert, Tabs, Table, Modal, Popconfirm, Tooltip, Tag, Space, Typography, Checkbox, Upload } from 'antd';
-import { SaveOutlined, MailOutlined, LinkOutlined, ShopOutlined, FileTextOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, SettingOutlined, MinusCircleOutlined, InfoCircleOutlined, KeyOutlined, UploadOutlined, AuditOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import { 
+    Card, Form, Input, InputNumber, Button, Switch, message, Spin, Row, Col, 
+    Divider, Alert, Tabs, Table, Modal, Popconfirm, Tooltip, Tag, Space, 
+    Typography, Checkbox, Upload, Badge, Radio 
+} from 'antd';
+import { 
+    SaveOutlined, MailOutlined, ShopOutlined, FileTextOutlined, PlusOutlined, 
+    EditOutlined, DeleteOutlined, CopyOutlined, SettingOutlined, MinusCircleOutlined, 
+    InfoCircleOutlined, KeyOutlined, UploadOutlined, AuditOutlined, PrinterOutlined, 
+    QrcodeOutlined, BgColorsOutlined, CheckCircleOutlined, ReloadOutlined, 
+    SafetyCertificateOutlined, EyeOutlined, ProjectOutlined, DollarOutlined,
+    GlobalOutlined, BankOutlined, PhoneOutlined, PictureOutlined
+} from '@ant-design/icons';
+import axios from '../utils/api';
 import { API_URL } from '../config';
 import dayjs from 'dayjs';
 import RichTextEditor from '../components/common/RichTextEditor';
 
+const { Title, Text, Paragraph } = Typography;
+
 const SystemSettingsPage: React.FC = () => {
+    const [activeTab, setActiveTab] = useState('company');
+
     return (
-        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-            <Card bordered={false} bodyStyle={{ padding: 0 }}>
-                <Tabs defaultActiveKey="1" tabPosition="left" style={{ minHeight: 600 }}>
-                    <Tabs.TabPane tab={<span><MailOutlined /> Cấu hình Email & Chung</span>} key="1">
-                        <div style={{ padding: 24 }}>
-                            <GeneralSettingsTab />
-                        </div>
-                    </Tabs.TabPane>
-                    <Tabs.TabPane tab={<span><FileTextOutlined /> Mẫu Hợp Đồng</span>} key="2">
-                        <div style={{ padding: 24 }}>
-                            <ContractTemplatesTab />
-                        </div>
-                    </Tabs.TabPane>
-                    <Tabs.TabPane tab={<span><MailOutlined /> Mẫu Email</span>} key="4">
-                        <div style={{ padding: 24 }}>
-                            <EmailTemplatesTab />
-                        </div>
-                    </Tabs.TabPane>
-                    <Tabs.TabPane tab={<span><ShopOutlined /> Terms Báo giá</span>} key="3">
-                        <div style={{ padding: 24 }}>
-                            <QuoteTermsTab />
-                        </div>
-                    </Tabs.TabPane>
-                    <Tabs.TabPane tab={<span><AuditOutlined /> Terms Đơn hàng</span>} key="6">
-                        <div style={{ padding: 24 }}>
-                            <OrderTermsTab />
-                        </div>
-                    </Tabs.TabPane>
-                    <Tabs.TabPane tab={<span><KeyOutlined /> API Management</span>} key="5">
-                        <div style={{ padding: 24 }}>
-                            <ApiKeysTab />
-                        </div>
-                    </Tabs.TabPane>
-                </Tabs>
+        <div style={{ maxWidth: 1200, margin: '0 auto', paddingBottom: 40 }}>
+            {/* Top Page Header Banner */}
+            <div 
+                style={{ 
+                    background: 'linear-gradient(135deg, #003a8c 0%, #0050b3 50%, #0958d9 100%)',
+                    borderRadius: 16,
+                    padding: '24px 32px',
+                    marginBottom: 24,
+                    color: '#fff',
+                    boxShadow: '0 8px 24px rgba(0,80,179,0.18)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 16
+                }}
+            >
+                <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                        <span style={{ fontSize: 28 }}>⚙️</span>
+                        <h1 style={{ color: '#fff', margin: 0, fontSize: 24, fontWeight: 800, letterSpacing: -0.5 }}>
+                            Cài Đặt Hệ Thống & Quản Lý Mẫu In
+                        </h1>
+                    </div>
+                    <p style={{ color: 'rgba(255,255,255,0.85)', margin: 0, fontSize: 13, maxWidth: 680, lineHeight: 1.5 }}>
+                        Thiết lập thông tin thương hiệu doanh nghiệp, tùy biến giao diện in ấn & nhận diện thương hiệu cho Portal Báo Giá, mẫu Hợp đồng, Email thông báo và phân quyền API Bot.
+                    </p>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <Tag color="cyan" style={{ padding: '6px 12px', fontSize: 12, borderRadius: 20, border: 'none' }}>
+                        <ShopOutlined /> Portal B2B Engine
+                    </Tag>
+                    <Tag color="green" style={{ padding: '6px 12px', fontSize: 12, borderRadius: 20, border: 'none' }}>
+                        <PrinterOutlined /> 4 Mẫu In Chuẩn
+                    </Tag>
+                </div>
+            </div>
+
+            {/* Main Tabs Container */}
+            <Card bordered={false} bodyStyle={{ padding: 0 }} style={{ borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+                <Tabs 
+                    activeKey={activeTab} 
+                    onChange={setActiveTab} 
+                    tabPosition="left" 
+                    style={{ minHeight: 650 }}
+                    tabBarStyle={{ width: 260, background: '#fafafa', borderRight: '1px solid #f0f0f0', padding: '12px 0' }}
+                    items={[
+                        {
+                            key: 'company',
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                                    <ShopOutlined style={{ fontSize: 16 }} />
+                                    <span>Doanh Nghiệp & Ngân Hàng</span>
+                                </div>
+                            ),
+                            children: <div style={{ padding: '24px 32px' }}><CompanyConfigTab /></div>
+                        },
+                        {
+                            key: 'print_branding',
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                                    <PrinterOutlined style={{ fontSize: 16 }} />
+                                    <span>Mẫu In & Nhận Diện Portal</span>
+                                </div>
+                            ),
+                            children: <div style={{ padding: '24px 32px' }}><PrintBrandingTab /></div>
+                        },
+                        {
+                            key: 'contracts',
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                                    <FileTextOutlined style={{ fontSize: 16 }} />
+                                    <span>Mẫu Hợp Đồng</span>
+                                </div>
+                            ),
+                            children: <div style={{ padding: '24px 32px' }}><ContractTemplatesTab /></div>
+                        },
+                        {
+                            key: 'terms',
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                                    <AuditOutlined style={{ fontSize: 16 }} />
+                                    <span>Điều Khoản & Ghi Chú</span>
+                                </div>
+                            ),
+                            children: <div style={{ padding: '24px 32px' }}><TermsAndNotesTab /></div>
+                        },
+                        {
+                            key: 'email',
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                                    <MailOutlined style={{ fontSize: 16 }} />
+                                    <span>Email (SMTP) & Mẫu Thư</span>
+                                </div>
+                            ),
+                            children: <div style={{ padding: '24px 32px' }}><EmailSettingsTab /></div>
+                        },
+                        {
+                            key: 'operations',
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                                    <ProjectOutlined style={{ fontSize: 16 }} />
+                                    <span>Quy Trình & Dòng Tiền</span>
+                                </div>
+                            ),
+                            children: <div style={{ padding: '24px 32px' }}><OperationsConfigTab /></div>
+                        },
+                        {
+                            key: 'api_keys',
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                                    <KeyOutlined style={{ fontSize: 16 }} />
+                                    <span>Tích Hợp API Keys</span>
+                                </div>
+                            ),
+                            children: <div style={{ padding: '24px 32px' }}><ApiKeysTab /></div>
+                        }
+                    ]}
+                />
             </Card>
         </div>
     );
 };
 
-const GeneralSettingsTab: React.FC = () => {
+// =========================================================================
+// TAB 1: THÔNG TIN DOANH NGHIỆP & NGÂN HÀNG
+// =========================================================================
+const CompanyConfigTab: React.FC = () => {
+    const [form] = Form.useForm();
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [bankValues, setBankValues] = useState<{ bank: string, account: string, holder: string }>({
+        bank: 'ACB - TP.HCM',
+        account: '141847859',
+        holder: 'CTY TNHH TM DV TUONG LINH'
+    });
+
+    const fetchCompanyInfo = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get(`${API_URL}/system/company`);
+            form.setFieldsValue(res.data);
+            if (res.data) {
+                setBankValues({
+                    bank: res.data.COMPANY_BANK_NAME || 'ACB - TP.HCM',
+                    account: res.data.COMPANY_BANK_ACCOUNT || '141847859',
+                    holder: res.data.COMPANY_BANK_HOLDER || 'CTY TNHH TM DV TUONG LINH'
+                });
+            }
+        } catch (e) {
+            message.error('Lỗi khi tải thông tin doanh nghiệp');
+        }
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchCompanyInfo();
+    }, []);
+
+    const onFinish = async (values: any) => {
+        setSaving(true);
+        try {
+            await axios.post(`${API_URL}/system/company`, values);
+            message.success('Đã lưu thông tin doanh nghiệp thành công!');
+            setBankValues({
+                bank: values.COMPANY_BANK_NAME || '',
+                account: values.COMPANY_BANK_ACCOUNT || '',
+                holder: values.COMPANY_BANK_HOLDER || ''
+            });
+        } catch (e) {
+            message.error('Lỗi khi lưu thông tin');
+        }
+        setSaving(false);
+    };
+
+    const rawBankCode = (bankValues.bank.split('-')[0] || 'ACB').trim();
+    const qrTestUrl = bankValues.account 
+        ? `https://img.vietqr.io/image/${rawBankCode}-${bankValues.account}-compact2.jpg?amount=100000&addInfo=TEST_PAYMENT&accountName=${encodeURIComponent(bankValues.holder)}`
+        : '';
+
+    if (loading) return <div style={{ textAlign: 'center', padding: 50 }}><Spin size="large" tip="Đang tải dữ liệu..." /></div>;
+
+    return (
+        <div>
+            <div style={{ marginBottom: 20 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#1a1a1a' }}>🏢 Hồ Sơ Doanh Nghiệp & Tài Khoản Ngân Hàng</h3>
+                <p style={{ color: '#888', margin: 0, fontSize: 13 }}>
+                    Thông tin này sẽ tự động xuất hiện trên tất cả các Báo giá, Xác nhận đơn hàng, Hợp đồng kinh tế và Mã VietQR thanh toán.
+                </p>
+            </div>
+
+            <Form form={form} layout="vertical" onFinish={onFinish}>
+                <Row gutter={24}>
+                    <Col xs={24} lg={15}>
+                        <Card title="Thông Tin Pháp Nhân Bên Bán" size="small" bordered style={{ marginBottom: 20, borderRadius: 8 }}>
+                            <Row gutter={16}>
+                                <Col span={24}>
+                                    <Form.Item name="COMPANY_NAME" label="Tên Doanh Nghiệp (In trên hóa đơn & báo giá)" rules={[{ required: true, message: 'Nhập tên doanh nghiệp' }]}>
+                                        <Input placeholder="VD: CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ TƯỜNG LINH" />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item name="COMPANY_TAX_CODE" label="Mã Số Thuế (MST)">
+                                        <Input placeholder="VD: 0311874522" />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item name="COMPANY_REPRESENTATIVE" label="Người Đại Diện Pháp Luật">
+                                        <Input placeholder="VD: Nguyễn Văn A" />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={24}>
+                                    <Form.Item name="COMPANY_ADDRESS" label="Địa Chỉ Trụ Sở Chính">
+                                        <Input.TextArea rows={2} placeholder="VD: 74/21/24 Nguyễn Khuyến, Phường 12, Quận Bình Thạnh, TP. Hồ Chí Minh" />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item name="COMPANY_PHONE" label="Hotline / Số Điện Thoại">
+                                        <Input placeholder="VD: 0983.882210 - 0983.796654" />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item name="COMPANY_EMAIL" label="Email Liên Hệ / Nhận Đơn">
+                                        <Input placeholder="VD: nemmanonerp4u@gmail.com" />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={24}>
+                                    <Form.Item name="COMPANY_WEBSITE" label="Website Doanh Nghiệp">
+                                        <Input placeholder="VD: https://erp4u.vn" />
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+                        </Card>
+
+                        <Card title="🏦 Tài Khoản Ngân Hàng Nhận Chuyển Khoản (VietQR)" size="small" bordered style={{ marginBottom: 20, borderRadius: 8 }}>
+                            <Row gutter={16}>
+                                <Col span={12}>
+                                    <Form.Item name="COMPANY_BANK_NAME" label="Tên Ngân Hàng (Kèm Chi nhánh)">
+                                        <Input 
+                                            placeholder="VD: ACB - TP.HCM hoặc Vietcombank" 
+                                            onChange={(e) => setBankValues(prev => ({ ...prev, bank: e.target.value }))}
+                                        />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item name="COMPANY_BANK_ACCOUNT" label="Số Tài Khoản">
+                                        <Input 
+                                            placeholder="VD: 141847859" 
+                                            onChange={(e) => setBankValues(prev => ({ ...prev, account: e.target.value }))}
+                                        />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={24}>
+                                    <Form.Item name="COMPANY_BANK_HOLDER" label="Tên Chủ Tài Khoản (In hoa không dấu)">
+                                        <Input 
+                                            placeholder="VD: CTY TNHH TM DV TUONG LINH" 
+                                            onChange={(e) => setBankValues(prev => ({ ...prev, holder: e.target.value }))}
+                                        />
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+                        </Card>
+
+                        <Button type="primary" htmlType="submit" icon={<SaveOutlined />} size="large" loading={saving} style={{ width: 220, borderRadius: 8 }}>
+                            Lưu Thông Tin
+                        </Button>
+                    </Col>
+
+                    <Col xs={24} lg={9}>
+                        <Card 
+                            title={<span><QrcodeOutlined /> Live Preview Mã Thanh Toán VietQR</span>} 
+                            size="small" 
+                            bordered 
+                            style={{ borderRadius: 8, background: '#fcfdff', borderColor: '#d6e4ff' }}
+                        >
+                            <Alert
+                                type="info"
+                                showIcon
+                                message="Tự Động Sinh Mã VietQR Chuẩn Napas247"
+                                description="Khi khách hàng truy cập Portal Báo Giá hoặc in Đơn hàng, mã QR sẽ tự động điền số tiền cọc/thanh toán và mã đơn hàng vào nội dung chuyển khoản."
+                                style={{ marginBottom: 16 }}
+                            />
+
+                            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                                {qrTestUrl ? (
+                                    <div>
+                                        <img 
+                                            src={qrTestUrl} 
+                                            alt="VietQR Preview" 
+                                            style={{ width: 200, height: 200, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: '#fff', padding: 6 }} 
+                                        />
+                                        <div style={{ marginTop: 12, fontSize: 12, color: '#666', lineHeight: 1.6 }}>
+                                            <div><b>Ngân hàng:</b> {bankValues.bank || '-'}</div>
+                                            <div><b>Số TK:</b> <span style={{ color: '#0050b3', fontWeight: 700 }}>{bankValues.account || '-'}</span></div>
+                                            <div><b>Chủ TK:</b> {bankValues.holder || '-'}</div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div style={{ color: '#999', padding: 30 }}>Chưa có thông tin tài khoản ngân hàng</div>
+                                )}
+                            </div>
+                        </Card>
+                    </Col>
+                </Row>
+            </Form>
+        </div>
+    );
+};
+
+// =========================================================================
+// TAB 2: MẪU IN & NHẬN DIỆN PORTAL (PRINT BRANDING & TEMPLATES)
+// =========================================================================
+const PrintBrandingTab: React.FC = () => {
+    const [bannerUrl, setBannerUrl] = useState('');
+    const [stampUrl, setStampUrl] = useState('');
+    const [watermarkUrl, setWatermarkUrl] = useState('');
+    const [primaryColor, setPrimaryColor] = useState('#0050b3');
+    const [footerNote, setFooterNote] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    // Preset color options
+    const colorPresets = [
+        { label: 'Xanh Navy ERP4U (Mặc định)', value: '#0050b3' },
+        { label: 'Xanh Dương Hiện Đại', value: '#1677ff' },
+        { label: 'Đỏ Đô Sang Trọng', value: '#a8071a' },
+        { label: 'Xanh Lá Tươi Mới', value: '#135200' },
+        { label: 'Cam ERP4U Năng Động', value: '#d46b08' },
+        { label: 'Tím Hoàng Gia', value: '#531dab' },
+        { label: 'Xám Đen Tối Giản', value: '#1f1f1f' }
+    ];
+
+    const fetchPrintConfigs = async () => {
+        setLoading(true);
+        try {
+            const [bRes, sRes, wRes, cRes, fRes] = await Promise.all([
+                axios.get(`${API_URL}/system/config/PRINT_HEADER_BANNER`).catch(() => ({ data: null })),
+                axios.get(`${API_URL}/system/config/COMPANY_STAMP_IMAGE`).catch(() => ({ data: null })),
+                axios.get(`${API_URL}/system/config/PORTAL_WATERMARK_IMAGE`).catch(() => ({ data: null })),
+                axios.get(`${API_URL}/system/config/PRINT_PRIMARY_COLOR`).catch(() => ({ data: null })),
+                axios.get(`${API_URL}/system/config/PRINT_CUSTOM_NOTE_FOOTER`).catch(() => ({ data: null })),
+            ]);
+
+            if (bRes.data?.value) setBannerUrl(bRes.data.value);
+            if (sRes.data?.value) setStampUrl(sRes.data.value);
+            if (wRes.data?.value) setWatermarkUrl(wRes.data.value);
+            if (cRes.data?.value) setPrimaryColor(cRes.data.value);
+            if (fRes.data?.value) setFooterNote(fRes.data.value);
+        } catch (e) {
+            message.error('Lỗi tải cấu hình mẫu in');
+        }
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchPrintConfigs();
+    }, []);
+
+    const handleSaveGlobalPrintConfig = async () => {
+        setSaving(true);
+        try {
+            await Promise.all([
+                axios.post(`${API_URL}/system/config`, {
+                    key: 'PRINT_PRIMARY_COLOR',
+                    value: primaryColor,
+                    description: 'Màu chủ đạo cho bản in Báo giá & Đơn hàng'
+                }),
+                axios.post(`${API_URL}/system/config`, {
+                    key: 'PRINT_CUSTOM_NOTE_FOOTER',
+                    value: footerNote,
+                    description: 'Ghi chú chân trang bản in'
+                })
+            ]);
+            message.success('Đã lưu cấu hình màu sắc & chân trang mẫu in!');
+        } catch (e) {
+            message.error('Lỗi khi lưu cấu hình');
+        }
+        setSaving(false);
+    };
+
+    const handleUploadImage = async (file: File, targetConfigKey: string, setLocalState: (url: string) => void) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('source', 'erp');
+
+        const hide = message.loading('Đang tải file lên...', 0);
+        try {
+            const uploadRes = await axios.post(`${API_URL}/upload/image`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            const url = uploadRes.data?.url || uploadRes.data?.data?.url;
+            if (url) {
+                await axios.post(`${API_URL}/system/config`, {
+                    key: targetConfigKey,
+                    value: url,
+                    description: `Cấu hình ảnh ${targetConfigKey}`
+                });
+                setLocalState(url);
+                message.success('Tải ảnh và lưu cấu hình thành công!');
+            }
+        } catch (e) {
+            message.error('Lỗi khi upload ảnh');
+        } finally {
+            hide();
+        }
+    };
+
+    const handleResetImage = async (targetConfigKey: string, setLocalState: (url: string) => void) => {
+        try {
+            await axios.post(`${API_URL}/system/config`, {
+                key: targetConfigKey,
+                value: '',
+                description: `Xóa cấu hình ảnh ${targetConfigKey}`
+            });
+            setLocalState('');
+            message.success('Đã khôi phục về mặc định!');
+        } catch (e) {
+            message.error('Lỗi khi xóa cấu hình');
+        }
+    };
+
+    const getFullImageUrl = (val: string) => {
+        if (!val) return '';
+        if (val.startsWith('http') || val.startsWith('data:')) return val;
+        if (val.startsWith('/uploads/')) return `${API_URL}/upload/files/${val.replace('/uploads/', '')}`;
+        return `${API_URL}${val}`;
+    };
+
+    if (loading) return <div style={{ textAlign: 'center', padding: 50 }}><Spin size="large" tip="Đang tải dữ liệu..." /></div>;
+
+    return (
+        <div>
+            <div style={{ marginBottom: 20 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#1a1a1a' }}>🖨️ Quản Lý Mẫu In & Nhận Diện Thương Hiệu Portal</h3>
+                <p style={{ color: '#888', margin: 0, fontSize: 13 }}>
+                    Upload banner header, con dấu chữ ký, watermark và tùy biến màu sắc áp dụng cho toàn bộ các mẫu in trong trang <b>Portal Báo Giá / Đơn Hàng</b>.
+                </p>
+            </div>
+
+            <Row gutter={[24, 24]}>
+                {/* 1. Header Banner Mẫu In */}
+                <Col xs={24} lg={12}>
+                    <Card 
+                        title={<span style={{ fontWeight: 700 }}><PictureOutlined /> 1. Header Banner Mẫu In (Báo giá & Đơn hàng)</span>} 
+                        bordered 
+                        size="small"
+                        style={{ height: '100%', borderRadius: 8 }}
+                    >
+                        <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
+                            Ảnh banner hiển thị trên đầu bản in A4 và giao diện Portal Báo giá khách hàng.
+                            <br />📐 <i>Kích thước khuyến nghị: <b>1200 x 240 px</b> (Tỷ lệ 5:1, nền trong suốt hoặc trắng).</i>
+                        </p>
+
+                        <div style={{ 
+                            border: '1px dashed #d9d9d9', 
+                            borderRadius: 8, 
+                            padding: 12, 
+                            background: '#fafafa', 
+                            textAlign: 'center',
+                            minHeight: 110,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginBottom: 12
+                        }}>
+                            <img 
+                                src={bannerUrl ? getFullImageUrl(bannerUrl) : `${window.location.origin}/b2b_header_banner.png`} 
+                                alt="Header Banner" 
+                                style={{ maxWidth: '100%', maxHeight: 90, objectFit: 'contain' }}
+                                onError={(e: any) => { e.target.src = `${window.location.origin}/company_header.png`; }}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Upload 
+                                beforeUpload={(file) => { handleUploadImage(file, 'PRINT_HEADER_BANNER', setBannerUrl); return false; }} 
+                                showUploadList={false} 
+                                accept="image/*"
+                            >
+                                <Button icon={<UploadOutlined />} type="primary">Tải Banner Mới Lên</Button>
+                            </Upload>
+                            {bannerUrl && (
+                                <Popconfirm title="Khôi phục về banner mặc định?" onConfirm={() => handleResetImage('PRINT_HEADER_BANNER', setBannerUrl)}>
+                                    <Button danger type="text" icon={<ReloadOutlined />}>Dùng Mặc Định</Button>
+                                </Popconfirm>
+                            )}
+                        </div>
+                    </Card>
+                </Col>
+
+                {/* 2. Con Dấu & Chữ Ký */}
+                <Col xs={24} lg={12}>
+                    <Card 
+                        title={<span style={{ fontWeight: 700 }}><SafetyCertificateOutlined /> 2. Con Dấu Tròn & Chữ Ký Doanh Nghiệp</span>} 
+                        bordered 
+                        size="small"
+                        style={{ height: '100%', borderRadius: 8 }}
+                    >
+                        <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
+                            Con dấu đỏ & chữ ký số tự động xuất hiện tại ô "Đại diện bên bán" trên bản in và Hợp đồng.
+                            <br />📐 <i>Khuyến nghị: File ảnh <b>PNG trong suốt</b> (kích thước khoảng 400 x 300 px).</i>
+                        </p>
+
+                        <div style={{ 
+                            border: '1px dashed #d9d9d9', 
+                            borderRadius: 8, 
+                            padding: 12, 
+                            background: '#fafafa', 
+                            textAlign: 'center',
+                            minHeight: 110,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginBottom: 12
+                        }}>
+                            {stampUrl ? (
+                                <img 
+                                    src={getFullImageUrl(stampUrl)} 
+                                    alt="Company Stamp" 
+                                    style={{ maxHeight: 90, maxWidth: 160, objectFit: 'contain' }}
+                                />
+                            ) : (
+                                <div style={{ color: '#aaa', fontSize: 12 }}>Chưa tải con dấu / chữ ký (Để trống ô ký khi in)</div>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Upload 
+                                beforeUpload={(file) => { handleUploadImage(file, 'COMPANY_STAMP_IMAGE', setStampUrl); return false; }} 
+                                showUploadList={false} 
+                                accept="image/png,image/jpeg,image/webp"
+                            >
+                                <Button icon={<UploadOutlined />} type="primary">Tải Con Dấu Lên</Button>
+                            </Upload>
+                            {stampUrl && (
+                                <Popconfirm title="Xóa con dấu này?" onConfirm={() => handleResetImage('COMPANY_STAMP_IMAGE', setStampUrl)}>
+                                    <Button danger type="text" icon={<DeleteOutlined />}>Xóa Ảnh</Button>
+                                </Popconfirm>
+                            )}
+                        </div>
+                    </Card>
+                </Col>
+
+                {/* 3. Watermark Bảo Mật */}
+                <Col xs={24} lg={12}>
+                    <Card 
+                        title={<span style={{ fontWeight: 700 }}><SafetyCertificateOutlined /> 3. Watermark Chống Sao Chép (Portal Báo Giá)</span>} 
+                        bordered 
+                        size="small"
+                        style={{ height: '100%', borderRadius: 8 }}
+                    >
+                        <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
+                            Hình ảnh / Logo mờ bảo mật hiển thị lặp lại trên nền Portal Báo giá khách hàng.
+                            <br />📐 <i>Khuyến nghị: Logo dạng <b>PNG mờ nhẹ</b> (kích thước 200 x 200 px).</i>
+                        </p>
+
+                        <div style={{ 
+                            border: '1px dashed #d9d9d9', 
+                            borderRadius: 8, 
+                            padding: 12, 
+                            background: '#fafafa', 
+                            textAlign: 'center',
+                            minHeight: 110,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginBottom: 12
+                        }}>
+                            {watermarkUrl ? (
+                                <img 
+                                    src={getFullImageUrl(watermarkUrl)} 
+                                    alt="Watermark" 
+                                    style={{ maxHeight: 80, maxWidth: 120, objectFit: 'contain', opacity: 0.7 }}
+                                />
+                            ) : (
+                                <div style={{ color: '#aaa', fontSize: 12 }}>Đang dùng watermark mặc định chữ "ERP4U"</div>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Upload 
+                                beforeUpload={(file) => { handleUploadImage(file, 'PORTAL_WATERMARK_IMAGE', setWatermarkUrl); return false; }} 
+                                showUploadList={false} 
+                                accept="image/*"
+                            >
+                                <Button icon={<UploadOutlined />} type="primary">Tải Logo Watermark</Button>
+                            </Upload>
+                            {watermarkUrl && (
+                                <Popconfirm title="Xóa watermark tùy chỉnh?" onConfirm={() => handleResetImage('PORTAL_WATERMARK_IMAGE', setWatermarkUrl)}>
+                                    <Button danger type="text" icon={<ReloadOutlined />}>Dùng Mặc Định</Button>
+                                </Popconfirm>
+                            )}
+                        </div>
+                    </Card>
+                </Col>
+
+                {/* 4. Tùy Chọn Màu Sắc & Chân Trang Bản In */}
+                <Col xs={24} lg={12}>
+                    <Card 
+                        title={<span style={{ fontWeight: 700 }}><BgColorsOutlined /> 4. Màu Sắc Chủ Đạo & Ghi Chú Bản In</span>} 
+                        bordered 
+                        size="small"
+                        style={{ height: '100%', borderRadius: 8 }}
+                    >
+                        <div style={{ marginBottom: 14 }}>
+                            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+                                Màu Sắc Nhận Diện Thương Hiệu Trên Bản In:
+                            </label>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                                {colorPresets.map(c => (
+                                    <Tag 
+                                        key={c.value} 
+                                        color={primaryColor === c.value ? 'blue' : 'default'}
+                                        style={{ 
+                                            cursor: 'pointer', 
+                                            padding: '4px 10px', 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            gap: 6,
+                                            borderColor: primaryColor === c.value ? '#1890ff' : '#d9d9d9',
+                                            fontWeight: primaryColor === c.value ? 700 : 400
+                                        }}
+                                        onClick={() => setPrimaryColor(c.value)}
+                                    >
+                                        <span style={{ width: 12, height: 12, borderRadius: '50%', background: c.value, display: 'inline-block' }} />
+                                        {c.label}
+                                    </Tag>
+                                ))}
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                <span style={{ fontSize: 12, color: '#888' }}>Mã màu tùy chọn:</span>
+                                <Input 
+                                    value={primaryColor} 
+                                    onChange={e => setPrimaryColor(e.target.value)} 
+                                    style={{ width: 120, fontFamily: 'monospace' }} 
+                                />
+                                <div style={{ width: 28, height: 28, borderRadius: 4, background: primaryColor, border: '1px solid #ccc' }} />
+                            </div>
+                        </div>
+
+                        <Divider style={{ margin: '12px 0' }} />
+
+                        <div style={{ marginBottom: 14 }}>
+                            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+                                Ghi Chú Chân Trang Bản In (Footer Note):
+                            </label>
+                            <Input 
+                                value={footerNote} 
+                                onChange={e => setFooterNote(e.target.value)} 
+                                placeholder="VD: ERP4U - Hệ thống quản lý bán hàng và xưởng sản xuất may mặc" 
+                            />
+                        </div>
+
+                        <Button 
+                            type="primary" 
+                            icon={<SaveOutlined />} 
+                            loading={saving} 
+                            onClick={handleSaveGlobalPrintConfig}
+                            block
+                        >
+                            Lưu Màu Sắc & Chân Trang
+                        </Button>
+                    </Card>
+                </Col>
+            </Row>
+
+            {/* 5. CÁC MẪU IN PORTAL ĐƯỢC TÍCH HỢP */}
+            <Divider style={{ margin: '32px 0 24px 0' }} orientation="left">
+                <span style={{ fontSize: 15, fontWeight: 700, color: '#0050b3' }}>
+                    📑 Danh Sách 4 Mẫu In Chuẩn Trong Portal Báo Giá / Đơn Hàng
+                </span>
+            </Divider>
+
+            <Row gutter={[16, 16]}>
+                {[
+                    {
+                        title: '1. Mẫu Công Ty B2B (Standard A4)',
+                        badge: 'Mặc định',
+                        badgeColor: 'blue',
+                        desc: 'Mẫu in A4 đầy đủ thông tin pháp lý bên bán & mua, bảng chi tiết sản phẩm kèm ảnh, giá sỉ bậc thang, tổng tiền, thuế VAT, tài khoản VietQR và 2 chữ ký.',
+                        icon: '🏢'
+                    },
+                    {
+                        title: '2. Mẫu B2B Không Tổng Tiền (No Total)',
+                        badge: 'Xưởng SX / Bàn giao',
+                        badgeColor: 'orange',
+                        desc: 'Mẫu in A4 lược bỏ hoàn toàn phần đơn giá và tổng số tiền thanh toán. Phù hợp bàn giao nội bộ xưởng may, kiểm đếm hàng hoặc gửi thợ gia công.',
+                        icon: '📋'
+                    },
+                    {
+                        title: '3. Mẫu Khách Lẻ Rút Gọn (Retail A4)',
+                        badge: 'Khách Lẻ',
+                        badgeColor: 'green',
+                        desc: 'Lược bỏ khung thông tin pháp nhân phức tạp, tập trung thể hiện danh sách sản phẩm, địa chỉ giao hàng và mã quét thanh toán nhanh chóng.',
+                        icon: '🛍️'
+                    },
+                    {
+                        title: '4. Mẫu Hóa Đơn Nhiệt POS (80mm)',
+                        badge: 'Bill POS',
+                        badgeColor: 'purple',
+                        desc: 'Mẫu bill dạng dọc in trực tiếp ra các dòng máy in nhiệt POS 80mm tại quầy bán lẻ, showroom trưng bày hoặc dán ngoài kiện hàng.',
+                        icon: '📠'
+                    }
+                ].map(item => (
+                    <Col xs={24} sm={12} lg={6} key={item.title}>
+                        <Card 
+                            size="small" 
+                            bordered 
+                            style={{ height: '100%', borderRadius: 8, background: '#fafafa', border: '1px solid #e8e8e8' }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <span style={{ fontSize: 22 }}>{item.icon}</span>
+                                <Tag color={item.badgeColor}>{item.badge}</Tag>
+                            </div>
+                            <h4 style={{ margin: '0 0 6px 0', fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>{item.title}</h4>
+                            <p style={{ margin: 0, fontSize: 12, color: '#666', lineHeight: 1.5 }}>{item.desc}</p>
+                        </Card>
+                    </Col>
+                ))}
+            </Row>
+        </div>
+    );
+};
+
+// =========================================================================
+// TAB 3: MẪU HỢP ĐỒNG (CONTRACT TEMPLATES)
+// =========================================================================
+const ContractTemplatesTab: React.FC = () => {
+    const [templates, setTemplates] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [editingTemplate, setEditingTemplate] = useState<any>(null);
+    const [form] = Form.useForm();
+
+    const [customPlaceholders, setCustomPlaceholders] = useState<{key: string, desc: string}[]>([]);
+    const [placeholderModalOpen, setPlaceholderModalOpen] = useState(false);
+    const [placeholderForm] = Form.useForm();
+
+    const fetchPlaceholders = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/system/config/CONTRACT_CUSTOM_PLACEHOLDERS`);
+            if (res.data && res.data.value) {
+                const parsed = JSON.parse(res.data.value);
+                setCustomPlaceholders(parsed);
+                placeholderForm.setFieldsValue({ placeholders: parsed });
+            }
+        } catch (e) { }
+    };
+
+    const fetchTemplates = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get(`${API_URL}/system/templates`);
+            setTemplates(res.data);
+        } catch (e) { message.error('Lỗi tải danh sách mẫu'); }
+        setLoading(false);
+    };
+
+    useEffect(() => { 
+        fetchTemplates(); 
+        fetchPlaceholders();
+    }, []);
+
+    const handleSavePlaceholders = async (values: any) => {
+        try {
+            await axios.post(`${API_URL}/system/config`, {
+                key: 'CONTRACT_CUSTOM_PLACEHOLDERS',
+                value: JSON.stringify(values.placeholders || []),
+                description: 'Danh sách Placeholder Hợp đồng tự tạo'
+            });
+            message.success('Đã lưu danh sách Placeholder');
+            setPlaceholderModalOpen(false);
+            fetchPlaceholders();
+        } catch (e) {
+            message.error('Lỗi khi lưu Placeholder');
+        }
+    };
+
+    const handleSave = async (values: any) => {
+        try {
+            await axios.post(`${API_URL}/system/templates`, { ...values, id: editingTemplate?.id });
+            message.success('Đã lưu mẫu hợp đồng');
+            setModalOpen(false);
+            fetchTemplates();
+        } catch (e) { message.error('Lỗi lưu mẫu'); }
+    };
+
+    const handleDelete = async (id: number) => {
+        try {
+            await axios.delete(`${API_URL}/system/templates/${id}`);
+            message.success('Đã xóa mẫu');
+            fetchTemplates();
+        } catch (e) { message.error('Lỗi xóa mẫu'); }
+    };
+
+    const columns = [
+        { title: 'Tên Mẫu Hợp Đồng', dataIndex: 'name', key: 'name', width: '35%', render: (t: string) => <b>{t}</b> },
+        { title: 'Cập nhật lần cuối', dataIndex: 'updated_at', key: 'updated_at', render: (t: string) => dayjs(t).format('DD/MM/YYYY HH:mm') },
+        {
+            title: 'Hành động', key: 'action', width: 150, render: (_: any, r: any) => (
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <Button icon={<EditOutlined />} size="small" onClick={() => { setEditingTemplate(r); form.setFieldsValue(r); setModalOpen(true); }}>Sửa</Button>
+                    <Popconfirm title="Xóa mẫu này?" onConfirm={() => handleDelete(r.id)}>
+                        <Button icon={<DeleteOutlined />} danger size="small">Xóa</Button>
+                    </Popconfirm>
+                </div>
+            )
+        }
+    ];
+
+    return (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>📜 Danh Sách Mẫu Hợp Đồng Kinh Tế</h3>
+                    <p style={{ color: '#888', margin: 0, fontSize: 13 }}>Soạn thảo và quản lý các biểu mẫu Hợp đồng nguyên tắc, Hợp đồng gia công, Đơn hàng B2B.</p>
+                </div>
+                <Space>
+                    <Button icon={<SettingOutlined />} onClick={() => setPlaceholderModalOpen(true)}>Cấu Hình Nhãn (Placeholders)</Button>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingTemplate(null); form.resetFields(); setModalOpen(true); }}>Tạo Mẫu Mới</Button>
+                </Space>
+            </div>
+
+            <Table dataSource={templates} columns={columns} rowKey="id" loading={loading} pagination={false} size="small" />
+
+            <Modal
+                title={editingTemplate ? "Chỉnh Sửa Mẫu Hợp Đồng" : "Tạo Mẫu Mới"}
+                open={modalOpen}
+                onCancel={() => setModalOpen(false)}
+                onOk={form.submit}
+                width={1200}
+                style={{ top: 20 }}
+                maskClosable={false}
+            >
+                <Row gutter={24}>
+                    <Col span={17}>
+                        <Form form={form} layout="vertical" onFinish={handleSave}>
+                            <Form.Item name="name" label={<span style={{fontWeight: 600}}>Tên mẫu hợp đồng</span>} rules={[{ required: true, message: 'Nhập tên mẫu' }]}>
+                                <Input placeholder="VD: Hợp đồng nguyên tắc may mặc 2026" size="large" />
+                            </Form.Item>
+                            <Form.Item name="content" label={<span style={{fontWeight: 600}}>Nội dung hợp đồng (Trình soạn thảo HTML trực quan)</span>} rules={[{ required: true }]}>
+                                <RichTextEditor minHeight={500} />
+                            </Form.Item>
+                        </Form>
+                    </Col>
+                    <Col span={7}>
+                        <div style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, height: '100%' }}>
+                            <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 14 }}>Danh Sách Placeholder</div>
+                            <p style={{ fontSize: 12, color: '#666', marginBottom: 16, lineHeight: 1.4 }}>
+                                Click để copy biến và DÁN (<code>Ctrl+V</code>) vào vị trí cần thiết.
+                            </p>
+                            <div style={{ maxHeight: 520, overflowY: 'auto', paddingRight: 4 }}>
+                                <Space size={[8, 12]} wrap direction="vertical" style={{ width: '100%' }}>
+                                    <div style={{ fontWeight: 600, fontSize: 11, color: '#999', textTransform: 'uppercase' }}>🔹 Khách hàng & Đơn hàng</div>
+                                    {[
+                                        { key: 'customer_name', desc: 'Tên Khách hàng' },
+                                        { key: 'customer_address', desc: 'Địa chỉ Khách hàng' },
+                                        { key: 'customer_tax_code', desc: 'Mã số thuế Khách hàng' },
+                                        { key: 'customer_legal_name', desc: 'Tên pháp nhân (Hóa đơn)' },
+                                        { key: 'customer_legal_address', desc: 'Địa chỉ pháp lý' },
+                                        { key: 'customer_legal_representative', desc: 'Người đại diện pháp luật' },
+                                        { key: 'customer_einvoice_email', desc: 'Email nhận hóa đơn điện tử' },
+                                        { key: 'order_code', desc: 'Mã Đơn hàng (Của PM)' },
+                                        { key: 'contract_code', desc: 'Mã số Hợp đồng tự động' },
+                                        { key: 'order_date', desc: 'Ngày tạo đơn' },
+                                        { key: 'total_amount_text', desc: 'Tổng tiền bằng chữ' },
+                                        { key: 'items_table', desc: 'Bảng chi tiết mặt hàng' }
+                                    ].map(p => (
+                                        <div key={p.key} style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <Tag color="blue" style={{ cursor: 'pointer', padding: '4px 8px', fontSize: 12, width: 'fit-content' }} onClick={() => {
+                                                navigator.clipboard.writeText(`{{${p.key}}}`);
+                                                message.success(`Đã copy: {{${p.key}}}`);
+                                            }}>
+                                                <Space size={4}><CopyOutlined style={{ opacity: 0.6 }} />{`{{${p.key}}}`}</Space>
+                                            </Tag>
+                                            <span style={{ fontSize: 11, color: '#888', marginTop: 2, marginLeft: 4 }}>{p.desc}</span>
+                                        </div>
+                                    ))}
+
+                                    <Divider style={{ margin: '8px 0' }} orientation="left" plain><span style={{fontSize: 11, color: '#aaa'}}>🔸 Bên Bán</span></Divider>
+                                    {[
+                                        { key: 'seller_company_name', desc: 'Tên công ty' },
+                                        { key: 'seller_address', desc: 'Địa chỉ' },
+                                        { key: 'seller_phone', desc: 'Số điện thoại' },
+                                        { key: 'seller_email', desc: 'Email' },
+                                        { key: 'seller_website', desc: 'Website' },
+                                        { key: 'seller_tax_code', desc: 'Mã số thuế' },
+                                        { key: 'seller_representative', desc: 'Người đại diện' },
+                                        { key: 'seller_bank_name', desc: 'Ngân hàng' },
+                                        { key: 'seller_bank_account', desc: 'Số tài khoản' },
+                                        { key: 'seller_bank_holder', desc: 'Chủ tài khoản' },
+                                    ].map(p => (
+                                        <div key={p.key} style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <Tag color="orange" style={{ cursor: 'pointer', padding: '4px 8px', fontSize: 12, width: 'fit-content' }} onClick={() => {
+                                                navigator.clipboard.writeText(`{{${p.key}}}`);
+                                                message.success(`Đã copy: {{${p.key}}}`);
+                                            }}>
+                                                <Space size={4}><CopyOutlined style={{ opacity: 0.6 }} />{`{{${p.key}}}`}</Space>
+                                            </Tag>
+                                            <span style={{ fontSize: 11, color: '#888', marginTop: 2, marginLeft: 4 }}>{p.desc}</span>
+                                        </div>
+                                    ))}
+                                </Space>
+                            </div>
+                        </div>
+                    </Col>
+                </Row>
+            </Modal>
+
+            {/* Placeholder Config Modal */}
+            <Modal
+                title="Cấu Hình Danh Sách Nhãn (Placeholders)"
+                open={placeholderModalOpen}
+                onCancel={() => setPlaceholderModalOpen(false)}
+                onOk={placeholderForm.submit}
+                width={600}
+                destroyOnClose
+            >
+                <Form form={placeholderForm} layout="vertical" onFinish={handleSavePlaceholders}>
+                    <Form.List name="placeholders">
+                        {(fields, { add, remove }) => (
+                            <>
+                                {fields.map(({ key, name, ...restField }) => (
+                                    <Row key={key} gutter={8} align="middle" style={{ marginBottom: 8 }}>
+                                        <Col flex="180px">
+                                            <Form.Item
+                                                {...restField}
+                                                name={[name, 'key']}
+                                                rules={[{ required: true, message: 'Nhập key' }]}
+                                                style={{ marginBottom: 0 }}
+                                            >
+                                                <Input addonBefore="{{" addonAfter="}}" placeholder="chi_nhanh" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col flex="auto">
+                                            <Form.Item
+                                                {...restField}
+                                                name={[name, 'desc']}
+                                                rules={[{ required: true, message: 'Nhập ghi chú' }]}
+                                                style={{ marginBottom: 0 }}
+                                            >
+                                                <Input placeholder="Chi nhánh văn phòng" />
+                                            </Form.Item>
+                                        </Col>
+                                        <Col>
+                                            <MinusCircleOutlined onClick={() => remove(name)} style={{ color: '#ff4d4f', fontSize: 16 }} />
+                                        </Col>
+                                    </Row>
+                                ))}
+                                <Form.Item style={{ marginTop: 16 }}>
+                                    <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                                        Thêm Placeholder tùy chỉnh
+                                    </Button>
+                                </Form.Item>
+                            </>
+                        )}
+                    </Form.List>
+                </Form>
+            </Modal>
+        </div>
+    );
+};
+
+// =========================================================================
+// TAB 4: ĐIỀU KHOẢN & GHI CHÚ (TERMS & NOTES)
+// =========================================================================
+const TermsAndNotesTab: React.FC = () => {
+    return (
+        <div>
+            <div style={{ marginBottom: 16 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>📋 Quản Lý Điều Khoản & Ghi Chú Mặc Định</h3>
+                <p style={{ color: '#888', margin: 0, fontSize: 13 }}>
+                    Cấu hình các mẫu điều khoản thanh toán, giao hàng và ghi chú mặc định khi tạo mới Báo Giá hoặc Đơn Hàng.
+                </p>
+            </div>
+
+            <Tabs 
+                defaultActiveKey="quote_terms"
+                type="card"
+                items={[
+                    {
+                        key: 'quote_terms',
+                        label: '📝 Điều Khoản Báo Giá (Quotes)',
+                        children: <QuoteTermsSubTab />
+                    },
+                    {
+                        key: 'order_terms',
+                        label: '📦 Điều Khoản Đơn Hàng (Orders)',
+                        children: <OrderTermsSubTab />
+                    }
+                ]}
+            />
+        </div>
+    );
+};
+
+const QuoteTermsSubTab: React.FC = () => {
+    const [termsList, setTermsList] = useState<{id: string, name: string, content: string, isDefault: boolean}[]>([]);
+    const [defaultNote, setDefaultNote] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    
+    const [modalOpen, setModalOpen] = useState(false);
+    const [editingTerm, setEditingTerm] = useState<any>(null);
+    const [form] = Form.useForm();
+
+    useEffect(() => {
+        setLoading(true);
+        Promise.all([
+            axios.get(`${API_URL}/system/config/QUOTE_TERMS_LIST`).catch(() => ({ data: null })),
+            axios.get(`${API_URL}/system/config/QUOTE_DEFAULT_TERMS`).catch(() => ({ data: null })),
+            axios.get(`${API_URL}/system/config/QUOTE_DEFAULT_NOTE`).catch(() => ({ data: null })),
+        ]).then(([listRes, termsRes, noteRes]) => {
+            let list = [];
+            if (listRes.data?.value) {
+                try { list = JSON.parse(listRes.data.value); } catch(e) {}
+            }
+            if (list.length === 0 && termsRes.data?.value) {
+                list = [{ id: 'default', name: 'Điều khoản mặc định', content: termsRes.data.value, isDefault: true }];
+            }
+            setTermsList(list);
+            if (noteRes.data?.value) setDefaultNote(noteRes.data.value);
+        }).finally(() => setLoading(false));
+    }, []);
+
+    const handleSaveConfig = async () => {
+        setSaving(true);
+        try {
+            await Promise.all([
+                axios.post(`${API_URL}/system/config`, {
+                    key: 'QUOTE_TERMS_LIST',
+                    value: JSON.stringify(termsList),
+                    description: 'Danh sách Điều khoản & Quy định cho Báo giá'
+                }),
+                axios.post(`${API_URL}/system/config`, {
+                    key: 'QUOTE_DEFAULT_NOTE',
+                    value: defaultNote,
+                    description: 'Ghi chú mặc định cho Báo giá'
+                })
+            ]);
+            message.success('Đã lưu cấu hình Terms Báo giá!');
+        } catch (e) {
+            message.error('Lỗi khi lưu');
+        }
+        setSaving(false);
+    };
+
+    const handleSaveTerm = (values: any) => {
+        let newList = [...termsList];
+        if (values.isDefault) {
+            newList = newList.map(t => ({ ...t, isDefault: false }));
+        }
+        if (editingTerm) {
+            newList = newList.map(t => t.id === editingTerm.id ? { ...t, ...values } : t);
+        } else {
+            newList.push({ id: Date.now().toString(), ...values });
+        }
+        if (newList.length === 1) newList[0].isDefault = true;
+        setTermsList(newList);
+        setModalOpen(false);
+    };
+
+    const handleDeleteTerm = (id: string) => {
+        setTermsList(termsList.filter(t => t.id !== id));
+    };
+
+    if (loading) return <Spin />;
+
+    const columns = [
+        { title: 'Tên Mẫu Điều Khoản', dataIndex: 'name', key: 'name', width: '30%', render: (t: string, r: any) => <b>{t} {r.isDefault && <Tag color="blue" style={{ marginLeft: 8 }}>Mặc định</Tag>}</b> },
+        { title: 'Nội dung', dataIndex: 'content', key: 'content', render: (t: string) => <div style={{ whiteSpace: 'pre-line', fontSize: 13, maxHeight: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t}</div> },
+        {
+            title: 'Hành động', key: 'action', width: 120, render: (_: any, r: any) => (
+                <Space>
+                    <Button icon={<EditOutlined />} size="small" onClick={() => { setEditingTerm(r); form.setFieldsValue(r); setModalOpen(true); }} />
+                    <Popconfirm title="Xóa mẫu này?" onConfirm={() => handleDeleteTerm(r.id)}>
+                        <Button icon={<DeleteOutlined />} danger size="small" />
+                    </Popconfirm>
+                </Space>
+            )
+        }
+    ];
+
+    return (
+        <div style={{ paddingTop: 8 }}>
+            <Card title="📝 Ghi chú mặc định (Note)" bordered={false} size="small" style={{ marginBottom: 16, background: '#fafafa' }}>
+                <div style={{ marginBottom: 8, fontSize: 12, color: '#888' }}>
+                    Nội dung này sẽ hiển thị trong phần "Ghi chú từ người bán" trên Portal và bản in Báo giá.
+                </div>
+                <Input.TextArea
+                    rows={3}
+                    value={defaultNote}
+                    onChange={e => setDefaultNote(e.target.value)}
+                    placeholder="VD: Báo giá có hiệu lực trong 7 ngày kể từ ngày gửi. Giá chưa bao gồm VAT và phí vận chuyển."
+                    style={{ fontSize: 13 }}
+                />
+            </Card>
+
+            <Card 
+                title="📋 Danh sách Điều khoản Báo Giá" 
+                bordered={false} 
+                size="small" 
+                style={{ marginBottom: 16, background: '#fafafa' }}
+                extra={<Button type="primary" icon={<PlusOutlined />} size="small" onClick={() => { setEditingTerm(null); form.resetFields(); form.setFieldsValue({ isDefault: termsList.length === 0 }); setModalOpen(true); }}>Thêm Mẫu</Button>}
+            >
+                <Table dataSource={termsList} columns={columns} rowKey="id" pagination={false} size="small" />
+            </Card>
+
+            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSaveConfig} size="large">
+                Lưu Cấu Hình Terms Báo Giá
+            </Button>
+
+            <Modal
+                title={editingTerm ? "Chỉnh sửa Mẫu Điều Khoản" : "Thêm Mẫu Điều Khoản"}
+                open={modalOpen}
+                onCancel={() => setModalOpen(false)}
+                onOk={form.submit}
+                width={700}
+                destroyOnClose
+            >
+                <Form form={form} layout="vertical" onFinish={handleSaveTerm}>
+                    <Form.Item name="name" label="Tên Mẫu" rules={[{ required: true }]}>
+                        <Input placeholder="VD: Điều khoản Standard" />
+                    </Form.Item>
+                    <Form.Item name="content" label="Nội dung Điều khoản & Quy định" rules={[{ required: true }]}>
+                        <Input.TextArea rows={8} placeholder={`VD:\n1. Thời gian giao hàng: 15-20 ngày...\n2. Thanh toán: Đặt cọc 50%...`} />
+                    </Form.Item>
+                    <Form.Item name="isDefault" valuePropName="checked">
+                        <Checkbox>Đặt làm Mẫu Mặc định</Checkbox>
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </div>
+    );
+};
+
+const OrderTermsSubTab: React.FC = () => {
+    const [termsList, setTermsList] = useState<{id: string, name: string, content: string, isDefault: boolean}[]>([]);
+    const [defaultNote, setDefaultNote] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    
+    const [modalOpen, setModalOpen] = useState(false);
+    const [editingTerm, setEditingTerm] = useState<any>(null);
+    const [form] = Form.useForm();
+
+    useEffect(() => {
+        setLoading(true);
+        Promise.all([
+            axios.get(`${API_URL}/system/config/ORDER_TERMS_LIST`).catch(() => ({ data: null })),
+            axios.get(`${API_URL}/system/config/ORDER_DEFAULT_TERMS`).catch(() => ({ data: null })),
+            axios.get(`${API_URL}/system/config/ORDER_DEFAULT_NOTE`).catch(() => ({ data: null })),
+        ]).then(([listRes, termsRes, noteRes]) => {
+            let list = [];
+            if (listRes.data?.value) {
+                try { list = JSON.parse(listRes.data.value); } catch(e) {}
+            }
+            if (list.length === 0 && termsRes.data?.value) {
+                list = [{ id: 'default', name: 'Điều khoản mặc định', content: termsRes.data.value, isDefault: true }];
+            }
+            setTermsList(list);
+            if (noteRes.data?.value) setDefaultNote(noteRes.data.value);
+        }).finally(() => setLoading(false));
+    }, []);
+
+    const handleSaveConfig = async () => {
+        setSaving(true);
+        try {
+            await Promise.all([
+                axios.post(`${API_URL}/system/config`, {
+                    key: 'ORDER_TERMS_LIST',
+                    value: JSON.stringify(termsList),
+                    description: 'Danh sách Điều khoản & Quy định cho Đơn hàng'
+                }),
+                axios.post(`${API_URL}/system/config`, {
+                    key: 'ORDER_DEFAULT_NOTE',
+                    value: defaultNote,
+                    description: 'Ghi chú mặc định cho Đơn hàng'
+                })
+            ]);
+            message.success('Đã lưu cấu hình Terms Đơn hàng!');
+        } catch (e) {
+            message.error('Lỗi khi lưu');
+        }
+        setSaving(false);
+    };
+
+    const handleSaveTerm = (values: any) => {
+        let newList = [...termsList];
+        if (values.isDefault) {
+            newList = newList.map(t => ({ ...t, isDefault: false }));
+        }
+        if (editingTerm) {
+            newList = newList.map(t => t.id === editingTerm.id ? { ...t, ...values } : t);
+        } else {
+            newList.push({ id: Date.now().toString(), ...values });
+        }
+        if (newList.length === 1) newList[0].isDefault = true;
+        setTermsList(newList);
+        setModalOpen(false);
+    };
+
+    const handleDeleteTerm = (id: string) => {
+        setTermsList(termsList.filter(t => t.id !== id));
+    };
+
+    if (loading) return <Spin />;
+
+    const columns = [
+        { title: 'Tên Mẫu Điều Khoản', dataIndex: 'name', key: 'name', width: '30%', render: (t: string, r: any) => <b>{t} {r.isDefault && <Tag color="blue" style={{ marginLeft: 8 }}>Mặc định</Tag>}</b> },
+        { title: 'Nội dung', dataIndex: 'content', key: 'content', render: (t: string) => <div style={{ whiteSpace: 'pre-line', fontSize: 13, maxHeight: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t}</div> },
+        {
+            title: 'Hành động', key: 'action', width: 120, render: (_: any, r: any) => (
+                <Space>
+                    <Button icon={<EditOutlined />} size="small" onClick={() => { setEditingTerm(r); form.setFieldsValue(r); setModalOpen(true); }} />
+                    <Popconfirm title="Xóa mẫu này?" onConfirm={() => handleDeleteTerm(r.id)}>
+                        <Button icon={<DeleteOutlined />} danger size="small" />
+                    </Popconfirm>
+                </Space>
+            )
+        }
+    ];
+
+    return (
+        <div style={{ paddingTop: 8 }}>
+            <Card title="📝 Ghi chú mặc định Đơn Hàng" bordered={false} size="small" style={{ marginBottom: 16, background: '#fafafa' }}>
+                <div style={{ marginBottom: 8, fontSize: 12, color: '#888' }}>
+                    Nội dung này sẽ hiển thị trong phần "Ghi chú từ người bán" trên bản in Xác nhận Đơn hàng.
+                </div>
+                <Input.TextArea
+                    rows={3}
+                    value={defaultNote}
+                    onChange={e => setDefaultNote(e.target.value)}
+                    placeholder="VD: Giá chưa bao gồm VAT. Giao hàng theo lịch trình thỏa thuận."
+                    style={{ fontSize: 13 }}
+                />
+            </Card>
+
+            <Card 
+                title="📋 Danh sách Điều khoản Đơn Hàng" 
+                bordered={false} 
+                size="small" 
+                style={{ marginBottom: 16, background: '#fafafa' }}
+                extra={<Button type="primary" icon={<PlusOutlined />} size="small" onClick={() => { setEditingTerm(null); form.resetFields(); form.setFieldsValue({ isDefault: termsList.length === 0 }); setModalOpen(true); }}>Thêm Mẫu</Button>}
+            >
+                <Table dataSource={termsList} columns={columns} rowKey="id" pagination={false} size="small" />
+            </Card>
+
+            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSaveConfig} size="large">
+                Lưu Cấu Hình Terms Đơn Hàng
+            </Button>
+
+            <Modal
+                title={editingTerm ? "Chỉnh sửa Mẫu Điều Khoản" : "Thêm Mẫu Điều Khoản"}
+                open={modalOpen}
+                onCancel={() => setModalOpen(false)}
+                onOk={form.submit}
+                width={700}
+                destroyOnClose
+            >
+                <Form form={form} layout="vertical" onFinish={handleSaveTerm}>
+                    <Form.Item name="name" label="Tên Mẫu" rules={[{ required: true }]}>
+                        <Input placeholder="VD: Điều khoản Đơn hàng Tiêu chuẩn" />
+                    </Form.Item>
+                    <Form.Item name="content" label="Nội dung Điều khoản & Quy định" rules={[{ required: true }]}>
+                        <Input.TextArea rows={8} placeholder={`VD:\n1. Thời gian giao hàng: 15-20 ngày...\n2. Thanh toán: Đặt cọc 50%...`} />
+                    </Form.Item>
+                    <Form.Item name="isDefault" valuePropName="checked">
+                        <Checkbox>Đặt làm Mẫu Mặc định</Checkbox>
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </div>
+    );
+};
+
+// =========================================================================
+// TAB 5: EMAIL (SMTP) & MẪU EMAIL
+// =========================================================================
+const EmailSettingsTab: React.FC = () => {
+    return (
+        <div>
+            <div style={{ marginBottom: 16 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>✉️ Cấu Hình Máy Chủ Email & Mẫu Thư Tự Động</h3>
+                <p style={{ color: '#888', margin: 0, fontSize: 13 }}>
+                    Cấu hình tài khoản SMTP gửi mail và các biểu mẫu email gửi Báo Giá / Thông báo tiến độ cho khách hàng.
+                </p>
+            </div>
+
+            <Tabs
+                defaultActiveKey="smtp_config"
+                type="card"
+                items={[
+                    {
+                        key: 'smtp_config',
+                        label: '⚙️ Cấu Hình Máy Chủ SMTP',
+                        children: <SmtpConfigSubTab />
+                    },
+                    {
+                        key: 'email_templates',
+                        label: '📬 Mẫu Email Gửi Khách Hàng',
+                        children: <EmailTemplatesSubTab />
+                    }
+                ]}
+            />
+        </div>
+    );
+};
+
+const SmtpConfigSubTab: React.FC = () => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -99,56 +1384,145 @@ const GeneralSettingsTab: React.FC = () => {
     };
 
     return (
-        <>
-            <Card title="Cấu Hình Email (SMTP)" bordered={false} size="small">
-                <Alert message="Cấu hình này dùng để gửi Email thông báo và Báo giá cho khách hàng." type="info" showIcon style={{ marginBottom: 24 }} />
-                {loading ? <Spin /> : (
-                    <Form form={form} layout="vertical" onFinish={onFinish}>
-                        <Row gutter={24}>
-                            <Col span={16}><Form.Item name="SMTP_HOST" label="SMTP Host" rules={[{ required: true }]}><Input placeholder="smtp.gmail.com" /></Form.Item></Col>
-                            <Col span={8}><Form.Item name="SMTP_PORT" label="Port" rules={[{ required: true }]}><Input placeholder="587" /></Form.Item></Col>
-                        </Row>
-                        <Row gutter={24}>
-                            <Col span={12}><Form.Item name="SMTP_USER" label="Username / Email" rules={[{ required: true }]}><Input placeholder="email@domain.com" /></Form.Item></Col>
-                            <Col span={12}><Form.Item name="SMTP_PASS" label="Password"><Input.Password placeholder="Nhập mật khẩu" /></Form.Item></Col>
-                        </Row>
-                        <Row gutter={24}>
-                            <Col span={12}><Form.Item name="SMTP_FROM_NAME" label="Tên người gửi" rules={[{ required: true }]}><Input placeholder="ERP4U System" /></Form.Item></Col>
-                            <Col span={12}><Form.Item name="SMTP_FROM_EMAIL" label="Email người gửi" rules={[{ required: true }]}><Input placeholder="no-reply@domain.com" /></Form.Item></Col>
-                        </Row>
-                        <Form.Item name="SMTP_SECURE" valuePropName="checked" label="Sử dụng SSL/TLS"><Switch /></Form.Item>
-                        <Space>
-                            <Button type="primary" icon={<SaveOutlined />} onClick={form.submit} loading={submitting}>Lưu Cấu Hình Email</Button>
-                            <Button icon={<MailOutlined />} onClick={handleTestSmtp} loading={testingSmtp}>Test Cấu hình SMTP</Button>
-                        </Space>
-                    </Form>
-                )}
-            </Card>
+        <Card bordered={false} size="small" style={{ background: '#fafafa', paddingTop: 8 }}>
+            <Alert message="Cấu hình máy chủ SMTP dùng để gửi Email Báo Giá, Xác Nhận Đơn Hàng và Thông Báo cho khách hàng." type="info" showIcon style={{ marginBottom: 20 }} />
+            {loading ? <Spin /> : (
+                <Form form={form} layout="vertical" onFinish={onFinish}>
+                    <Row gutter={24}>
+                        <Col span={16}><Form.Item name="SMTP_HOST" label="SMTP Host" rules={[{ required: true }]}><Input placeholder="smtp.gmail.com" /></Form.Item></Col>
+                        <Col span={8}><Form.Item name="SMTP_PORT" label="Port" rules={[{ required: true }]}><Input placeholder="587" /></Form.Item></Col>
+                    </Row>
+                    <Row gutter={24}>
+                        <Col span={12}><Form.Item name="SMTP_USER" label="Username / Email Đăng Nhập" rules={[{ required: true }]}><Input placeholder="email@domain.com" /></Form.Item></Col>
+                        <Col span={12}><Form.Item name="SMTP_PASS" label="Password / App Password"><Input.Password placeholder="Nhập mật khẩu ứng dụng" /></Form.Item></Col>
+                    </Row>
+                    <Row gutter={24}>
+                        <Col span={12}><Form.Item name="SMTP_FROM_NAME" label="Tên Người Gửi Hiển Thị" rules={[{ required: true }]}><Input placeholder="ERP4U System" /></Form.Item></Col>
+                        <Col span={12}><Form.Item name="SMTP_FROM_EMAIL" label="Email Người Gửi (From Email)" rules={[{ required: true }]}><Input placeholder="no-reply@domain.com" /></Form.Item></Col>
+                    </Row>
+                    <Form.Item name="SMTP_SECURE" valuePropName="checked" label="Sử dụng SSL/TLS"><Switch /></Form.Item>
+                    <Space size="middle">
+                        <Button type="primary" icon={<SaveOutlined />} onClick={form.submit} loading={submitting} size="large">Lưu Cấu Hình Email</Button>
+                        <Button icon={<MailOutlined />} onClick={handleTestSmtp} loading={testingSmtp} size="large">Gửi Thử Email Test</Button>
+                    </Space>
+                </Form>
+            )}
+        </Card>
+    );
+};
 
-            <Divider />
+const EmailTemplatesSubTab: React.FC = () => {
+    const [templates, setTemplates] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [editingTemplate, setEditingTemplate] = useState<any>(null);
+    const [form] = Form.useForm();
 
-            <Card title="Thông tin Doanh nghiệp" bordered={false} size="small">
-                <CompanyConfigForm />
-            </Card>
+    const fetchTemplates = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get(`${API_URL}/system/email-templates`);
+            setTemplates(res.data);
+        } catch (e) { message.error('Lỗi tải danh sách mẫu email'); }
+        setLoading(false);
+    };
 
-            <Divider />
+    useEffect(() => { 
+        fetchTemplates(); 
+    }, []);
 
-            <Card title="Quản Lý Link Tài Nguyên" bordered={false} size="small">
-                <LinkConfigItem label="Folder Ảnh Sản Phẩm (Google Drive)" configKey="SALES_SHARED_DRIVE_LINK" placeholder="https://drive.google.com/..." />
-                <Divider style={{ margin: '16px 0' }} />
-                <ImageUploadConfigItem label="Watermark Hình Ảnh (Portal Báo Giá/Dashboard)" configKey="PORTAL_WATERMARK_IMAGE" />
-            </Card>
+    const handleSave = async (values: any) => {
+        try {
+            await axios.post(`${API_URL}/system/email-templates`, { ...values, id: editingTemplate?.id });
+            message.success('Đã lưu mẫu email');
+            setModalOpen(false);
+            fetchTemplates();
+        } catch (e) { message.error('Lỗi lưu mẫu email'); }
+    };
 
-            <Divider />
+    const handleDelete = async (id: number) => {
+        try {
+            await axios.delete(`${API_URL}/system/email-templates/${id}`);
+            message.success('Đã xóa mẫu email');
+            fetchTemplates();
+        } catch (e) { message.error('Lỗi xóa mẫu email'); }
+    };
 
-            <Card title="Cấu Hình Dòng Tiền" bordered={false} size="small">
+    const columns = [
+        { title: 'Tên Mẫu', dataIndex: 'name', key: 'name', width: '25%', render: (t: string) => <b>{t}</b> },
+        { title: 'Tiêu đề Email', dataIndex: 'subject', key: 'subject', width: '35%' },
+        { title: 'Cập nhật lần cuối', dataIndex: 'updated_at', key: 'updated_at', render: (t: string) => dayjs(t).format('DD/MM/YYYY HH:mm') },
+        {
+            title: 'Hành động', key: 'action', width: 150, render: (_: any, r: any) => (
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <Button icon={<EditOutlined />} size="small" onClick={() => { setEditingTemplate(r); form.setFieldsValue(r); setModalOpen(true); }}>Sửa</Button>
+                    <Popconfirm title="Xóa mẫu này?" onConfirm={() => handleDelete(r.id)}>
+                        <Button icon={<DeleteOutlined />} danger size="small">Xóa</Button>
+                    </Popconfirm>
+                </div>
+            )
+        }
+    ];
+
+    return (
+        <div style={{ paddingTop: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                <span style={{ fontSize: 13, color: '#666' }}>Quản lý các kịch bản email tự động gửi báo giá, xác nhận cọc, thông báo hoàn thành đơn.</span>
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingTemplate(null); form.resetFields(); setModalOpen(true); }}>Tạo Mẫu Mới</Button>
+            </div>
+
+            <Table dataSource={templates} columns={columns} rowKey="id" loading={loading} pagination={false} size="small" />
+
+            <Modal
+                title={editingTemplate ? "Chỉnh Sửa Mẫu Email" : "Tạo Mẫu Email Mới"}
+                open={modalOpen}
+                onCancel={() => setModalOpen(false)}
+                onOk={form.submit}
+                width={1100}
+                style={{ top: 20 }}
+                maskClosable={false}
+            >
+                <Form form={form} layout="vertical" onFinish={handleSave}>
+                    <Form.Item name="name" label={<span style={{fontWeight: 600}}>Tên mẫu (Quản lý nội bộ)</span>} rules={[{ required: true, message: 'Nhập tên mẫu' }]}>
+                        <Input placeholder="VD: Gửi Báo Giá Khách Hàng B2B" size="large" />
+                    </Form.Item>
+                    <Form.Item name="subject" label={<span style={{fontWeight: 600}}>Tiêu đề Email</span>} rules={[{ required: true, message: 'Nhập tiêu đề email' }]}>
+                        <Input placeholder="VD: Báo giá dịch vụ may mặc từ ERP4U - {{order_code}}" size="large" />
+                    </Form.Item>
+                    <Form.Item name="content" label={<span style={{fontWeight: 600}}>Nội dung Email (HTML trực quan)</span>} rules={[{ required: true }]}>
+                        <RichTextEditor minHeight={350} />
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </div>
+    );
+};
+
+// =========================================================================
+// TAB 6: QUY TRÌNH & DÒNG TIỀN (OPERATIONS)
+// =========================================================================
+const OperationsConfigTab: React.FC = () => {
+    return (
+        <div>
+            <div style={{ marginBottom: 20 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>⚙️ Cấu Hình Vận Hành & Dòng Tiền</h3>
+                <p style={{ color: '#888', margin: 0, fontSize: 13 }}>
+                    Thiết lập quy trình dự án tự động (SO Project Templates), ngưỡng cảnh báo quỹ và link tài nguyên Google Drive.
+                </p>
+            </div>
+
+            <SOProjectTemplateConfig />
+
+            <Divider style={{ margin: '24px 0' }} />
+
+            <Card title="💰 Cấu Hình Cảnh Báo Dòng Tiền" bordered={false} size="small" style={{ background: '#fafafa', marginBottom: 20 }}>
                 <NumberConfigItem label="Ngưỡng cảnh báo quỹ thấp (VNĐ)" configKey="CASH_FLOW_THRESHOLD" defaultValue={50000000} />
             </Card>
 
-            <Divider />
-
-            <SOProjectTemplateConfig />
-        </>
+            <Card title="📁 Quản Lý Link Tài Nguyên" bordered={false} size="small" style={{ background: '#fafafa' }}>
+                <LinkConfigItem label="Folder Ảnh Sản Phẩm (Google Drive)" configKey="SALES_SHARED_DRIVE_LINK" placeholder="https://drive.google.com/..." />
+            </Card>
+        </div>
     );
 };
 
@@ -157,7 +1531,6 @@ const SOProjectTemplateConfig: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    // Modal state for editing milestone
     const [modalOpen, setModalOpen] = useState(false);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [form] = Form.useForm();
@@ -181,7 +1554,7 @@ const SOProjectTemplateConfig: React.FC = () => {
         setSubmitting(true);
         try {
             await axios.post(`${API_URL}/system/so-project-template`, milestones);
-            message.success('Đã lưu Template Dự án');
+            message.success('Đã lưu Template Dự án thành công!');
         } catch (e) {
             message.error('Lỗi khi lưu Template');
         }
@@ -225,19 +1598,19 @@ const SOProjectTemplateConfig: React.FC = () => {
 
     const columns = [
         { title: 'Thứ tự', dataIndex: 'sort_order', width: 80, align: 'center' as const },
-        { title: 'Giai đoạn (Milestone)', dataIndex: 'title' },
-        { title: 'Phòng ban', dataIndex: 'department', width: 150 },
+        { title: 'Giai đoạn (Milestone)', dataIndex: 'title', width: 220, render: (t: string) => <b>{t}</b> },
+        { title: 'Phòng ban', dataIndex: 'department', width: 140, render: (d: string) => <Tag color="blue">{d}</Tag> },
         { 
             title: 'Công việc (Tasks)', 
             dataIndex: 'tasks',
             render: (tasks: string[]) => (
-                <ul style={{ paddingLeft: 16, margin: 0 }}>
+                <ul style={{ paddingLeft: 16, margin: 0, fontSize: 12 }}>
                     {tasks?.map((t, i) => <li key={i}>{t}</li>)}
                 </ul>
             )
         },
         {
-            title: 'Thao tác', width: 120, align: 'center' as const,
+            title: 'Thao tác', width: 100, align: 'center' as const,
             render: (_: any, __: any, index: number) => (
                 <Space>
                     <Button type="text" icon={<EditOutlined />} onClick={() => openModal(index)} />
@@ -251,9 +1624,10 @@ const SOProjectTemplateConfig: React.FC = () => {
 
     return (
         <Card 
-            title="Template Dự Án (Tạo từ Đơn Hàng)" 
+            title="Template Dự Án Đơn Hàng (SO Project Milestones)" 
             bordered={false} 
             size="small"
+            style={{ background: '#fafafa' }}
             extra={
                 <Space>
                     <Button icon={<PlusOutlined />} onClick={() => openModal()}>Thêm Giai Đoạn</Button>
@@ -261,7 +1635,7 @@ const SOProjectTemplateConfig: React.FC = () => {
                 </Space>
             }
         >
-            <Alert message="Cấu hình này định nghĩa các giai đoạn và công việc mặc định được tạo ra khi chuyển Báo giá thành Đơn hàng (Sales Order)." type="info" showIcon style={{ marginBottom: 16 }} />
+            <Alert message="Quy trình mẫu tự động tạo danh sách công việc khi đơn hàng chuyển sang trạng thái sản xuất." type="info" showIcon style={{ marginBottom: 16 }} />
             
             <Table 
                 dataSource={milestones}
@@ -339,1070 +1713,9 @@ const SOProjectTemplateConfig: React.FC = () => {
     );
 };
 
-
-const ContractTemplatesTab: React.FC = () => {
-    const [templates, setTemplates] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [modalOpen, setModalOpen] = useState(false);
-    const [editingTemplate, setEditingTemplate] = useState<any>(null);
-    const [form] = Form.useForm();
-
-    // Placeholders Management
-    const [customPlaceholders, setCustomPlaceholders] = useState<{key: string, desc: string}[]>([]);
-    const [placeholderModalOpen, setPlaceholderModalOpen] = useState(false);
-    const [placeholderForm] = Form.useForm();
-
-    const fetchPlaceholders = async () => {
-        try {
-            const res = await axios.get(`${API_URL}/system/config/CONTRACT_CUSTOM_PLACEHOLDERS`);
-            if (res.data && res.data.value) {
-                const parsed = JSON.parse(res.data.value);
-                setCustomPlaceholders(parsed);
-                placeholderForm.setFieldsValue({ placeholders: parsed });
-            }
-        } catch (e) { }
-    };
-
-    const fetchTemplates = async () => {
-        setLoading(true);
-        try {
-            const res = await axios.get(`${API_URL}/system/templates`);
-            setTemplates(res.data);
-        } catch (e) { message.error('Lỗi tải danh sách mẫu'); }
-        setLoading(false);
-    };
-
-    useEffect(() => { 
-        fetchTemplates(); 
-        fetchPlaceholders();
-    }, []);
-
-    const handleSavePlaceholders = async (values: any) => {
-        try {
-            await axios.post(`${API_URL}/system/config`, {
-                key: 'CONTRACT_CUSTOM_PLACEHOLDERS',
-                value: JSON.stringify(values.placeholders || []),
-                description: 'Danh sách Placeholder Hợp đồng tự tạo'
-            });
-            message.success('Đã lưu danh sách Placeholder');
-            setPlaceholderModalOpen(false);
-            fetchPlaceholders();
-        } catch (e) {
-            message.error('Lỗi khi lưu Placeholder');
-        }
-    };
-
-    const handleSave = async (values: any) => {
-        try {
-            await axios.post(`${API_URL}/system/templates`, { ...values, id: editingTemplate?.id });
-            message.success('Đã lưu mẫu hợp đồng');
-            setModalOpen(false);
-            fetchTemplates();
-        } catch (e) { message.error('Lỗi lưu mẫu'); }
-    };
-
-    const handleDelete = async (id: number) => {
-        try {
-            await axios.delete(`${API_URL}/system/templates/${id}`);
-            message.success('Đã xóa mẫu');
-            fetchTemplates();
-        } catch (e) { message.error('Lỗi xóa mẫu'); }
-    };
-
-    const columns = [
-        { title: 'Tên Mẫu', dataIndex: 'name', key: 'name', width: '30%', render: (t: string) => <b>{t}</b> },
-        { title: 'Cập nhật lần cuối', dataIndex: 'updated_at', key: 'updated_at', render: (t: string) => dayjs(t).format('DD/MM/YYYY HH:mm') },
-        {
-            title: 'Hành động', key: 'action', width: 150, render: (_: any, r: any) => (
-                <div style={{ display: 'flex', gap: 8 }}>
-                    <Button icon={<EditOutlined />} size="small" onClick={() => { setEditingTemplate(r); form.setFieldsValue(r); setModalOpen(true); }} />
-                    <Popconfirm title="Xóa mẫu này?" onConfirm={() => handleDelete(r.id)}>
-                        <Button icon={<DeleteOutlined />} danger size="small" />
-                    </Popconfirm>
-                </div>
-            )
-        }
-    ];
-
-    return (
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                <h3>Danh Sách Mẫu Hợp Đồng</h3>
-                <Space>
-                    <Button icon={<SettingOutlined />} onClick={() => setPlaceholderModalOpen(true)}>Cấu Hình Nhãn (Placeholders)</Button>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingTemplate(null); form.resetFields(); setModalOpen(true); }}>Tạo Mẫu Mới</Button>
-                </Space>
-            </div>
-
-            <Alert
-                type="info"
-                showIcon
-                style={{ marginBottom: 16 }}
-                message="Hướng dẫn sử dụng Nhãn (Placeholder)"
-                description={
-                    <div style={{ marginTop: 8 }}>
-                        <p style={{ marginBottom: 8, fontSize: 13, color: '#666' }}>Click vào các nhãn dưới đây để copy, sau đó <strong>DÁN</strong> vào trình soạn thảo bằng <code>Ctrl + V</code>.</p>
-                        <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 12, color: '#555' }}>🔹 Khách hàng & Đơn hàng</div>
-                        <Space size={[8, 8]} wrap style={{ marginBottom: 12 }}>
-                            {[
-                                { key: 'customer_name', desc: 'Tên Khách hàng' },
-                                { key: 'customer_address', desc: 'Địa chỉ Khách hàng' },
-                                { key: 'customer_tax_code', desc: 'Mã số thuế Khách hàng' },
-                                { key: 'order_code', desc: 'Mã Đơn hàng / Hợp đồng' },
-                                { key: 'order_date', desc: 'Ngày tạo đơn' },
-                                { key: 'total_amount_text', desc: 'Tổng tiền bằng chữ' },
-                                { key: 'items_table', desc: 'Bảng chi tiết mặt hàng' }
-                            ].map(p => (
-                                <Tooltip title={`Mặc định: ${p.desc}`} key={p.key}>
-                                    <Tag color="blue" style={{ cursor: 'pointer', padding: '4px 8px', fontSize: 13 }} onClick={() => {
-                                        navigator.clipboard.writeText(`{{${p.key}}}`);
-                                        message.success(`Đã copy: {{${p.key}}}`);
-                                    }}>
-                                        <Space size={4}>
-                                            <CopyOutlined style={{ opacity: 0.6 }} />
-                                            {`{{${p.key}}}`}
-                                        </Space>
-                                    </Tag>
-                                </Tooltip>
-                            ))}
-                        </Space>
-                        <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 12, color: '#555' }}>🔸 Bên Bán (Thông tin Doanh nghiệp)</div>
-                        <Space size={[8, 8]} wrap style={{ marginBottom: 12 }}>
-                            {[
-                                { key: 'seller_company_name', desc: 'Tên công ty' },
-                                { key: 'seller_address', desc: 'Địa chỉ công ty' },
-                                { key: 'seller_phone', desc: 'Số điện thoại' },
-                                { key: 'seller_email', desc: 'Email' },
-                                { key: 'seller_website', desc: 'Website' },
-                                { key: 'seller_tax_code', desc: 'Mã số thuế' },
-                                { key: 'seller_representative', desc: 'Người đại diện' },
-                                { key: 'seller_bank_name', desc: 'Tên ngân hàng' },
-                                { key: 'seller_bank_account', desc: 'Số tài khoản' },
-                                { key: 'seller_bank_holder', desc: 'Chủ tài khoản' },
-                            ].map(p => (
-                                <Tooltip title={`Bên bán: ${p.desc}`} key={p.key}>
-                                    <Tag color="orange" style={{ cursor: 'pointer', padding: '4px 8px', fontSize: 13 }} onClick={() => {
-                                        navigator.clipboard.writeText(`{{${p.key}}}`);
-                                        message.success(`Đã copy: {{${p.key}}}`);
-                                    }}>
-                                        <Space size={4}>
-                                            <CopyOutlined style={{ opacity: 0.6 }} />
-                                            {`{{${p.key}}}`}
-                                        </Space>
-                                    </Tag>
-                                </Tooltip>
-                            ))}
-                        </Space>
-                        <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 12, color: '#555' }}>📝 Nội dung tự soạn</div>
-                        <Space size={[8, 8]} wrap style={{ marginBottom: 12 }}>
-                            {[
-                                { key: 'text_content_1', desc: 'Nội dung tự soạn 1' },
-                                { key: 'text_content_2', desc: 'Nội dung tự soạn 2' },
-                                { key: 'text_content_3', desc: 'Nội dung tự soạn 3' },
-                                { key: 'text_content_4', desc: 'Nội dung tự soạn 4' },
-                                { key: 'text_content_5', desc: 'Nội dung tự soạn 5' },
-                            ].map(p => (
-                                <Tooltip title={p.desc} key={p.key}>
-                                    <Tag color="purple" style={{ cursor: 'pointer', padding: '4px 8px', fontSize: 13 }} onClick={() => {
-                                        navigator.clipboard.writeText(`{{${p.key}}}`);
-                                        message.success(`Đã copy: {{${p.key}}}`);
-                                    }}>
-                                        <Space size={4}>
-                                            <CopyOutlined style={{ opacity: 0.6 }} />
-                                            {`{{${p.key}}}`}
-                                        </Space>
-                                    </Tag>
-                                </Tooltip>
-                            ))}
-                        </Space>
-                        {customPlaceholders.length > 0 && (
-                            <>
-                                <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 12, color: '#555' }}>🟢 Tự định nghĩa</div>
-                                <Space size={[8, 8]} wrap>
-                                    {customPlaceholders.map(p => (
-                                        <Tooltip title={`Tự định nghĩa: ${p.desc}`} key={p.key}>
-                                            <Tag color="green" style={{ cursor: 'pointer', padding: '4px 8px', fontSize: 13 }} onClick={() => {
-                                                navigator.clipboard.writeText(`{{${p.key}}}`);
-                                                message.success(`Đã copy: {{${p.key}}}`);
-                                            }}>
-                                                <Space size={4}>
-                                                    <CopyOutlined style={{ opacity: 0.6 }} />
-                                                    {`{{${p.key}}}`}
-                                                </Space>
-                                            </Tag>
-                                        </Tooltip>
-                                    ))}
-                                </Space>
-                            </>
-                        )}
-                    </div>
-                }
-            />
-
-            <Table dataSource={templates} columns={columns} rowKey="id" loading={loading} pagination={false} />
-
-            <Modal
-                title={editingTemplate ? "Chỉnh Sửa Mẫu Hợp Đồng" : "Tạo Mẫu Mới"}
-                open={modalOpen}
-                onCancel={() => setModalOpen(false)}
-                onOk={form.submit}
-                width={1200}
-                style={{ top: 20 }}
-                maskClosable={false}
-            >
-                <Row gutter={24}>
-                    <Col span={17}>
-                        <Form form={form} layout="vertical" onFinish={handleSave}>
-                            <Form.Item name="name" label={<span style={{fontWeight: 600}}>Tên mẫu hợp đồng</span>} rules={[{ required: true, message: 'Nhập tên mẫu' }]}>
-                                <Input placeholder="VD: Hợp đồng nguyên tắc 2024" size="large" />
-                            </Form.Item>
-                            <Form.Item name="content" label={<span style={{fontWeight: 600}}>Nội dung hợp đồng (HTML/Text)</span>} rules={[{ required: true }]}>
-                                <RichTextEditor minHeight={500} />
-                            </Form.Item>
-                        </Form>
-                    </Col>
-                    <Col span={7}>
-                        <div style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, height: '100%' }}>
-                            <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 15 }}>Danh Sách Placeholder</div>
-                            <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.4 }}>
-                                Click để copy biến và DÁN (<code>Ctrl+V</code>) vào vị trí cần thiết. Các biến này sẽ được hệ thống dữ liệu tự động thay thế khi in hợp đồng.
-                            </p>
-                            <div style={{ maxHeight: 600, overflowY: 'auto', paddingRight: 4 }}>
-                                <Space size={[8, 12]} wrap direction="vertical" style={{ width: '100%' }}>
-                                    {/* Default Placeholders - Khách hàng & Đơn hàng */}
-                                    <div style={{ fontWeight: 600, fontSize: 11, color: '#999', textTransform: 'uppercase' }}>🔹 Khách hàng & Đơn hàng</div>
-                                    {[
-                                        { key: 'customer_name', desc: 'Tên Khách hàng' },
-                                        { key: 'customer_address', desc: 'Địa chỉ Khách hàng' },
-                                        { key: 'customer_tax_code', desc: 'Mã số thuế Khách hàng' },
-                                        { key: 'customer_legal_name', desc: 'Tên pháp nhân (Hóa đơn)' },
-                                        { key: 'customer_legal_address', desc: 'Địa chỉ pháp lý' },
-                                        { key: 'customer_legal_representative', desc: 'Người đại diện pháp luật' },
-                                        { key: 'customer_einvoice_email', desc: 'Email nhận hóa đơn điện tử' },
-                                        { key: 'order_code', desc: 'Mã Đơn hàng (Của PM)' },
-                                        { key: 'contract_code', desc: 'Mã số Hợp đồng tự động (TLG/Năm-ID)' },
-                                        { key: 'order_date', desc: 'Ngày tạo đơn' },
-                                        { key: 'total_amount_text', desc: 'Tổng tiền bằng chữ' },
-                                        { key: 'items_table', desc: 'Bảng chi tiết mặt hàng' }
-                                    ].map(p => (
-                                        <div key={p.key} style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <Tag color="blue" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: 13, width: 'fit-content' }} onClick={() => {
-                                                navigator.clipboard.writeText(`{{${p.key}}}`);
-                                                message.success(`Đã copy: {{${p.key}}}`);
-                                            }}>
-                                                <Space size={4}>
-                                                    <CopyOutlined style={{ opacity: 0.6 }} />
-                                                    {`{{${p.key}}}`}
-                                                </Space>
-                                            </Tag>
-                                            <span style={{ fontSize: 12, color: '#888', marginTop: 4, marginLeft: 4 }}>{p.desc}</span>
-                                        </div>
-                                    ))}
-                                    {/* Seller Placeholders */}
-                                    <Divider style={{ margin: '8px 0' }} orientation="left" plain><span style={{fontSize: 11, color: '#aaa'}}>🔸 Bên Bán</span></Divider>
-                                    {[
-                                        { key: 'seller_company_name', desc: 'Tên công ty' },
-                                        { key: 'seller_address', desc: 'Địa chỉ' },
-                                        { key: 'seller_phone', desc: 'Số điện thoại' },
-                                        { key: 'seller_email', desc: 'Email' },
-                                        { key: 'seller_website', desc: 'Website' },
-                                        { key: 'seller_tax_code', desc: 'Mã số thuế' },
-                                        { key: 'seller_representative', desc: 'Người đại diện' },
-                                        { key: 'seller_bank_name', desc: 'Ngân hàng' },
-                                        { key: 'seller_bank_account', desc: 'Số tài khoản' },
-                                        { key: 'seller_bank_holder', desc: 'Chủ tài khoản' },
-                                    ].map(p => (
-                                        <div key={p.key} style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <Tag color="orange" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: 13, width: 'fit-content' }} onClick={() => {
-                                                navigator.clipboard.writeText(`{{${p.key}}}`);
-                                                message.success(`Đã copy: {{${p.key}}}`);
-                                            }}>
-                                                <Space size={4}>
-                                                    <CopyOutlined style={{ opacity: 0.6 }} />
-                                                    {`{{${p.key}}}`}
-                                                </Space>
-                                            </Tag>
-                                            <span style={{ fontSize: 12, color: '#888', marginTop: 4, marginLeft: 4 }}>{p.desc}</span>
-                                        </div>
-                                    ))}
-                                    {/* Text Content Placeholders */}
-                                    <Divider style={{ margin: '8px 0' }} orientation="left" plain><span style={{fontSize: 11, color: '#aaa'}}>📝 Nội dung tự soạn</span></Divider>
-                                    {[
-                                        { key: 'text_content_1', desc: 'Nội dung 1' },
-                                        { key: 'text_content_2', desc: 'Nội dung 2' },
-                                        { key: 'text_content_3', desc: 'Nội dung 3' },
-                                        { key: 'text_content_4', desc: 'Nội dung 4' },
-                                        { key: 'text_content_5', desc: 'Nội dung 5' },
-                                    ].map(p => (
-                                        <div key={p.key} style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <Tag color="purple" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: 13, width: 'fit-content' }} onClick={() => {
-                                                navigator.clipboard.writeText(`{{${p.key}}}`);
-                                                message.success(`Đã copy: {{${p.key}}}`);
-                                            }}>
-                                                <Space size={4}>
-                                                    <CopyOutlined style={{ opacity: 0.6 }} />
-                                                    {`{{${p.key}}}`}
-                                                </Space>
-                                            </Tag>
-                                            <span style={{ fontSize: 12, color: '#888', marginTop: 4, marginLeft: 4 }}>{p.desc}</span>
-                                        </div>
-                                    ))}
-                                    {customPlaceholders.length > 0 && <Divider style={{ margin: '8px 0' }} orientation="left" plain><span style={{fontSize: 11, color: '#aaa'}}>🟢 Tự định nghĩa</span></Divider>}
-                                    {customPlaceholders.map(p => (
-                                        <div key={p.key} style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <Tag color="green" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: 13, width: 'fit-content' }} onClick={() => {
-                                                navigator.clipboard.writeText(`{{${p.key}}}`);
-                                                message.success(`Đã copy: {{${p.key}}}`);
-                                            }}>
-                                                <Space size={4}>
-                                                    <CopyOutlined style={{ opacity: 0.6 }} />
-                                                    {`{{${p.key}}}`}
-                                                </Space>
-                                            </Tag>
-                                            <span style={{ fontSize: 12, color: '#888', marginTop: 4, marginLeft: 4 }}>{p.desc}</span>
-                                        </div>
-                                    ))}
-                                </Space>
-                            </div>
-                        </div>
-                    </Col>
-                </Row>
-            </Modal>
-
-            {/* Placeholder Config Modal */}
-            <Modal
-                title="Cấu Hình Danh Sách Nhãn (Placeholders)"
-                open={placeholderModalOpen}
-                onCancel={() => setPlaceholderModalOpen(false)}
-                onOk={placeholderForm.submit}
-                width={600}
-                destroyOnClose
-            >
-                <Alert
-                    type="warning"
-                    showIcon
-                    style={{ marginBottom: 16 }}
-                    message="Quy tắc tạo mã Placeholder (Mã biến)"
-                    description={
-                        <ul style={{ paddingLeft: 20, margin: 0, fontSize: 13 }}>
-                            <li><strong>Định dạng đúng:</strong> Ghi bằng chữ thường, tiếng Anh không dấu, sử dụng dấu gạch dưới <code>_</code> thay cho dấu cách (VD: <code>contract_value</code>, <code>buyer_email</code>). Không dùng chữ in hoa, không dùng ký tự đặc biệt.</li>
-                            <li><strong>Khớp dữ liệu:</strong> Tên biến phải <strong>chính xác</strong> với các trường dữ liệu trên hệ thống CRM (VD: khách hàng có số điện thoại là `phone` thì đặt biến là <code>customer_phone</code> hoặc <code>buyer_phone</code> tùy thiết lập tính năng in). Nếu đặt sai mã, hệ thống không thể tự lấy dữ liệu điền vào khoảng trống.</li>
-                        </ul>
-                    }
-                />
-                <Form form={placeholderForm} layout="vertical" onFinish={handleSavePlaceholders}>
-                    <Form.List name="placeholders">
-                        {(fields, { add, remove }) => (
-                            <>
-                                {fields.map(({ key, name, ...restField }) => (
-                                    <Row key={key} gutter={8} align="middle" style={{ marginBottom: 8 }}>
-                                        <Col flex="180px">
-                                            <Form.Item
-                                                {...restField}
-                                                name={[name, 'key']}
-                                                rules={[{ required: true, message: 'Nhập key' }]}
-                                                style={{ marginBottom: 0 }}
-                                            >
-                                                <Input addonBefore="{{" addonAfter="}}" placeholder="chi_nhanh" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col flex="auto">
-                                            <Form.Item
-                                                {...restField}
-                                                name={[name, 'desc']}
-                                                rules={[{ required: true, message: 'Nhập ghi chú' }]}
-                                                style={{ marginBottom: 0 }}
-                                            >
-                                                <Input placeholder="Chi nhánh văn phòng" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col>
-                                            <MinusCircleOutlined onClick={() => remove(name)} style={{ color: '#ff4d4f', fontSize: 16 }} />
-                                        </Col>
-                                    </Row>
-                                ))}
-                                <Form.Item style={{ marginTop: 16 }}>
-                                    <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                                        Thêm Placeholder tùy chỉnh
-                                    </Button>
-                                </Form.Item>
-                            </>
-                        )}
-                    </Form.List>
-                </Form>
-            </Modal>
-        </div>
-    );
-};
-
-// ... Helper components (LinkConfigItem, NumberConfigItem, CompanyConfigForm) ...
-
-const LinkConfigItem = ({ label, configKey, placeholder }: { label: string, configKey: string, placeholder: string }) => {
-    const [val, setVal] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        axios.get(`${API_URL}/system/config/${configKey}`).then(res => {
-            if (res.data && res.data.value) setVal(res.data.value);
-        });
-    }, [configKey]);
-
-    const handleSave = async () => {
-        setLoading(true);
-        try {
-            await axios.post(`${API_URL}/system/config`, {
-                key: configKey,
-                value: val,
-                description: label
-            });
-            message.success('Đã lưu');
-        } catch (e) { message.error('Lỗi lưu'); }
-        setLoading(false);
-    }
-
-    return (
-        <Form.Item label={label} style={{ marginBottom: 0 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-                <Input value={val} onChange={e => setVal(e.target.value)} placeholder={placeholder} />
-                <Button type="primary" icon={<SaveOutlined />} loading={loading} onClick={handleSave}>Lưu</Button>
-            </div>
-        </Form.Item>
-    );
-}
-
-const ImageUploadConfigItem = ({ label, configKey }: { label: string, configKey: string }) => {
-    const [val, setVal] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        axios.get(`${API_URL}/system/config/${configKey}`).then(res => {
-            if (res.data && res.data.value) setVal(res.data.value);
-        });
-    }, [configKey]);
-
-    const handleSave = async (newValue: string) => {
-        setLoading(true);
-        try {
-            await axios.post(`${API_URL}/system/config`, {
-                key: configKey,
-                value: newValue,
-                description: label
-            });
-            message.success('Đã lưu cấu hình hình ảnh');
-            setVal(newValue);
-        } catch (e) { message.error('Lỗi lưu cấu hình hình ảnh'); }
-        setLoading(false);
-    }
-
-    const uploadProps = {
-        name: 'file',
-        action: `${API_URL}/upload/image`,
-        data: { source: 'erp' },
-        showUploadList: false,
-        onChange(info: any) {
-            if (info.file.status === 'uploading') {
-                setLoading(true);
-                return;
-            }
-            if (info.file.status === 'done') {
-                const url = info.file.response?.url || info.file.response?.data?.url;
-                if (url) {
-                    handleSave(url);
-                } else {
-                    message.error('Upload thất bại, không nhận được URL');
-                    setLoading(false);
-                }
-            } else if (info.file.status === 'error') {
-                message.error(`${info.file.name} upload thất bại.`);
-                setLoading(false);
-            }
-        },
-    };
-
-    return (
-        <Form.Item label={label} style={{ marginBottom: 0 }}>
-            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                <Upload {...uploadProps}>
-                    <Button icon={<UploadOutlined />} loading={loading}>Tải Ảnh Lên</Button>
-                </Upload>
-                {val && (
-                    <div style={{ position: 'relative' }}>
-                        <img 
-                            src={val.startsWith('/uploads/') ? `${API_URL}/upload/files/${val.replace('/uploads/', '')}` : val} 
-                            alt="watermark" 
-                            style={{ height: 60, objectFit: 'contain', border: '1px dashed #ccc', padding: 4 }} 
-                        />
-                        <Button 
-                            danger 
-                            size="small" 
-                            style={{ position: 'absolute', top: -10, right: -10, borderRadius: '50%' }}
-                            onClick={() => handleSave('')}
-                        >×</Button>
-                    </div>
-                )}
-            </div>
-        </Form.Item>
-    );
-}
-
-const NumberConfigItem = ({ label, configKey, defaultValue }: { label: string, configKey: string, defaultValue: number }) => {
-    const [val, setVal] = useState<number>(defaultValue);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        axios.get(`${API_URL}/system/config/${configKey}`).then(res => {
-            if (res.data && res.data.value) setVal(Number(res.data.value));
-        });
-    }, [configKey]);
-
-    const handleSave = async () => {
-        setLoading(true);
-        try {
-            await axios.post(`${API_URL}/system/config`, {
-                key: configKey,
-                value: String(val),
-                description: label
-            });
-            message.success('Đã lưu');
-        } catch (e) { message.error('Lỗi lưu'); }
-        setLoading(false);
-    }
-
-    return (
-        <Form.Item label={label} style={{ marginBottom: 0 }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <InputNumber
-                    style={{ width: 200 }}
-                    value={val}
-                    onChange={(v) => setVal(v || defaultValue)}
-                    formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    parser={(v) => Number(v?.replace(/,/g, '') || defaultValue)}
-                    min={0}
-                />
-                <span style={{ color: '#888' }}>VNĐ</span>
-                <Button type="primary" icon={<SaveOutlined />} loading={loading} onClick={handleSave}>Lưu</Button>
-            </div>
-        </Form.Item>
-    );
-}
-
-const CompanyConfigForm = () => {
-    const [form] = Form.useForm();
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        axios.get(`${API_URL}/system/company`).then(res => form.setFieldsValue(res.data));
-    }, []);
-
-    const onFinish = async (values: any) => {
-        setLoading(true);
-        try {
-            await axios.post(`${API_URL}/system/company`, values);
-            message.success('Đã lưu thông tin doanh nghiệp');
-        } catch (e) { message.error('Lỗi khi lưu'); }
-        setLoading(false);
-    };
-
-    return (
-        <Form form={form} layout="vertical" onFinish={onFinish}>
-            <Row gutter={16}>
-                <Col span={12}><Form.Item name="COMPANY_NAME" label="Tên Doanh Nghiệp"><Input placeholder="VD: Công ty TNHH ABC" /></Form.Item></Col>
-                <Col span={12}><Form.Item name="COMPANY_PHONE" label="Số điện thoại"><Input placeholder="0909xxxxxx" /></Form.Item></Col>
-            </Row>
-            <Form.Item name="COMPANY_ADDRESS" label="Địa chỉ"><Input.TextArea rows={2} placeholder="Số 123, đường xyz..." /></Form.Item>
-            <Row gutter={16}>
-                <Col span={12}><Form.Item name="COMPANY_EMAIL" label="Email"><Input /></Form.Item></Col>
-                <Col span={12}><Form.Item name="COMPANY_WEBSITE" label="Website"><Input /></Form.Item></Col>
-            </Row>
-            <Row gutter={16}>
-                <Col span={12}><Form.Item name="COMPANY_TAX_CODE" label="Mã số thuế"><Input placeholder="0123456789" /></Form.Item></Col>
-                <Col span={12}><Form.Item name="COMPANY_REPRESENTATIVE" label="Người đại diện"><Input placeholder="Nguyễn Văn A" /></Form.Item></Col>
-            </Row>
-            <Divider orientation="left" plain>🏦 Thông tin Ngân hàng</Divider>
-            <Row gutter={16}>
-                <Col span={8}><Form.Item name="COMPANY_BANK_NAME" label="Tên Ngân hàng"><Input placeholder="VD: Vietcombank" /></Form.Item></Col>
-                <Col span={8}><Form.Item name="COMPANY_BANK_ACCOUNT" label="Số tài khoản"><Input placeholder="0123456789" /></Form.Item></Col>
-                <Col span={8}><Form.Item name="COMPANY_BANK_HOLDER" label="Chủ tài khoản"><Input placeholder="CÔNG TY TNHH ABC" /></Form.Item></Col>
-            </Row>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={loading}>Lưu Thông Tin</Button>
-        </Form>
-    );
-};
-
-const QuoteTermsTab: React.FC = () => {
-    const [termsList, setTermsList] = useState<{id: string, name: string, content: string, isDefault: boolean}[]>([]);
-    const [defaultNote, setDefaultNote] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
-    
-    const [modalOpen, setModalOpen] = useState(false);
-    const [editingTerm, setEditingTerm] = useState<any>(null);
-    const [form] = Form.useForm();
-
-    useEffect(() => {
-        setLoading(true);
-        Promise.all([
-            axios.get(`${API_URL}/system/config/QUOTE_TERMS_LIST`).catch(() => ({ data: null })),
-            axios.get(`${API_URL}/system/config/QUOTE_DEFAULT_TERMS`).catch(() => ({ data: null })),
-            axios.get(`${API_URL}/system/config/QUOTE_DEFAULT_NOTE`).catch(() => ({ data: null })),
-        ]).then(([listRes, termsRes, noteRes]) => {
-            let list = [];
-            if (listRes.data?.value) {
-                try {
-                    list = JSON.parse(listRes.data.value);
-                } catch(e) {}
-            }
-            if (list.length === 0 && termsRes.data?.value) {
-                list = [{ id: 'default', name: 'Điều khoản mặc định', content: termsRes.data.value, isDefault: true }];
-            }
-            setTermsList(list);
-            if (noteRes.data?.value) setDefaultNote(noteRes.data.value);
-        }).finally(() => setLoading(false));
-    }, []);
-
-    const handleSaveConfig = async () => {
-        setSaving(true);
-        try {
-            await Promise.all([
-                axios.post(`${API_URL}/system/config`, {
-                    key: 'QUOTE_TERMS_LIST',
-                    value: JSON.stringify(termsList),
-                    description: 'Danh sách Điều khoản & Quy định cho Báo giá'
-                }),
-                axios.post(`${API_URL}/system/config`, {
-                    key: 'QUOTE_DEFAULT_NOTE',
-                    value: defaultNote,
-                    description: 'Ghi chú mặc định cho Báo giá'
-                })
-            ]);
-            message.success('Đã lưu cấu hình Terms Báo giá!');
-        } catch (e) {
-            message.error('Lỗi khi lưu');
-        }
-        setSaving(false);
-    };
-
-    const handleSaveTerm = (values: any) => {
-        let newList = [...termsList];
-        if (values.isDefault) {
-            newList = newList.map(t => ({ ...t, isDefault: false }));
-        }
-        if (editingTerm) {
-            newList = newList.map(t => t.id === editingTerm.id ? { ...t, ...values } : t);
-        } else {
-            newList.push({ id: Date.now().toString(), ...values });
-        }
-        // Nếu chỉ có 1 cái thì tự động set default
-        if (newList.length === 1) {
-            newList[0].isDefault = true;
-        }
-        setTermsList(newList);
-        setModalOpen(false);
-    };
-
-    const handleDeleteTerm = (id: string) => {
-        setTermsList(termsList.filter(t => t.id !== id));
-    };
-
-    if (loading) return <Spin />;
-
-    const columns = [
-        { title: 'Tên Mẫu Điều Khoản', dataIndex: 'name', key: 'name', render: (t: string, r: any) => <b>{t} {r.isDefault && <Tag color="blue" style={{ marginLeft: 8 }}>Mặc định</Tag>}</b> },
-        { title: 'Nội dung', dataIndex: 'content', key: 'content', render: (t: string) => <div style={{ whiteSpace: 'pre-line', fontSize: 13, maxHeight: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t}</div> },
-        {
-            title: 'Hành động', key: 'action', width: 120, render: (_: any, r: any) => (
-                <Space>
-                    <Button icon={<EditOutlined />} size="small" onClick={() => { setEditingTerm(r); form.setFieldsValue(r); setModalOpen(true); }} />
-                    <Popconfirm title="Xóa mẫu này?" onConfirm={() => handleDeleteTerm(r.id)}>
-                        <Button icon={<DeleteOutlined />} danger size="small" />
-                    </Popconfirm>
-                </Space>
-            )
-        }
-    ];
-
-    return (
-        <>
-            <Alert
-                message="Cấu hình nội dung mặc định cho Báo giá B2B"
-                description="Nội dung dưới đây sẽ được tự động điền khi tạo báo giá mới. Nhân viên Sales có thể chọn mẫu Điều khoản và chỉnh sửa cho từng đơn cụ thể."
-                type="info"
-                showIcon
-                style={{ marginBottom: 24 }}
-            />
-
-            <Card title="📝 Ghi chú mặc định (Note)" bordered={false} size="small" style={{ marginBottom: 20 }}>
-                <div style={{ marginBottom: 8, fontSize: 12, color: '#888' }}>
-                    Nội dung này sẽ hiển thị trong phần "Ghi chú từ người bán" trên Portal và bản in.
-                </div>
-                <Input.TextArea
-                    rows={4}
-                    value={defaultNote}
-                    onChange={e => setDefaultNote(e.target.value)}
-                    placeholder="VD: Báo giá có hiệu lực trong 7 ngày kể từ ngày gửi. Giá chưa bao gồm VAT và phí vận chuyển."
-                    style={{ fontSize: 13 }}
-                />
-            </Card>
-
-            <Card 
-                title="📋 Danh sách Điều khoản & Quy định (Terms)" 
-                bordered={false} 
-                size="small" 
-                style={{ marginBottom: 20 }}
-                extra={<Button type="primary" icon={<PlusOutlined />} size="small" onClick={() => { setEditingTerm(null); form.resetFields(); form.setFieldsValue({ isDefault: termsList.length === 0 }); setModalOpen(true); }}>Thêm Mẫu</Button>}
-            >
-                <div style={{ marginBottom: 16, fontSize: 12, color: '#888' }}>
-                    Nhân viên có thể chọn các mẫu này khi tạo Báo giá. Mẫu "Mặc định" sẽ tự động được điền.
-                </div>
-                <Table dataSource={termsList} columns={columns} rowKey="id" pagination={false} size="small" />
-            </Card>
-
-            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSaveConfig} size="large">
-                Lưu Toàn Bộ Cấu Hình Terms
-            </Button>
-
-            <Modal
-                title={editingTerm ? "Chỉnh sửa Mẫu Điều Khoản" : "Thêm Mẫu Điều Khoản"}
-                open={modalOpen}
-                onCancel={() => setModalOpen(false)}
-                onOk={form.submit}
-                width={800}
-                destroyOnClose
-            >
-                <Form form={form} layout="vertical" onFinish={handleSaveTerm}>
-                    <Form.Item name="name" label="Tên Mẫu" rules={[{ required: true }]}>
-                        <Input placeholder="VD: Điều khoản Standard" />
-                    </Form.Item>
-                    <Form.Item name="content" label="Nội dung Điều khoản & Quy định" rules={[{ required: true }]}>
-                        <Input.TextArea rows={8} placeholder={`VD:\n1. Thời gian giao hàng: 15-20 ngày...\n2. Thanh toán: Đặt cọc 50%...`} />
-                    </Form.Item>
-                    <Form.Item name="isDefault" valuePropName="checked">
-                        <Checkbox>Đặt làm Mẫu Mặc định</Checkbox>
-                    </Form.Item>
-                </Form>
-            </Modal>
-        </>
-    );
-};
-
-const OrderTermsTab: React.FC = () => {
-    const [termsList, setTermsList] = useState<{id: string, name: string, content: string, isDefault: boolean}[]>([]);
-    const [defaultNote, setDefaultNote] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
-    
-    const [modalOpen, setModalOpen] = useState(false);
-    const [editingTerm, setEditingTerm] = useState<any>(null);
-    const [form] = Form.useForm();
-
-    useEffect(() => {
-        setLoading(true);
-        Promise.all([
-            axios.get(`${API_URL}/system/config/ORDER_TERMS_LIST`).catch(() => ({ data: null })),
-            axios.get(`${API_URL}/system/config/ORDER_DEFAULT_TERMS`).catch(() => ({ data: null })),
-            axios.get(`${API_URL}/system/config/ORDER_DEFAULT_NOTE`).catch(() => ({ data: null })),
-        ]).then(([listRes, termsRes, noteRes]) => {
-            let list = [];
-            if (listRes.data?.value) {
-                try {
-                    list = JSON.parse(listRes.data.value);
-                } catch(e) {}
-            }
-            if (list.length === 0 && termsRes.data?.value) {
-                list = [{ id: 'default', name: 'Điều khoản mặc định', content: termsRes.data.value, isDefault: true }];
-            }
-            setTermsList(list);
-            if (noteRes.data?.value) setDefaultNote(noteRes.data.value);
-        }).finally(() => setLoading(false));
-    }, []);
-
-    const handleSaveConfig = async () => {
-        setSaving(true);
-        try {
-            await Promise.all([
-                axios.post(`${API_URL}/system/config`, {
-                    key: 'ORDER_TERMS_LIST',
-                    value: JSON.stringify(termsList),
-                    description: 'Danh sách Điều khoản & Quy định cho Đơn hàng'
-                }),
-                axios.post(`${API_URL}/system/config`, {
-                    key: 'ORDER_DEFAULT_NOTE',
-                    value: defaultNote,
-                    description: 'Ghi chú mặc định cho Đơn hàng'
-                })
-            ]);
-            message.success('Đã lưu cấu hình Terms Đơn hàng!');
-        } catch (e) {
-            message.error('Lỗi khi lưu');
-        }
-        setSaving(false);
-    };
-
-    const handleSaveTerm = (values: any) => {
-        let newList = [...termsList];
-        if (values.isDefault) {
-            newList = newList.map(t => ({ ...t, isDefault: false }));
-        }
-        if (editingTerm) {
-            newList = newList.map(t => t.id === editingTerm.id ? { ...t, ...values } : t);
-        } else {
-            newList.push({ id: Date.now().toString(), ...values });
-        }
-        // Nếu chỉ có 1 cái thì tự động set default
-        if (newList.length === 1) {
-            newList[0].isDefault = true;
-        }
-        setTermsList(newList);
-        setModalOpen(false);
-    };
-
-    const handleDeleteTerm = (id: string) => {
-        setTermsList(termsList.filter(t => t.id !== id));
-    };
-
-    if (loading) return <Spin />;
-
-    const columns = [
-        { title: 'Tên Mẫu Điều Khoản', dataIndex: 'name', key: 'name', render: (t: string, r: any) => <b>{t} {r.isDefault && <Tag color="blue" style={{ marginLeft: 8 }}>Mặc định</Tag>}</b> },
-        { title: 'Nội dung', dataIndex: 'content', key: 'content', render: (t: string) => <div style={{ whiteSpace: 'pre-line', fontSize: 13, maxHeight: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t}</div> },
-        {
-            title: 'Hành động', key: 'action', width: 120, render: (_: any, r: any) => (
-                <Space>
-                    <Button icon={<EditOutlined />} size="small" onClick={() => { setEditingTerm(r); form.setFieldsValue(r); setModalOpen(true); }} />
-                    <Popconfirm title="Xóa mẫu này?" onConfirm={() => handleDeleteTerm(r.id)}>
-                        <Button icon={<DeleteOutlined />} danger size="small" />
-                    </Popconfirm>
-                </Space>
-            )
-        }
-    ];
-
-    return (
-        <>
-            <Alert
-                message="Cấu hình nội dung mặc định cho Đơn hàng"
-                description="Nội dung dưới đây sẽ được tự động điền khi tạo đơn hàng mới. Nhân viên có thể chọn mẫu Điều khoản và chỉnh sửa cho từng đơn cụ thể."
-                type="info"
-                showIcon
-                style={{ marginBottom: 24 }}
-            />
-
-            <Card title="📝 Ghi chú mặc định (Note)" bordered={false} size="small" style={{ marginBottom: 20 }}>
-                <div style={{ marginBottom: 8, fontSize: 12, color: '#888' }}>
-                    Nội dung này sẽ hiển thị trong phần "Ghi chú từ người bán" trên Portal và bản in.
-                </div>
-                <Input.TextArea
-                    rows={4}
-                    value={defaultNote}
-                    onChange={e => setDefaultNote(e.target.value)}
-                    placeholder="VD: Giá chưa bao gồm VAT. Giao hàng theo lịch trình thỏa thuận."
-                    style={{ fontSize: 13 }}
-                />
-            </Card>
-
-            <Card 
-                title="📋 Danh sách Điều khoản & Quy định (Terms)" 
-                bordered={false} 
-                size="small" 
-                style={{ marginBottom: 20 }}
-                extra={<Button type="primary" icon={<PlusOutlined />} size="small" onClick={() => { setEditingTerm(null); form.resetFields(); form.setFieldsValue({ isDefault: termsList.length === 0 }); setModalOpen(true); }}>Thêm Mẫu</Button>}
-            >
-                <div style={{ marginBottom: 16, fontSize: 12, color: '#888' }}>
-                    Nhân viên có thể chọn các mẫu này khi tạo Đơn hàng. Mẫu "Mặc định" sẽ tự động được điền.
-                </div>
-                <Table dataSource={termsList} columns={columns} rowKey="id" pagination={false} size="small" />
-            </Card>
-
-            <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSaveConfig} size="large">
-                Lưu Toàn Bộ Cấu Hình Terms
-            </Button>
-
-            <Modal
-                title={editingTerm ? "Chỉnh sửa Mẫu Điều Khoản" : "Thêm Mẫu Điều Khoản"}
-                open={modalOpen}
-                onCancel={() => setModalOpen(false)}
-                onOk={form.submit}
-                width={800}
-                destroyOnClose
-            >
-                <Form form={form} layout="vertical" onFinish={handleSaveTerm}>
-                    <Form.Item name="name" label="Tên Mẫu" rules={[{ required: true }]}>
-                        <Input placeholder="VD: Điều khoản Standard" />
-                    </Form.Item>
-                    <Form.Item name="content" label="Nội dung Điều khoản & Quy định" rules={[{ required: true }]}>
-                        <Input.TextArea rows={8} placeholder={`VD:\n1. Thời gian giao hàng: 15-20 ngày...\n2. Thanh toán: Đặt cọc 50%...`} />
-                    </Form.Item>
-                    <Form.Item name="isDefault" valuePropName="checked">
-                        <Checkbox>Đặt làm Mẫu Mặc định</Checkbox>
-                    </Form.Item>
-                </Form>
-            </Modal>
-        </>
-    );
-};
-
-const EmailTemplatesTab: React.FC = () => {
-    const [templates, setTemplates] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [modalOpen, setModalOpen] = useState(false);
-    const [editingTemplate, setEditingTemplate] = useState<any>(null);
-    const [form] = Form.useForm();
-
-    const [customPlaceholders, setCustomPlaceholders] = useState<{key: string, desc: string}[]>([]);
-
-    const fetchPlaceholders = async () => {
-        try {
-            const res = await axios.get(`${API_URL}/system/config/CONTRACT_CUSTOM_PLACEHOLDERS`);
-            if (res.data && res.data.value) {
-                setCustomPlaceholders(JSON.parse(res.data.value));
-            }
-        } catch (e) { }
-    };
-
-    const fetchTemplates = async () => {
-        setLoading(true);
-        try {
-            const res = await axios.get(`${API_URL}/system/email-templates`);
-            setTemplates(res.data);
-        } catch (e) { message.error('Lỗi tải danh sách mẫu email'); }
-        setLoading(false);
-    };
-
-    useEffect(() => { 
-        fetchTemplates(); 
-        fetchPlaceholders();
-    }, []);
-
-    const handleSave = async (values: any) => {
-        try {
-            await axios.post(`${API_URL}/system/email-templates`, { ...values, id: editingTemplate?.id });
-            message.success('Đã lưu mẫu email');
-            setModalOpen(false);
-            fetchTemplates();
-        } catch (e) { message.error('Lỗi lưu mẫu email'); }
-    };
-
-    const handleDelete = async (id: number) => {
-        try {
-            await axios.delete(`${API_URL}/system/email-templates/${id}`);
-            message.success('Đã xóa mẫu email');
-            fetchTemplates();
-        } catch (e) { message.error('Lỗi xóa mẫu email'); }
-    };
-
-    const columns = [
-        { title: 'Tên Mẫu', dataIndex: 'name', key: 'name', width: '25%', render: (t: string) => <b>{t}</b> },
-        { title: 'Tiêu đề Email', dataIndex: 'subject', key: 'subject', width: '35%' },
-        { title: 'Cập nhật lần cuối', dataIndex: 'updated_at', key: 'updated_at', render: (t: string) => dayjs(t).format('DD/MM/YYYY HH:mm') },
-        {
-            title: 'Hành động', key: 'action', width: 150, render: (_: any, r: any) => (
-                <div style={{ display: 'flex', gap: 8 }}>
-                    <Button icon={<EditOutlined />} size="small" onClick={() => { setEditingTemplate(r); form.setFieldsValue(r); setModalOpen(true); }} />
-                    <Popconfirm title="Xóa mẫu này?" onConfirm={() => handleDelete(r.id)}>
-                        <Button icon={<DeleteOutlined />} danger size="small" />
-                    </Popconfirm>
-                </div>
-            )
-        }
-    ];
-
-    return (
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                <h3>Danh Sách Mẫu Email</h3>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingTemplate(null); form.resetFields(); setModalOpen(true); }}>Tạo Mẫu Mới</Button>
-            </div>
-
-            <Table dataSource={templates} columns={columns} rowKey="id" loading={loading} pagination={false} />
-
-            <Modal
-                title={editingTemplate ? "Chỉnh Sửa Mẫu Email" : "Tạo Mẫu Email"}
-                open={modalOpen}
-                onCancel={() => setModalOpen(false)}
-                onOk={form.submit}
-                width={1200}
-                style={{ top: 20 }}
-                maskClosable={false}
-            >
-                <Row gutter={24}>
-                    <Col span={17}>
-                        <Form form={form} layout="vertical" onFinish={handleSave}>
-                            <Form.Item name="name" label={<span style={{fontWeight: 600}}>Tên mẫu (Dùng để quản lý nội bộ)</span>} rules={[{ required: true, message: 'Nhập tên mẫu' }]}>
-                                <Input placeholder="VD: Gửi Báo Giá Khách Hàng" size="large" />
-                            </Form.Item>
-                            <Form.Item name="subject" label={<span style={{fontWeight: 600}}>Tiêu đề Email</span>} rules={[{ required: true, message: 'Nhập tiêu đề email' }]}>
-                                <Input placeholder="VD: Báo giá dịch vụ từ ERP4U - {{order_code}}" size="large" />
-                            </Form.Item>
-                            <Form.Item name="content" label={<span style={{fontWeight: 600}}>Nội dung Email (HTML)</span>} rules={[{ required: true }]}>
-                                <RichTextEditor minHeight={400} />
-                            </Form.Item>
-                        </Form>
-                    </Col>
-                    <Col span={7}>
-                        <div style={{ background: '#f5f5f5', padding: 16, borderRadius: 8, height: '100%' }}>
-                            <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 15 }}>Danh Sách Placeholder</div>
-                            <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.4 }}>
-                                Dùng chung nhãn với Mẫu hợp đồng. Click để copy và dán vào tiêu đề hoặc nội dung.
-                            </p>
-                            <div style={{ maxHeight: 500, overflowY: 'auto', paddingRight: 4 }}>
-                                <Space size={[8, 12]} wrap direction="vertical" style={{ width: '100%' }}>
-                                    <div style={{ fontWeight: 600, fontSize: 11, color: '#999', textTransform: 'uppercase' }}>🔹 Khách hàng & Đơn hàng</div>
-                                    {[
-                                        { key: 'customer_name', desc: 'Tên Khách hàng' },
-                                        { key: 'customer_email', desc: 'Email Khách hàng' },
-                                        { key: 'order_code', desc: 'Mã Đơn hàng / Báo giá' },
-                                        { key: 'order_date', desc: 'Ngày tạo' },
-                                        { key: 'total_amount_text', desc: 'Tổng tiền (chữ)' },
-                                    ].map(p => (
-                                        <div key={p.key} style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <Tag color="blue" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: 13, width: 'fit-content' }} onClick={() => {
-                                                navigator.clipboard.writeText(`{{${p.key}}}`);
-                                                message.success(`Đã copy: {{${p.key}}}`);
-                                            }}>
-                                                <Space size={4}><CopyOutlined style={{ opacity: 0.6 }} />{`{{${p.key}}}`}</Space>
-                                            </Tag>
-                                            <span style={{ fontSize: 12, color: '#888', marginTop: 4, marginLeft: 4 }}>{p.desc}</span>
-                                        </div>
-                                    ))}
-                                    <Divider style={{ margin: '8px 0' }} orientation="left" plain><span style={{fontSize: 11, color: '#aaa'}}>🔸 Bên Bán</span></Divider>
-                                    {[
-                                        { key: 'seller_company_name', desc: 'Tên công ty' },
-                                        { key: 'seller_phone', desc: 'Số điện thoại' },
-                                        { key: 'seller_email', desc: 'Email' },
-                                        { key: 'seller_website', desc: 'Website' },
-                                    ].map(p => (
-                                        <div key={p.key} style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <Tag color="orange" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: 13, width: 'fit-content' }} onClick={() => {
-                                                navigator.clipboard.writeText(`{{${p.key}}}`);
-                                                message.success(`Đã copy: {{${p.key}}}`);
-                                            }}>
-                                                <Space size={4}><CopyOutlined style={{ opacity: 0.6 }} />{`{{${p.key}}}`}</Space>
-                                            </Tag>
-                                            <span style={{ fontSize: 12, color: '#888', marginTop: 4, marginLeft: 4 }}>{p.desc}</span>
-                                        </div>
-                                    ))}
-                                    {customPlaceholders.length > 0 && <Divider style={{ margin: '8px 0' }} orientation="left" plain><span style={{fontSize: 11, color: '#aaa'}}>🟢 Tự định nghĩa</span></Divider>}
-                                    {customPlaceholders.map(p => (
-                                        <div key={p.key} style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <Tag color="green" style={{ cursor: 'pointer', padding: '6px 12px', fontSize: 13, width: 'fit-content' }} onClick={() => {
-                                                navigator.clipboard.writeText(`{{${p.key}}}`);
-                                                message.success(`Đã copy: {{${p.key}}}`);
-                                            }}>
-                                                <Space size={4}><CopyOutlined style={{ opacity: 0.6 }} />{`{{${p.key}}}`}</Space>
-                                            </Tag>
-                                            <span style={{ fontSize: 12, color: '#888', marginTop: 4, marginLeft: 4 }}>{p.desc}</span>
-                                        </div>
-                                    ))}
-                                </Space>
-                            </div>
-                        </div>
-                    </Col>
-                </Row>
-            </Modal>
-        </div>
-    );
-};
-
+// =========================================================================
+// TAB 7: TÍCH HỢP API KEYS (BOT / AGENTS)
+// =========================================================================
 const ApiKeysTab: React.FC = () => {
     const [tokens, setTokens] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -1464,15 +1777,15 @@ const ApiKeysTab: React.FC = () => {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div>
-                    <h3>Quản Lý API Keys</h3>
-                    <p style={{ color: '#888', marginBottom: 0 }}>Cấp phát và thu hồi API Key cho các hệ thống Agent (Bot) tích hợp.</p>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>🔑 Quản Lý API Keys Cho Bot & Tích Hợp</h3>
+                    <p style={{ color: '#888', margin: 0, fontSize: 13 }}>Cấp phát và thu hồi API Token cho các trợ lý ảo (AI Agent), Bot báo cáo tự động và dịch vụ bên thứ 3.</p>
                 </div>
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => { setGeneratedKey(null); form.resetFields(); setModalOpen(true); }}>Tạo API Key</Button>
             </div>
 
-            <Table dataSource={tokens} columns={columns} rowKey="id" loading={loading} pagination={false} />
+            <Table dataSource={tokens} columns={columns} rowKey="id" loading={loading} pagination={false} size="small" />
 
             <Modal
                 title="Tạo API Key Mới"
@@ -1513,6 +1826,83 @@ const ApiKeysTab: React.FC = () => {
                 )}
             </Modal>
         </div>
+    );
+};
+
+// =========================================================================
+// HELPER COMPONENTS
+// =========================================================================
+const LinkConfigItem = ({ label, configKey, placeholder }: { label: string, configKey: string, placeholder: string }) => {
+    const [val, setVal] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        axios.get(`${API_URL}/system/config/${configKey}`).then(res => {
+            if (res.data && res.data.value) setVal(res.data.value);
+        });
+    }, [configKey]);
+
+    const handleSave = async () => {
+        setLoading(true);
+        try {
+            await axios.post(`${API_URL}/system/config`, {
+                key: configKey,
+                value: val,
+                description: label
+            });
+            message.success('Đã lưu');
+        } catch (e) { message.error('Lỗi lưu'); }
+        setLoading(false);
+    };
+
+    return (
+        <Form.Item label={label} style={{ marginBottom: 0 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+                <Input value={val} onChange={e => setVal(e.target.value)} placeholder={placeholder} />
+                <Button type="primary" icon={<SaveOutlined />} loading={loading} onClick={handleSave}>Lưu</Button>
+            </div>
+        </Form.Item>
+    );
+};
+
+const NumberConfigItem = ({ label, configKey, defaultValue }: { label: string, configKey: string, defaultValue: number }) => {
+    const [val, setVal] = useState<number>(defaultValue);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        axios.get(`${API_URL}/system/config/${configKey}`).then(res => {
+            if (res.data && res.data.value) setVal(Number(res.data.value));
+        });
+    }, [configKey]);
+
+    const handleSave = async () => {
+        setLoading(true);
+        try {
+            await axios.post(`${API_URL}/system/config`, {
+                key: configKey,
+                value: String(val),
+                description: label
+            });
+            message.success('Đã lưu');
+        } catch (e) { message.error('Lỗi lưu'); }
+        setLoading(false);
+    };
+
+    return (
+        <Form.Item label={label} style={{ marginBottom: 0 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <InputNumber
+                    style={{ width: 220 }}
+                    value={val}
+                    onChange={(v) => setVal(v || defaultValue)}
+                    formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    parser={(v) => Number(v?.replace(/,/g, '') || defaultValue)}
+                    min={0}
+                />
+                <span style={{ color: '#888' }}>VNĐ</span>
+                <Button type="primary" icon={<SaveOutlined />} loading={loading} onClick={handleSave}>Lưu</Button>
+            </div>
+        </Form.Item>
     );
 };
 

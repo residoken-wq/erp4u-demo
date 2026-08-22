@@ -195,7 +195,9 @@ export class SalesService {
                 sample_image: itemData.sample_image,
                 image_url: itemData.image_url || (product ? product.image_url : null), // <--- Prioritize User Input
                 position: validItems.indexOf(itemData) + 1, // Save Position
-                price_ranges: itemData.price_ranges
+                price_ranges: itemData.price_ranges,
+                customer_note: itemData.customer_note,
+                internal_note: itemData.internal_note
             });
         }));
 
@@ -432,6 +434,8 @@ export class SalesService {
                     image_url: itemData.image_url || (product ? product.image_url : null), // <--- Prioritize User Input
                     position: validItems.indexOf(itemData) + 1, // Save Position
                     price_ranges: itemData.price_ranges,
+                    customer_note: itemData.customer_note,
+                    internal_note: itemData.internal_note,
                     // --- RESTORE BOOKING FIELDS ---
                     booking_status: bookingData?.booking_status as any || BookingStatus.NONE,
                     booked_quantity: bookingData?.booked_quantity || 0,

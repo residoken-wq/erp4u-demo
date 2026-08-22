@@ -848,10 +848,28 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
         }
         
         const watermarkConfig = await this.configRepo.findOne({ where: { key: 'PORTAL_WATERMARK_IMAGE' } });
+        const bannerConfig = await this.configRepo.findOne({ where: { key: 'PRINT_HEADER_BANNER' } });
+        const stampConfig = await this.configRepo.findOne({ where: { key: 'COMPANY_STAMP_IMAGE' } });
+        const colorConfig = await this.configRepo.findOne({ where: { key: 'PRINT_PRIMARY_COLOR' } });
+        const footerConfig = await this.configRepo.findOne({ where: { key: 'PRINT_CUSTOM_NOTE_FOOTER' } });
+        const printOptionsConfig = await this.configRepo.findOne({ where: { key: 'PORTAL_PRINT_OPTIONS' } });
+        
+        let printOptions = {};
+        if (printOptionsConfig?.value) {
+            try { printOptions = JSON.parse(printOptionsConfig.value); } catch (e) { }
+        }
+
+        const companyInfo = await this.systemService.getCompanyConfig();
         
         return {
             ...quote,
-            watermark_image: watermarkConfig?.value || ''
+            company_info: companyInfo,
+            watermark_image: watermarkConfig?.value || '',
+            print_header_banner: bannerConfig?.value || '',
+            company_stamp_image: stampConfig?.value || '',
+            print_primary_color: colorConfig?.value || '#0050b3',
+            print_footer_note: footerConfig?.value || '',
+            print_options: printOptions,
         };
     }
 

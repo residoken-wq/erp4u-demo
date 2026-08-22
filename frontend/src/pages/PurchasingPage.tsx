@@ -1362,14 +1362,28 @@ const PurchasingPage: React.FC = () => {
                                     },
                                     {
                                         title: 'Ghi chú', width: 150, render: (r: any, _: any, index: number) => (
-                                            <Input
-                                                value={r.note}
-                                                onChange={(e) => {
-                                                    const newItems = [...editingItems];
-                                                    newItems[index].note = e.target.value;
-                                                    setEditingItems(newItems);
-                                                }}
-                                            />
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                                <Input
+                                                    placeholder="Ghi chú PO..."
+                                                    value={r.note}
+                                                    onChange={(e) => {
+                                                        const newItems = [...editingItems];
+                                                        newItems[index].note = e.target.value;
+                                                        setEditingItems(newItems);
+                                                    }}
+                                                />
+                                                <Input.TextArea
+                                                    rows={1}
+                                                    placeholder="Ghi chú NB..."
+                                                    value={r.internal_note}
+                                                    style={{ color: '#cf1322', fontSize: 12 }}
+                                                    onChange={(e) => {
+                                                        const newItems = [...editingItems];
+                                                        newItems[index].internal_note = e.target.value;
+                                                        setEditingItems(newItems);
+                                                    }}
+                                                />
+                                            </div>
                                         )
                                     },
                                     { title: 'Thành tiền', render: (r: any) => <b>{Number(r.subtotal).toLocaleString()}</b> }

@@ -81,7 +81,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             ];
 
             // Row 1: Logo & Title
-            const r1 = sheet.addRow(['ERP4YOU', '', '', '', isQuotation ? 'BẢNG BÁO GIÁ' : 'ĐƠN ĐẶT HÀNG']);
+            const r1 = sheet.addRow(['NỆM MẦM NON ERP4U', '', '', '', isQuotation ? 'BẢNG BÁO GIÁ' : 'ĐƠN ĐẶT HÀNG']);
             sheet.mergeCells('A1:D1');
             sheet.mergeCells('E1:H1');
             r1.getCell(1).font = { bold: true, size: 16, color: { argb: 'FF0070C0' } };
@@ -89,7 +89,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             r1.getCell(5).alignment = { horizontal: 'center' };
 
             // Row 2: Company & Quote Number
-            const r2 = sheet.addRow(['CÔNG TY TNHH ERP4YOU', '', '', '', `Số: ${initialData?.order_code || 'New'}`]);
+            const r2 = sheet.addRow(['CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ TƯỜNG LINH', '', '', '', `Số: ${initialData?.order_code || 'New'}`]);
             sheet.mergeCells('A2:D2');
             sheet.mergeCells('E2:H2');
             r2.getCell(1).font = { bold: true, color: { argb: 'FF555555' } };
@@ -523,7 +523,9 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                 vat_content: i.vat_content || '',
                 sample_image: i.sample_image,
                 image_url: i.image_url,
-                price_ranges: i.price_ranges
+                price_ranges: i.price_ranges,
+                customer_note: i.customer_note,
+                internal_note: i.internal_note
             }));
             setOrderItems(items);
             calculateTotal(items);
@@ -601,7 +603,9 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                     sample_image: i.sample_image,
                     image_url: i.image_url, // <--- Add this!
                     total_price: i.total_price, // Frontend gửi total_price, Backend sẽ map vào subtotal
-                    price_ranges: i.price_ranges
+                    price_ranges: i.price_ranges,
+                    customer_note: i.customer_note,
+                    internal_note: i.internal_note
                 }))
             };
 

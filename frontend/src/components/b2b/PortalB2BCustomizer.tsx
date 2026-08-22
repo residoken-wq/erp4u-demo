@@ -30,7 +30,7 @@ export default function PortalB2BCustomizer({ slug, token, onClose }: Props) {
     useEffect(() => {
         const loadData = async () => {
             try {
-                const apiUrl = (import.meta as any).env?.VITE_API_URL || ((import.meta as any).env?.DEV ? 'http://localhost:3000/api' : '/api');
+                const apiUrl = (import.meta as any).env?.VITE_API_URL || 'https://localhost:3000/api';
                 const [settingsRes, configRes] = await Promise.all([
                     fetch(`${apiUrl}/public/settings`),
                     fetch(`${apiUrl}/public/wizard/config`)

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Spin, Result, Button, message, Modal, Steps, Typography, List, Input, Avatar, Row, Col, Card, Descriptions, Divider, Table, Space, Tag, Empty, Dropdown, Watermark } from 'antd';
-import { LinkOutlined, CheckCircleOutlined, SolutionOutlined, FileDoneOutlined, CarOutlined, DollarOutlined, UserOutlined, SendOutlined, ShopOutlined, PrinterOutlined, InfoCircleOutlined, CreditCardOutlined, EyeOutlined, AppstoreAddOutlined, FilePdfOutlined, LockOutlined } from '@ant-design/icons';
+import { LinkOutlined, CheckCircleOutlined, SolutionOutlined, FileDoneOutlined, CarOutlined, DollarOutlined, UserOutlined, SendOutlined, ShopOutlined, PrinterOutlined, InfoCircleOutlined, CreditCardOutlined, EyeOutlined, AppstoreAddOutlined, FilePdfOutlined, LockOutlined, FileTextOutlined, PushpinOutlined } from '@ant-design/icons';
 import { API_URL } from '../config';
 import dayjs from 'dayjs';
 import useMobile from '../hooks/useMobile'; // <--- Import Hook
@@ -194,6 +194,27 @@ const PortalQuotePage: React.FC = () => {
         const vatTax = data.customer?.tax_code || data.vat_tax_code || '';
         const vatAddress = data.customer?.legal_address || data.vat_address || customerAddress;
 
+        // Dynamic Company / Seller Info
+        const sellerName = data.company_info?.COMPANY_NAME || 'CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ TƯỜNG LINH';
+        const sellerAddress = data.company_info?.COMPANY_ADDRESS || '74/21/24 Nguyễn Khuyến, P. Bình Thạnh, TP. HCM, VN';
+        const sellerPhone = data.company_info?.COMPANY_PHONE || '0983.882210 - 0983.796654';
+        const sellerTaxCode = data.company_info?.COMPANY_TAX_CODE || '0311.874.522';
+        const sellerEmail = data.company_info?.COMPANY_EMAIL || 'nemmanonerp4u@gmail.com';
+        const sellerBankName = data.company_info?.COMPANY_BANK_NAME || 'ACB - TP.HCM';
+        const sellerBankAccount = data.company_info?.COMPANY_BANK_ACCOUNT || '141847859';
+        const sellerBankHolder = data.company_info?.COMPANY_BANK_HOLDER || 'CTY TNHH TM DV TUONG LINH';
+        
+        const bannerUrl = data.print_header_banner
+            ? (data.print_header_banner.startsWith('/uploads/') ? `${API_URL}/upload/files/${data.print_header_banner.replace('/uploads/', '')}` : data.print_header_banner)
+            : `${window.location.origin}/b2b_header_banner.png`;
+
+        const stampImage = data.company_stamp_image
+            ? (data.company_stamp_image.startsWith('/uploads/') ? `${API_URL}/upload/files/${data.company_stamp_image.replace('/uploads/', '')}` : data.company_stamp_image)
+            : '';
+
+        const primaryColor = data.print_primary_color || '#0050b3';
+        const footerNote = data.print_footer_note || '';
+
         // Calculate totals
         const subTotal = data.items.reduce((sum: number, item: any) => sum + Number(item.subtotal), 0);
         const discountAmount = Number(data.discount_amount || 0);
@@ -214,7 +235,9 @@ const PortalQuotePage: React.FC = () => {
             qrAmount = remaining > 0 ? remaining : 0;
         }
         qrAmount = Math.floor(qrAmount);
-        const qrLink = `https://img.vietqr.io/image/ACB-141847859-compact2.jpg?amount=${qrAmount}&addInfo=${data.order_code}&accountName=CTY TNHH TM DV TUONG LINH`;
+
+        const rawBankCode = (sellerBankName.split('-')[0] || 'ACB').trim();
+        const qrLink = `https://img.vietqr.io/image/${rawBankCode}-${sellerBankAccount}-compact2.jpg?amount=${qrAmount}&addInfo=${data.order_code}&accountName=${encodeURIComponent(sellerBankHolder)}`;
 
         if (mode === 'pos') {
             const posHtml = `<!DOCTYPE html>
@@ -234,7 +257,7 @@ const PortalQuotePage: React.FC = () => {
 <body style="background: #f0f0f0; display: flex; justify-content: center; padding: 20px;">
     <div id="pos-receipt" style="width: 300px; font-family: monospace; color: #000; font-size: 13px; padding: 10px; background: #fff;">
         <div style="text-align: center; margin-bottom: 10px;">
-            <h2 style="margin: 0; font-size: 18px;">ERP4U</h2>
+            <h2 style="margin: 0; font-size: 18px;">${sellerName}</h2>
             <div>Hóa Đơn Bán Lẻ POS</div>
             <div>================================</div>
         </div>
@@ -242,6 +265,7 @@ const PortalQuotePage: React.FC = () => {
             <div><strong>Mã đơn:</strong> ${data.order_code}</div>
             <div><strong>Ngày:</strong> ${dayjs(data.order_date || new Date()).format('DD/MM/YYYY HH:mm')}</div>
             <div><strong>Khách hàng:</strong> ${customerName}</div>
+            ${customerPhone ? `<div><strong>SĐT:</strong> ${customerPhone}</div>` : ''}
         </div>
         <div>================================</div>
         <table style="width: 100%; margin-bottom: 10px; border-collapse: collapse;">
@@ -309,9 +333,6 @@ const PortalQuotePage: React.FC = () => {
             return;
         }
 
-
-
-
         // Terms content
         const termsHtml = data.terms_content
             ? data.terms_content.split('\n').map((line: string) => `<div>${line}</div>`).join('')
@@ -336,13 +357,13 @@ const PortalQuotePage: React.FC = () => {
         .page { width: 100%; max-width: 210mm; margin: 0 auto; padding: 0; }
         
         /* HEADER */
-        .header { display: flex; justify-content: space-between; align-items: stretch; padding-bottom: 12px; border-bottom: 3px solid #0050b3; margin-bottom: 15px; gap: 15px; }
+        .header { display: flex; justify-content: space-between; align-items: stretch; padding-bottom: 12px; border-bottom: 3px solid ${primaryColor}; margin-bottom: 15px; gap: 15px; }
         .header-left { width: calc(50% - 7.5px); display: flex; align-items: center; }
         .header-right { text-align: right; min-width: 200px; }
-        .doc-title { font-size: 22px; font-weight: 800; color: #0050b3; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .doc-title { font-size: 22px; font-weight: 800; color: ${primaryColor}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
         .doc-subtitle { font-size: 11px; color: #666; font-style: italic; text-transform: uppercase; letter-spacing: 2px; }
         .doc-meta { font-size: 12px; color: #555; margin-top: 8px; }
-        .doc-meta b { color: #0050b3; }
+        .doc-meta b { color: ${primaryColor}; }
         
         /* PARTY INFO */
         .parties { display: flex; gap: 15px; margin-bottom: 15px; }
@@ -350,7 +371,7 @@ const PortalQuotePage: React.FC = () => {
         .party-a { background: #f0f5ff; border: 1px solid #adc6ff; }
         .party-b { background: #fff7e6; border: 1px solid #ffd591; }
         .party-label { font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid rgba(0,0,0,0.1); }
-        .party-a .party-label { color: #0050b3; }
+        .party-a .party-label { color: ${primaryColor}; }
         .party-b .party-label { color: #d46b08; }
         .party-row { margin-bottom: 2px; }
         .party-row b { color: #333; }
@@ -358,14 +379,14 @@ const PortalQuotePage: React.FC = () => {
         /* TABLE */
         .items-table { width: 100%; border-collapse: collapse; margin-bottom: 0; font-size: 12px; }
         .items-table th { 
-            background: #0050b3; 
+            background: ${primaryColor}; 
             color: #fff; 
             padding: 8px 6px; 
             font-weight: 700; 
             font-size: 11px; 
             text-transform: uppercase; 
             letter-spacing: 0.5px;
-            border: 1px solid #003d8a;
+            border: 1px solid ${primaryColor};
         }
         .items-table td { 
             padding: 6px; 
@@ -381,27 +402,27 @@ const PortalQuotePage: React.FC = () => {
         .summary-label { text-align: right; color: #555; font-weight: 500; }
         .summary-value { text-align: right; font-weight: 600; width: 140px; }
         .summary-total { background: #f0f5ff !important; }
-        .summary-total .summary-label { font-size: 14px; font-weight: 800; color: #0050b3; }
+        .summary-total .summary-label { font-size: 14px; font-weight: 800; color: ${primaryColor}; }
         .summary-total .summary-value { font-size: 15px; font-weight: 800; color: #cf1322; }
         
         /* BOTTOM SECTION */
         .bottom-section { display: block; margin-top: 15px; }
         .terms-box { margin-bottom: 15px; font-size: 11px; line-height: 1.5; }
-        .terms-title { font-weight: 700; text-transform: uppercase; font-size: 11px; color: #0050b3; margin-bottom: 6px; border-bottom: 1px solid #0050b3; padding-bottom: 3px; }
+        .terms-title { font-weight: 700; text-transform: uppercase; font-size: 11px; color: ${primaryColor}; margin-bottom: 6px; border-bottom: 1px solid ${primaryColor}; padding-bottom: 3px; }
         .payment-horizontal { border: 1px solid #d9d9d9; border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 15px; page-break-inside: avoid; }
         .payment-amounts { display: flex; gap: 10px; }
         .payment-amount-box { flex: 1; padding: 6px; border-radius: 6px; text-align: center; }
         .bank-info { background: #f9f9f9; padding: 6px 10px; border-radius: 6px; border: 1px solid #e8e8e8; font-size: 11px; display: flex; justify-content: space-between; margin-top: 8px; }
         .qr-box { width: 130px; text-align: center; flex-shrink: 0; }
         .qr-box img { width: 130px; height: 130px; }
-        .qr-label { font-size: 9px; font-weight: 700; color: #0050b3; margin-top: 2px; }
+        .qr-label { font-size: 9px; font-weight: 700; color: ${primaryColor}; margin-top: 2px; }
         
         /* SIGNATURES */
         .signatures { display: flex; justify-content: space-between; margin-top: 25px; text-align: center; page-break-inside: avoid; }
         .sig-col { width: 45%; }
         .sig-role { font-weight: 700; font-size: 13px; text-transform: uppercase; margin-bottom: 4px; }
         .sig-note { font-size: 11px; font-style: italic; color: #888; }
-        .sig-space { height: 70px; }
+        .sig-space { height: 75px; }
         
         /* FOOTER */
         .page-footer { margin-top: 15px; padding-top: 8px; border-top: 1px solid #e8e8e8; text-align: center; font-size: 9px; color: #bbb; }
@@ -416,7 +437,7 @@ const PortalQuotePage: React.FC = () => {
         <!-- HEADER -->
         <div class="header">
             <div class="header-left">
-                <div style="color: #1e3a8a; font-family: 'Outfit', sans-serif; font-size: 36px; font-weight: bold; margin-bottom: 10px;">erp4you</div>
+                <img src="${bannerUrl}" alt="${sellerName}" style="width: 100%; max-height: 90px; object-fit: contain; object-position: left center;" onerror="this.src='${window.location.origin}/company_header.png';" />
             </div>
             <div class="header-right">
                 <div class="doc-title">${docTitle}</div>
@@ -432,11 +453,11 @@ const PortalQuotePage: React.FC = () => {
         <div class="parties">
             <div class="party-box party-a">
                 <div class="party-label">Bên bán</div>
-                <div class="party-row"><b>CÔNG TY TNHH ERP4YOU</b></div>
-                <div class="party-row">📍 123 Đường Ảo, Phường Fake, TP. HCM, VN</div>
-                <div class="party-row">📞 0999.999.999</div>
-                <div class="party-row">MST: <b>0311.999.999</b></div>
-                <div class="party-row">Email: <b>contact@erp4you.com</b></div>
+                <div class="party-row"><b>${sellerName}</b></div>
+                <div class="party-row">📍 ${sellerAddress}</div>
+                <div class="party-row">📞 ${sellerPhone}</div>
+                <div class="party-row">MST: <b>${sellerTaxCode}</b></div>
+                <div class="party-row">Email: <b>${sellerEmail}</b></div>
                 <div class="party-row">Sale Agent: <b>${data.assigned_to?.full_name || data.assigned_to?.name || data.sale_agent?.name || data.sale_name || data.created_by?.full_name || data.created_by?.name || '...'}</b> - ${data.assigned_to?.phone || data.sale_agent?.phone || data.sale_phone || data.created_by?.phone || '...'}</div>
             </div>
             <div class="party-box party-b">
@@ -458,13 +479,13 @@ const PortalQuotePage: React.FC = () => {
             <thead>
                 <tr>
                     <th style="width:30px;">STT</th>
-                    <th style="width:70px;">Hình</th>
+                    <th style="width:95px;">Hình</th>
                     <th style="width:120px;">Tên Sản Phẩm</th>
                     <th>Mô tả Sản Phẩm</th>
                     <th style="width:40px;">ĐVT</th>
                     <th style="width:35px;">SL</th>
-                    <th style="width:75px;">Đơn Giá</th>
-                    <th style="width:75px;">Thành Tiền</th>
+                    <th style="width:70px;">Đơn Giá</th>
+                    <th style="width:55px;">Thành Tiền</th>
                 </tr>
             </thead>
             <tbody>
@@ -504,7 +525,8 @@ const PortalQuotePage: React.FC = () => {
                     return '<div style="padding-left:12px;margin-top:2px;font-size:10px;color:#666;font-style:italic;">. ' + cleanLine.replace(/^[•-]\s*/, '') + '</div>';
                 }).join('');
             }
-            const imgCell = imgSrc ? '<img src="' + imgSrc + '" style="width:65px;height:65px;object-fit:cover;border-radius:4px;border:1px solid #ddd;" onerror="this.style.display=\'none\'" />' : '<span style="color:#ccc;font-size:10px;">-</span>';
+            const customerNoteHTML = item.customer_note ? '<div style="margin-top:6px;font-size:10px;font-style:italic;color:#d46b08;">📌 ' + item.customer_note + '</div>' : '';
+            const imgCell = '<div style="display:flex;flex-direction:column;align-items:center;">' + (imgSrc ? '<img src="' + imgSrc + '" style="width:80px;height:80px;object-fit:cover;border-radius:4px;border:1px solid #ddd;" onerror="this.style.display=\'none\'" />' : '<span style="color:#ccc;font-size:10px;">-</span>') + customerNoteHTML + '</div>';
             const colorLine = item.variant_color ? '<div style="font-size:10px;color:#888;">Màu: ' + item.variant_color + '</div>' : '';
 
             let priceRangesHtml = '';
@@ -582,10 +604,10 @@ const PortalQuotePage: React.FC = () => {
                     </div>
                     
                     <div class="bank-info">
-                        <div><b>NH:</b> ACB - TP.HCM</div>
-                        <div><b>STK:</b> 141847859</div>
-                        <div><b>Chủ TK:</b> CTY TNHH ERP4YOU</div>
-                        <div><b>ND CK:</b> <b style="color:#0050b3;">${data.order_code}</b></div>
+                        <div><b>NH:</b> ${sellerBankName}</div>
+                        <div><b>STK:</b> ${sellerBankAccount}</div>
+                        <div><b>Chủ TK:</b> ${sellerBankHolder}</div>
+                        <div><b>ND CK:</b> <b style="color:${primaryColor};">${data.order_code}</b></div>
                     </div>
                 </div>
                 
@@ -606,15 +628,17 @@ const PortalQuotePage: React.FC = () => {
                 <div class="sig-space"></div>
             </div>
             <div class="sig-col">
-                <div class="sig-role">Đại diện Cty ERP4YOU</div>
+                <div class="sig-role">Đại diện ${sellerName}</div>
                 <div class="sig-note">(Ký, đóng dấu)</div>
-                <div class="sig-space"></div>
+                <div class="sig-space" style="position: relative; display: flex; justify-content: center; align-items: center;">
+                    ${stampImage ? `<img src="${stampImage}" alt="Stamp" style="max-height: 75px; max-width: 140px; object-fit: contain;" />` : ''}
+                </div>
             </div>
         </div>
         `}
         
         <div class="page-footer">
-            Xác nhận đơn đặt hàng được tạo tự động bởi ERP4U &bull; ${window.location.origin}/portal/${data.uuid}
+            ${footerNote ? `${footerNote} &bull; ` : ''}Xác nhận đơn đặt hàng được tạo tự động bởi ERP4U &bull; ${window.location.origin}/portal/${data.uuid}
         </div>
     </div>
     <script>window.onload = function() { window.print(); }</script>
@@ -711,7 +735,7 @@ const PortalQuotePage: React.FC = () => {
         {
             title: 'Hình',
             key: 'image',
-            width: 70,
+            width: 120,
             align: 'center' as const,
             render: (_: any, r: any) => {
                 const rawUrl = r.image_url || r.sample_image || r.product?.image_url;
@@ -755,9 +779,8 @@ const PortalQuotePage: React.FC = () => {
 
                 // Force isImage true if we detected Drive link
                 if (rawUrl.includes('drive.google.com')) isImage = true;
-
                 return (
-                    <div style={{ textAlign: 'center' }}>
+                    <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                         {isImage ? (
                             <Watermark {...getWatermarkProps('rgba(0,0,0,0.15)', 14)}>
                                 <img
@@ -775,6 +798,15 @@ const PortalQuotePage: React.FC = () => {
                             <a href={finalSrc} target="_blank" rel="noopener noreferrer">
                                 <LinkOutlined style={{ fontSize: 18, color: '#1890ff' }} />
                             </a>
+                        )}
+                        
+                        {r.customer_note && (
+                            <div style={{ width: '100%', padding: '6px', background: '#fffbe6', border: '1px dashed #ffe58f', borderRadius: 4, textAlign: 'left', display: 'flex', gap: 4, alignItems: 'flex-start' }}>
+                                <PushpinOutlined style={{ color: '#d46b08', marginTop: 2 }} />
+                                <div style={{ fontSize: 11, color: '#d46b08', whiteSpace: 'pre-wrap', fontStyle: 'italic', flex: 1 }}>
+                                    {r.customer_note}
+                                </div>
+                            </div>
                         )}
                     </div>
                 );
@@ -892,6 +924,8 @@ const PortalQuotePage: React.FC = () => {
                                     </div>
                                 </div>
                             )}
+
+
 
                         </div>
                     </div>
@@ -1076,7 +1110,7 @@ const PortalQuotePage: React.FC = () => {
                             <div style={{ fontSize: 13, lineHeight: 1.6 }}>
                                 <div><b>ACB - TP.HCM</b></div>
                                 <div>STK: <span style={{ fontFamily: 'monospace', background: '#f0f0f0', padding: '0 4px' }}>141847859</span></div>
-                                <div>Chủ TK: CTY TNHH ERP4YOU</div>
+                                <div>Chủ TK: CTY TNHH TM DV TƯỜNG LINH</div>
                                 <div>Nội dung: <b>{data.order_code}</b></div>
                             </div>
                         </Card>

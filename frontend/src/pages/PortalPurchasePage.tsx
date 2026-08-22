@@ -174,7 +174,15 @@ const PortalPurchasePage: React.FC = () => {
                         { title: 'Số lượng', dataIndex: 'quantity', width: 90, align: 'center' as const, render: (v: any) => <b>{Number(v).toLocaleString()}</b> },
                         { title: 'Đơn giá', dataIndex: 'unit_price', width: 110, align: 'right' as const, render: (v: any) => Number(v).toLocaleString() },
                         { title: 'Thành tiền', dataIndex: 'subtotal', width: 130, align: 'right' as const, render: (v: any) => <b style={{ color: '#1890ff' }}>{Number(v).toLocaleString()}</b> },
-                        { title: 'Ghi chú', dataIndex: 'note', ellipsis: true }
+                        { 
+                            title: 'Ghi chú', 
+                            render: (r: any) => (
+                                <div>
+                                    {r.note && <div>{r.note}</div>}
+                                    {r.internal_note && <div style={{ color: '#cf1322', fontStyle: 'italic', fontSize: 11 }}>NB: {r.internal_note}</div>}
+                                </div>
+                            )
+                        }
                     ]}
                     summary={(pageData: readonly any[]) => {
                         let total = 0;

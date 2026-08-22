@@ -182,15 +182,23 @@ export class UploadController {
   @Post('customers')
   @UseInterceptors(FileInterceptor('file'))
   async uploadCustomers(@UploadedFile() file: Express.Multer.File) {
-    if (!file) throw new BadRequestException('Chua chon file!');
+    if (!file) throw new BadRequestException('Chưa chọn file!');
     return this.uploadService.importCustomers(file.buffer);
+  }
+
+  // --- API IMPORT SUPPLIERS (MOI) ---
+  @Post('suppliers')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadSuppliers(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Chưa chọn file!');
+    return this.uploadService.importSuppliers(file.buffer);
   }
 
   // --- API IMPORT SALES ORDERS (MOI) ---
   @Post('sales')
   @UseInterceptors(FileInterceptor('file'))
   async uploadSales(@UploadedFile() file: Express.Multer.File) {
-    if (!file) throw new BadRequestException('Chua chon file!');
+    if (!file) throw new BadRequestException('Chưa chọn file!');
     return this.uploadService.importSalesOrders(file.buffer);
   }
   // ----------------------------------

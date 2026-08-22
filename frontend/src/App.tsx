@@ -38,6 +38,7 @@ const PortalPurchasePage = React.lazy(() => import('./pages/PortalPurchasePage')
 const PortalRecruitmentPage = React.lazy(() => import('./pages/PortalRecruitmentPage'));
 const PortalLoginPage = React.lazy(() => import('./pages/PortalLoginPage'));
 const PortalDashboardPage = React.lazy(() => import('./pages/PortalDashboardPage'));
+const PortalSupplierDashboard = React.lazy(() => import('./pages/PortalSupplierDashboard'));
 const PromotionPage = React.lazy(() => import('./pages/PromotionPage'));
 const PriceListsPage = React.lazy(() => import('./pages/PriceListPage'));
 const UsersPage = React.lazy(() => import('./pages/UsersPage'));
@@ -270,6 +271,7 @@ const App: React.FC = () => {
                 <Route path="/portal/po/:uuid" element={<PortalPurchasePage />} />
                 <Route path="/portal/recruitment/:token" element={<PortalRecruitmentPage />} />
                 <Route path="/portal/login" element={<PortalLoginPage />} />
+                <Route path="/portal/supplier/:uuid" element={<PortalSupplierDashboard />} />
                 <Route path="/portal/:slug" element={<PortalDashboardPage />} />
 
                 <Route path="*" element={

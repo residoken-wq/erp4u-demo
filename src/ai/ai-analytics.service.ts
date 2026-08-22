@@ -13,10 +13,10 @@ export class AiAnalyticsService {
 
     async getUsageStats() {
         const totalMessages = await this.messageRepo.count();
-        const activeUsersCount = await this.messageRepo.createQueryBuilder('msg')
-            .select('msg.user_id')
-            .distinct(true)
-            .getCount();
+        const activeUsersResult = await this.messageRepo.createQueryBuilder('msg')
+            .select('COUNT(DISTINCT msg.user_id)', 'count')
+            .getRawOne();
+        const activeUsersCount = activeUsersResult ? parseInt(activeUsersResult.count) || 0 : 0;
 
         const recentFeedbacks = await this.feedbackRepo.find({ order: { created_at: 'DESC' }, take: 10 });
         const positiveFeedbacks = await this.feedbackRepo.count({ where: { rating: 'GOOD' } });

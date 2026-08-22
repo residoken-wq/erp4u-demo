@@ -1065,4 +1065,30 @@ export class PurchasingService {
         };
     }
     // ----------------------------
+
+    // --- SUPPLIER PORTAL ---
+    async getSupplierPortalData(uuid: string) {
+        const supplier = await this.poRepo.manager.findOne('Supplier', { where: { uuid } }) as any;
+        if (!supplier) throw new NotFoundException('Không tìm thấy Supplier hoặc link đã hết hạn');
+
+        // Lấy tất cả PO của supplier này
+        const pos = await this.poRepo.find({
+            where: { supplier_id: supplier.id },
+            relations: ['items', 'items.product', 'items.material'],
+            order: { created_at: 'DESC' }
+        });
+
+        // Lấy thông tin QC (Module Kiểm tra chất lượng) liên quan đến Supplier này
+        const qcLogs = await this.poRepo.manager.find('QualityInspection', {
+            where: { supplier_id: supplier.id },
+            relations: ['defect_items'],
+            order: { created_at: 'DESC' } as any
+        });
+
+        return {
+            supplier,
+            pos,
+            qcLogs
+        };
+    }
 }

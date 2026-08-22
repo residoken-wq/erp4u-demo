@@ -10,7 +10,7 @@ interface ExcelUploadModalProps {
     open: boolean;
     onClose: () => void;
     onSuccess?: () => void;
-    type: 'sales' | 'customers' | 'products' | 'materials' | 'boms' | 'combos';
+    type: 'sales' | 'customers' | 'products' | 'materials' | 'boms' | 'combos' | 'suppliers';
     title?: string;
 }
 

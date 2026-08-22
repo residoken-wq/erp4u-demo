@@ -30,7 +30,7 @@ const QuotationTemplate: React.FC<QuotationProps> = ({ data }) => {
             <Row gutter={40} align="stretch" style={{ borderBottom: '2px solid #1e3a8a', paddingBottom: 20, marginBottom: 30 }}>
                 <Col span={12}>
                     <div style={{ textAlign: 'left', height: '100%', display: 'flex', alignItems: 'center' }}>
-                        <div style={{ color: '#1e3a8a', fontFamily: "'Outfit', sans-serif", fontSize: '32px', fontWeight: 'bold' }}>erp4you</div>
+                        <Image preview={false} src="/company_header.png" alt="Company Header" style={{ width: '100%', objectFit: 'contain', objectPosition: 'left center' }} />
                     </div>
                 </Col>
                 <Col span={12} style={{ textAlign: 'right' }}>
@@ -45,10 +45,10 @@ const QuotationTemplate: React.FC<QuotationProps> = ({ data }) => {
                 <Col span={12}>
                     <div style={{ background: '#f8fafc', padding: 15, borderRadius: 8, height: '100%', border: '1px solid #e2e8f0' }}>
                         <h4 style={{ marginTop: 0, color: '#1e3a8a', borderBottom: '1px solid #cbd5e1', paddingBottom: 5, textTransform: 'uppercase', fontFamily: "'Outfit', sans-serif" }}>BÊN BÁN</h4>
-                        <p style={{ marginBottom: 5 }}><b>CÔNG TY TNHH ERP4YOU</b></p>
-                        <p style={{ marginBottom: 5 }}>📍 123 Đường Ảo, Phường Fake, TP. Hồ Chí Minh</p>
-                        <p style={{ marginBottom: 5 }}>📞 0999.999.999</p>
-                        <p style={{ marginBottom: 5 }}><b>MST:</b> 0311.999.999</p>
+                        <p style={{ marginBottom: 5 }}><b>CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ TƯỜNG LINH</b></p>
+                        <p style={{ marginBottom: 5 }}>📍 74/21/24 Nguyễn Khuyến, Phường Bình Thạnh, TP. Hồ Chí Minh</p>
+                        <p style={{ marginBottom: 5 }}>📞 0983.882210 - 0983.796654</p>
+                        <p style={{ marginBottom: 5 }}><b>MST:</b> 0311.874.522</p>
                         <p style={{ marginBottom: 5 }}><b>Email:</b> nemmanonerp4u@gmail.com</p>
                         <p style={{ marginBottom: 0 }}><b>Sale Agent:</b> {data.created_by?.full_name || data.created_by?.name || data.sale_agent?.name || data.sale_name || '...'} - {data.created_by?.phone || data.sale_agent?.phone || data.sale_phone || '...'}</p>
                     </div>
@@ -179,7 +179,7 @@ const QuotationTemplate: React.FC<QuotationProps> = ({ data }) => {
                         <div style={{ fontSize: 11, lineHeight: 1.6, textAlign: 'left', marginBottom: 15 }}>
                             <div><b>ACB - TP.HCM</b></div>
                             <div>STK: <span style={{ fontFamily: 'monospace', background: '#f0f0f0', padding: '0 4px' }}>141847859</span></div>
-                            <div>Chủ TK: CTY TNHH ERP4YOU</div>
+                            <div>Chủ TK: CTY TNHH TM DV TƯỜNG LINH</div>
                             <div>Nội dung: <b>{data.order_code}</b></div>
                         </div>
                         
@@ -192,7 +192,7 @@ const QuotationTemplate: React.FC<QuotationProps> = ({ data }) => {
 
             <Row style={{ marginTop: 50, textAlign: 'center' }}>
                 <Col span={12}><b>ĐẠI DIỆN KHÁCH HÀNG</b><br /><i>(Ký, ghi rõ họ tên)</i></Col>
-                <Col span={12}><b>ĐẠI DIỆN CÔNG TY ERP4YOU</b><br /><i>(Ký, đóng dấu)</i><div style={{ height: 80 }}></div></Col>
+                <Col span={12}><b>ĐẠI DIỆN CÔNG TY TƯỜNG LINH</b><br /><i>(Ký, đóng dấu)</i><div style={{ height: 80 }}></div></Col>
             </Row>
         </div>
     );

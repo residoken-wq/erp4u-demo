@@ -72,4 +72,8 @@ export class PurchaseOrderItem {
 
   @Column({ nullable: true })
   back_color: string;
+
+  // --- MỚI: Ghi chú nội bộ ---
+  @Column('text', { nullable: true })
+  internal_note: string;
 }
