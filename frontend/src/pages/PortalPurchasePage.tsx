@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Spin, Result, Button, message, Modal, Descriptions, Table, Tag, Typography, Form, Input, InputNumber, Steps, Card, Divider, Timeline, Space, Row, Col, Statistic } from 'antd';
-import { CheckCircleOutlined, CloseCircleOutlined, SendOutlined, TruckOutlined, ExclamationCircleOutlined, ClockCircleOutlined, BarChartOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, CloseCircleOutlined, SendOutlined, TruckOutlined, ExclamationCircleOutlined, ClockCircleOutlined, BarChartOutlined, PrinterOutlined } from '@ant-design/icons';
 import { API_URL } from '../config';
 import dayjs from 'dayjs';
 
@@ -107,6 +107,67 @@ const PortalPurchasePage: React.FC = () => {
     const stepMap: Record<string, number> = { 'DRAFT': 0, 'SENT': 0, 'CONFIRMED': 1, 'ORDERED': 2, 'PARTIAL_DELIVERED': 2, 'DELIVERED': 3, 'COMPLETED': 3, 'CANCELLED': -1 };
     const currentStep = stepMap[data.status] ?? 0;
 
+    const handlePrint = (mode: 'full' | 'no-price') => {
+        if (!data.supplier?.po_template) {
+            message.warning('Nhà cung cấp chưa có template in ấn!');
+            return;
+        }
+
+        let printContent = data.supplier.po_template
+            .replace(/\{\{poCode\}\}/g, data.po_code || '')
+            .replace(/\{\{supplierName\}\}/g, data.supplier?.name || '')
+            .replace(/\{\{date\}\}/g, dayjs(data.created_at).format('DD/MM/YYYY'))
+            .replace(/\{\{totalAmount\}\}/g, mode === 'full' ? Number(data.total_amount || 0).toLocaleString() + ' đ' : '');
+
+        let itemsTableHTML = '';
+        if (mode === 'full') {
+            itemsTableHTML = `<table style="width: 100%; border-collapse: collapse; margin-top: 10px;" border="1">
+                <thead><tr><th style="padding: 5px">STT</th><th style="padding: 5px">Sản phẩm/NPL</th><th style="padding: 5px">Công đoạn</th><th style="padding: 5px">Mô tả SX</th><th style="padding: 5px">ĐVT</th><th style="padding: 5px">Số lượng</th><th style="padding: 5px">Đơn giá</th><th style="padding: 5px">Thành tiền</th></tr></thead>
+                <tbody>
+                    ${data.items?.map((i: any, idx: number) => `<tr><td style="padding: 5px; text-align: center;">${idx + 1}</td><td style="padding: 5px">${data.type === 'OUTSOURCING' ? i.product?.sku || i.material?.sku || '-' : i.product?.name || i.material?.name || i.description || '-'}</td><td style="padding: 5px">${i.description || '-'}</td><td style="padding: 5px">${i.product?.processing_description || '-'}</td><td style="padding: 5px; text-align: center;">${i.material?.unit || i.product?.unit || 'Cái'}</td><td style="padding: 5px; text-align: center;">${Number(i.quantity).toLocaleString()}</td><td style="padding: 5px; text-align: center;">${Number(i.unit_price || 0).toLocaleString()}</td><td style="padding: 5px; text-align: center;">${Number(i.subtotal || 0).toLocaleString()}</td></tr>`).join('') || ''}
+                </tbody>
+            </table>`;
+        } else {
+            itemsTableHTML = `<table style="width: 100%; border-collapse: collapse; margin-top: 10px;" border="1">
+                <thead><tr><th style="padding: 5px">STT</th><th style="padding: 5px">Sản phẩm/NPL</th><th style="padding: 5px">Công đoạn</th><th style="padding: 5px">Mô tả SX</th><th style="padding: 5px">ĐVT</th><th style="padding: 5px">Số lượng</th></tr></thead>
+                <tbody>
+                    ${data.items?.map((i: any, idx: number) => `<tr><td style="padding: 5px; text-align: center;">${idx + 1}</td><td style="padding: 5px">${data.type === 'OUTSOURCING' ? i.product?.sku || i.material?.sku || '-' : i.product?.name || i.material?.name || i.description || '-'}</td><td style="padding: 5px">${i.description || '-'}</td><td style="padding: 5px">${i.product?.processing_description || '-'}</td><td style="padding: 5px; text-align: center;">${i.material?.unit || i.product?.unit || 'Cái'}</td><td style="padding: 5px; text-align: center;">${Number(i.quantity).toLocaleString()}</td></tr>`).join('') || ''}
+                </tbody>
+            </table>`;
+        }
+
+        printContent = printContent.replace(/\{\{itemsTable\}\}/g, itemsTableHTML);
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>In Đơn - ${data.po_code}</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; padding: 20px; color: #000; }
+                            table { width: 100%; border-collapse: collapse; }
+                            th, td { border: 1px solid #000; padding: 6px; font-size: 13px; }
+                            th { background-color: #f2f2f2; text-align: center; }
+                            @media print {
+                                @page { margin: 15mm; }
+                                body { padding: 0; }
+                                button { display: none; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${printContent}
+                        <div style="text-align: center; margin-top: 30px;">
+                            <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">🖨️ IN NGAY</button>
+                        </div>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+    };
+
     return (
         <div style={{ maxWidth: 960, margin: '0 auto', padding: '30px 20px', minHeight: '100vh', background: 'linear-gradient(180deg, #f0f5ff 0%, #fff 100%)' }}>
             {/* HEADER */}
@@ -167,8 +228,16 @@ const PortalPurchasePage: React.FC = () => {
                     size="small"
                     columns={[
                         {
-                            title: 'Tên hàng / Công đoạn',
-                            render: (r: any) => <b>{r.material?.name || r.product?.name || r.description || '-'}</b>
+                            title: 'Mã SKU / Tên Hàng',
+                            render: (r: any) => <b>{data.type === 'OUTSOURCING' ? r.product?.sku || r.material?.sku || '-' : r.product?.name || r.material?.name || r.description || '-'}</b>
+                        },
+                        {
+                            title: 'Công đoạn',
+                            render: (r: any) => r.description || '-'
+                        },
+                        {
+                            title: 'Mô tả sản xuất',
+                            render: (r: any) => r.product?.processing_description || '-'
                         },
                         { title: 'ĐVT', width: 60, align: 'center' as const, render: (r: any) => r.material?.unit || r.product?.unit || 'Cái' },
                         { title: 'Số lượng', dataIndex: 'quantity', width: 90, align: 'center' as const, render: (v: any) => <b>{Number(v).toLocaleString()}</b> },
@@ -201,7 +270,13 @@ const PortalPurchasePage: React.FC = () => {
             {/* SUPPLIER PO TEMPLATE VIEW */}
             {data.supplier?.po_template && (
                 <div style={{ background: '#fff', borderRadius: 12, padding: '24px 32px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: 24, overflowX: 'auto' }}>
-                    <Divider orientation="left" style={{ fontSize: 14, marginTop: 0 }}>📄 Mẫu Đơn Đặt Hàng</Divider>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <Title level={5} style={{ margin: 0 }}>📄 Mẫu Đơn Đặt Hàng</Title>
+                        <Space>
+                            <Button icon={<PrinterOutlined />} onClick={() => handlePrint('full')}>In Mẫu Đầy Đủ</Button>
+                            <Button icon={<PrinterOutlined />} onClick={() => handlePrint('no-price')}>In Không Giá</Button>
+                        </Space>
+                    </div>
                     <div 
                         dangerouslySetInnerHTML={{ 
                             __html: data.supplier.po_template
@@ -210,9 +285,9 @@ const PortalPurchasePage: React.FC = () => {
                                 .replace(/\{\{date\}\}/g, dayjs(data.created_at).format('DD/MM/YYYY'))
                                 .replace(/\{\{totalAmount\}\}/g, Number(data.total_amount || 0).toLocaleString())
                                 .replace(/\{\{itemsTable\}\}/g, `<table style="width: 100%; border-collapse: collapse; margin-top: 10px;" border="1">
-                                    <thead><tr><th style="padding: 5px">STT</th><th style="padding: 5px">Sản phẩm / Công đoạn</th><th style="padding: 5px">Số lượng</th><th style="padding: 5px">Đơn giá</th><th style="padding: 5px">Thành tiền</th></tr></thead>
+                                    <thead><tr><th style="padding: 5px">STT</th><th style="padding: 5px">Mã SKU</th><th style="padding: 5px">Công đoạn</th><th style="padding: 5px">Số lượng</th><th style="padding: 5px">Đơn giá</th><th style="padding: 5px">Thành tiền</th></tr></thead>
                                     <tbody>
-                                        ${data.items?.map((i: any, idx: number) => `<tr><td style="padding: 5px; text-align: center;">${idx + 1}</td><td style="padding: 5px">${i.description || i.product?.name || i.material?.name || '-'}</td><td style="padding: 5px; text-align: center;">${Number(i.quantity).toLocaleString()}</td><td style="padding: 5px; text-align: center;">${Number(i.unit_price || 0).toLocaleString()}</td><td style="padding: 5px; text-align: center;">${Number(i.subtotal || 0).toLocaleString()}</td></tr>`).join('') || ''}
+                                        ${data.items?.map((i: any, idx: number) => `<tr><td style="padding: 5px; text-align: center;">${idx + 1}</td><td style="padding: 5px">${data.type === 'OUTSOURCING' ? i.product?.sku || i.material?.sku || '-' : i.product?.name || i.material?.name || i.description || '-'}</td><td style="padding: 5px">${i.description || '-'}</td><td style="padding: 5px; text-align: center;">${Number(i.quantity).toLocaleString()}</td><td style="padding: 5px; text-align: center;">${Number(i.unit_price || 0).toLocaleString()}</td><td style="padding: 5px; text-align: center;">${Number(i.subtotal || 0).toLocaleString()}</td></tr>`).join('') || ''}
                                     </tbody>
                                 </table>`)
                         }} 

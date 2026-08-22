@@ -663,6 +663,39 @@ export class PurchasingService {
                 po.status = POStatus.DELIVERED;
                 break;
 
+            case 'SUBMIT_QC':
+                // Supplier submits self-QC, create a QualityInspection record
+                const qcCode = `QC-SUP-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(Math.random() * 1000)}`;
+                const qcRepo = this.poRepo.manager.getRepository('QualityInspection');
+                
+                let total_qty = 0;
+                if (data?.item_id) {
+                    const item = po.items.find((i: any) => i.id === data.item_id);
+                    if (item) total_qty = Number(item.quantity);
+                } else {
+                    total_qty = po.items.reduce((sum: number, i: any) => sum + Number(i.quantity), 0);
+                }
+
+                const newQc = qcRepo.create({
+                    code: qcCode,
+                    type: 'OUTSOURCING',
+                    status: 'PENDING',
+                    po_id: po.id,
+                    supplier_id: po.supplier_id,
+                    pfo_id: po.pfo_id,
+                    total_quantity: total_qty,
+                    inspected_quantity: Number(data?.inspected_quantity || 0),
+                    passed_quantity: Number(data?.passed_quantity || 0),
+                    defect_quantity: Number(data?.defect_quantity || 0),
+                    inspection_date: new Date().toISOString().split('T')[0],
+                    note: data?.note ? `[NGC tự kiểm] ${data.note}` : '[NGC tự kiểm]',
+                    inspector: po.supplier?.name || 'Nhà gia công',
+                    created_at: new Date()
+                } as any);
+
+                await qcRepo.save(newQc);
+                break;
+
             case 'REJECT':
                 po.outsourcing_delivery_info.rejection = {
                     reason: data?.reason || 'Không có lý do',

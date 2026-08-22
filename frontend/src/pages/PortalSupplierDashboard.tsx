@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Spin, Result, Button, message, Modal, Typography, Table, Tag, Input, Tabs, Card, Row, Col, Progress, Space, Divider } from 'antd';
-import { LockOutlined, ShopOutlined, FileTextOutlined, UnorderedListOutlined, CheckCircleOutlined, SyncOutlined } from '@ant-design/icons';
+import { Spin, Result, Button, message, Modal, Typography, Table, Tag, Input, Tabs, Card, Row, Col, Progress, Space, Divider, Form, InputNumber } from 'antd';
+import { LockOutlined, ShopOutlined, FileTextOutlined, UnorderedListOutlined, CheckCircleOutlined, SyncOutlined, SafetyCertificateOutlined, EyeOutlined, SendOutlined } from '@ant-design/icons';
 import { API_URL } from '../config';
 import dayjs from 'dayjs';
 import useMobile from '../hooks/useMobile';
@@ -17,6 +17,16 @@ const PortalSupplierDashboard: React.FC = () => {
     const [isPasswordCorrect, setIsPasswordCorrect] = useState(false);
     const [passwordInput, setPasswordInput] = useState('');
     const isMobile = useMobile();
+
+    // New states for Modals & Actions
+    const [actionLoading, setActionLoading] = useState(false);
+    const [nplModalOpen, setNplModalOpen] = useState(false);
+    const [nplData, setNplData] = useState([]);
+    const [nplLoading, setNplLoading] = useState(false);
+
+    const [qcModalOpen, setQcModalOpen] = useState(false);
+    const [qcForm] = Form.useForm();
+    const [selectedItemForQc, setSelectedItemForQc] = useState<any>(null);
 
     const fetchPortalData = async () => {
         try {
@@ -79,6 +89,62 @@ const PortalSupplierDashboard: React.FC = () => {
 
     const { supplier, pos, qcLogs } = data;
 
+    // --- Actions ---
+    const handleConfirmPO = (poUuid: string) => {
+        Modal.confirm({
+            title: 'Xác nhận đơn hàng?',
+            content: 'Bạn xác nhận sẽ cung cấp / gia công đơn hàng này.',
+            okText: 'Xác nhận',
+            cancelText: 'Hủy',
+            onOk: async () => {
+                try {
+                    await axios.post(`${API_URL}/purchasing/portal/${poUuid}/action`, { action: 'CONFIRM' });
+                    message.success('Xác nhận thành công!');
+                    fetchPortalData();
+                } catch (e: any) {
+                    message.error(e?.response?.data?.message || 'Có lỗi xảy ra');
+                }
+            }
+        });
+    };
+
+    const handleViewNPL = async (poId: number) => {
+        setNplModalOpen(true);
+        setNplLoading(true);
+        try {
+            const res = await axios.get(`${API_URL}/purchasing/${poId}/outsourcing-materials`);
+            setNplData(res.data || []);
+        } catch (e: any) {
+            message.error('Không thể tải danh sách NPL');
+            setNplData([]);
+        }
+        setNplLoading(false);
+    };
+
+    const openQcModal = (item: any) => {
+        setSelectedItemForQc(item);
+        qcForm.resetFields();
+        setQcModalOpen(true);
+    };
+
+    const handleQcSubmit = async (values: any) => {
+        try {
+            setActionLoading(true);
+            await axios.post(`${API_URL}/purchasing/portal/${selectedItemForQc.po_uuid}/action`, {
+                action: 'SUBMIT_QC',
+                item_id: selectedItemForQc.id,
+                ...values
+            });
+            message.success('Đã gửi yêu cầu QC thành công!');
+            setQcModalOpen(false);
+            fetchPortalData();
+        } catch (e: any) {
+            message.error(e?.response?.data?.message || 'Có lỗi xảy ra');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     // TABS 1: POs
     const poColumns = [
         { title: 'Mã Đơn', dataIndex: 'po_code', key: 'po_code', render: (text: string, record: any) => <a onClick={() => window.open(`/portal/po/${record.uuid}`, '_blank')}>{text}</a> },
@@ -96,16 +162,52 @@ const PortalSupplierDashboard: React.FC = () => {
             }
         },
         { title: 'Tổng tiền', dataIndex: 'total_amount', key: 'total_amount', render: (val: any) => `${Number(val).toLocaleString()} đ` },
+        {
+            title: 'Thao tác', key: 'actions', render: (_: any, record: any) => (
+                <Space>
+                    {['DRAFT', 'SENT'].includes(record.status) && (
+                        <Button size="small" type="primary" onClick={() => handleConfirmPO(record.uuid)}>Xác nhận trực tiếp</Button>
+                    )}
+                    {record.type === 'OUTSOURCING' && (
+                        <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewNPL(record.id)} title="Xem NPL giao kèm">NPL</Button>
+                    )}
+                </Space>
+            )
+        }
     ];
 
+    const expandedRowRender = (record: any) => {
+        const columns = [
+            { title: 'Sản phẩm/NPL', render: (_: any, r: any) => record.type === 'OUTSOURCING' ? r.product?.sku || r.material?.sku || '-' : r.product?.name || r.material?.name || r.description || '-' },
+            { title: 'Công đoạn', render: (_: any, r: any) => r.description || '-' },
+            { title: 'ĐVT', render: (_: any, r: any) => r.material?.unit || r.product?.unit || 'Cái' },
+            { title: 'Số lượng', dataIndex: 'quantity', render: (val: any) => Number(val).toLocaleString() }
+        ];
+        return <Table columns={columns} dataSource={record.items || []} pagination={false} size="small" rowKey="id" />;
+    };
+
     // TABS 2: Items
-    const allItems = pos.flatMap((po: any) => (po.items || []).map((item: any) => ({ ...item, po_code: po.po_code, po_status: po.status, po_uuid: po.uuid })));
+    const allItems = pos.flatMap((po: any) => (po.items || []).map((item: any) => ({ ...item, po_code: po.po_code, po_status: po.status, po_uuid: po.uuid, po_type: po.type })));
     const itemColumns = [
         { title: 'Mã Đơn (PO)', dataIndex: 'po_code', key: 'po_code', render: (text: string, record: any) => <a onClick={() => window.open(`/portal/po/${record.po_uuid}`, '_blank')}>{text}</a> },
-        { title: 'Sản phẩm/NPL', key: 'product_name', render: (_: any, record: any) => record.product?.name || record.material?.name || record.description || 'Không rõ' },
+        { title: 'Sản phẩm/NPL', key: 'product_name', render: (_: any, record: any) => record.po_type === 'OUTSOURCING' ? record.product?.sku || record.material?.sku || '-' : record.product?.name || record.material?.name || record.description || 'Không rõ' },
+        { title: 'Mô tả sản xuất', render: (_: any, record: any) => record.product?.processing_description || '-' },
+        { title: 'Công đoạn', render: (_: any, record: any) => record.description || '-' },
         { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity', render: (val: any) => Number(val).toLocaleString() },
         { title: 'Đơn giá', dataIndex: 'unit_price', key: 'unit_price', render: (val: any) => `${Number(val).toLocaleString()} đ` },
         { title: 'Thành tiền', dataIndex: 'subtotal', key: 'subtotal', render: (val: any) => `${Number(val).toLocaleString()} đ` },
+        {
+            title: 'Hành động', key: 'action', render: (_: any, record: any) => (
+                <Space>
+                    {['CONFIRMED', 'ORDERED', 'PARTIAL_DELIVERED'].includes(record.po_status) && (
+                        <>
+                            <Button size="small" icon={<SendOutlined />} onClick={() => window.open(`/portal/po/${record.po_uuid}`, '_blank')} title="Báo cáo tiến độ PO">Báo cáo SX</Button>
+                            <Button size="small" type="dashed" icon={<SafetyCertificateOutlined />} onClick={() => openQcModal(record)}>Kiểm QC</Button>
+                        </>
+                    )}
+                </Space>
+            )
+        }
     ];
 
     // TABS 3: Processing Status
@@ -200,6 +302,7 @@ const PortalSupplierDashboard: React.FC = () => {
                                     rowKey="id" 
                                     scroll={{ x: 'max-content' }}
                                     pagination={{ pageSize: 15 }}
+                                    expandable={{ expandedRowRender }}
                                 />
                             </Card>
                         )
@@ -251,6 +354,62 @@ const PortalSupplierDashboard: React.FC = () => {
                     }
                 ]}
             />
+
+            {/* Modal Xem NPL */}
+            <Modal
+                title="Danh sách NPL (Vật tư gia công)"
+                open={nplModalOpen}
+                onCancel={() => setNplModalOpen(false)}
+                footer={null}
+                width={800}
+            >
+                <Table
+                    dataSource={nplData}
+                    loading={nplLoading}
+                    rowKey="id"
+                    pagination={false}
+                    size="small"
+                    columns={[
+                        { title: 'NPL', render: (r: any) => r.material?.name || r.product?.name || r.description },
+                        { title: 'Số lượng cần', dataIndex: 'quantity', render: (v: any) => Number(v).toLocaleString() },
+                        { title: 'Đã giao', dataIndex: 'delivered_quantity', render: (v: any) => <Text type="success">{Number(v || 0).toLocaleString()}</Text> },
+                    ]}
+                />
+            </Modal>
+
+            {/* Modal Nhập QC */}
+            <Modal
+                title="Kiểm tra chất lượng (QC) tự kiểm"
+                open={qcModalOpen}
+                onCancel={() => setQcModalOpen(false)}
+                onOk={() => qcForm.submit()}
+                confirmLoading={actionLoading}
+                okText="Gửi kết quả QC"
+            >
+                <Form form={qcForm} layout="vertical" onFinish={handleQcSubmit}>
+                    <Row gutter={16}>
+                        <Col span={8}>
+                            <Form.Item name="inspected_quantity" label="SL Kiểm tra" rules={[{ required: true }]}>
+                                <InputNumber min={1} style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="passed_quantity" label="SL Đạt" rules={[{ required: true }]}>
+                                <InputNumber min={0} style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="defect_quantity" label="SL Lỗi">
+                                <InputNumber min={0} style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Form.Item name="note" label="Ghi chú / Đánh giá">
+                        <Input.TextArea rows={3} placeholder="Mô tả kết quả kiểm tra..." />
+                    </Form.Item>
+                </Form>
+            </Modal>
+
         </div>
     );
 };
