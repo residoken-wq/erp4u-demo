@@ -202,36 +202,46 @@ const SuppliersPage: React.FC = () => {
             )
         },
         {
-            key: 'act', align: 'right' as const, width: 80,
+            key: 'act', align: 'right' as const, width: 220,
             render: (_: any, r: any) => (
-                <Dropdown menu={{
-                    items: [
-                        { key: 'price', label: 'Bảng giá & Lịch sử', icon: <DollarOutlined />, onClick: () => openPriceList(r) },
-                        { key: 'debt', label: 'Quản lý công nợ', icon: <BankOutlined />, onClick: () => openDebtModal(r) },
-                        { key: 'portal', label: 'Copy Link Portal', icon: <LinkOutlined />, onClick: () => {
-                            if (!r.uuid) return message.warning('Nhà cung cấp chưa có Link Portal (cần cập nhật uuid)');
-                            navigator.clipboard.writeText(`${window.location.origin}/portal/supplier/${r.uuid}`);
-                            message.success('Đã copy link Portal NCC!');
-                        }},
-                        { type: 'divider' },
-                        {
-                            key: 'edit', label: 'Chỉnh sửa', icon: <EditOutlined />, onClick: () => {
-                                setEditingItem(r);
-                                form.setFieldsValue(r);
-                                setPriceDrawerOpen(false);
-                                setIsModalOpen(true);
-                                loadPOs(r.id)
+                <Space size="small">
+                    <Tooltip title="Bảng giá">
+                        <Button type="text" icon={<DollarOutlined style={{ color: '#52c41a' }} />} onClick={() => openPriceList(r)} />
+                    </Tooltip>
+                    <Tooltip title="Công nợ">
+                        <Button type="text" icon={<BankOutlined style={{ color: '#faad14' }} />} onClick={() => openDebtModal(r)} />
+                    </Tooltip>
+                    <Tooltip title="Copy Link Portal">
+                        <Button type="text" icon={<LinkOutlined style={{ color: '#722ed1' }} />} onClick={async () => {
+                            let portalUuid = r.uuid;
+                            if (!portalUuid) {
+                                try {
+                                    portalUuid = crypto.randomUUID();
+                                    await api.put(`/suppliers/${r.id}`, { uuid: portalUuid });
+                                    r.uuid = portalUuid; // Update local reference
+                                } catch(e) {
+                                    return message.error('Lỗi khi tự động khởi tạo UUID cho NCC này');
+                                }
                             }
-                        },
-                        {
-                            key: 'del', label: 'Xóa', icon: <DeleteOutlined />, danger: true, onClick: () => Modal.confirm({
-                                title: 'Xóa Nhà Cung Cấp?', content: 'Hành động này không thể hoàn tác.', onOk: () => handleDelete(r.id)
-                            })
-                        },
-                    ]
-                }} trigger={['click']}>
-                    <Button icon={<MoreOutlined />} type="text" />
-                </Dropdown>
+                            navigator.clipboard.writeText(`${window.location.origin}/portal/supplier/${portalUuid}`);
+                            message.success('Đã copy link Portal NCC!');
+                        }} />
+                    </Tooltip>
+                    <Tooltip title="Chỉnh sửa">
+                        <Button type="text" icon={<EditOutlined style={{ color: '#1890ff' }} />} onClick={() => {
+                            setEditingItem(r);
+                            form.setFieldsValue(r);
+                            setPriceDrawerOpen(false);
+                            setIsModalOpen(true);
+                            loadPOs(r.id);
+                        }} />
+                    </Tooltip>
+                    <Tooltip title="Xóa">
+                        <Button type="text" danger icon={<DeleteOutlined />} onClick={() => Modal.confirm({
+                            title: 'Xóa Nhà Cung Cấp?', content: 'Hành động này không thể hoàn tác.', onOk: () => handleDelete(r.id)
+                        })} />
+                    </Tooltip>
+                </Space>
             )
         }
     ];

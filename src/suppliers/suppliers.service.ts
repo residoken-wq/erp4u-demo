@@ -23,7 +23,7 @@ export class SuppliersService {
     async findAll() {
         const qb = this.supplierRepo.createQueryBuilder('s')
             .leftJoin('s.transactions', 't', 't.type = :type', { type: 'EXPENSE' })
-            .select(['s.id', 's.code', 's.name', 's.type', 's.phone', 's.email', 's.address', 's.note', 's.created_at'])
+            .select(['s.id', 's.code', 's.name', 's.type', 's.phone', 's.email', 's.address', 's.note', 's.created_at', 's.uuid'])
             .addSelect('SUM(CASE WHEN t.reference_code LIKE :poPrefix OR t.reference_code LIKE :bulkPrefix THEN t.amount ELSE 0 END)', 'paid_po')
             .addSelect('SUM(CASE WHEN t.reference_code IS NULL OR (t.reference_code NOT LIKE :poPrefix AND t.reference_code NOT LIKE :bulkPrefix) THEN t.amount ELSE 0 END)', 'paid_other')
             .groupBy('s.id')
