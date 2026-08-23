@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Card, Row, Col, Typography, Tag, Tabs, Table, Statistic, Divider, Button, Popconfirm, message, Space, InputNumber, Modal, Checkbox } from 'antd';
+import { Card, Row, Col, Typography, Tag, Tabs, Table, Statistic, Divider, Button, Popconfirm, message, Space, InputNumber, Modal, Checkbox, Form, DatePicker, Input } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../../utils/api';
@@ -32,6 +32,11 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
     const [isBtpModalOpen, setIsBtpModalOpen] = React.useState(false);
     const [selectedPoGc, setSelectedPoGc] = React.useState<any>(null);
     const [selectedBtpIds, setSelectedBtpIds] = React.useState<number[]>([]);
+    
+    // --- PXK Từ Tồn Kho Modal State ---
+    const [isPxkModalVisible, setIsPxkModalVisible] = React.useState(false);
+    const [pxkForm] = Form.useForm();
+    const [pxkTargetItem, setPxkTargetItem] = React.useState<any>(null);
     
     // Lấy danh sách BTP của PFO hiện tại
     const availableBtps = useMemo(() => {
@@ -165,6 +170,10 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
                         sku: cProd?.sku,
                         type: 'Sản phẩm con',
                         quantity: comp.quantity,
+                        inventory_qty: cProd?.quantity_in_stock || 0,
+                        booking_status: item.booking_status,
+                        booked_quantity: Math.floor(Number(item.booked_quantity || 0) * Number(comp.quantity)),
+                        product_id: cProd?.id,
                         children: cProd?.boms?.map((b: any) => ({
                             key: `bom-${comp.id}-${b.id}`,
                             name: b.material?.name || b.material?.sku,
@@ -190,6 +199,10 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
                 sku: product?.sku,
                 type: 'Thành phẩm',
                 quantity: item.quantity,
+                inventory_qty: product?.quantity_in_stock || 0,
+                booking_status: item.booking_status,
+                booked_quantity: item.booked_quantity,
+                product_id: product?.id,
                 children: children.length > 0 ? children : undefined
             };
         });
@@ -199,6 +212,29 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
         { title: 'Tên / Mã', dataIndex: 'name', key: 'name', render: (text: string, record: any) => <b>{text} ({record.sku})</b> },
         { title: 'Loại', dataIndex: 'type', key: 'type' },
         { title: 'Định mức / SL (Gốc)', dataIndex: 'quantity', key: 'quantity' },
+        {
+            title: 'SL Sale đã book',
+            key: 'booked_quantity',
+            render: (_: any, record: any) => {
+                if (record.type === 'Thành phẩm' || record.type === 'Sản phẩm con') {
+                    if (!record.booking_status || record.booking_status === 'NONE') return <Text type="secondary">Chưa book</Text>;
+                    const color = record.booking_status === 'CONFIRMED' ? 'green' : 'orange';
+                    const text = record.booking_status === 'CONFIRMED' ? 'Đã duyệt' : 'Chờ duyệt';
+                    return <div>{Number(record.booked_quantity || 0).toLocaleString()} <Tag color={color}>{text}</Tag></div>;
+                }
+                return null;
+            }
+        },
+        {
+            title: 'Tồn kho TP',
+            key: 'inventory_qty',
+            render: (_: any, record: any) => {
+                if (record.type === 'Thành phẩm' || record.type === 'Sản phẩm con') {
+                    return <b>{Number(record.inventory_qty || 0).toLocaleString()}</b>;
+                }
+                return null;
+            }
+        },
         { 
             title: 'SL KHSX (Tùy chỉnh)', 
             key: 'custom_quantity', 
@@ -228,6 +264,32 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
                             }}
                             style={{ width: 100 }}
                         />
+                    );
+                }
+                return null;
+            }
+        },
+        {
+            title: 'Thao tác',
+            key: 'action',
+            render: (_: any, record: any) => {
+                if ((record.type === 'Thành phẩm' || record.type === 'Sản phẩm con') && record.booking_status === 'CONFIRMED' && Number(record.booked_quantity) > 0) {
+                    return (
+                        <Button 
+                            type="primary" 
+                            size="small"
+                            onClick={() => {
+                                setPxkTargetItem(record);
+                                pxkForm.setFieldsValue({
+                                    date: dayjs(),
+                                    quantity: record.booked_quantity,
+                                    note: `Xuất kho thành phẩm cho SO ${selectedPfo?.sales_order?.order_code || ''}`
+                                });
+                                setIsPxkModalVisible(true);
+                            }}
+                        >
+                            Dùng tồn kho
+                        </Button>
                     );
                 }
                 return null;
@@ -574,18 +636,67 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
                 ]} />
             </Card>
 
+        </div>
+    );
+
+    const handlePxkSubmit = async () => {
+        try {
+            const values = await pxkForm.validateFields();
+            if (!pxkTargetItem) return;
+
+            const soId = selectedPfo?.sales_order?.id;
+            if (!soId) {
+                message.error('Không tìm thấy thông tin Sales Order');
+                return;
+            }
+
+            const payload = {
+                code: `PXK-${dayjs().format('YYMMDD-HHmmss')}`,
+                date: values.date.format('YYYY-MM-DD'),
+                note: values.note || '',
+                delivery_address: selectedPfo?.sales_order?.customer?.address || '',
+                contact_name: selectedPfo?.sales_order?.customer?.name || '',
+                contact_phone: selectedPfo?.sales_order?.customer?.phone || '',
+                status: 'PENDING_EXPORT',
+                items: [
+                    {
+                        sku: pxkTargetItem.sku,
+                        quantity: values.quantity
+                    }
+                ]
+            };
+
+            await api.post(`/sales/${soId}/delivery`, payload);
+            message.success('Đã tạo PXK (Sales Delivery) thành công');
+            setIsPxkModalVisible(false);
+            onRefreshDetails?.();
+        } catch (error: any) {
+            console.error(error);
+            if (error.response?.data?.message) {
+                message.error(error.response.data.message);
+            } else if (error.errorFields) {
+                // validation error, do nothing
+            } else {
+                message.error('Lỗi khi tạo PXK');
+            }
+        }
+    };
+
+    return (
+        <div>
+            {tabsContent}
+            {/* Modal Chọn BTP (Existing) */}
             <Modal
-                title={`Gán Bán Thành Phẩm cho ${selectedPoGc?.po_code || 'PO GC'}`}
+                title={`Chọn Bán Thành Phẩm (Giao cho: ${selectedPoGc?.supplier?.name})`}
                 open={isBtpModalOpen}
-                onCancel={() => setIsBtpModalOpen(false)}
+                onCancel={() => {
+                    setIsBtpModalOpen(false);
+                    setSelectedBtpIds([]);
+                }}
                 onOk={async () => {
-                    if (!selectedPoGc) return;
                     try {
-                        const selectedBtpObjects = availableBtps.filter((b: any) => selectedBtpIds.includes(b.product_id));
-                        await api.put(`/purchasing/${selectedPoGc.id}`, {
-                            semi_finished_products: selectedBtpObjects
-                        });
-                        message.success('Đã cập nhật danh sách Bán Thành Phẩm cho PO GC');
+                        await api.put(`/purchasing/po/${selectedPoGc.id}/semi-finished-products`, { semi_finished_products: selectedBtpIds });
+                        message.success('Đã cập nhật BTP cho PO Gia công');
                         setIsBtpModalOpen(false);
                         onRefreshDetails?.();
                     } catch (e: any) {
@@ -618,6 +729,40 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
                             ))}
                         </Row>
                     </Checkbox.Group>
+                )}
+            </Modal>
+
+            {/* Modal Tạo PXK Từ Tồn Kho */}
+            <Modal
+                title="Tạo PXK xuất kho (Dùng tồn kho)"
+                open={isPxkModalVisible}
+                onCancel={() => setIsPxkModalVisible(false)}
+                onOk={handlePxkSubmit}
+                okText="Tạo phiếu"
+                cancelText="Hủy"
+                destroyOnClose
+            >
+                {pxkTargetItem && (
+                    <Form form={pxkForm} layout="vertical">
+                        <div style={{ marginBottom: 16 }}>
+                            <Text strong>Sản phẩm:</Text> {pxkTargetItem.name} ({pxkTargetItem.sku})
+                            <br />
+                            <Text strong>Khách hàng:</Text> {selectedPfo?.sales_order?.customer?.name || 'N/A'}
+                        </div>
+                        <Form.Item name="date" label="Ngày xuất" rules={[{ required: true, message: 'Vui lòng chọn ngày xuất' }]}>
+                            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+                        </Form.Item>
+                        <Form.Item name="quantity" label="Số lượng xuất" rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}>
+                            <InputNumber 
+                                style={{ width: '100%' }} 
+                                min={1} 
+                                max={pxkTargetItem.booked_quantity} 
+                            />
+                        </Form.Item>
+                        <Form.Item name="note" label="Ghi chú">
+                            <Input.TextArea rows={3} placeholder="Ghi chú thêm..." />
+                        </Form.Item>
+                    </Form>
                 )}
             </Modal>
         </div>

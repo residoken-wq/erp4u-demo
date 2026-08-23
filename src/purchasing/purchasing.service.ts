@@ -1155,12 +1155,34 @@ export class PurchasingService {
         const supplier = await this.poRepo.manager.findOne('Supplier', { where: { uuid } }) as any;
         if (!supplier) throw new NotFoundException('Không tìm thấy Supplier hoặc link đã hết hạn');
 
-        // Lấy tất cả PO của supplier này
         const pos = await this.poRepo.find({
             where: { supplier_id: supplier.id },
-            relations: ['items', 'items.product', 'items.material'],
+            relations: ['items', 'items.product', 'items.material', 'child_pos', 'child_pos.items', 'child_pos.items.product', 'child_pos.items.material'],
             order: { created_at: 'DESC' }
         });
+
+        // Xử lý POOLED items
+        for (const po of pos) {
+            if (po.type === 'POOLED' && po.child_pos && po.child_pos.length > 0) {
+                const aggregatedItems = new Map<string, any>();
+                for (const child of po.child_pos) {
+                    if (child.items) {
+                        for (const item of child.items) {
+                            const key = `${item.product_id || ''}-${item.material_id || ''}-${item.description || ''}`;
+                            if (aggregatedItems.has(key)) {
+                                const existing = aggregatedItems.get(key);
+                                existing.quantity = Number(existing.quantity) + Number(item.quantity);
+                            } else {
+                                aggregatedItems.set(key, { ...item });
+                            }
+                        }
+                    }
+                }
+                po.items = Array.from(aggregatedItems.values());
+            }
+            // Remove child_pos to keep payload small and avoid circular issues
+            delete po.child_pos;
+        }
 
         // Lấy thông tin QC (Module Kiểm tra chất lượng) liên quan đến Supplier này
         const qcLogs = await this.poRepo.manager.find('QualityInspection', {

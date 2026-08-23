@@ -202,7 +202,7 @@ const PortalSupplierDashboard: React.FC = () => {
     };
 
     // TABS 2: Items
-    const allItems = pos.flatMap((po: any) => (po.items || []).map((item: any) => ({ ...item, po_code: po.po_code, po_status: po.status, po_uuid: po.uuid, po_type: po.type })));
+    const allItems = pos.filter((po: any) => po.type !== 'POOLED').flatMap((po: any) => (po.items || []).map((item: any) => ({ ...item, po_code: po.po_code, po_status: po.status, po_uuid: po.uuid, po_type: po.type })));
     const itemColumns = [
         { title: 'Mã Đơn (PO)', dataIndex: 'po_code', key: 'po_code', render: (text: string, record: any) => <a onClick={() => window.open(`/portal/po/${record.po_uuid}`, '_blank')}>{text}</a> },
         { title: 'Hình ảnh', width: 60, render: (_: any, r: any) => { const img = r.product?.image_url || r.material?.image_url; const finalImg = getGoogleDriveImageUrl(img, 'w100'); return finalImg ? <img src={finalImg} alt="img" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} /> : '-'; } },

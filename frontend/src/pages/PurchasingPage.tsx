@@ -41,10 +41,7 @@ const PurchasingPage: React.FC = () => {
     // Delivery Matrix State
     const [deliveryMatrix, setDeliveryMatrix] = useState<any[]>([]);
     const [isDeliveryLoading, setIsDeliveryLoading] = useState(false);
-
-
-
-    // --- MỚI: Modal Xuất Kho NPL Gia Công ---
+    const [poReceipts, setPoReceipts] = useState<any[]>([]); // PNK history
     const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
     const [issueModalPO, setIssueModalPO] = useState<any>(null);
 
@@ -467,6 +464,15 @@ const PurchasingPage: React.FC = () => {
                 }
             }
 
+            // MỚI: Fetch PNK History
+            try {
+                const receiptRes = await api.get(`/inventory/goods-receipt/po/${poDetail.id}`);
+                setPoReceipts(Array.isArray(receiptRes.data) ? receiptRes.data : []);
+            } catch (e) {
+                console.error('Error fetching PO receipts', e);
+                setPoReceipts([]);
+            }
+
             // Fetch Delivery Matrix Progress
             fetchDeliveryMatrix(poDetail.id);
         } catch (e) {
@@ -752,24 +758,46 @@ const PurchasingPage: React.FC = () => {
             }
         }
 
-        // Nếu không có BTP, thì lấy theo danh sách items của PO
+        // Tính tổng số lượng đã nhập từ các PNK trước (dựa vào poReceipts)
+        const receivedQtyMap: Record<number, number> = {};
+        poReceipts.forEach(receipt => {
+            (receipt.items || []).forEach((ri: any) => {
+                if (ri.po_item_id) {
+                    receivedQtyMap[ri.po_item_id] = (receivedQtyMap[ri.po_item_id] || 0) + Number(ri.quantity || 0);
+                }
+            });
+        });
+
+        // Nếu không có BTP, thì lấy theo danh sách items của PO, chỉ lấy số lượng còn thiếu
         if (receiptItems.length === 0) {
             const items = editingItems?.length > 0 ? editingItems : (currentPO.items || []);
             if (items.length === 0) return message.warning('Không có hàng hóa nào');
             
-            receiptItems = items.map((i: any) => ({
-                po_item_id: i.id,
-                material_id: i.material?.id || i.material_id,
-                product_id: i.product?.id || i.product_id,
-                quantity: i.quantity
-            }));
+            items.forEach((i: any) => {
+                const orderedQty = Number(i.quantity || 0);
+                const receivedQty = receivedQtyMap[i.id] || 0;
+                const remainingQty = Math.max(0, orderedQty - receivedQty);
+
+                if (remainingQty > 0) {
+                    receiptItems.push({
+                        po_item_id: i.id,
+                        material_id: i.material?.id || i.material_id,
+                        product_id: i.product?.id || i.product_id,
+                        quantity: remainingQty
+                    });
+                }
+            });
+
+            if (receiptItems.length === 0) {
+                return message.info('Đơn hàng này đã được tạo phiếu nhập kho cho toàn bộ số lượng!');
+            }
         }
 
         try {
             await api.post(`/inventory/goods-receipt/draft`, {
                 po_id: currentPO.id,
                 items: receiptItems,
-                note: `Nhập kho từ PO ${currentPO.po_code}`
+                note: `Nhập kho từ PO ${currentPO.po_code} (Đợt ${poReceipts.length + 1})`
             });
             message.success('Đã tạo phiếu nhập kho nháp');
             setIsDetailOpen(false);
@@ -1551,6 +1579,41 @@ const PurchasingPage: React.FC = () => {
                                     </Space>
                                 </div>
 
+                                {/* MỚI: Bảng Lịch sử Phiếu Nhập Kho */}
+                                {poReceipts && poReceipts.length > 0 ? (
+                                    <div style={{ marginBottom: 16 }}>
+                                        <div style={{ fontWeight: 600, color: '#1890ff', marginBottom: 8 }}>Lịch sử Phiếu Nhập Kho</div>
+                                        <Table
+                                            dataSource={poReceipts}
+                                            rowKey="id"
+                                            size="small"
+                                            pagination={false}
+                                            columns={[
+                                                { title: 'Mã PNK', dataIndex: 'code', render: (t) => <b>{t}</b> },
+                                                { 
+                                                    title: 'Trạng thái', 
+                                                    dataIndex: 'status', 
+                                                    render: (s) => (
+                                                        <Tag color={s === 'COMPLETED' ? 'green' : s === 'DRAFT' ? 'orange' : 'default'}>
+                                                            {s === 'COMPLETED' ? 'Đã nhập kho' : s === 'DRAFT' ? 'Chờ duyệt' : s}
+                                                        </Tag>
+                                                    ) 
+                                                },
+                                                { title: 'Ngày tạo', dataIndex: 'created_at', render: (t) => dayjs(t).format('DD/MM/YYYY HH:mm') },
+                                                { 
+                                                    title: 'Tổng SL', 
+                                                    render: (_, r) => {
+                                                        const total = (r.items || []).reduce((acc: number, item: any) => acc + Number(item.quantity || 0), 0);
+                                                        return <b>{total.toLocaleString()}</b>;
+                                                    } 
+                                                },
+                                                { title: 'Ghi chú', dataIndex: 'note' },
+                                            ]}
+                                        />
+                                    </div>
+                                ) : null}
+
+                                <div style={{ fontWeight: 600, color: '#cf1322', marginBottom: 8, marginTop: 16 }}>Chi tiết hàng hóa & Quản lý giao hàng theo PO (Ma trận Cây / Cuộn / Kiện):</div>
                                 <Table
                                     dataSource={packingList}
                                     rowKey="id"
