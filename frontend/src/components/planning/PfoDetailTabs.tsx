@@ -174,6 +174,7 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
                         booking_status: item.booking_status,
                         booked_quantity: Math.floor(Number(item.booked_quantity || 0) * Number(comp.quantity)),
                         product_id: cProd?.id,
+                        so_item_id: item.id,
                         children: cProd?.boms?.map((b: any) => ({
                             key: `bom-${comp.id}-${b.id}`,
                             name: b.material?.name || b.material?.sku,
@@ -203,6 +204,7 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
                 booking_status: item.booking_status,
                 booked_quantity: item.booked_quantity,
                 product_id: product?.id,
+                so_item_id: item.id,
                 children: children.length > 0 ? children : undefined
             };
         });
@@ -273,9 +275,11 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
             title: 'Thao tác',
             key: 'action',
             render: (_: any, record: any) => {
+                const actions = [];
                 if ((record.type === 'Thành phẩm' || record.type === 'Sản phẩm con') && record.booking_status === 'CONFIRMED' && Number(record.booked_quantity) > 0) {
-                    return (
+                    actions.push(
                         <Button 
+                            key="use_stock"
                             type="primary" 
                             size="small"
                             onClick={() => {
@@ -292,7 +296,30 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
                         </Button>
                     );
                 }
-                return null;
+                
+                if ((record.type === 'Thành phẩm' || record.type === 'Sản phẩm con') && record.booking_status === 'TEMPORARY' && record.so_item_id) {
+                    actions.push(
+                        <Popconfirm
+                            key="approve_booking"
+                            title="Bạn có chắc chắn duyệt book kho cho sản phẩm này?"
+                            onConfirm={async () => {
+                                try {
+                                    await api.post(`/planning/${selectedPfo.id}/confirm-bookings`, { itemIds: [record.so_item_id] });
+                                    message.success('Đã duyệt book kho thành công!');
+                                    onRefreshDetails?.();
+                                } catch (e: any) {
+                                    message.error(e.response?.data?.message || 'Lỗi khi duyệt book kho');
+                                }
+                            }}
+                        >
+                            <Button size="small" type="dashed" style={{ borderColor: 'orange', color: 'orange' }}>
+                                Duyệt book
+                            </Button>
+                        </Popconfirm>
+                    );
+                }
+
+                return <Space>{actions}</Space>;
             }
         }
     ];
