@@ -152,6 +152,8 @@ import { AiMessage } from './ai/ai-message.entity';
 import { CustomerLogo } from './designs/entities/customer-logo.entity';
 import { PrintDesign } from './designs/entities/print-design.entity';
 import { PrintSample } from './designs/entities/print-sample.entity';
+import { DesignOrder } from './designs/entities/design-order.entity';
+import { DesignOrderItem } from './designs/entities/design-order-item.entity';
 
 // Social & Marketing Entities
 import { SocialChannel } from './social/entities/social-channel.entity';
@@ -220,7 +222,7 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
           Promotion,
           AnalyticsVisitor,
           AiMessage,
-          CustomerLogo, PrintDesign, PrintSample
+          CustomerLogo, PrintDesign, PrintSample, DesignOrder, DesignOrderItem
         ],
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
         subscribers: [],
