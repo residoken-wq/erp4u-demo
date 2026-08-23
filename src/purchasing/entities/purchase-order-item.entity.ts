@@ -47,6 +47,12 @@ export class PurchaseOrderItem {
   @Column('decimal', { precision: 15, scale: 2 })
   subtotal: number;
 
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  actual_quantity: number;
+
+  @Column('decimal', { precision: 15, scale: 2, default: 0 })
+  actual_subtotal: number;
+
   @Column({ nullable: true })
   note: string;  // Ghi chu cho cac don gia cong
 

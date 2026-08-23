@@ -642,9 +642,26 @@ export class PurchasingService {
                 break;
 
             case 'UPDATE_PROGRESS':
-                // data: { completed_qty, note, photos }
+                // data: { items: {item_id, completed_qty}[], note, photos }
+                let totalCompletedThisTime = 0;
+                
+                if (data.items && Array.isArray(data.items)) {
+                    for (const progressItem of data.items) {
+                        const it = po.items?.find(i => Number(i.id) === Number(progressItem.item_id));
+                        if (it) {
+                            it.actual_quantity = (Number(it.actual_quantity) || 0) + Number(progressItem.completed_qty);
+                            it.actual_subtotal = Number(it.actual_quantity) * Number(it.unit_price || 0);
+                            totalCompletedThisTime += Number(progressItem.completed_qty);
+                        }
+                    }
+                } else {
+                    // Backward compatibility if some frontend version still sends completed_qty directly
+                    totalCompletedThisTime = Number(data?.completed_qty || 0);
+                }
+
                 po.outsourcing_delivery_info.progress_updates.push({
-                    completed_qty: Number(data?.completed_qty || 0),
+                    completed_qty: totalCompletedThisTime,
+                    items: data.items || [], // lưu chi tiết item update list { item_id, completed_qty }
                     note: data?.note || '',
                     photos: data?.photos || [],
                     timestamp: new Date().toISOString()

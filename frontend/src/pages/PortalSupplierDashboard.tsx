@@ -6,6 +6,7 @@ import { LockOutlined, ShopOutlined, FileTextOutlined, UnorderedListOutlined, Ch
 import { API_URL } from '../config';
 import dayjs from 'dayjs';
 import useMobile from '../hooks/useMobile';
+import { getGoogleDriveImageUrl } from '../utils/googleDrive';
 
 const { Title, Text } = Typography;
 
@@ -187,9 +188,9 @@ const PortalSupplierDashboard: React.FC = () => {
 
     const expandedRowRender = (record: any) => {
         const columns = [
-            { title: 'Hình ảnh', width: 60, render: (_: any, r: any) => { const img = r.product?.image_url || r.material?.image_url; return img ? <img src={img} alt="img" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} /> : '-'; } },
+            { title: 'Hình ảnh', width: 60, render: (_: any, r: any) => { const img = r.product?.image_url || r.material?.image_url; const finalImg = getGoogleDriveImageUrl(img, 'w100'); return finalImg ? <img src={finalImg} alt="img" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} /> : '-'; } },
             { title: 'Sản phẩm/NPL', render: (_: any, r: any) => record.type === 'OUTSOURCING' ? r.product?.sku || r.material?.sku || '-' : r.product?.name || r.material?.name || r.description || '-' },
-            { title: 'Công đoạn', render: (_: any, r: any) => r.description || '-' },
+            { title: 'Công đoạn', render: (_: any, r: any) => r.description ? r.description.replace(/^Gia công:\s*/i, '') : '-' },
             { title: 'ĐVT', render: (_: any, r: any) => r.material?.unit || r.product?.unit || 'Cái' },
             { title: 'Số lượng', dataIndex: 'quantity', render: (val: any) => Number(val).toLocaleString() }
         ];
@@ -200,10 +201,10 @@ const PortalSupplierDashboard: React.FC = () => {
     const allItems = pos.flatMap((po: any) => (po.items || []).map((item: any) => ({ ...item, po_code: po.po_code, po_status: po.status, po_uuid: po.uuid, po_type: po.type })));
     const itemColumns = [
         { title: 'Mã Đơn (PO)', dataIndex: 'po_code', key: 'po_code', render: (text: string, record: any) => <a onClick={() => window.open(`/portal/po/${record.po_uuid}`, '_blank')}>{text}</a> },
-        { title: 'Hình ảnh', width: 60, render: (_: any, r: any) => { const img = r.product?.image_url || r.material?.image_url; return img ? <img src={img} alt="img" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} /> : '-'; } },
+        { title: 'Hình ảnh', width: 60, render: (_: any, r: any) => { const img = r.product?.image_url || r.material?.image_url; const finalImg = getGoogleDriveImageUrl(img, 'w100'); return finalImg ? <img src={finalImg} alt="img" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} /> : '-'; } },
         { title: 'Sản phẩm/NPL', key: 'product_name', render: (_: any, record: any) => record.po_type === 'OUTSOURCING' ? record.product?.sku || record.material?.sku || '-' : record.product?.name || record.material?.name || record.description || 'Không rõ' },
-        { title: 'Mô tả sản xuất', width: 250, render: (_: any, record: any) => <div style={{ whiteSpace: 'normal', wordWrap: 'break-word', maxWidth: 250 }}>{record.product?.processing_description || '-'}</div> },
-        { title: 'Công đoạn', render: (_: any, record: any) => record.description || '-' },
+        { title: 'Mô tả sản xuất', width: 350, render: (_: any, record: any) => <div style={{ whiteSpace: 'normal', wordWrap: 'break-word', maxWidth: 350 }}>{record.product?.processing_description || '-'}</div> },
+        { title: 'Công đoạn', width: 200, render: (_: any, record: any) => <div style={{ whiteSpace: 'normal', wordWrap: 'break-word', maxWidth: 200 }}>{record.description ? record.description.replace(/^Gia công:\s*/i, '') : '-'}</div> },
         { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity', render: (val: any) => Number(val).toLocaleString() },
         { title: 'Đơn giá', dataIndex: 'unit_price', key: 'unit_price', render: (val: any) => `${Number(val).toLocaleString()} đ` },
         { title: 'Thành tiền', dataIndex: 'subtotal', key: 'subtotal', render: (val: any) => `${Number(val).toLocaleString()} đ` },

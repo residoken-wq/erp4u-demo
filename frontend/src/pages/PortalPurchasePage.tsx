@@ -81,13 +81,25 @@ const PortalPurchasePage: React.FC = () => {
         });
     };
 
+    const [progressItems, setProgressItems] = useState<Record<number, number>>({});
+
     const handleProgress = async (values: any) => {
+        const itemsToUpdate = Object.entries(progressItems)
+            .filter(([_, qty]) => qty > 0)
+            .map(([id, qty]) => ({ item_id: Number(id), completed_qty: qty }));
+
+        if (itemsToUpdate.length === 0 && !values.note) {
+            message.warning('Vui lòng nhập số lượng hoàn thành hoặc ghi chú!');
+            return;
+        }
+
         await doAction('UPDATE_PROGRESS', {
-            completed_qty: values.completed_qty,
+            items: itemsToUpdate,
             note: values.note
         });
         setIsProgressOpen(false);
         progressForm.resetFields();
+        setProgressItems({});
     };
 
     const handleReject = async (values: any) => {
@@ -172,7 +184,7 @@ const PortalPurchasePage: React.FC = () => {
     };
 
     return (
-        <div style={{ maxWidth: 960, margin: '0 auto', padding: '30px 20px', minHeight: '100vh', background: 'linear-gradient(180deg, #f0f5ff 0%, #fff 100%)' }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', padding: '30px 20px', minHeight: '100vh', background: 'linear-gradient(180deg, #f0f5ff 0%, #fff 100%)' }}>
             {/* HEADER */}
             <div style={{
                 background: '#fff',
@@ -230,6 +242,35 @@ const PortalPurchasePage: React.FC = () => {
                 )}
             </div>
 
+            {/* ACTION BUTTONS */}
+            {isActive && (
+                <div style={{ background: '#fff', borderRadius: 12, padding: '20px 32px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: 24 }}>
+                    <Divider orientation="left" style={{ fontSize: 14, marginTop: 0 }}>Thao tác</Divider>
+                    <Space size={12} wrap>
+                        {['DRAFT', 'SENT'].includes(data.status) && (
+                            <>
+                                <Button type="primary" size="large" icon={<CheckCircleOutlined />} onClick={handleConfirm} loading={actionLoading}>
+                                    ✅ Xác nhận đơn hàng
+                                </Button>
+                                <Button danger size="large" icon={<CloseCircleOutlined />} onClick={() => setIsRejectOpen(true)}>
+                                    ❌ Từ chối
+                                </Button>
+                            </>
+                        )}
+                        {['CONFIRMED', 'ORDERED', 'PARTIAL_DELIVERED'].includes(data.status) && (
+                            <>
+                                <Button type="default" size="large" icon={<BarChartOutlined />} onClick={() => setIsProgressOpen(true)}>
+                                    📊 Cập nhật tiến độ
+                                </Button>
+                                <Button type="primary" size="large" style={{ background: '#13c2c2', borderColor: '#13c2c2' }} icon={<TruckOutlined />} onClick={handleMarkCompleted} loading={actionLoading}>
+                                    🚚 Báo hoàn thành
+                                </Button>
+                            </>
+                        )}
+                    </Space>
+                </div>
+            )}
+
             {/* MAIN CONTENT */}
             <div style={{ background: '#fff', borderRadius: 12, padding: '24px 32px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: 24 }}>
                 <Descriptions bordered column={2} size="small">
@@ -264,6 +305,8 @@ const PortalPurchasePage: React.FC = () => {
                         { title: 'Số lượng', dataIndex: 'quantity', width: 90, align: 'center' as const, render: (v: any) => <b>{Number(v).toLocaleString()}</b> },
                         { title: 'Đơn giá', dataIndex: 'unit_price', width: 110, align: 'right' as const, render: (v: any) => Number(v).toLocaleString() },
                         { title: 'Thành tiền', dataIndex: 'subtotal', width: 130, align: 'right' as const, render: (v: any) => <b style={{ color: '#1890ff' }}>{Number(v).toLocaleString()}</b> },
+                        { title: 'SL SX thực tế', dataIndex: 'actual_quantity', width: 110, align: 'center' as const, render: (v: any, r: any) => <b style={{ color: '#52c41a' }}>{Number(v || 0).toLocaleString()} <span style={{fontSize: 10, color: '#999'}}>/{Number(r.quantity)}</span></b> },
+                        { title: 'Thành tiền thực tế', dataIndex: 'actual_subtotal', width: 140, align: 'right' as const, render: (v: any) => <b style={{ color: '#52c41a' }}>{Number(v || 0).toLocaleString()}</b> },
                         { 
                             title: 'Ghi chú', 
                             render: (r: any) => (
@@ -276,12 +319,17 @@ const PortalPurchasePage: React.FC = () => {
                     ]}
                     summary={(pageData: readonly any[]) => {
                         let total = 0;
-                        pageData.forEach((item: any) => { total += Number(item.subtotal || 0); });
+                        let actualTotal = 0;
+                        pageData.forEach((item: any) => { 
+                            total += Number(item.subtotal || 0); 
+                            actualTotal += Number(item.actual_subtotal || 0);
+                        });
                         return (
                             <Table.Summary.Row style={{ background: '#fafafa' }}>
                                 <Table.Summary.Cell index={0} colSpan={4} align="right"><b>TỔNG CỘNG</b></Table.Summary.Cell>
                                 <Table.Summary.Cell index={1} align="right"><b style={{ fontSize: 16, color: '#1890ff' }}>{total.toLocaleString()} ₫</b></Table.Summary.Cell>
-                                <Table.Summary.Cell index={2}></Table.Summary.Cell>
+                                <Table.Summary.Cell index={2} colSpan={2} align="right"><b style={{ fontSize: 16, color: '#52c41a' }}>{actualTotal.toLocaleString()} ₫</b></Table.Summary.Cell>
+                                <Table.Summary.Cell index={3}></Table.Summary.Cell>
                             </Table.Summary.Row>
                         );
                     }}
@@ -374,8 +422,17 @@ const PortalPurchasePage: React.FC = () => {
                             {progressUpdates.map((p: any, idx: number) => (
                                 <Timeline.Item key={idx} color={idx === progressUpdates.length - 1 ? 'green' : 'blue'}>
                                     <div><b>Lần {idx + 1}</b> — <Text type="secondary">{dayjs(p.timestamp).format('DD/MM/YYYY HH:mm')}</Text></div>
-                                    <div>SL hoàn thành: <b style={{ color: '#52c41a' }}>{Number(p.completed_qty).toLocaleString()}</b></div>
-                                    {p.note && <div><i>{p.note}</i></div>}
+                                    <div>SL hoàn thành: <b style={{ color: '#52c41a' }}>{Number(p.completed_qty || 0).toLocaleString()}</b></div>
+                                    {p.items && p.items.length > 0 && (
+                                        <div style={{ marginTop: 4, fontSize: 12, background: '#f5f5f5', padding: 8, borderRadius: 4 }}>
+                                            {p.items.map((it: any, idx: number) => {
+                                                const itemDef = data.items.find((i: any) => i.id === it.item_id);
+                                                const name = itemDef ? (itemDef.product?.name || itemDef.material?.name || itemDef.description || 'Item') : 'Item';
+                                                return <div key={idx}>- {name}: <b style={{ color: '#52c41a' }}>+{it.completed_qty}</b></div>;
+                                            })}
+                                        </div>
+                                    )}
+                                    {p.note && <div style={{ marginTop: 4 }}><i>{p.note}</i></div>}
                                 </Timeline.Item>
                             ))}
                         </Timeline>
@@ -385,33 +442,6 @@ const PortalPurchasePage: React.FC = () => {
                 </div>
             )}
 
-            {/* ACTION BUTTONS */}
-            {isActive && (
-                <div style={{ background: '#fff', borderRadius: 12, padding: '20px 32px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: 24 }}>
-                    <Divider orientation="left" style={{ fontSize: 14, marginTop: 0 }}>Thao tác</Divider>
-                    <Space size={12} wrap>
-                        {['DRAFT', 'SENT'].includes(data.status) && (
-                            <>
-                                <Button type="primary" size="large" icon={<CheckCircleOutlined />} onClick={handleConfirm} loading={actionLoading}>
-                                    ✅ Xác nhận đơn hàng
-                                </Button>
-                                <Button danger size="large" icon={<CloseCircleOutlined />} onClick={() => setIsRejectOpen(true)}>
-                                    ❌ Từ chối
-                                </Button>
-                            </>
-                        )}
-                        {['CONFIRMED', 'ORDERED', 'PARTIAL_DELIVERED'].includes(data.status) && (
-                            <>
-                                <Button type="default" size="large" icon={<BarChartOutlined />} onClick={() => setIsProgressOpen(true)}>
-                                    📊 Cập nhật tiến độ
-                                </Button>
-                                <Button type="primary" size="large" style={{ background: '#13c2c2', borderColor: '#13c2c2' }} icon={<TruckOutlined />} onClick={handleMarkCompleted} loading={actionLoading}>
-                                    🚚 Báo hoàn thành
-                                </Button>
-                            </>
-                        )}
-                    </Space>
-                </div>
             )}
 
             {/* Rejection info */}
@@ -447,13 +477,43 @@ const PortalPurchasePage: React.FC = () => {
                 onOk={() => progressForm.submit()}
                 okText="Gửi cập nhật"
                 confirmLoading={actionLoading}
+                width={800}
             >
+                <div style={{ marginBottom: 16 }}>Vui lòng nhập số lượng hoàn thành tương ứng cho từng sản phẩm/NPL:</div>
+                <Table
+                    dataSource={data.items || []}
+                    rowKey="id"
+                    pagination={false}
+                    size="small"
+                    bordered
+                    columns={[
+                        {
+                            title: 'Sản phẩm/NPL',
+                            render: (r: any) => r.product?.name || r.material?.name || r.description || '-'
+                        },
+                        { title: 'Công đoạn', render: (r: any) => r.description || '-' },
+                        { title: 'SL Đặt', dataIndex: 'quantity', width: 80, align: 'center', render: (v: any) => Number(v).toLocaleString() },
+                        { title: 'Đã hoàn thành', dataIndex: 'actual_quantity', width: 100, align: 'center', render: (v: any) => <b style={{ color: '#52c41a' }}>{Number(v || 0).toLocaleString()}</b> },
+                        {
+                            title: 'SL cập nhật lần này',
+                            width: 150,
+                            render: (r: any) => (
+                                <InputNumber 
+                                    min={0} 
+                                    max={Number(r.quantity) - Number(r.actual_quantity || 0)} 
+                                    value={progressItems[r.id] || null} 
+                                    onChange={(val) => setProgressItems(prev => ({ ...prev, [r.id]: val || 0 }))} 
+                                    placeholder="0"
+                                    style={{ width: '100%' }}
+                                />
+                            )
+                        }
+                    ]}
+                    style={{ marginBottom: 16 }}
+                />
                 <Form form={progressForm} layout="vertical" onFinish={handleProgress}>
-                    <Form.Item name="completed_qty" label="Số lượng đã hoàn thành (lần này)" rules={[{ required: true }]}>
-                        <InputNumber min={1} style={{ width: '100%' }} placeholder="VD: 150" />
-                    </Form.Item>
-                    <Form.Item name="note" label="Ghi chú">
-                        <Input.TextArea rows={3} placeholder="Mô tả tiến độ, vấn đề gặp phải..." />
+                    <Form.Item name="note" label="Ghi chú chung">
+                        <Input.TextArea rows={2} placeholder="Mô tả tiến độ, vấn đề gặp phải..." />
                     </Form.Item>
                 </Form>
             </Modal>

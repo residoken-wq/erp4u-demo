@@ -305,8 +305,9 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
     const expandedRowRenderItems = (record: any) => {
         if (!record.items || record.items.length === 0) return <Text type="secondary" style={{ marginLeft: 32 }}>Không có chi tiết</Text>;
         const itemCols = [
-            { title: 'Vật tư / SP', dataIndex: 'product_name', key: 'product_name', render: (val: any, rec: any) => val || rec.material?.name || rec.product?.name || 'N/A' },
-            { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity', align: 'right' as const, render: (val: any) => Number(val || 0).toLocaleString() },
+            { title: 'Vật tư / SP', dataIndex: 'product_name', key: 'product_name', render: (val: any, rec: any) => val || rec.material?.name || rec.product?.name || rec.description || 'N/A' },
+            { title: 'Yêu cầu', dataIndex: 'quantity', key: 'quantity', align: 'right' as const, render: (val: any) => Number(val || 0).toLocaleString() },
+            { title: 'Thực tế', dataIndex: 'actual_quantity', key: 'actual_quantity', align: 'right' as const, render: (val: any) => <b style={{ color: '#52c41a' }}>{Number(val || 0).toLocaleString()}</b> },
             { title: 'Đơn giá', dataIndex: 'unit_price', key: 'unit_price', align: 'right' as const, render: (val: any, rec: any) => {
                 const price = Number(val || rec.material?.unit_price || rec.product?.unit_price || 0);
                 return `${price.toLocaleString()} ₫`;
