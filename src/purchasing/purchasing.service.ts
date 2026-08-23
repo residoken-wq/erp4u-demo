@@ -401,6 +401,14 @@ export class PurchasingService {
             }
         }
 
+        // --- MỚI: Truy vấn danh sách Phiếu Xuất Kho (PXK) liên quan đến PO này ---
+        // (Không lấy phiếu nháp DRAFT)
+        const goodsIssues = await this.poRepo.manager.find('GoodsIssue', {
+            where: { po_id: poId },
+            relations: ['items']
+        }) as any[];
+        const validPXKs = goodsIssues.filter(gi => gi.status !== 'DRAFT');
+
         const materialNeeds = new Map<string, any>();
 
         for (const item of po.items) {
@@ -410,7 +418,8 @@ export class PurchasingService {
                 for (const bom of boms) {
                     if (bom.material) {
                         const matId = bom.material.id;
-                        const needQty = Number(bom.quantity) * Number(item.quantity) * (1 + Number(bom.waste_percent) / 100);
+                        const needQty = Number(bom.quantity) * Number(item.quantity) * (1 + Number(bom.waste_percent || 0) / 100);
+                        const usedQty = Number(bom.quantity) * Number(item.actual_quantity || 0) * (1 + Number(bom.waste_percent || 0) / 100);
 
                         let reserved_for_plan = false;
                         const mrpItem = mrpData.find(m => m.material_id === matId);
@@ -422,6 +431,7 @@ export class PurchasingService {
                         if (materialNeeds.has(key)) {
                             const exist = materialNeeds.get(key);
                             exist.quantity += needQty;
+                            exist.used_quantity += usedQty;
                             if (reserved_for_plan) exist.reserved_for_plan = true;
                         } else {
                             materialNeeds.set(key, {
@@ -431,6 +441,7 @@ export class PurchasingService {
                                 name: bom.material.name,
                                 unit: bom.material.unit,
                                 quantity: needQty,
+                                used_quantity: usedQty,
                                 stock: Number(bom.material.quantity_in_stock || 0),
                                 reserved_for_plan: reserved_for_plan
                             });
@@ -448,11 +459,13 @@ export class PurchasingService {
                     if (comp.child_product && comp.child_product.product_type === 'SEMI_FINISHED') {
                         const prodId = comp.child_product.id;
                         const needQty = Number(comp.quantity) * Number(item.quantity);
+                        const usedQty = Number(comp.quantity) * Number(item.actual_quantity || 0);
                         
                         const key = `PROD_${prodId}`;
                         if (materialNeeds.has(key)) {
                             const exist = materialNeeds.get(key);
                             exist.quantity += needQty;
+                            exist.used_quantity += usedQty;
                         } else {
                             materialNeeds.set(key, {
                                 type: 'SEMI_FINISHED',
@@ -461,6 +474,7 @@ export class PurchasingService {
                                 name: comp.child_product.name,
                                 unit: comp.child_product.unit,
                                 quantity: needQty,
+                                used_quantity: usedQty,
                                 stock: Number(comp.child_product.quantity_in_stock || 0),
                                 reserved_for_plan: false
                             });
@@ -508,6 +522,7 @@ export class PurchasingService {
                                     name: btp.btp_name || btp.name || 'Bán thành phẩm gia công',
                                     unit: btp.unit || 'm',
                                     quantity: Number(btp.output_quantity || btp.quantity || 0),
+                                    used_quantity: 0, // Tính năng sau
                                     stock: Number(btp.output_quantity || btp.quantity || 0),
                                     reserved_for_plan: true,
                                     from_po_id: sib.id,
@@ -547,6 +562,25 @@ export class PurchasingService {
                 item.mixed_in_btp = true;
                 item.used_in_btp_names = btpMaterialMap.get(item.code);
             }
+
+            // Tính số lượng thực giao từ PXK
+            let deliveredQty = 0;
+            const pxks: { code: string; date: string; qty: number }[] = [];
+
+            for (const gi of validPXKs) {
+                if (gi.items && Array.isArray(gi.items)) {
+                    for (const giItem of gi.items) {
+                        const isMatch = (matId && Number(giItem.material_id) === Number(matId)) || 
+                                        (item.product_id && Number(giItem.product_id) === Number(item.product_id));
+                        if (isMatch) {
+                            deliveredQty += Number(giItem.quantity || 0);
+                            pxks.push({ code: gi.code, date: gi.issue_date, qty: Number(giItem.quantity || 0) });
+                        }
+                    }
+                }
+            }
+            item.delivered_quantity = deliveredQty;
+            item.pxks = pxks;
 
             // Kiểm tra danh sách loại bỏ của PO này
             if (!excludedList.includes(key) && !(matId && excludedList.includes(`MAT_${matId}`)) && !(item.product_id && excludedList.includes(`PROD_${item.product_id}`))) {

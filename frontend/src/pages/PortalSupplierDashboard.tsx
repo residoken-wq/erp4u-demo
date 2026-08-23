@@ -29,6 +29,10 @@ const PortalSupplierDashboard: React.FC = () => {
     const [qcForm] = Form.useForm();
     const [selectedItemForQc, setSelectedItemForQc] = useState<any>(null);
 
+    // --- NPL / PXK State ---
+    const [pxkModalOpen, setPxkModalOpen] = useState(false);
+    const [selectedPxks, setSelectedPxks] = useState<any[]>([]);
+
     const fetchPortalData = async () => {
         try {
             const res = await axios.get(`${API_URL}/purchasing/supplier-portal/${uuid}`);
@@ -378,9 +382,48 @@ const PortalSupplierDashboard: React.FC = () => {
                     pagination={false}
                     size="small"
                     columns={[
-                        { title: 'NPL', render: (r: any) => r.material?.name || r.product?.name || r.description },
+                        { title: 'NPL', render: (r: any) => r.name || r.code || r.material?.name || r.product?.name || r.description },
+                        { title: 'Mã PXK đã xuất', render: (r: any) => {
+                            if (!r.pxks || r.pxks.length === 0) return '-';
+                            return (
+                                <Space>
+                                    <span style={{ fontSize: 12, color: '#1890ff' }}>{r.pxks.map((p:any) => p.code).join(', ')}</span>
+                                    <Button size="small" type="text" icon={<EyeOutlined />} onClick={() => { setSelectedPxks(r.pxks); setPxkModalOpen(true); }} />
+                                </Space>
+                            );
+                        }},
                         { title: 'Số lượng cần', dataIndex: 'quantity', render: (v: any) => Number(v).toLocaleString() },
-                        { title: 'Đã giao', dataIndex: 'delivered_quantity', render: (v: any) => <Text type="success">{Number(v || 0).toLocaleString()}</Text> },
+                        { title: 'Đã giao', dataIndex: 'delivered_quantity', render: (v: any) => <Text type="success"><b>{Number(v || 0).toLocaleString()}</b></Text> },
+                        { title: 'Đủ / Thiếu', render: (r: any) => {
+                            const diff = Number(r.delivered_quantity || 0) - Number(r.quantity || 0);
+                            return <Text type={diff >= 0 ? "success" : "danger"}>{diff > 0 ? '+' : ''}{diff.toLocaleString()}</Text>;
+                        }},
+                        { title: 'Đã sử dụng', dataIndex: 'used_quantity', render: (v: any) => <span style={{ color: '#fa8c16' }}>{Number(v || 0).toLocaleString()}</span> },
+                        { title: 'Còn lại sau SX', render: (r: any) => {
+                            const remain = Number(r.delivered_quantity || 0) - Number(r.used_quantity || 0);
+                            return <b>{remain.toLocaleString()}</b>;
+                        }}
+                    ]}
+                />
+            </Modal>
+
+            {/* Modal Chi tiết PXK */}
+            <Modal
+                title="Chi tiết các Phiếu Xuất Kho (PXK)"
+                open={pxkModalOpen}
+                onCancel={() => setPxkModalOpen(false)}
+                footer={null}
+                width={600}
+            >
+                <Table
+                    dataSource={selectedPxks}
+                    rowKey="code"
+                    pagination={false}
+                    size="small"
+                    columns={[
+                        { title: 'Mã PXK', dataIndex: 'code', render: (v: any) => <b style={{ color: '#1890ff' }}>{v}</b> },
+                        { title: 'Ngày xuất', dataIndex: 'date', render: (v: any) => dayjs(v).format('DD/MM/YYYY') },
+                        { title: 'Số lượng giao', dataIndex: 'qty', align: 'right', render: (v: any) => <b style={{ color: '#52c41a' }}>{Number(v).toLocaleString()}</b> }
                     ]}
                 />
             </Modal>
