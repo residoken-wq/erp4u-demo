@@ -52,6 +52,15 @@ export class ProductionFulfillmentOrder {
   @Column({ type: 'json', nullable: true })
   custom_quantities: Record<string, number>;
 
+  @Column({ type: 'json', nullable: true })
+  mrp_data: any;
+
+  @Column({ type: 'json', nullable: true })
+  outsourcing_data: any;
+
+  @Column({ type: 'json', nullable: true })
+  logistics_data: any;
+
   @Column({ type: 'date', nullable: true })
   planned_start_date: Date;
 
