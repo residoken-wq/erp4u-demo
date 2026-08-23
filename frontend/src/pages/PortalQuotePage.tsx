@@ -1078,10 +1078,6 @@ const PortalQuotePage: React.FC = () => {
                         current={currentStep}
                         size={isMobile ? "small" : "small"}
                         direction={isMobile ? "vertical" : "horizontal"} // <--- Vertical on Mobile
-                    <Steps
-                        current={currentStep}
-                        size={isMobile ? "small" : "small"}
-                        direction={isMobile ? "vertical" : "horizontal"} // <--- Vertical on Mobile
                         items={stepsItems}
                     />
                 </Card>
