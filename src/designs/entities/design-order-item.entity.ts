@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { DesignOrder } from './design-order.entity';
+import type { DesignOrder } from './design-order.entity';
 
 export enum PrintItemStatus {
     PENDING = 'PENDING',
@@ -12,7 +12,7 @@ export class DesignOrderItem {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @ManyToOne(() => DesignOrder, order => order.items, { onDelete: 'CASCADE' })
+    @ManyToOne('DesignOrder', (order: any) => order.items, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'design_order_id' })
     design_order: DesignOrder;
 

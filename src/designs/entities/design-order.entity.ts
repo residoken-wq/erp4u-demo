@@ -2,9 +2,9 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
 import { Customer } from '../../customers/customer.entity';
 import { Product } from '../../products/product.entity';
 import { User } from '../../users/entities/user.entity';
-import { SalesOrder } from '../../sales/sales-order.entity';
-import { PurchaseOrder } from '../../purchasing/entities/purchase-order.entity';
-import { DesignOrderItem } from './design-order-item.entity';
+import type { SalesOrder } from '../../sales/sales-order.entity';
+import type { PurchaseOrder } from '../../purchasing/entities/purchase-order.entity';
+import type { DesignOrderItem } from './design-order-item.entity';
 
 export enum DesignOrderStatus {
     INFO_COLLECTED = 'INFO_COLLECTED',
@@ -127,14 +127,14 @@ export class DesignOrder {
     quote_version: number;
 
     // --- Liên kết ---
-    @ManyToOne(() => SalesOrder, { nullable: true, onDelete: 'SET NULL' })
+    @ManyToOne('SalesOrder', { nullable: true, onDelete: 'SET NULL' })
     @JoinColumn({ name: 'sales_order_id' })
     sales_order: SalesOrder;
 
     @Column({ nullable: true })
     sales_order_id: number;
 
-    @ManyToOne(() => PurchaseOrder, { nullable: true, onDelete: 'SET NULL' })
+    @ManyToOne('PurchaseOrder', { nullable: true, onDelete: 'SET NULL' })
     @JoinColumn({ name: 'purchase_order_id' })
     purchase_order: PurchaseOrder;
 
@@ -144,7 +144,7 @@ export class DesignOrder {
     @Column('text', { nullable: true })
     notes: string;
 
-    @OneToMany(() => DesignOrderItem, item => item.design_order, { cascade: true })
+    @OneToMany('DesignOrderItem', (item: any) => item.design_order, { cascade: true })
     items: DesignOrderItem[];
 
     @CreateDateColumn()
