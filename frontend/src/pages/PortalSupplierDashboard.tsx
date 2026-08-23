@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Spin, Result, Button, message, Modal, Typography, Table, Tag, Input, Tabs, Card, Row, Col, Progress, Space, Divider, Form, InputNumber } from 'antd';
-import { LockOutlined, ShopOutlined, FileTextOutlined, UnorderedListOutlined, CheckCircleOutlined, SyncOutlined, SafetyCertificateOutlined, EyeOutlined, SendOutlined } from '@ant-design/icons';
+import { Spin, Result, Button, message, Modal, Typography, Table, Tag, Input, Tabs, Card, Row, Col, Progress, Space, Divider, Form, InputNumber, Dropdown } from 'antd';
+import { LockOutlined, ShopOutlined, FileTextOutlined, UnorderedListOutlined, CheckCircleOutlined, SyncOutlined, SafetyCertificateOutlined, EyeOutlined, SendOutlined, PrinterOutlined } from '@ant-design/icons';
 import { API_URL } from '../config';
 import dayjs from 'dayjs';
 import useMobile from '../hooks/useMobile';
@@ -166,11 +166,20 @@ const PortalSupplierDashboard: React.FC = () => {
             title: 'Thao tác', key: 'actions', render: (_: any, record: any) => (
                 <Space>
                     {['DRAFT', 'SENT'].includes(record.status) && (
-                        <Button size="small" type="primary" onClick={() => handleConfirmPO(record.uuid)}>Xác nhận trực tiếp</Button>
+                        <Button size="small" type="primary" onClick={() => handleConfirmPO(record.uuid)}>Xác nhận</Button>
                     )}
                     {record.type === 'OUTSOURCING' && (
                         <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewNPL(record.id)} title="Xem NPL giao kèm">NPL</Button>
                     )}
+                    <Dropdown
+                        menu={{
+                            items: [
+                                { key: '1', label: 'Xem chi tiết PO', onClick: () => window.open(`/portal/po/${record.uuid}`, '_blank') },
+                            ]
+                        }}
+                    >
+                        <Button size="small" icon={<PrinterOutlined />} onClick={() => window.open(`/portal/po/${record.uuid}`, '_blank')}>In / Xem</Button>
+                    </Dropdown>
                 </Space>
             )
         }
@@ -178,6 +187,7 @@ const PortalSupplierDashboard: React.FC = () => {
 
     const expandedRowRender = (record: any) => {
         const columns = [
+            { title: 'Hình ảnh', width: 60, render: (_: any, r: any) => { const img = r.product?.image_url || r.material?.image_url; return img ? <img src={img} alt="img" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} /> : '-'; } },
             { title: 'Sản phẩm/NPL', render: (_: any, r: any) => record.type === 'OUTSOURCING' ? r.product?.sku || r.material?.sku || '-' : r.product?.name || r.material?.name || r.description || '-' },
             { title: 'Công đoạn', render: (_: any, r: any) => r.description || '-' },
             { title: 'ĐVT', render: (_: any, r: any) => r.material?.unit || r.product?.unit || 'Cái' },
@@ -190,8 +200,9 @@ const PortalSupplierDashboard: React.FC = () => {
     const allItems = pos.flatMap((po: any) => (po.items || []).map((item: any) => ({ ...item, po_code: po.po_code, po_status: po.status, po_uuid: po.uuid, po_type: po.type })));
     const itemColumns = [
         { title: 'Mã Đơn (PO)', dataIndex: 'po_code', key: 'po_code', render: (text: string, record: any) => <a onClick={() => window.open(`/portal/po/${record.po_uuid}`, '_blank')}>{text}</a> },
+        { title: 'Hình ảnh', width: 60, render: (_: any, r: any) => { const img = r.product?.image_url || r.material?.image_url; return img ? <img src={img} alt="img" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} /> : '-'; } },
         { title: 'Sản phẩm/NPL', key: 'product_name', render: (_: any, record: any) => record.po_type === 'OUTSOURCING' ? record.product?.sku || record.material?.sku || '-' : record.product?.name || record.material?.name || record.description || 'Không rõ' },
-        { title: 'Mô tả sản xuất', render: (_: any, record: any) => record.product?.processing_description || '-' },
+        { title: 'Mô tả sản xuất', width: 250, render: (_: any, record: any) => <div style={{ whiteSpace: 'normal', wordWrap: 'break-word', maxWidth: 250 }}>{record.product?.processing_description || '-'}</div> },
         { title: 'Công đoạn', render: (_: any, record: any) => record.description || '-' },
         { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity', render: (val: any) => Number(val).toLocaleString() },
         { title: 'Đơn giá', dataIndex: 'unit_price', key: 'unit_price', render: (val: any) => `${Number(val).toLocaleString()} đ` },
@@ -199,12 +210,8 @@ const PortalSupplierDashboard: React.FC = () => {
         {
             title: 'Hành động', key: 'action', render: (_: any, record: any) => (
                 <Space>
-                    {['CONFIRMED', 'ORDERED', 'PARTIAL_DELIVERED'].includes(record.po_status) && (
-                        <>
-                            <Button size="small" icon={<SendOutlined />} onClick={() => window.open(`/portal/po/${record.po_uuid}`, '_blank')} title="Báo cáo tiến độ PO">Báo cáo SX</Button>
-                            <Button size="small" type="dashed" icon={<SafetyCertificateOutlined />} onClick={() => openQcModal(record)}>Kiểm QC</Button>
-                        </>
-                    )}
+                    <Button size="small" icon={<SendOutlined />} onClick={() => window.open(`/portal/po/${record.po_uuid}`, '_blank')} title="Báo cáo tiến độ PO">Báo cáo SX</Button>
+                    <Button size="small" type="dashed" icon={<SafetyCertificateOutlined />} onClick={() => openQcModal(record)} disabled={['DRAFT', 'CANCELLED'].includes(record.po_status)}>Kiểm QC</Button>
                 </Space>
             )
         }

@@ -124,8 +124,8 @@ const PortalQuotePage: React.FC = () => {
         }
 
         Modal.confirm({
-            title: isOrder ? 'Từ chối đơn hàng?' : 'Từ chối báo giá?',
-            content: isOrder ? 'Bạn muốn từ chối đơn hàng này?' : 'Bạn muốn từ chối báo giá này?',
+            title: (isOrder || data.is_design_order) ? 'Từ chối đơn hàng?' : 'Từ chối báo giá?',
+            content: data.is_design_order ? 'Bạn muốn từ chối bản Demo thiết kế này?' : (isOrder ? 'Bạn muốn từ chối đơn hàng này?' : 'Bạn muốn từ chối báo giá này?'),
             okText: 'Từ Chối',
             cancelText: 'Hủy',
             okType: 'danger',
@@ -163,7 +163,7 @@ const PortalQuotePage: React.FC = () => {
 
         try {
             await axios.post(`${API_URL}/public/portal/quote/${uuid}/action`, { action: 'ACCEPT' });
-            message.success(isOrder ? 'Xác nhận đơn hàng thành công!' : 'Xác nhận báo giá thành công!');
+            message.success(data.is_design_order ? 'Đã duyệt bản Demo thiết kế thành công!' : (isOrder ? 'Xác nhận đơn hàng thành công!' : 'Xác nhận báo giá thành công!'));
             setIsVerifyModalOpen(false);
             window.location.reload();
         } catch (e) {
@@ -712,14 +712,49 @@ const PortalQuotePage: React.FC = () => {
         );
     }
 
-    const statusList = ['QUOTATION', 'DEPOSITED', 'SAMPLE_APPROVED', 'IN_PRODUCTION', 'MANUFACTURING_COMPLETED', 'DELIVERED', 'COMPLETED'];
-    let currentStep = statusList.indexOf(data.status);
+    let currentStep = 0;
+    let stepsItems: any[] = [];
+    
+    if (data.is_design_order) {
+        const designStatuses = ['DRAFT', 'INFO_COLLECTED', 'DESIGNING', 'DEMO_SENT', 'DEMO_APPROVED', 'DEMO_REJECTED', 'PRINTING', 'DONE'];
+        currentStep = designStatuses.indexOf(data.status);
+        if (currentStep < 0) currentStep = 0;
+        
+        stepsItems = [
+            { title: 'Tiếp nhận', icon: <SolutionOutlined /> },
+            { title: 'Đang thiết kế', icon: <FileTextOutlined /> },
+            { title: 'Gửi Demo', icon: <SendOutlined /> },
+            { title: 'Duyệt Demo', icon: <CheckCircleOutlined /> },
+            { title: 'In ấn', icon: <PrinterOutlined /> },
+            { title: 'Hoàn tất', icon: <CheckCircleOutlined /> }
+        ];
+        
+        if (data.status === 'DRAFT' || data.status === 'INFO_COLLECTED') currentStep = 0;
+        else if (data.status === 'DESIGNING') currentStep = 1;
+        else if (data.status === 'DEMO_SENT') currentStep = 2;
+        else if (data.status === 'DEMO_APPROVED' || data.status === 'DEMO_REJECTED') currentStep = 3;
+        else if (data.status === 'PRINTING') currentStep = 4;
+        else if (data.status === 'DONE') currentStep = 5;
+    } else {
+        const statusList = ['QUOTATION', 'DEPOSITED', 'SAMPLE_APPROVED', 'IN_PRODUCTION', 'MANUFACTURING_COMPLETED', 'DELIVERED', 'COMPLETED'];
+        currentStep = statusList.indexOf(data.status);
 
-    // Map status to steps
-    if (data.status === 'SO_PENDING') currentStep = 0; // Still Quotation/Pending
-    if (data.status === 'PLANNED') currentStep = 3; // Planned -> Production
-    if (data.status === 'PARTIAL_DELIVERY') currentStep = 5; // Partial -> Delivery
-    if (data.status === 'COMPLETED') currentStep = 6;
+        // Map status to steps
+        if (data.status === 'SO_PENDING') currentStep = 0; // Still Quotation/Pending
+        if (data.status === 'PLANNED') currentStep = 3; // Planned -> Production
+        if (data.status === 'PARTIAL_DELIVERY') currentStep = 5; // Partial -> Delivery
+        if (data.status === 'COMPLETED') currentStep = 6;
+        
+        stepsItems = [
+            { title: 'Báo Giá', icon: <SolutionOutlined /> },
+            { title: 'Xác Nhận & Cọc', icon: <DollarOutlined /> },
+            { title: 'Duyệt Mẫu', icon: <FileDoneOutlined /> },
+            { title: 'Sản Xuất', icon: <AppstoreAddOutlined /> },
+            { title: 'Xong SX', icon: <CheckCircleOutlined /> },
+            { title: 'Giao Hàng', icon: <CarOutlined /> },
+            { title: 'Hoàn Tất', icon: <DollarOutlined /> }
+        ];
+    }
 
     const visibleComments = (data.comments || []).filter((c: any) => c.sender_type === 'CUSTOMER' || c.is_visible);
 
@@ -1001,16 +1036,20 @@ const PortalQuotePage: React.FC = () => {
                     </Row>
                 </div>
 
-                {!isMobile && data.status === 'QUOTATION' && (
+                {!isMobile && (data.status === 'QUOTATION' || (data.is_design_order && data.status === 'DEMO_SENT')) && (
                     <div style={{ borderTop: '1px solid #f0f0f0', background: '#fff' }}>
                         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <InfoCircleOutlined style={{ color: '#faad14', fontSize: 18 }} />
-                                <span style={{ fontSize: 14 }}>Vui lòng kiểm tra kỹ thông tin và phản hồi {isOrder ? 'đơn hàng' : 'báo giá'} này.</span>
+                                <span style={{ fontSize: 14 }}>
+                                    {data.is_design_order ? 'Vui lòng kiểm tra kỹ bản Demo thiết kế và phản hồi.' : `Vui lòng kiểm tra kỹ thông tin và phản hồi ${isOrder ? 'đơn hàng' : 'báo giá'} này.`}
+                                </span>
                             </div>
                             <Space>
                                 <Button danger size="large" onClick={() => handleAction('REJECT')}>Từ Chối</Button>
-                                <Button type="primary" size="large" style={{ background: '#52c41a', borderColor: '#52c41a', boxShadow: '0 4px 10px rgba(82, 196, 26, 0.3)' }} onClick={() => handleAction('ACCEPT')}>Xác Nhận Đồng Ý</Button>
+                                <Button type="primary" size="large" style={{ background: '#52c41a', borderColor: '#52c41a', boxShadow: '0 4px 10px rgba(82, 196, 26, 0.3)' }} onClick={() => handleAction('ACCEPT')}>
+                                    {data.is_design_order ? 'Duyệt Demo Thiết Kế' : 'Xác Nhận Đồng Ý'}
+                                </Button>
                             </Space>
                         </div>
                     </div>
@@ -1018,7 +1057,7 @@ const PortalQuotePage: React.FC = () => {
             </div>
 
             {/* --- MOBILE FIXED BOTTOM ACTIONS --- */}
-            {isMobile && data.status === 'QUOTATION' && (
+            {isMobile && (data.status === 'QUOTATION' || (data.is_design_order && data.status === 'DEMO_SENT')) && (
                 <div style={{
                     position: 'fixed', bottom: 0, left: 0, right: 0,
                     background: '#fff', padding: '12px 16px',
@@ -1039,55 +1078,55 @@ const PortalQuotePage: React.FC = () => {
                         current={currentStep}
                         size={isMobile ? "small" : "small"}
                         direction={isMobile ? "vertical" : "horizontal"} // <--- Vertical on Mobile
-                        items={[
-                            { title: 'Báo Giá', icon: <SolutionOutlined /> },
-                            { title: 'Xác Nhận & Cọc', icon: <DollarOutlined /> },
-                            { title: 'Duyệt Mẫu', icon: <FileDoneOutlined /> },
-                            { title: 'Sản Xuất', icon: <AppstoreAddOutlined /> },
-                            { title: 'Xong SX', icon: <CheckCircleOutlined /> },
-                            { title: 'Giao Hàng', icon: <CarOutlined /> },
-                            { title: 'Hoàn Tất', icon: <DollarOutlined /> }
-                        ]}
+                    <Steps
+                        current={currentStep}
+                        size={isMobile ? "small" : "small"}
+                        direction={isMobile ? "vertical" : "horizontal"} // <--- Vertical on Mobile
+                        items={stepsItems}
                     />
                 </Card>
 
                 {/* --- INFO ROW: CUSTOMER / VAT / PAYMENT --- */}
                 <Row gutter={24} style={{ marginBottom: 24 }}>
-                    <Col xs={24} md={8}>
+                    <Col xs={24} md={data.is_design_order ? 12 : 8}>
                         <Card title={<span><UserOutlined /> Thông Tin Khách Hàng</span>} bordered={false} style={{ height: '100%', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', borderRadius: 12 }}>
                             <Descriptions column={1} size="small" labelStyle={{ color: '#888' }} contentStyle={{ fontWeight: 500 }}>
                                 <Descriptions.Item label="Đơn vị">{data.customer_name || data.customer?.name || 'Khách lẻ'}</Descriptions.Item>
-                                <Descriptions.Item label="Người nhận">{data.receiver_name || data.customer?.contacts?.[0]?.full_name || data.customer?.name || '-'}</Descriptions.Item>
+                                {!data.is_design_order && <Descriptions.Item label="Người nhận">{data.receiver_name || data.customer?.contacts?.[0]?.full_name || data.customer?.name || '-'}</Descriptions.Item>}
                                 <Descriptions.Item label="SĐT">{maskPhone(data.receiver_phone || data.customer?.contacts?.[0]?.phone || data.customer?.phone)}</Descriptions.Item>
-                                <Descriptions.Item label="Địa chỉ">{data.shipping_address || data.customer?.address || '-'}</Descriptions.Item>
+                                {!data.is_design_order && <Descriptions.Item label="Địa chỉ">{data.shipping_address || data.customer?.address || '-'}</Descriptions.Item>}
                             </Descriptions>
                         </Card>
                     </Col>
-                    <Col xs={24} md={8}>
-                        <Card title={<span><ShopOutlined /> Thông Tin Xuất Hóa Đơn</span>} bordered={false} style={{ height: '100%', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', borderRadius: 12 }}>
-                            <Descriptions column={1} size="small" labelStyle={{ color: '#888' }} contentStyle={{ fontWeight: 500 }}>
-                                <Descriptions.Item label="Công ty">{data.customer?.legal_name || data.vat_company_name || data.customer?.name || '-'}</Descriptions.Item>
-                                <Descriptions.Item label="MST">{data.customer?.tax_code || data.vat_tax_code || '-'}</Descriptions.Item>
-                                <Descriptions.Item label="Địa chỉ">{data.customer?.legal_address || data.vat_address || data.customer?.address || '-'}</Descriptions.Item>
-                                {(data.vat_email || data.customer?.einvoice_email) && <Descriptions.Item label="Email nhận HĐ">{data.vat_email || data.customer.einvoice_email}</Descriptions.Item>}
-                                {data.vat_invoice_link && (
-                                    <Descriptions.Item label="Hóa đơn">
-                                        <Button
-                                            type="link"
-                                            size="small"
-                                            icon={<FilePdfOutlined />}
-                                            onClick={() => window.open(data.vat_invoice_link, '_blank')}
-                                            style={{ padding: 0 }}
-                                        >
-                                            Xem/Tải Hóa Đơn
-                                        </Button>
-                                    </Descriptions.Item>
-                                )}
-                            </Descriptions>
-                        </Card>
-                    </Col>
-                    <Col xs={24} md={8}>
-                        <Card title={<span><CreditCardOutlined /> Thông Tin Thanh Toán</span>} bordered={false} style={{ height: '100%', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', borderRadius: 12 }}>
+                    
+                    {/* Hide VAT and Payment info if it is a Design Order */}
+                    {!data.is_design_order && (
+                        <>
+                        <Col xs={24} md={8}>
+                            <Card title={<span><ShopOutlined /> Thông Tin Xuất Hóa Đơn</span>} bordered={false} style={{ height: '100%', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', borderRadius: 12 }}>
+                                <Descriptions column={1} size="small" labelStyle={{ color: '#888' }} contentStyle={{ fontWeight: 500 }}>
+                                    <Descriptions.Item label="Công ty">{data.customer?.legal_name || data.vat_company_name || data.customer?.name || '-'}</Descriptions.Item>
+                                    <Descriptions.Item label="MST">{data.customer?.tax_code || data.vat_tax_code || '-'}</Descriptions.Item>
+                                    <Descriptions.Item label="Địa chỉ">{data.customer?.legal_address || data.vat_address || data.customer?.address || '-'}</Descriptions.Item>
+                                    {(data.vat_email || data.customer?.einvoice_email) && <Descriptions.Item label="Email nhận HĐ">{data.vat_email || data.customer.einvoice_email}</Descriptions.Item>}
+                                    {data.vat_invoice_link && (
+                                        <Descriptions.Item label="Hóa đơn">
+                                            <Button
+                                                type="link"
+                                                size="small"
+                                                icon={<FilePdfOutlined />}
+                                                onClick={() => window.open(data.vat_invoice_link, '_blank')}
+                                                style={{ padding: 0 }}
+                                            >
+                                                Xem/Tải Hóa Đơn
+                                            </Button>
+                                        </Descriptions.Item>
+                                    )}
+                                </Descriptions>
+                            </Card>
+                        </Col>
+                        <Col xs={24} md={8}>
+                            <Card title={<span><CreditCardOutlined /> Thông Tin Thanh Toán</span>} bordered={false} style={{ height: '100%', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', borderRadius: 12 }}>
                             {/* DEPOSIT REQUIREMENT */}
                             {Number(data.deposit_amount) > 0 && (
                                 <div style={{ background: '#f9f0ff', padding: 10, borderRadius: 8, border: '1px solid #d3adf7', textAlign: 'center', marginBottom: 10 }}>
@@ -1115,15 +1154,17 @@ const PortalQuotePage: React.FC = () => {
                             </div>
                         </Card>
                     </Col>
+                    </>
+                    )}
                 </Row>
 
                 {/* --- DETAILS ROW: TABLE --- */}
                 <Row gutter={24}>
                     <Col span={24}>
-                        <Card title={<span style={{ fontWeight: 700, fontSize: 16 }}>{isOrder ? '📋 Chi Tiết Đơn Hàng' : '📋 Chi Tiết Báo Giá'}</span>} bordered={false} style={{ marginBottom: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.03)', borderRadius: 12 }}>
+                        <Card title={<span style={{ fontWeight: 700, fontSize: 16 }}>{data.is_design_order ? '📋 Chi Tiết Đơn Thiết Kế & Bản Demo' : (isOrder ? '📋 Chi Tiết Đơn Hàng' : '📋 Chi Tiết Báo Giá')}</span>} bordered={false} style={{ marginBottom: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.03)', borderRadius: 12 }}>
 
-                            {isMobile ? (
-                                // MOBILE LIST VIEW
+                            {isMobile || data.is_design_order ? (
+                                // MOBILE LIST VIEW or DESIGN ORDER VIEW
                                 <List
                                     dataSource={data.items}
                                     rowKey="id"
@@ -1167,12 +1208,12 @@ const PortalQuotePage: React.FC = () => {
                                             >
                                                 <div style={{ display: 'flex', gap: 12 }}>
                                                     {/* Image */}
-                                                    <div style={{ width: 80, height: 80, flexShrink: 0, borderRadius: 6, overflow: 'hidden', border: '1px solid #eee' }}>
+                                                    <div style={{ width: 120, height: 120, flexShrink: 0, borderRadius: 6, overflow: 'hidden', border: '1px solid #eee' }}>
                                                         {isImage ? (
                                                             <Watermark {...getWatermarkProps('rgba(0,0,0,0.15)', 12)}>
                                                                 <img
                                                                     src={finalSrc} alt="prod"
-                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: 'pointer' }}
                                                                     onClick={() => handlePreview(finalSrc)}
                                                                 />
                                                             </Watermark>
@@ -1181,19 +1222,21 @@ const PortalQuotePage: React.FC = () => {
 
                                                     {/* Content */}
                                                     <div style={{ flex: 1 }}>
-                                                        <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>
+                                                        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>
                                                             {item.product?.customer_description || item.product_name_real || item.product?.name}
                                                         </div>
                                                         <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>{item.sku} {item.variant_color && `• ${item.variant_color}`}</div>
-
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                            <div style={{ fontSize: 12 }}>
-                                                                <b>{Number(item.quantity)}</b> x {Number(item.unit_price).toLocaleString()}
+                                                        
+                                                        {!data.is_design_order && (
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                <div style={{ fontSize: 12 }}>
+                                                                    <b>{Number(item.quantity)}</b> x {Number(item.unit_price).toLocaleString()}
+                                                                </div>
+                                                                <div style={{ fontWeight: 700, fontSize: 14 }}>
+                                                                    {Number(item.subtotal).toLocaleString()}₫
+                                                                </div>
                                                             </div>
-                                                            <div style={{ fontWeight: 700, fontSize: 14 }}>
-                                                                {Number(item.subtotal).toLocaleString()}₫
-                                                            </div>
-                                                        </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 {item.vat_content && (
@@ -1255,7 +1298,7 @@ const PortalQuotePage: React.FC = () => {
                             )}
 
                             {/* MOBILE SUMMARY BLOCK (Since Table Summary won't show in List) */}
-                            {isMobile && (() => {
+                            {isMobile && !data.is_design_order && (() => {
                                 const subTotal = data.items.reduce((sum: number, item: any) => sum + Number(item.subtotal), 0);
                                 const discountAmount = Number(data.discount_amount || 0);
                                 const vatRate = data.vat_rate || 0;

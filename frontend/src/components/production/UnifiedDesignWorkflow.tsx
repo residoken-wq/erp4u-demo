@@ -1013,9 +1013,27 @@ const UnifiedDesignWorkflow: React.FC<UnifiedDesignWorkflowProps> = ({ standalon
                                             type={selectedItem?.id === r.id ? 'primary' : 'default'}
                                             shape="round"
                                             block
-                                            onClick={() => {
+                                            onClick={async () => {
                                                 setSelectedPo(po);
                                                 setSelectedItem(r);
+                                                
+                                                // Tích hợp dữ liệu từ DesignOrder nếu có
+                                                if (r.design_order_id) {
+                                                    try {
+                                                        const res = await api.get(`/designs/orders/${r.design_order_id}`);
+                                                        const designOrder = res.data;
+                                                        if (designOrder) {
+                                                            message.success(`Đã tự động tải dữ liệu từ Đơn thiết kế: ${designOrder.code}`);
+                                                            setFaces(prev => prev.map(f => ({
+                                                                ...f,
+                                                                bgColor: designOrder.background_color || f.bgColor,
+                                                                // Pre-fill print content note if needed
+                                                            })));
+                                                        }
+                                                    } catch (err) {
+                                                        console.error('Lỗi khi tải Đơn thiết kế', err);
+                                                    }
+                                                }
                                             }}
                                             style={{
                                                 background: selectedItem?.id === r.id ? 'linear-gradient(90deg, #1890ff, #096dd9)' : undefined,

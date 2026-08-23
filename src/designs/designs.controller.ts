@@ -83,4 +83,60 @@ export class DesignsController {
     updatePrintSampleStatus(@Param('id') id: string, @Body() data: { status: string, feedback?: string }) {
         return this.designsService.updatePrintSampleStatus(+id, data.status, data.feedback);
     }
+
+    // --- Design Orders ---
+    @Get('orders')
+    @RequirePermission('PRODUCT', 'can_view')
+    getDesignOrders(@Query('customer_id') customerId?: number, @Query('product_id') productId?: number, @Query('status') status?: string) {
+        return this.designsService.getDesignOrders({ customer_id: customerId, product_id: productId, status });
+    }
+
+    @Get('orders/:id')
+    @RequirePermission('PRODUCT', 'can_view')
+    getDesignOrderById(@Param('id') id: string) {
+        return this.designsService.getDesignOrderById(+id);
+    }
+
+    @Post('orders')
+    @RequirePermission('PRODUCT', 'can_create')
+    createDesignOrder(@Body() data: any) {
+        return this.designsService.createDesignOrder(data);
+    }
+
+    @Put('orders/:id')
+    @RequirePermission('PRODUCT', 'can_update')
+    updateDesignOrder(@Param('id') id: string, @Body() data: any) {
+        return this.designsService.updateDesignOrder(+id, data);
+    }
+
+    @Put('orders/:id/status')
+    @RequirePermission('PRODUCT', 'can_update')
+    updateDesignOrderStatus(@Param('id') id: string, @Body() data: { status: string }) {
+        return this.designsService.updateDesignOrderStatus(+id, data.status);
+    }
+
+    @Delete('orders/:id')
+    @RequirePermission('PRODUCT', 'can_delete')
+    deleteDesignOrder(@Param('id') id: string) {
+        return this.designsService.deleteDesignOrder(+id);
+    }
+
+    // --- Design Order Items ---
+    @Post('orders/:id/items')
+    @RequirePermission('PRODUCT', 'can_create')
+    addDesignOrderItem(@Param('id') id: string, @Body() data: any) {
+        return this.designsService.addDesignOrderItem(+id, data);
+    }
+
+    @Put('order-items/:itemId')
+    @RequirePermission('PRODUCT', 'can_update')
+    updateDesignOrderItem(@Param('itemId') itemId: string, @Body() data: any) {
+        return this.designsService.updateDesignOrderItem(+itemId, data);
+    }
+
+    @Delete('order-items/:itemId')
+    @RequirePermission('PRODUCT', 'can_delete')
+    deleteDesignOrderItem(@Param('itemId') itemId: string) {
+        return this.designsService.deleteDesignOrderItem(+itemId);
+    }
 }

@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Spin, Result, Button, message, Modal, Descriptions, Table, Tag, Typography, Form, Input, InputNumber, Steps, Card, Divider, Timeline, Space, Row, Col, Statistic } from 'antd';
-import { CheckCircleOutlined, CloseCircleOutlined, SendOutlined, TruckOutlined, ExclamationCircleOutlined, ClockCircleOutlined, BarChartOutlined, PrinterOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, CloseCircleOutlined, SendOutlined, TruckOutlined, ExclamationCircleOutlined, ClockCircleOutlined, BarChartOutlined, PrinterOutlined, DownOutlined } from '@ant-design/icons';
 import { API_URL } from '../config';
 import dayjs from 'dayjs';
+import { handlePrintPO } from '../utils/printPurchasingTemplate';
+
+import { Dropdown } from 'antd';
 
 const { Title, Text } = Typography;
 
@@ -188,9 +191,27 @@ const PortalPurchasePage: React.FC = () => {
                             Mã: <b style={{ color: '#1890ff', fontSize: 16 }}>{data.po_code}</b>
                         </Text>
                     </div>
-                    <Tag color={sc.color} style={{ fontSize: 15, padding: '6px 16px', borderRadius: 20 }}>
-                        {sc.icon} <span style={{ marginLeft: 6 }}>{sc.label}</span>
-                    </Tag>
+                    <Space>
+                        <Tag color={sc.color} style={{ fontSize: 15, padding: '6px 16px', borderRadius: 20 }}>
+                            {sc.icon} <span style={{ marginLeft: 6 }}>{sc.label}</span>
+                        </Tag>
+                        <Dropdown
+                            menu={{
+                                items: [
+                                    { key: '3', label: 'Mẫu Tiêu Chuẩn', onClick: () => handlePrintPO(data, [], 'STANDARD', true, { COMPANY_NAME: 'ERP4U' }) },
+                                    { key: '4', label: 'Mẫu Gia Công (Có Đơn giá)', onClick: () => handlePrintPO(data, [], 'OUTSOURCING', true, { COMPANY_NAME: 'ERP4U' }) },
+                                    { key: '5', label: 'Mẫu Gia Công (Ẩn Giá)', onClick: () => handlePrintPO(data, [], 'OUTSOURCING', false, { COMPANY_NAME: 'ERP4U' }) },
+                                    { type: 'divider' },
+                                    { key: '1', label: 'Mẫu của NCC / NGC (Đầy đủ)', onClick: () => handlePrint('full') },
+                                    { key: '2', label: 'Mẫu của NCC / NGC (Ẩn giá)', onClick: () => handlePrint('no-price') },
+                                ]
+                            }}
+                        >
+                            <Button type="default" icon={<PrinterOutlined />}>
+                                In Đơn <DownOutlined />
+                            </Button>
+                        </Dropdown>
+                    </Space>
                 </div>
 
                 {/* PROGRESS STEPS */}
@@ -271,11 +292,7 @@ const PortalPurchasePage: React.FC = () => {
             {data.supplier?.po_template && (
                 <div style={{ background: '#fff', borderRadius: 12, padding: '24px 32px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', marginBottom: 24, overflowX: 'auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                        <Title level={5} style={{ margin: 0 }}>📄 Mẫu Đơn Đặt Hàng</Title>
-                        <Space>
-                            <Button icon={<PrinterOutlined />} onClick={() => handlePrint('full')}>In Mẫu Đầy Đủ</Button>
-                            <Button icon={<PrinterOutlined />} onClick={() => handlePrint('no-price')}>In Không Giá</Button>
-                        </Space>
+                        <Title level={5} style={{ margin: 0 }}>📄 Mẫu Đơn Đặt Hàng (Của NCC)</Title>
                     </div>
                     <div 
                         dangerouslySetInnerHTML={{ 

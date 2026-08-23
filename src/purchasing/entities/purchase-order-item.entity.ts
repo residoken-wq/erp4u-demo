@@ -3,6 +3,7 @@ import { PurchaseOrder } from './purchase-order.entity';
 import { Material } from '../../materials/material.entity';
 import { Product } from '../../products/product.entity';
 import { PrintDesign } from '../../designs/entities/print-design.entity';
+import { DesignOrder } from '../../designs/entities/design-order.entity';
 
 @Entity('purchase_order_items')
 export class PurchaseOrderItem {
@@ -65,6 +66,14 @@ export class PurchaseOrderItem {
 
   @Column({ nullable: true })
   print_design_id: number;
+
+  // --- MỚI: Liên kết Đơn thiết kế (từ Module Thiết kế & In ấn) ---
+  @ManyToOne(() => DesignOrder, { nullable: true })
+  @JoinColumn({ name: 'design_order_id' })
+  design_order: DesignOrder;
+
+  @Column({ nullable: true })
+  design_order_id: number;
 
   // --- MỚI: Gán màu sắc sản phẩm cho NPL ---
   @Column({ nullable: true })

@@ -2,6 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
 import { Customer } from '../../customers/customer.entity';
 import { Product } from '../../products/product.entity';
 import { CustomerLogo } from './customer-logo.entity';
+import { DesignOrder } from './design-order.entity';
 
 export enum PrintDesignType {
     PRINT = 'PRINT',
@@ -59,6 +60,25 @@ export class PrintDesign {
 
     @Column('jsonb', { nullable: true })
     tech_pack: any; // JSON lưu thông số kỹ thuật: loại mực, lưới in, vị trí in...
+
+    @ManyToOne(() => DesignOrder, { nullable: true, onDelete: 'SET NULL' })
+    @JoinColumn({ name: 'design_order_id' })
+    design_order: DesignOrder;
+
+    @Column({ nullable: true })
+    design_order_id: number;
+
+    @Column({ nullable: true })
+    print_type: string;
+
+    @Column({ nullable: true })
+    background_color: string;
+
+    @Column({ nullable: true })
+    text_color: string;
+
+    @Column('text', { nullable: true })
+    notes: string;
 
     @Column({
         type: 'enum',

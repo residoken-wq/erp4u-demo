@@ -15,6 +15,7 @@ import { WizardConfig, WizardConfigData } from './entities/wizard-config.entity'
 import { WebProject } from '../website-projects/entities/web-project.entity';
 import { HrService } from '../hr/hr.service';
 import { JobPostStatus } from '../hr/entities/job-post.entity';
+import { DesignsService } from '../designs/designs.service';
 
 @Controller('public')
 export class PublicController {
@@ -39,7 +40,8 @@ export class PublicController {
         private readonly websiteProjectRepo: Repository<WebProject>,
         private readonly salesService: SalesService,
         private readonly systemService: SystemService,
-        private readonly hrService: HrService
+        private readonly hrService: HrService,
+        private readonly designsService: DesignsService
     ) { }
 
     // ... (settings code)
@@ -807,8 +809,34 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
 
     @Get('portal/quote/:uuid')
     async getPortalQuote(@Param('uuid') uuid: string, @Req() req: any) {
-        const quote = await this.salesService.getQuoteByUuid(uuid);
-        if (!quote) return null;
+        let quote: any = await this.salesService.getQuoteByUuid(uuid);
+        
+        let isDesignOrder = false;
+        if (!quote) {
+            // Check if it's a design order
+            quote = await this.designsService.getDesignOrderByUuid(uuid);
+            if (!quote) return null;
+            isDesignOrder = true;
+            
+            // Format design order to match quote structure roughly for portal
+            quote.order_code = quote.code;
+            quote.order_date = quote.created_at;
+            quote.customer = { name: quote.school_name };
+            quote.customer_name = quote.school_name;
+            quote.type = 'DESIGN_ORDER';
+            quote.items = quote.items || [];
+            if (quote.items.length === 0) {
+                 quote.items = [{
+                     sku: 'DESIGN-' + quote.code,
+                     product: { name: quote.product_type },
+                     product_name_real: quote.product_type,
+                     unit_price: 0,
+                     quantity: quote.quantity,
+                     subtotal: 0,
+                     image_url: quote.preview_images?.[0] || null
+                 }];
+            }
+        }
         
         // --- ATTACH EMPLOYEE PHONE TO ASSIGNED_TO ---
         if (quote.assigned_to?.id) {
@@ -863,6 +891,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
         
         return {
             ...quote,
+            is_design_order: isDesignOrder,
             company_info: companyInfo,
             watermark_image: watermarkConfig?.value || '',
             print_header_banner: bannerConfig?.value || '',
@@ -874,10 +903,21 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
     }
 
     @Post('portal/quote/:uuid/action')
-    portalQuoteAction(@Param('uuid') uuid: string, @Body() body: any, @Req() req: any) {
+    async portalQuoteAction(@Param('uuid') uuid: string, @Body() body: any, @Req() req: any) {
         const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
         const userAgent = req.headers['user-agent'];
         const metadata = { ip, userAgent };
+
+        // Check if design order
+        const designOrder = await this.designsService.getDesignOrderByUuid(uuid);
+        if (designOrder) {
+             if (body.action === 'ACCEPT') {
+                 return this.designsService.updateDesignOrderStatus(designOrder.id, 'DEMO_APPROVED');
+             } else if (body.action === 'REJECT') {
+                 return this.designsService.updateDesignOrderStatus(designOrder.id, 'DEMO_REJECTED');
+             }
+        }
+        
         return this.salesService.customerAction(uuid, body.action, metadata);
     }
 

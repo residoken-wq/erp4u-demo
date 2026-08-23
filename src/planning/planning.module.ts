@@ -28,6 +28,7 @@ import { InventoryModule } from '../inventory/inventory.module';
 import { SupplierStock } from '../inventory/entities/supplier-stock.entity';
 import { GoodsIssue } from '../inventory/entities/goods-issue.entity';
 import { GoodsIssueItem } from '../inventory/entities/goods-issue-item.entity';
+import { DesignsModule } from '../designs/designs.module';
 
 @Module({
   imports: [
@@ -53,7 +54,8 @@ import { GoodsIssueItem } from '../inventory/entities/goods-issue-item.entity';
     ]),
     ProductsModule,
     MaterialsModule,
-    forwardRef(() => InventoryModule)
+    forwardRef(() => InventoryModule),
+    forwardRef(() => DesignsModule)
   ],
   controllers: [PlanningController],
   providers: [

@@ -23,6 +23,7 @@ import { Assessment } from '../hr/entities/assessment.entity';
 import { Interview } from '../hr/entities/interview.entity';
 import { HrModule } from '../hr/hr.module';
 import { EmailService } from '../common/services/email.service';
+import { DesignsModule } from '../designs/designs.module';
 
 @Module({
     imports: [
@@ -35,7 +36,8 @@ import { EmailService } from '../common/services/email.service';
         ]),
         SalesModule,
         SystemModule, // <--- Import for SystemService
-        HrModule // <--- Import for HrService (if needed)
+        HrModule, // <--- Import for HrService (if needed)
+        DesignsModule
     ],
     controllers: [PublicController, PortalController],
     providers: [EmailService]
