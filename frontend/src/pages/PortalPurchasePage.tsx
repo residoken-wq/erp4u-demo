@@ -442,8 +442,6 @@ const PortalPurchasePage: React.FC = () => {
                 </div>
             )}
 
-            )}
-
             {/* Rejection info */}
             {data.outsourcing_delivery_info?.rejection && (
                 <div style={{ background: '#fff2f0', borderRadius: 12, padding: '20px 32px', border: '1px solid #ffccc7', marginBottom: 24 }}>
