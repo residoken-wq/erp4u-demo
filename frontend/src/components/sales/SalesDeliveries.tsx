@@ -86,7 +86,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         if (order?.id) fetchHistory();
         fetchCarriers();
         api.get(`/system/company`).then(res => setCompanyConfig(res.data)).catch(() => { });
-    }, [order?.id]);
+    }, [order]);
 
     // Fetch combo components for COMBO products
     useEffect(() => {

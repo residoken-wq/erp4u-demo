@@ -27,12 +27,38 @@ export class PfoDemandService {
             where: {
                 status: In([SalesOrderStatus.SO_PENDING, SalesOrderStatus.SAMPLE_APPROVED, SalesOrderStatus.DEPOSITED]),
             },
-            relations: ['customer', 'items', 'items.product', 'pfos', 'deliveries'],
+            relations: ['customer', 'items', 'items.product', 'pfos', 'deliveries', 'deliveries.items'],
             order: { delivery_date: 'ASC' }
         });
 
-        // Filter orders that haven't been fully planned
-        const filteredOrders = orders.filter(o => !o.pfos || o.pfos.length === 0);
+        // Filter orders that haven't been fully planned and haven't been fully delivered
+        const filteredOrders = orders.filter(o => {
+            if (o.pfos && o.pfos.length > 0) return false;
+            
+            // Check if all items are fully delivered (SHIPPED)
+            if (o.items && o.items.length > 0) {
+                let allDelivered = true;
+                for (const item of o.items) {
+                    let deliveredQty = 0;
+                    if (o.deliveries) {
+                        for (const d of o.deliveries) {
+                            if (d.status === 'SHIPPED' && d.items) {
+                                const dItem = d.items.find((di: any) => di.sku === item.sku);
+                                if (dItem) {
+                                    deliveredQty += Number(dItem.quantity);
+                                }
+                            }
+                        }
+                    }
+                    if (deliveredQty < Number(item.quantity)) {
+                        allDelivered = false;
+                        break;
+                    }
+                }
+                if (allDelivered) return false;
+            }
+            return true;
+        });
 
         const stocks = await this.inventoryService.getAllStocks();
         const stockMap = new Map<string, number>();
