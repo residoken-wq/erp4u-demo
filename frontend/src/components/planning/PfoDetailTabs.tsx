@@ -284,12 +284,14 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
                             size="small"
                             onClick={() => {
                                 setPxkTargetItem(record);
-                                pxkForm.setFieldsValue({
-                                    date: dayjs(),
-                                    quantity: record.booked_quantity,
-                                    note: `Xuất kho thành phẩm cho SO ${selectedPfo?.sales_order?.order_code || ''}`
-                                });
                                 setIsPxkModalVisible(true);
+                                setTimeout(() => {
+                                    pxkForm.setFieldsValue({
+                                        date: dayjs(),
+                                        quantity: record.booked_quantity,
+                                        note: `Xuất kho thành phẩm cho SO ${selectedPfo?.sales_order?.order_code || ''}`
+                                    });
+                                }, 50);
                             }}
                         >
                             Dùng tồn kho
