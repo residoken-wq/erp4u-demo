@@ -13,6 +13,9 @@ import {
     GlobalOutlined, BankOutlined, PhoneOutlined, PictureOutlined
 } from '@ant-design/icons';
 import axios from '../utils/api';
+import { SketchPicker } from 'react-color';
+import { getVietQRBankCode } from '../utils/vietqr';
+import ReactQuill from 'react-quill';
 import { API_URL } from '../config';
 import dayjs from 'dayjs';
 import RichTextEditor from '../components/common/RichTextEditor';
@@ -198,7 +201,7 @@ const CompanyConfigTab: React.FC = () => {
         setSaving(false);
     };
 
-    const rawBankCode = (bankValues.bank.split('-')[0] || 'ACB').trim();
+    const rawBankCode = getVietQRBankCode(bankValues.bank);
     const qrTestUrl = bankValues.account 
         ? `https://img.vietqr.io/image/${rawBankCode}-${bankValues.account}-compact2.jpg?amount=100000&addInfo=TEST_PAYMENT&accountName=${encodeURIComponent(bankValues.holder)}`
         : '';

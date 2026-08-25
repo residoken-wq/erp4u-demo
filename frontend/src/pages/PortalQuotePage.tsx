@@ -6,6 +6,7 @@ import { LinkOutlined, CheckCircleOutlined, SolutionOutlined, FileDoneOutlined, 
 import { API_URL } from '../config';
 import dayjs from 'dayjs';
 import useMobile from '../hooks/useMobile'; // <--- Import Hook
+import { getVietQRBankCode } from '../utils/vietqr';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -236,7 +237,7 @@ const PortalQuotePage: React.FC = () => {
         }
         qrAmount = Math.floor(qrAmount);
 
-        const rawBankCode = (sellerBankName.split('-')[0] || 'ACB').trim();
+        const rawBankCode = getVietQRBankCode(sellerBankName);
         const qrLink = `https://img.vietqr.io/image/${rawBankCode}-${sellerBankAccount}-compact2.jpg?amount=${qrAmount}&addInfo=${data.order_code}&accountName=${encodeURIComponent(sellerBankHolder)}`;
 
         if (mode === 'pos') {
@@ -1615,8 +1616,14 @@ const PortalQuotePage: React.FC = () => {
                                     } else if (paidAmount > 0) {
                                         qrAmount = remaining > 0 ? remaining : 0;
                                     }
+                                    
+                                    const sellerBankName = data.company_info?.COMPANY_BANK_NAME || 'ACB - TP.HCM';
+                                    const sellerBankAccount = data.company_info?.COMPANY_BANK_ACCOUNT || '141847859';
+                                    const sellerBankHolder = data.company_info?.COMPANY_BANK_HOLDER || 'CTY TNHH TM DV TUONG LINH';
+                                    const rawBankCode = getVietQRBankCode(sellerBankName);
+                                    
                                     return (
-                                        <img src={`https://img.vietqr.io/image/ACB-141847859-compact2.jpg?amount=${Math.floor(qrAmount)}&addInfo=${data.order_code}&accountName=CTY TNHH TM DV TUONG LINH`} alt="VietQR" style={{ width: 160 }} />
+                                        <img src={`https://img.vietqr.io/image/${rawBankCode}-${sellerBankAccount}-compact2.jpg?amount=${Math.floor(qrAmount)}&addInfo=${data.order_code}&accountName=${encodeURIComponent(sellerBankHolder)}`} alt="VietQR" style={{ width: 160 }} />
                                     );
                                 })()}
                             </div>
