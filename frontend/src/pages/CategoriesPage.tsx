@@ -37,6 +37,7 @@ const CategoriesPage: React.FC = () => {
   const columns = [
       { title: 'Mã', dataIndex: 'code', width: 150, render: (t:any) => <b>{t}</b> },
       { title: 'Tên Danh Mục', dataIndex: 'name', render: (t:any) => <><AppstoreOutlined /> {t}</> },
+      { title: 'Tên DM Gia Công', dataIndex: 'outsourcing_category_name' },
       { 
           title: '% Biên Lợi Nhuận (Mong muốn)', dataIndex: 'profit_margin', align: 'center' as const,
           render: (v:any) => <span style={{color: '#1890ff', fontWeight:'bold', fontSize:16}}>{v}%</span>
@@ -62,6 +63,7 @@ const CategoriesPage: React.FC = () => {
             <Form form={form} layout="vertical" onFinish={handleSave} initialValues={{profit_margin: 30}}>
                 <Form.Item name="code" label="Mã Danh Mục" rules={[{required:true}]}><Input disabled={!!editingItem} /></Form.Item>
                 <Form.Item name="name" label="Tên Danh Mục" rules={[{required:true}]}><Input /></Form.Item>
+                <Form.Item name="outsourcing_category_name" label="Tên Danh Mục (Portal NCC)"><Input placeholder="Ví dụ: Nệm, Chăn, Gối..." /></Form.Item>
                 <Form.Item name="profit_margin" label="% Biên Lợi Nhuận Gộp (Margin)" help="Công thức: Giá Bán = Giá Vốn / (1 - %Margin). Thay đổi ở đây sẽ cập nhật giá tất cả SP thuộc danh mục." rules={[{required:true}]}>
                     <InputNumber min={0} max={90} style={{width:'100%'}} suffix={<PercentageOutlined />} />
                 </Form.Item>

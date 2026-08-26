@@ -31,6 +31,7 @@ const PortalPurchasePage: React.FC = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [progressForm] = Form.useForm();
     const [rejectForm] = Form.useForm();
+    const [companyConfig, setCompanyConfig] = useState<any>(null);
 
     const fetchData = () => {
         setLoading(true);
@@ -38,6 +39,10 @@ const PortalPurchasePage: React.FC = () => {
             .then(res => setData(res.data))
             .catch(() => { })
             .finally(() => setLoading(false));
+
+        axios.get(`${API_URL}/system/company`)
+            .then(res => setCompanyConfig(res.data))
+            .catch(console.error);
     };
 
     useEffect(() => { fetchData(); }, [uuid]);
@@ -210,9 +215,9 @@ const PortalPurchasePage: React.FC = () => {
                         <Dropdown
                             menu={{
                                 items: [
-                                    { key: '3', label: 'Mẫu Tiêu Chuẩn', onClick: () => handlePrintPO(data, [], 'STANDARD', true, { COMPANY_NAME: 'ERP4U' }) },
-                                    { key: '4', label: 'Mẫu Gia Công (Có Đơn giá)', onClick: () => handlePrintPO(data, [], 'OUTSOURCING', true, { COMPANY_NAME: 'ERP4U' }) },
-                                    { key: '5', label: 'Mẫu Gia Công (Ẩn Giá)', onClick: () => handlePrintPO(data, [], 'OUTSOURCING', false, { COMPANY_NAME: 'ERP4U' }) },
+                                    { key: '3', label: 'Mẫu Tiêu Chuẩn', onClick: () => handlePrintPO(data, [], 'STANDARD', true, companyConfig || { COMPANY_NAME: 'ERP4U' }) },
+                                    { key: '4', label: 'Mẫu Gia Công (Có Đơn giá)', onClick: () => handlePrintPO(data, [], 'OUTSOURCING', true, companyConfig || { COMPANY_NAME: 'ERP4U' }) },
+                                    { key: '5', label: 'Mẫu Gia Công (Ẩn Giá)', onClick: () => handlePrintPO(data, [], 'OUTSOURCING', false, companyConfig || { COMPANY_NAME: 'ERP4U' }) },
                                     { type: 'divider' },
                                     { key: '1', label: 'Mẫu của NCC / NGC (Đầy đủ)', onClick: () => handlePrint('full') },
                                     { key: '2', label: 'Mẫu của NCC / NGC (Ẩn giá)', onClick: () => handlePrint('no-price') },

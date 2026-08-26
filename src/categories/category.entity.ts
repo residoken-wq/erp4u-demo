@@ -17,6 +17,9 @@ export class Category {
   @Column('decimal', { precision: 5, scale: 2, default: 30 })
   profit_margin: number;
 
+  @Column({ nullable: true })
+  outsourcing_category_name: string; // Tên danh mục theo GC
+
   @OneToMany(() => Product, (product) => product.category_link)
   products: Product[];
 

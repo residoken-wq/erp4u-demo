@@ -739,7 +739,7 @@ const PurchasingPage: React.FC = () => {
     const handleCreateReceipt = async () => {
         if (!currentPO) return;
         
-        let receiptItems = [];
+        let receiptItems: any[] = [];
 
         // Ưu tiên nhập kho Bán Thành Phẩm nếu PO là loại Gia Công và có cấu hình BTP
         if (currentPO.type === 'OUTSOURCING' && currentPO.semi_finished_products) {
@@ -1128,6 +1128,23 @@ const PurchasingPage: React.FC = () => {
                     </Descriptions.Item>
                     <Descriptions.Item label="Đã trả" contentStyle={{ color: 'green', fontWeight: 'bold' }}>{Number(currentPO?.paid_amount).toLocaleString()} ₫</Descriptions.Item>
                     <Descriptions.Item label="Còn lại" contentStyle={{ color: 'red' }}>{Number((currentPO?.total_amount || 0) - (currentPO?.paid_amount || 0)).toLocaleString()} ₫</Descriptions.Item>
+                    <Descriptions.Item label="Ngày giao hàng">
+                        <DatePicker
+                            style={{ width: '100%' }}
+                            value={currentPO?.expected_delivery_date ? dayjs(currentPO.expected_delivery_date) : null}
+                            onChange={(d) => setCurrentPO({ ...currentPO, expected_delivery_date: d ? d.toDate() : null })}
+                            format="DD/MM/YYYY"
+                        />
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Timeline KHSX" span={2}>
+                        {currentPO?.pfo?.planned_start_date && currentPO?.pfo?.committed_finish_date ? (
+                            <span style={{ color: '#1890ff', fontWeight: 500 }}>
+                                {dayjs(currentPO.pfo.planned_start_date).format('DD/MM/YYYY')} - {dayjs(currentPO.pfo.committed_finish_date).format('DD/MM/YYYY')}
+                            </span>
+                        ) : (
+                            <span style={{ color: '#999' }}>Chưa có KHSX</span>
+                        )}
+                    </Descriptions.Item>
                     <Descriptions.Item label="Dự án & Task" span={1}>
                         <div style={{ display: 'flex', gap: 5, flexDirection: 'column' }}>
                             <Select 

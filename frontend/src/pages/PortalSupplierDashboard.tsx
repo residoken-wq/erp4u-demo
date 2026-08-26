@@ -166,6 +166,12 @@ const PortalSupplierDashboard: React.FC = () => {
                 return <Tag color={color}>{status}</Tag>;
             }
         },
+        { 
+            title: 'Ngày giao hàng', dataIndex: 'expected_delivery_date', key: 'expected_delivery_date', 
+            render: (val: any) => val ? <b style={{color: '#1890ff'}}>{dayjs(val).format('DD/MM/YYYY')}</b> : '-',
+            filters: Array.from(new Set(pos.map((p: any) => p.expected_delivery_date ? dayjs(p.expected_delivery_date).format('DD/MM/YYYY') : null).filter(Boolean))).map((d: any) => ({ text: d, value: d })),
+            onFilter: (value: any, record: any) => record.expected_delivery_date ? dayjs(record.expected_delivery_date).format('DD/MM/YYYY') === value : false
+        },
         { title: 'Tổng tiền', dataIndex: 'total_amount', key: 'total_amount', render: (val: any) => `${Number(val).toLocaleString()} đ` },
         {
             title: 'Thao tác', key: 'actions', render: (_: any, record: any) => (
@@ -202,13 +208,52 @@ const PortalSupplierDashboard: React.FC = () => {
     };
 
     // TABS 2: Items
-    const allItems = pos.filter((po: any) => po.type !== 'POOLED').flatMap((po: any) => (po.items || []).map((item: any) => ({ ...item, po_code: po.po_code, po_status: po.status, po_uuid: po.uuid, po_type: po.type })));
+    const allItems = pos.filter((po: any) => po.type !== 'POOLED').flatMap((po: any) => (po.items || []).map((item: any) => ({ ...item, po_code: po.po_code, po_status: po.status, po_uuid: po.uuid, po_type: po.type, expected_delivery_date: po.expected_delivery_date })));
+    
+    // Tạo danh sách filter cho công đoạn
+    const uniqueSteps = Array.from(new Set(allItems.map((i: any) => i.description ? i.description.replace(/^Gia công:\s*/i, '').replace(/\s*\[.*?\]$/, '').trim() : '-').filter((v:any) => v !== '-')));
+
     const itemColumns = [
         { title: 'Mã Đơn (PO)', dataIndex: 'po_code', key: 'po_code', render: (text: string, record: any) => <a onClick={() => window.open(`/portal/po/${record.po_uuid}`, '_blank')}>{text}</a> },
+        { 
+            title: 'Ngày giao hàng', dataIndex: 'expected_delivery_date', key: 'expected_delivery_date', 
+            render: (val: any) => val ? <b style={{color: '#1890ff'}}>{dayjs(val).format('DD/MM/YYYY')}</b> : '-',
+            filters: Array.from(new Set(allItems.map((p: any) => p.expected_delivery_date ? dayjs(p.expected_delivery_date).format('DD/MM/YYYY') : null).filter(Boolean))).map((d: any) => ({ text: d, value: d })),
+            onFilter: (value: any, record: any) => record.expected_delivery_date ? dayjs(record.expected_delivery_date).format('DD/MM/YYYY') === value : false
+        },
         { title: 'Hình ảnh', width: 60, render: (_: any, r: any) => { const img = r.product?.image_url || r.material?.image_url; const finalImg = getGoogleDriveImageUrl(img, 'w100'); return finalImg ? <img src={finalImg} alt="img" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} /> : '-'; } },
-        { title: 'Sản phẩm/NPL', key: 'product_name', render: (_: any, record: any) => record.po_type === 'OUTSOURCING' ? record.product?.sku || record.material?.sku || '-' : record.product?.name || record.material?.name || record.description || 'Không rõ' },
-        { title: 'Mô tả sản xuất', width: 350, render: (_: any, record: any) => <div style={{ whiteSpace: 'normal', wordWrap: 'break-word', maxWidth: 350 }}>{record.product?.processing_description || '-'}</div> },
-        { title: 'Công đoạn', width: 200, render: (_: any, record: any) => <div style={{ whiteSpace: 'normal', wordWrap: 'break-word', maxWidth: 200 }}>{record.description ? record.description.replace(/^Gia công:\s*/i, '') : '-'}</div> },
+        { 
+            title: 'Sản phẩm/NPL', key: 'product_name', render: (_: any, record: any) => {
+                const catName = record.product?.category_link?.outsourcing_category_name;
+                const sku = record.po_type === 'OUTSOURCING' ? record.product?.sku || record.material?.sku || '-' : record.product?.name || record.material?.name || record.description || 'Không rõ';
+                return (
+                    <div>
+                        {catName && <div style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>{catName}</div>}
+                        <div>{sku}</div>
+                    </div>
+                );
+            } 
+        },
+        { 
+            title: 'Kích thước', key: 'size', 
+            render: (_: any, record: any) => {
+                const size = record.product?.attributes?.size || record.product?.variant_attributes?.size;
+                return size ? <b>{size}</b> : '-';
+            }
+        },
+        { title: 'Mô tả sản xuất', width: 250, render: (_: any, record: any) => <div style={{ whiteSpace: 'normal', wordWrap: 'break-word', maxWidth: 250 }}>{record.product?.processing_description || '-'}</div> },
+        { 
+            title: 'Công đoạn', width: 150, 
+            filters: uniqueSteps.map((s: any) => ({ text: s, value: s })),
+            onFilter: (value: any, record: any) => {
+                const step = record.description ? record.description.replace(/^Gia công:\s*/i, '').replace(/\s*\[.*?\]$/, '').trim() : '-';
+                return step === value;
+            },
+            render: (_: any, record: any) => {
+                const step = record.description ? record.description.replace(/^Gia công:\s*/i, '').replace(/\s*\[.*?\]$/, '').trim() : '-';
+                return <div style={{ whiteSpace: 'normal', wordWrap: 'break-word', maxWidth: 150, fontWeight: 500, color: '#d46b08' }}>{step}</div>;
+            } 
+        },
         { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity', render: (val: any) => Number(val).toLocaleString() },
         { title: 'Đơn giá', dataIndex: 'unit_price', key: 'unit_price', render: (val: any) => `${Number(val).toLocaleString()} đ` },
         { title: 'Thành tiền', dataIndex: 'subtotal', key: 'subtotal', render: (val: any) => `${Number(val).toLocaleString()} đ` },
@@ -360,6 +405,22 @@ const PortalSupplierDashboard: React.FC = () => {
                                     rowKey="id" 
                                     scroll={{ x: 'max-content' }}
                                     pagination={{ pageSize: 15 }}
+                                />
+                            </Card>
+                        )
+                    },
+                    {
+                        key: '5',
+                        label: <span><SafetyCertificateOutlined /> Đơn Hàng Đã Hoàn Thành</span>,
+                        children: (
+                            <Card style={{ borderRadius: 12 }}>
+                                <Table 
+                                    dataSource={pos.filter((p: any) => p.status === 'COMPLETED')} 
+                                    columns={poColumns} 
+                                    rowKey="id" 
+                                    scroll={{ x: 'max-content' }}
+                                    pagination={{ pageSize: 15 }}
+                                    expandable={{ expandedRowRender }}
                                 />
                             </Card>
                         )

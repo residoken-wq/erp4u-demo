@@ -24,15 +24,18 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
     `;
 
     if (template === 'STANDARD') {
-        const rows = currentPO?.items?.map((i: any, idx: number) => `
+        const rows = currentPO?.items?.map((i: any, idx: number) => {
+            const size = i.product?.attributes?.size || i.product?.variant_attributes?.size || '-';
+            return `
             <tr>
                 <td>${idx + 1}</td>
                 <td class="left-align">${i.description}</td>
+                <td>${size}</td>
                 <td>${Number(i.quantity).toLocaleString()}</td>
                 <td>${Number(i.unit_price).toLocaleString()}</td>
                 <td>${Number(i.subtotal).toLocaleString()}</td>
             </tr>
-        `).join('');
+        `}).join('');
 
         content = `
             ${style}
@@ -44,6 +47,7 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
                 <div style="text-align:right;">
                     <div><b>Ngày:</b> ${dateStr}</div>
                     <div><b>Mã PO:</b> ${poCode}</div>
+                    <div><b>Ngày giao hàng:</b> ${currentPO?.expected_delivery_date ? dayjs(currentPO.expected_delivery_date).format('DD/MM/YYYY') : '-'}</div>
                 </div>
             </div>
             <div class="title">ĐƠN ĐẶT HÀNG (NPL)</div>
@@ -53,6 +57,7 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
                     <tr>
                         <th>STT</th>
                         <th>Description</th>
+                        <th>Kích thước</th>
                         <th>Quantity</th>
                         <th>Unit Price</th>
                         <th>Amount</th>
@@ -61,7 +66,7 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
                 <tbody>${rows}</tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="4" style="text-align:right; font-weight:bold;">Total</td>
+                        <td colspan="5" style="text-align:right; font-weight:bold;">Total</td>
                         <td style="font-weight:bold;">${Number(currentPO?.total_amount).toLocaleString()}</td>
                     </tr>
                 </tfoot>
@@ -100,11 +105,13 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
 
             const logoAttr = i.product?.attributes?.Logo || i.product?.attributes?.logo;
             let theuText = logoAttr || '-';
+            const size = i.product?.attributes?.size || i.product?.variant_attributes?.size || '-';
 
             return `
             <tr>
                 <td>${idx + 1}</td>
                 <td class="left-align">${productSku || productName}</td>
+                <td>${size}</td>
                 <td>${frontColor}</td>
                 <td>${backColor}</td>
                 <td class="left-align">${processingDesc}</td>
@@ -125,6 +132,7 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
                 <div style="text-align:right;">
                     <div><b>Ngày:</b> ${dateStr}</div>
                     <div><b>Mã:</b> ${poCode}</div>
+                    <div><b>Ngày giao hàng:</b> ${currentPO?.expected_delivery_date ? dayjs(currentPO.expected_delivery_date).format('DD/MM/YYYY') : '-'}</div>
                 </div>
             </div>
             <div class="title">ĐƠN ĐẶT HÀNG GIA CÔNG</div>
@@ -134,6 +142,7 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
                     <tr>
                         <th style="width: 5%;">STT</th>
                         <th style="width: 12%;">Mã SKU</th>
+                        <th>Kích thước</th>
                         <th>Màu MT</th>
                         <th>Màu MS</th>
                         <th>Mô tả sản xuất</th>
@@ -146,7 +155,7 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
                 <tbody>${rows}</tbody>
                     <tfoot>
                     <tr>
-                        <td colspan="5" style="text-align:right; font-weight:bold;">Tổng cộng</td>
+                        <td colspan="6" style="text-align:right; font-weight:bold;">Tổng cộng</td>
                         <td style="font-weight:bold;">${Number(currentPO?.items?.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0)).toLocaleString()}</td>
                         <td colspan="${2 + priceColspan}"></td>
                     </tr>

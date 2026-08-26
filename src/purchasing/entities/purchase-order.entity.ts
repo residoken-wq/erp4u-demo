@@ -76,6 +76,9 @@ export class PurchaseOrder {
   @Column({ nullable: true })
   note: string;
 
+  @Column({ type: 'date', nullable: true })
+  expected_delivery_date: Date;
+
   @Column('decimal', { precision: 5, scale: 2, default: 0, nullable: true })
   vat_rate: number;
 
