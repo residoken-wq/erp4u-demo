@@ -741,6 +741,32 @@ export class ProductsService {
         }
     }
 
+    async updateSizesByCategory(categoryId: number, newSize: string) {
+        let updatedCount = 0;
+        if (!newSize) return updatedCount;
+        const products = await this.productRepo.find({ where: { category_id: categoryId } });
+        for (const p of products) {
+            let attrs = p.attributes;
+            if (typeof attrs === 'string') {
+                try {
+                    attrs = JSON.parse(attrs);
+                } catch (e) {
+                    attrs = {};
+                }
+            }
+            if (!attrs || typeof attrs !== 'object') attrs = {};
+            
+            // Chỉ cập nhật nếu sản phẩm chưa có giá trị kích thước
+            if (!attrs.size) {
+                attrs.size = newSize;
+                p.attributes = attrs;
+                await this.productRepo.save(p);
+                updatedCount++;
+            }
+        }
+        return updatedCount;
+    }
+
     async getComboComponents(sku: string) {
         const product = await this.productRepo.findOne({ where: { sku } });
         if (!product) return [];

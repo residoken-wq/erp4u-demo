@@ -26,6 +26,8 @@ export class CategoriesService {
       
       const oldMargin = Number(category.profit_margin);
       const newMargin = Number(data.profit_margin);
+      const oldSize = category.size;
+      const newSize = data.size;
 
       await this.repo.update(id, data);
       
@@ -34,7 +36,21 @@ export class CategoriesService {
           await this.productsService.updatePricesByCategory(id, newMargin);
       }
 
+      // Nếu Kích thước thay đổi -> KHÔNG cập nhật tự động nữa, người dùng sẽ tự bấm nút đồng bộ
+      // if (newSize !== undefined && oldSize !== newSize) {
+      //     await this.productsService.updateSizesByCategory(id, newSize);
+      // }
+
       return this.findOne(id);
+  }
+
+  async syncSize(id: number) {
+      const category = await this.findOne(id);
+      if (!category) throw new NotFoundException('Danh mục không tồn tại');
+      if (!category.size) throw new BadRequestException('Danh mục này chưa được cấu hình kích thước');
+      
+      const updatedCount = await this.productsService.updateSizesByCategory(id, category.size);
+      return { message: `Đã đồng bộ kích thước cho ${updatedCount} sản phẩm trống` };
   }
 
   async remove(id: number) { return this.repo.delete(id); }

@@ -20,6 +20,9 @@ export class Category {
   @Column({ nullable: true })
   outsourcing_category_name: string; // Tên danh mục theo GC
 
+  @Column({ nullable: true })
+  size: string; // Kích thước áp dụng cho toàn bộ danh mục
+
   @OneToMany(() => Product, (product) => product.category_link)
   products: Product[];
 
