@@ -85,8 +85,10 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             if (res.data.success) {
                 message.success('Đã tạo hóa đơn nháp thành công!');
                 setVatData(res.data.data);
-                form.setFieldsValue({ vat_invoice_link: res.data.data.linkView });
+                form.setFieldsValue({ vat_invoice_link: res.data.data?.linkView });
                 onSuccess(); // Refresh list
+            } else {
+                message.error(res.data.message || 'Lỗi khi tạo hóa đơn nháp');
             }
         } catch (error: any) {
             message.error(error.response?.data?.message || 'Lỗi khi tạo hóa đơn nháp');

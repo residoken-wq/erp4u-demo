@@ -2464,37 +2464,46 @@ export class SalesService {
 
     // --- EASYINVOICE INTEGRATION ---
     async issueVatInvoice(orderId: number) {
-        const order = await this.orderRepo.findOne({
-            where: { id: orderId },
-            relations: ['items', 'items.product', 'customer']
-        });
-        if (!order) throw new NotFoundException('Order not found');
-        if (!order.vat_company_name && !order.customer?.legal_name && !order.customer?.name) {
-            throw new Error('Thiếu thông tin công ty xuất hóa đơn');
+        try {
+            const order = await this.orderRepo.findOne({
+                where: { id: orderId },
+                relations: ['items', 'items.product', 'customer']
+            });
+            if (!order) throw new NotFoundException('Order not found');
+            if (!order.vat_company_name && !order.customer?.legal_name && !order.customer?.name) {
+                throw new Error('Thiếu thông tin công ty xuất hóa đơn');
+            }
+
+            this.logger.log(`[EasyInvoice] Issuing draft for SO #${order.order_code}, items: ${order.items?.length || 0}`);
+
+            // Tạo hóa đơn nháp (Draft)
+            const draftResult = await this.easyInvoiceService.createDraftInvoice(order);
+            
+            this.logger.log(`[EasyInvoice] Draft result: ${JSON.stringify(draftResult)}`);
+
+            // Lưu thông tin Draft vào DB
+            const issuedAt = new Date().toISOString();
+            order.vat_invoice_data = {
+                ikey: order.order_code,
+                invoiceNo: '', // Chưa có số (Nháp)
+                lookupCode: '',
+                linkView: '',
+                issueDate: '',
+                invoiceStatus: 0, // 0: Nháp
+                pattern: draftResult?.Pattern || '',
+                serial: draftResult?.Serial || '',
+                issuedAt: issuedAt
+            };
+
+            await this.orderRepo.save(order);
+            
+            this.systemService.logAction('SALES', 'CREATE_VAT_INVOICE_DRAFT', `Tạo hóa đơn VAT nháp cho SO ${order.order_code}`, null, 'System', String(order.id));
+
+            return { success: true, message: 'Đã tạo hóa đơn nháp trên EasyInvoice', data: order.vat_invoice_data };
+        } catch (error: any) {
+            this.logger.error(`[EasyInvoice] issueVatInvoice error for orderId=${orderId}: ${error.message}`, error.stack);
+            return { success: false, message: error.message || 'Lỗi không xác định khi tạo hóa đơn nháp' };
         }
-
-        // Tạo hóa đơn nháp (Draft)
-        const draftResult = await this.easyInvoiceService.createDraftInvoice(order);
-        
-        // Lưu thông tin Draft vào DB
-        const issuedAt = new Date().toISOString();
-        order.vat_invoice_data = {
-            ikey: order.order_code,
-            invoiceNo: '', // Chưa có số (Nháp)
-            lookupCode: '',
-            linkView: '',
-            issueDate: '',
-            invoiceStatus: 0, // 0: Nháp
-            pattern: draftResult?.Pattern || '',
-            serial: draftResult?.Serial || '',
-            issuedAt: issuedAt
-        };
-
-        await this.orderRepo.save(order);
-        
-        this.systemService.logAction('SALES', 'CREATE_VAT_INVOICE_DRAFT', `Tạo hóa đơn VAT nháp cho SO ${order.order_code}`, null, 'System', String(order.id));
-
-        return { success: true, message: 'Đã tạo hóa đơn nháp trên EasyInvoice', data: order.vat_invoice_data };
     }
 
     async getVatInvoiceStatus(orderId: number) {
