@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Table, Tag, Button, message, Card, Input, Space, Row, Col, Tabs, Progress, Tooltip, Statistic, DatePicker, Select, List, Dropdown, MenuProps, FloatButton } from 'antd';
+import { Table, Tag, Button, message, Card, Input, Space, Row, Col, Tabs, Progress, Tooltip, Statistic, DatePicker, Select, List, Dropdown, MenuProps, FloatButton, Avatar } from 'antd';
 // --- FIX: Thêm PlusOutlined đã bị thiếu trước đó ---
 import { PlusOutlined, ReloadOutlined, DollarOutlined, SearchOutlined, BellOutlined, EditOutlined, LinkOutlined, ShoppingCartOutlined, FileTextOutlined, CalendarOutlined, WalletOutlined, AuditOutlined, AppstoreAddOutlined, ShopOutlined, RightOutlined, MoreOutlined, PrinterOutlined } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -267,8 +267,14 @@ const SalesPage: React.FC = () => {
             }
         },
         {
-            title: 'Nhân sự', dataIndex: 'assigned_to', width: 120,
-            render: (u: any) => u ? <Tag color="blue">{u.full_name || u.username}</Tag> : '-'
+            title: 'Nhân sự', dataIndex: 'assigned_to', width: 120, align: 'center' as const,
+            render: (u: any) => u ? (
+                <Tooltip title={u.full_name || u.username}>
+                    <Avatar src={u.avatar} style={{ backgroundColor: '#1890ff', cursor: 'pointer' }} size="small">
+                        {!u.avatar && (u.full_name || u.username || '?').charAt(0).toUpperCase()}
+                    </Avatar>
+                </Tooltip>
+            ) : '-'
         },
         {
             title: 'Trạng Thái', dataIndex: 'status', align: 'center' as const, width: 120,
@@ -302,7 +308,21 @@ const SalesPage: React.FC = () => {
                                 <Progress percent={pct} size="small" steps={5} strokeColor={pct >= 100 ? '#52c41a' : '#1890ff'} showInfo={false} />
                                 <span style={{ fontSize: 11, color: pct >= 100 ? 'green' : '#666' }}>{pct}%</span>
                             </div>
-                            {r.require_invoice && <Tag color="blue" style={{ margin: 0 }}>Lấy hóa đơn</Tag>}
+                            {r.require_invoice && (
+                                <Tooltip title={
+                                    r.vat_invoice_data?.invoiceStatus === 0 ? 'Bản nháp' :
+                                    r.vat_invoice_data?.invoiceStatus === 1 ? 'Đã ký' :
+                                    r.vat_invoice_data?.invoiceStatus === 2 ? 'Đã khai thuế' :
+                                    r.vat_invoice_data?.invoiceStatus > 2 ? 'Đã hủy/Thay thế' : 'Chưa lấy hóa đơn'
+                                }>
+                                    <Tag color={
+                                        r.vat_invoice_data?.invoiceStatus === 0 ? 'orange' :
+                                        r.vat_invoice_data?.invoiceStatus === 1 ? 'blue' :
+                                        r.vat_invoice_data?.invoiceStatus === 2 ? 'green' :
+                                        r.vat_invoice_data?.invoiceStatus > 2 ? 'red' : 'default'
+                                    } style={{ margin: 0 }}>Lấy hóa đơn</Tag>
+                                </Tooltip>
+                            )}
                         </div>
                     </Tooltip>
                 )
@@ -516,7 +536,14 @@ const SalesPage: React.FC = () => {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, fontSize: 11, color: '#999' }}>
                                                 <span>{r.order_date ? dayjs(r.order_date).format('DD/MM/YYYY') : '-'}</span>
                                                 <span>{r.assigned_to?.full_name || '-'}</span>
-                                                {r.require_invoice && <Tag color="blue" style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px', margin: 0 }}>Lấy hóa đơn</Tag>}
+                                                {r.require_invoice && (
+                                                    <Tag color={
+                                                        r.vat_invoice_data?.invoiceStatus === 0 ? 'orange' :
+                                                        r.vat_invoice_data?.invoiceStatus === 1 ? 'blue' :
+                                                        r.vat_invoice_data?.invoiceStatus === 2 ? 'green' :
+                                                        r.vat_invoice_data?.invoiceStatus > 2 ? 'red' : 'default'
+                                                    } style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px', margin: 0 }}>Lấy hóa đơn</Tag>
+                                                )}
                                             </div>
                                         </div>
                                         {/* Action buttons on mobile list item */}

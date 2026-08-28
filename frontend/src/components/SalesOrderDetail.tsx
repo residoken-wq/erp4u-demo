@@ -823,7 +823,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             }
             open={open}
             onClose={onClose}
-            width={isMobile ? '100%' : 1100}
+            width={isMobile ? '100%' : '85vw'}
             placement="right"
             styles={{ 
                 body: { padding: isMobile ? 8 : 24, background: 'rgba(255, 255, 255, 0.4)' },
