@@ -5,6 +5,62 @@ import { SalesOrder } from './sales-order.entity';
 import * as crypto from 'crypto';
 import { firstValueFrom } from 'rxjs';
 
+function readNumberInVietnamese(number: number): string {
+    const digits = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+    const units = ['', 'nghìn', 'triệu', 'tỷ', 'nghìn tỷ', 'triệu tỷ'];
+
+    if (number === 0) return 'Không đồng';
+
+    let str = '';
+    let numStr = Math.round(number).toString();
+    
+    // Split into chunks of 3
+    const chunks = [];
+    while (numStr.length > 0) {
+        chunks.push(numStr.substring(Math.max(0, numStr.length - 3)));
+        numStr = numStr.substring(0, Math.max(0, numStr.length - 3));
+    }
+
+    for (let i = 0; i < chunks.length; i++) {
+        if (parseInt(chunks[i]) === 0 && i !== 0) continue;
+        
+        let chunkStr = '';
+        const chunk = chunks[i].padStart(3, '0');
+        const hundreds = parseInt(chunk[0]);
+        const tens = parseInt(chunk[1]);
+        const ones = parseInt(chunk[2]);
+
+        if (hundreds > 0 || (i < chunks.length - 1 && chunks.length > 1 && parseInt(chunks[i]) > 0)) {
+            chunkStr += digits[hundreds] + ' trăm ';
+        }
+
+        if (tens === 0 && ones > 0 && (hundreds > 0 || chunkStr.length > 0)) {
+            chunkStr += 'lẻ ';
+        } else if (tens === 1) {
+            chunkStr += 'mười ';
+        } else if (tens > 1) {
+            chunkStr += digits[tens] + ' mươi ';
+        }
+
+        if (ones === 1 && tens > 1) {
+            chunkStr += 'mốt ';
+        } else if (ones === 5 && tens > 0) {
+            chunkStr += 'lăm ';
+        } else if (ones > 0 || (tens === 0 && hundreds === 0 && i === 0)) {
+            if (!(tens === 0 && hundreds === 0 && i > 0)) {
+                 chunkStr += digits[ones] + ' ';
+            }
+        }
+
+        if (chunkStr.trim().length > 0) {
+            str = chunkStr + units[i] + ' ' + str;
+        }
+    }
+
+    str = str.trim().replace(/\s+/g, ' ') + ' đồng';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 @Injectable()
 export class EasyInvoiceService {
     private readonly logger = new Logger(EasyInvoiceService.name);
@@ -61,8 +117,10 @@ export class EasyInvoiceService {
             );
             return response.data;
         } catch (error: any) {
-            this.logger.error(`EasyInvoice API Error (${endpoint}):`, error.response?.data || error.message);
-            throw new Error(`EasyInvoice API request failed: ${error.message}`);
+            const errorDetails = error.response?.data;
+            const errorMsg = typeof errorDetails === 'object' ? JSON.stringify(errorDetails) : errorDetails;
+            this.logger.error(`EasyInvoice API Error (${endpoint}):`, errorDetails || error.message);
+            throw new Error(`EasyInvoice API request failed: ${error.message}. Details: ${errorMsg || 'No details'}`);
         }
     }
 
@@ -134,7 +192,7 @@ export class EasyInvoiceService {
         const cusPhone = order.contact_phone || order.receiver_phone || order.customer?.phone || '';
         const cusEmail = order.vat_email || order.customer?.einvoice_email || '';
 
-        const amountInWords = 'Chưa thiết lập chữ'; 
+        const amountInWords = readNumberInVietnamese(grandTotal); 
 
         const xml = `
         <Invoices>
