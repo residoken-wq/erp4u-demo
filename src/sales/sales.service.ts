@@ -2538,6 +2538,10 @@ export class SalesService {
         return { success: false, message: 'Không tìm thấy thông tin hóa đơn' };
     }
 
+    async downloadEasyInvoicePdfRaw(ikey: string) {
+        return this.easyInvoiceService.downloadInvoicePdf(ikey);
+    }
+
     async previewVatInvoice(orderId: number) {
         const order = await this.orderRepo.findOne({
             where: { id: orderId },

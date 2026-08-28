@@ -1,4 +1,5 @@
-import { Controller, Post, Get, Put, Delete, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Body, Param, Query, Req, UseGuards, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { SalesService } from './sales.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -163,6 +164,29 @@ export class SalesController {
     @RequirePermission('SALES', 'can_update')
     sendVatInvoiceEmail(@Param('id') id: number, @Body('email') email: string) {
         return this.s.sendVatInvoiceEmail(Number(id), email);
+    }
+
+    @Get(':id/easyinvoice-pdf')
+    @RequirePermission('SALES', 'can_view')
+    async downloadEasyInvoicePdf(@Param('id') id: number, @Res() res: Response) {
+        try {
+            const order = await this.s.findOne(Number(id));
+            if (!order || !order.vat_invoice_data || !order.vat_invoice_data.ikey) {
+                return res.status(404).send('Không tìm thấy hóa đơn hoặc chưa tạo Hóa đơn nháp.');
+            }
+            
+            const pdfBuffer = await this.s.downloadEasyInvoicePdfRaw(order.vat_invoice_data.ikey);
+            
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `inline; filename="hoadon_${order.vat_invoice_data.ikey}.pdf"`,
+                'Content-Length': pdfBuffer.length,
+            });
+            
+            res.send(pdfBuffer);
+        } catch (error: any) {
+            return res.status(500).send(`Lỗi tải Hóa đơn: ${error.message}`);
+        }
     }
 
     // Portal APIs

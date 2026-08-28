@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, Select, DatePicker, Button, Tabs, Row, Col, InputNumber, Divider, message, Tag, Popconfirm, Tooltip, Checkbox, Table, Switch, Dropdown, MenuProps } from 'antd';
 import { Drawer } from 'antd';
-import { PlusOutlined, SaveOutlined, CheckCircleOutlined, InfoCircleOutlined, MoreOutlined, HistoryOutlined, CopyOutlined, DeleteOutlined, LinkOutlined, PrinterOutlined, FileTextOutlined, AppstoreAddOutlined, LockOutlined, MenuOutlined, FileExcelOutlined, MailOutlined } from '@ant-design/icons';
+import { PlusOutlined, SaveOutlined, CheckCircleOutlined, InfoCircleOutlined, MoreOutlined, HistoryOutlined, CopyOutlined, DeleteOutlined, LinkOutlined, PrinterOutlined, FileTextOutlined, AppstoreAddOutlined, LockOutlined, MenuOutlined, FileExcelOutlined, MailOutlined, FilePdfOutlined } from '@ant-design/icons';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import api from '../utils/api';
@@ -1286,30 +1286,38 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                                         </Row>
                                         <div style={{ marginTop: 15, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                                             {vatData.linkView ? (
-                                                <Button type="primary" icon={<LinkOutlined />} href={vatData.linkView} target="_blank">
-                                                    Xem Hóa Đơn
-                                                </Button>
-                                            ) : (
-                                                <Button icon={<FileTextOutlined />} disabled>
-                                                    Chưa có Link
-                                                </Button>
-                                            )}
-                                            
-                                            <Button 
-                                                icon={<HistoryOutlined />} 
-                                                onClick={handleCheckInvoiceStatus}
-                                                loading={checkingInvoice}
-                                            >
-                                                Kiểm tra lại trạng thái
+                                            <Button type="primary" icon={<LinkOutlined />} href={vatData.linkView} target="_blank">
+                                                Portal Hóa Đơn
                                             </Button>
-                                            
-                                            <Button 
-                                                icon={<MailOutlined />} 
-                                                onClick={handleSendInvoiceEmail}
-                                                loading={sendingInvoiceEmail}
-                                            >
-                                                Gửi Email cho KH
+                                        ) : (
+                                            <Button icon={<FileTextOutlined />} disabled>
+                                                Chưa có Link
                                             </Button>
+                                        )}
+                                        
+                                        <Button 
+                                            icon={<FilePdfOutlined />} 
+                                            href={`/api/sales/${initialData.id}/easyinvoice-pdf`} 
+                                            target="_blank"
+                                        >
+                                            Tải PDF Hóa Đơn
+                                        </Button>
+
+                                        <Button 
+                                            icon={<HistoryOutlined />} 
+                                            onClick={handleCheckInvoiceStatus}
+                                            loading={checkingInvoice}
+                                        >
+                                            Kiểm tra lại trạng thái
+                                        </Button>
+                                        
+                                        <Button 
+                                            icon={<MailOutlined />} 
+                                            onClick={handleSendInvoiceEmail}
+                                            loading={sendingInvoiceEmail}
+                                        >
+                                            Gửi Email cho KH
+                                        </Button>
                                         </div>
                                     </div>
                                 )}

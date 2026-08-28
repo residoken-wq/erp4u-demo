@@ -23,6 +23,9 @@ import {
     AppstoreAddOutlined,
     ExperimentOutlined,
     BranchesOutlined,
+    FileAddOutlined,
+    PrinterOutlined,
+    MailOutlined,
     DatabaseOutlined,
     TagsOutlined,
     GiftOutlined,
@@ -229,6 +232,62 @@ const HelpPage: React.FC = () => {
                             type="warning"
                             showIcon
                             style={{ marginTop: 24 }}
+                        />
+                    </div>
+                );
+            case 'sales-easyinvoice':
+                return (
+                    <div>
+                        <Tag color="blue" style={{ marginBottom: 16 }}>Modules: Sales / Accounting</Tag>
+                        <Title level={2}>🧾 Quy trình Xuất Hóa Đơn VAT (Tích hợp EasyInvoice)</Title>
+                        <Paragraph>
+                            Hệ thống ERP4U đã được tích hợp chặt chẽ với phần mềm hóa đơn điện tử <b>EasyInvoice</b>, giúp bộ phận Kế toán và Sales xuất hóa đơn một cách nhanh chóng, đồng bộ mà không cần phải nhập lại dữ liệu thủ công.
+                        </Paragraph>
+
+                        <Card title="Các bước tạo Hóa đơn điện tử" style={{ marginBottom: 20 }}>
+                            <Steps
+                                direction="vertical"
+                                items={[
+                                    {
+                                        title: 'Bước 1: Kiểm tra thông tin pháp nhân (Đơn vị mua)',
+                                        description: 'Tại SO Detail (Tab Hợp đồng & Hóa đơn), kiểm tra các trường "Tên đơn vị (Xuất HĐ)", "MST", "Địa chỉ". Hệ thống sẽ ưu tiên lấy tên công ty (legal_name) thay vì tên người liên hệ.',
+                                        icon: <UserOutlined />
+                                    },
+                                    {
+                                        title: 'Bước 2: Tạo Hóa đơn nháp (Draft)',
+                                        description: 'Nhấn nút "Tạo Hóa Đơn Nháp". Hệ thống sẽ gọi API EasyInvoice để truyền toàn bộ dữ liệu đơn hàng (Sản phẩm, Đơn giá, Thuế VAT 8% hoặc 10%) sang hệ thống của EasyInvoice dưới dạng hóa đơn chờ phát hành (chưa có số hóa đơn).',
+                                        icon: <FileAddOutlined />
+                                    },
+                                    {
+                                        title: 'Bước 3: Tải/Xem trước Hóa đơn',
+                                        description: 'Sau khi tạo nháp thành công, hệ thống sẽ trả về Link Xem Trước. Bạn có thể nhấn "Tải File PDF" hoặc "Xem Hóa Đơn" để gửi file nháp này cho Khách hàng kiểm tra trước khi phát hành chính thức.',
+                                        icon: <PrinterOutlined />
+                                    },
+                                    {
+                                        title: 'Bước 4: Phát hành Hóa đơn (Trên EasyInvoice)',
+                                        description: 'Khi khách hàng đã chốt bản nháp, kế toán đăng nhập vào Portal của EasyInvoice (bằng USB Token) để thực hiện thao tác Ký số và Phát hành Hóa đơn chính thức.',
+                                        icon: <CheckCircleOutlined />
+                                    },
+                                    {
+                                        title: 'Bước 5: Cập nhật Trạng thái trên ERP',
+                                        description: 'Trạng thái hóa đơn (Đã phát hành / Hủy) sẽ được cập nhật đồng bộ về ERP4U. Người dùng có thể nhấn "Gửi Email" để gửi hóa đơn chính thức từ ERP cho khách.',
+                                        icon: <MailOutlined />
+                                    }
+                                ]}
+                            />
+                        </Card>
+
+                        <Alert
+                            message="Lưu ý quan trọng"
+                            description={
+                                <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
+                                    <li><b>Pattern & Serial:</b> Trong màn Cấu hình Hệ thống, Mẫu số (Pattern) phải là 1, và Ký hiệu (Serial) phải đúng (VD: 1C26TAA).</li>
+                                    <li><b>Chuyển khoản:</b> Hình thức thanh toán luôn mặc định là "2 - Chuyển khoản".</li>
+                                    <li><b>Thuế suất:</b> Cần cấu hình Thuế VAT đúng ở đơn hàng trước khi bấm Tạo Hóa Đơn.</li>
+                                </ul>
+                            }
+                            type="info"
+                            showIcon
                         />
                     </div>
                 );
@@ -2445,6 +2504,7 @@ const HelpPage: React.FC = () => {
                                 { key: 'booking-stock', label: 'Booking Giữ Kho' }, // <--- NEW Booking
                                 { key: 'sales-pos', label: 'Bán Lẻ (POS)' }, // <--- NEW POS
                                 { key: 'sales-portal', label: 'Customer Portal' },
+                                { key: 'sales-easyinvoice', label: 'Xuất Hóa Đơn EasyInvoice' }, // <--- NEW EasyInvoice
                                 { key: 'sales-payment', label: 'Thanh toán & Tất toán' }, // <--- NEW PAYMENT
                                 { key: 'price-list', label: 'Chính sách giá' },
                             ]

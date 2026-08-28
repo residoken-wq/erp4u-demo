@@ -97,7 +97,7 @@ export class EasyInvoiceService {
         return `${signature}:${nonce}:${timestamp}:${username}:${password}:${taxCode}`;
     }
 
-    private async requestApi(endpoint: string, data: any, method: 'post' | 'get' = 'post') {
+    private async requestApi(endpoint: string, data: any, method: 'post' | 'get' = 'post', responseType: any = 'json') {
         const config = await this.getConfig();
         const baseUrl = config.url.endsWith('/') ? config.url : `${config.url}/`;
         const fullUrl = `${baseUrl}${endpoint}`;
@@ -113,10 +113,11 @@ export class EasyInvoiceService {
                     headers: {
                         'Authentication': token,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    responseType: responseType
                 })
             );
-            return response.data;
+            return { data: response.data, headers: response.headers };
         } catch (error: any) {
             const errorDetails = error.response?.data;
             const errorMsg = typeof errorDetails === 'object' ? JSON.stringify(errorDetails) : errorDetails;
@@ -237,11 +238,11 @@ export class EasyInvoiceService {
 
         const result = await this.requestApi('api/publish/importInvoice', payload);
         
-        if (result.Status !== 2 && result.Status !== '2') {
-            throw new Error(`Lỗi tạo HĐ nháp: ${result.Message} - ${JSON.stringify(result.Data)}`);
+        if (result.data.Status !== 2 && result.data.Status !== '2') {
+            throw new Error(`Lỗi tạo HĐ nháp: ${result.data.Message} - ${JSON.stringify(result.data.Data)}`);
         }
 
-        return result.Data;
+        return result.data.Data;
     }
 
     // 2. Tra cứu thông tin hóa đơn (Lấy LinkView, Status) (API V.25)
@@ -252,27 +253,46 @@ export class EasyInvoiceService {
 
         const result = await this.requestApi('api/publish/getInvoicesByIkeys', payload);
         
-        if (result.Status !== 2 && result.Status !== '2') {
-            throw new Error(`Lỗi tra cứu thông tin: ${result.Message}`);
+        if (result.data.Status !== 2 && result.data.Status !== '2') {
+            throw new Error(`Lỗi tra cứu thông tin: ${result.data.Message}`);
         }
 
-        if (result.Data?.Invoices && result.Data.Invoices.length > 0) {
-            return result.Data.Invoices[0];
+        if (result.data.Data?.Invoices && result.data.Data.Invoices.length > 0) {
+            return result.data.Data.Invoices[0];
         }
         
         return null;
     }
 
     // 3. Tải Hóa đơn PDF / XML (API V.24)
-    async downloadInvoicePdf(ikey: string) {
+    async downloadInvoicePdf(ikey: string): Promise<Buffer> {
         const payload = {
             Ikey: ikey,
             Option: 0
         };
 
-        const result = await this.requestApi('api/publish/getInvoicePdf', payload);
-        // Có thể trả về chuỗi Base64
-        return result; 
+        const result = await this.requestApi('api/publish/getInvoicePdf', payload, 'post', 'arraybuffer');
+        const contentType = String(result.headers['content-type'] || '');
+        
+        if (contentType.includes('application/json')) {
+            // Có thể API trả về lỗi dạng JSON hoặc chuỗi base64 trong JSON
+            const jsonStr = Buffer.from(result.data).toString('utf8');
+            try {
+                const jsonObj = JSON.parse(jsonStr);
+                if (jsonObj.Status === 2 || jsonObj.Status === '2') {
+                    // Nếu trả về Data là chuỗi base64
+                    if (typeof jsonObj.Data === 'string') {
+                        return Buffer.from(jsonObj.Data, 'base64');
+                    }
+                }
+                throw new Error(jsonObj.Message || 'Lỗi lấy file PDF');
+            } catch (e: any) {
+                if (e.message.includes('Lỗi lấy file PDF') || e.message.includes('Lỗi tạo HĐ')) throw e;
+                // Nếu parse fail hoặc ko có status thì return raw
+            }
+        }
+        
+        return Buffer.from(result.data); 
     }
     
     // 4. Gửi email (API V.28)
@@ -285,10 +305,10 @@ export class EasyInvoiceService {
 
         const result = await this.requestApi('api/business/sendIssuanceNotice', payload);
         
-        if (result.Status !== 2 && result.Status !== '2') {
-            throw new Error(`Lỗi gửi email: ${result.Message}`);
+        if (result.data.Status !== 2 && result.data.Status !== '2') {
+            throw new Error(`Lỗi gửi email: ${result.data.Message}`);
         }
-
-        return result.Data;
+        
+        return result.data.Data;
     }
 }
