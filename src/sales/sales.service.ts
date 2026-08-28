@@ -84,6 +84,7 @@ export class SalesService {
         private notificationsService: NotificationsService,
         private projectsService: ProjectsService,
         @InjectRepository(Promotion) private promotionRepo: Repository<Promotion>,
+        private easyInvoiceService: EasyInvoiceService,
     ) { }
 
 
@@ -2458,5 +2459,93 @@ export class SalesService {
             console.error('Error deleting promotion:', error);
             throw error;
         }
+    }
+
+    // --- EASYINVOICE INTEGRATION ---
+    async issueVatInvoice(orderId: number) {
+        const order = await this.orderRepo.findOne({
+            where: { id: orderId },
+            relations: ['items', 'items.product', 'customer']
+        });
+        if (!order) throw new NotFoundException('Order not found');
+        if (!order.vat_company_name && !order.customer?.legal_name && !order.customer?.name) {
+            throw new Error('Thiếu thông tin công ty xuất hóa đơn');
+        }
+
+        // Tạo hóa đơn nháp (Draft)
+        const draftResult = await this.easyInvoiceService.createDraftInvoice(order);
+        
+        // Lưu thông tin Draft vào DB
+        const issuedAt = new Date().toISOString();
+        order.vat_invoice_data = {
+            ikey: order.order_code,
+            invoiceNo: '', // Chưa có số (Nháp)
+            lookupCode: '',
+            linkView: '',
+            issueDate: '',
+            invoiceStatus: 0, // 0: Nháp
+            pattern: draftResult?.Pattern || '',
+            serial: draftResult?.Serial || '',
+            issuedAt: issuedAt
+        };
+
+        await this.orderRepo.save(order);
+        
+        this.systemService.logAction('SALES', 'CREATE_VAT_INVOICE_DRAFT', `Tạo hóa đơn VAT nháp cho SO ${order.order_code}`, null, 'System', String(order.id));
+
+        return { success: true, message: 'Đã tạo hóa đơn nháp trên EasyInvoice', data: order.vat_invoice_data };
+    }
+
+    async getVatInvoiceStatus(orderId: number) {
+        const order = await this.orderRepo.findOne({ where: { id: orderId } });
+        if (!order || !order.vat_invoice_data || !order.vat_invoice_data.ikey) {
+            throw new Error('Chưa có thông tin hóa đơn cho đơn hàng này');
+        }
+
+        const invoiceInfo = await this.easyInvoiceService.getInvoiceInfo(order.vat_invoice_data.ikey);
+        if (invoiceInfo) {
+            // Cập nhật lại db
+            order.vat_invoice_data = {
+                ...order.vat_invoice_data,
+                invoiceNo: invoiceInfo.No || order.vat_invoice_data.invoiceNo,
+                lookupCode: invoiceInfo.LookupCode || order.vat_invoice_data.lookupCode,
+                linkView: invoiceInfo.LinkView || order.vat_invoice_data.linkView,
+                issueDate: invoiceInfo.IssueDate || order.vat_invoice_data.issueDate,
+                invoiceStatus: invoiceInfo.InvoiceStatus !== undefined ? parseInt(invoiceInfo.InvoiceStatus) : order.vat_invoice_data.invoiceStatus,
+                pattern: invoiceInfo.Pattern || order.vat_invoice_data.pattern,
+                serial: invoiceInfo.Serial || order.vat_invoice_data.serial
+            };
+            
+            // Cập nhật linkView ra field cũ cho tương thích
+            if (invoiceInfo.LinkView) {
+                order.vat_invoice_link = invoiceInfo.LinkView;
+            }
+
+            await this.orderRepo.save(order);
+            return { success: true, data: order.vat_invoice_data };
+        }
+        
+        return { success: false, message: 'Không tìm thấy thông tin hóa đơn' };
+    }
+
+    async previewVatInvoice(orderId: number) {
+        const order = await this.orderRepo.findOne({
+            where: { id: orderId },
+            relations: ['items', 'items.product', 'customer']
+        });
+        if (!order) throw new NotFoundException('Order not found');
+
+        const result = await this.easyInvoiceService.previewInvoiceHtml(order);
+        return { success: true, data: result }; // Có thể trả về link/base64 tùy EasyInvoice return type
+    }
+
+    async sendVatInvoiceEmail(orderId: number, email: string) {
+        const order = await this.orderRepo.findOne({ where: { id: orderId } });
+        if (!order || !order.vat_invoice_data || !order.vat_invoice_data.ikey) {
+            throw new Error('Chưa có thông tin hóa đơn');
+        }
+
+        await this.easyInvoiceService.sendEmailNotice(order.vat_invoice_data.ikey, email);
+        return { success: true, message: 'Đã gửi email thông báo phát hành hóa đơn' };
     }
 }

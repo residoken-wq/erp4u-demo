@@ -1106,7 +1106,32 @@ const PortalQuotePage: React.FC = () => {
                                     <Descriptions.Item label="MST">{data.customer?.tax_code || data.vat_tax_code || '-'}</Descriptions.Item>
                                     <Descriptions.Item label="Địa chỉ">{data.customer?.legal_address || data.vat_address || data.customer?.address || '-'}</Descriptions.Item>
                                     {(data.vat_email || data.customer?.einvoice_email) && <Descriptions.Item label="Email nhận HĐ">{data.vat_email || data.customer.einvoice_email}</Descriptions.Item>}
-                                    {data.vat_invoice_link && (
+                                    {data.vat_invoice_data && data.vat_invoice_data.invoiceNo ? (
+                                        <>
+                                            <Descriptions.Item label="Số HĐ">{data.vat_invoice_data.invoiceNo}</Descriptions.Item>
+                                            <Descriptions.Item label="Mã tra cứu">{data.vat_invoice_data.lookupCode}</Descriptions.Item>
+                                            <Descriptions.Item label="Ngày phát hành">{data.vat_invoice_data.issueDate}</Descriptions.Item>
+                                            <Descriptions.Item label="Trạng thái">
+                                                {data.vat_invoice_data.invoiceStatus === 0 && <Tag color="orange">Bản nháp</Tag>}
+                                                {data.vat_invoice_data.invoiceStatus === 1 && <Tag color="blue">Đã ký</Tag>}
+                                                {data.vat_invoice_data.invoiceStatus === 2 && <Tag color="green">Đã khai thuế</Tag>}
+                                                {data.vat_invoice_data.invoiceStatus > 2 && <Tag color="red">Đã hủy/Thay thế</Tag>}
+                                            </Descriptions.Item>
+                                            {data.vat_invoice_data.linkView && (
+                                                <Descriptions.Item label="Hóa đơn">
+                                                    <Button
+                                                        type="primary"
+                                                        size="small"
+                                                        icon={<FilePdfOutlined />}
+                                                        onClick={() => window.open(data.vat_invoice_data.linkView, '_blank')}
+                                                        style={{ padding: '0 12px' }}
+                                                    >
+                                                        Xem Hóa Đơn Điện Tử
+                                                    </Button>
+                                                </Descriptions.Item>
+                                            )}
+                                        </>
+                                    ) : data.vat_invoice_link ? (
                                         <Descriptions.Item label="Hóa đơn">
                                             <Button
                                                 type="link"
@@ -1117,6 +1142,10 @@ const PortalQuotePage: React.FC = () => {
                                             >
                                                 Xem/Tải Hóa Đơn
                                             </Button>
+                                        </Descriptions.Item>
+                                    ) : (
+                                        <Descriptions.Item label="Hóa đơn">
+                                            <span style={{ color: '#aaa', fontStyle: 'italic' }}>Chưa xuất hóa đơn</span>
                                         </Descriptions.Item>
                                     )}
                                 </Descriptions>

@@ -38,6 +38,17 @@ export class SystemController {
         return this.s.getSellerInfo();
     }
 
+    // --- EASYINVOICE CONFIG ---
+    @Get('easyinvoice')
+    getEasyInvoiceConfig() {
+        return this.s.getEasyInvoiceConfig();
+    }
+
+    @Post('easyinvoice')
+    saveEasyInvoiceConfig(@Body() body: any) {
+        return this.s.saveEasyInvoiceConfig(body);
+    }
+
     @UseGuards(JwtAuthGuard, PermissionsGuard)
     @RequirePermission('USERS', 'can_view')
     @Get('logs')

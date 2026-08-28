@@ -140,6 +140,31 @@ export class SalesController {
     @Get(':code/payment-history')
     getPaymentHistory(@Param('code') code: string) { return this.s.getPaymentHistory(code); }
 
+    // --- EASYINVOICE APIS ---
+    @Post(':id/issue-vat-invoice')
+    @RequirePermission('SALES', 'can_update')
+    issueVatInvoice(@Param('id') id: number) {
+        return this.s.issueVatInvoice(Number(id));
+    }
+
+    @Get(':id/vat-invoice-status')
+    @RequirePermission('SALES', 'can_view')
+    getVatInvoiceStatus(@Param('id') id: number) {
+        return this.s.getVatInvoiceStatus(Number(id));
+    }
+
+    @Get(':id/vat-invoice-preview')
+    @RequirePermission('SALES', 'can_view')
+    previewVatInvoice(@Param('id') id: number) {
+        return this.s.previewVatInvoice(Number(id));
+    }
+
+    @Post(':id/vat-invoice-email')
+    @RequirePermission('SALES', 'can_update')
+    sendVatInvoiceEmail(@Param('id') id: number, @Body('email') email: string) {
+        return this.s.sendVatInvoiceEmail(Number(id), email);
+    }
+
     // Portal APIs
     @Get('portal/:uuid') getPortal(@Param('uuid') uuid: string) { return this.s.getQuoteByUuid(uuid); }
     @Post('portal/:uuid/action')

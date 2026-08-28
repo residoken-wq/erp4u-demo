@@ -193,6 +193,28 @@ export class SystemService {
             seller_bank_holder: company.COMPANY_BANK_HOLDER || '',
         };
     }
+
+    // --- EASYINVOICE CONFIG HELPER ---
+    async getEasyInvoiceConfig() {
+        const keys = ['EASYINVOICE_URL', 'EASYINVOICE_USERNAME', 'EASYINVOICE_PASSWORD', 'EASYINVOICE_TAX_CODE', 'EASYINVOICE_PATTERN'];
+        const configs = await this.configRepo.findByIds(keys);
+        const result: any = {};
+        keys.forEach(k => {
+            const found = configs.find(c => c.key === k);
+            result[k] = found ? found.value : '';
+        });
+        return result;
+    }
+
+    async saveEasyInvoiceConfig(data: any) {
+        await this.setValue('EASYINVOICE_URL', data.EASYINVOICE_URL || '', 'EasyInvoice API URL');
+        await this.setValue('EASYINVOICE_USERNAME', data.EASYINVOICE_USERNAME || '', 'EasyInvoice Username');
+        await this.setValue('EASYINVOICE_PASSWORD', data.EASYINVOICE_PASSWORD || '', 'EasyInvoice Password');
+        await this.setValue('EASYINVOICE_TAX_CODE', data.EASYINVOICE_TAX_CODE || '', 'EasyInvoice Tax Code');
+        await this.setValue('EASYINVOICE_PATTERN', data.EASYINVOICE_PATTERN || '', 'EasyInvoice Pattern');
+        return { success: true };
+    }
+
     // --- ACTIVITY LOGGING ---
     async logAction(module: string, action: string, description: string, userId?: number, username?: string, entityId?: string, details?: any, metadata?: any, fullName?: string) {
         const log = this.logRepo.create({

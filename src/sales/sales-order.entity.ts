@@ -112,6 +112,19 @@ export class SalesOrder {
   // --- LẤY HÓA ĐƠN ---
   @Column({ type: 'boolean', default: true }) require_invoice: boolean;
 
+  // --- DỮ LIỆU HÓA ĐƠN EASYINVOICE ---
+  @Column('jsonb', { nullable: true }) vat_invoice_data: {
+      ikey: string;           // = order_code
+      invoiceNo: string;      // Số HĐ
+      lookupCode: string;     // Mã tra cứu
+      linkView: string;       // URL tra cứu (= vat_invoice_link)
+      issueDate: string;      // Ngày phát hành
+      invoiceStatus: number;  // Trạng thái (0: Nháp, 1: Đã ký, ...)
+      pattern: string;        // Ký hiệu HĐ
+      serial: string;         // Ký hiệu mẫu số
+      issuedAt: string;       // Timestamp phát hành từ ERP
+  };
+
   // --- DỮ LIỆU HỢP ĐỒNG KHÁCH HÀNG ---
   @Column('text', { nullable: true }) contract_html: string;
   @Column('jsonb', { nullable: true }) contract_variables: any;

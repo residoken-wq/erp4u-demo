@@ -63,6 +63,73 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
 
     const [exportingExcel, setExportingExcel] = useState(false);
 
+    // EasyInvoice State
+    const [issuingInvoice, setIssuingInvoice] = useState(false);
+    const [checkingInvoice, setCheckingInvoice] = useState(false);
+    const [sendingInvoiceEmail, setSendingInvoiceEmail] = useState(false);
+    const [vatData, setVatData] = useState<any>(null);
+
+    useEffect(() => {
+        if (initialData?.vat_invoice_data) {
+            setVatData(initialData.vat_invoice_data);
+        } else {
+            setVatData(null);
+        }
+    }, [initialData]);
+
+    const handleIssueInvoiceDraft = async () => {
+        if (!initialData?.id) return;
+        setIssuingInvoice(true);
+        try {
+            const res = await api.post(`/sales/${initialData.id}/issue-vat-invoice`);
+            if (res.data.success) {
+                message.success('Đã tạo hóa đơn nháp thành công!');
+                setVatData(res.data.data);
+                form.setFieldsValue({ vat_invoice_link: res.data.data.linkView });
+                onSuccess(); // Refresh list
+            }
+        } catch (error: any) {
+            message.error(error.response?.data?.message || 'Lỗi khi tạo hóa đơn nháp');
+        }
+        setIssuingInvoice(false);
+    };
+
+    const handleCheckInvoiceStatus = async () => {
+        if (!initialData?.id) return;
+        setCheckingInvoice(true);
+        try {
+            const res = await api.get(`/sales/${initialData.id}/vat-invoice-status`);
+            if (res.data.success) {
+                message.success('Đã cập nhật trạng thái hóa đơn mới nhất');
+                setVatData(res.data.data);
+                form.setFieldsValue({ vat_invoice_link: res.data.data.linkView });
+                onSuccess();
+            }
+        } catch (error: any) {
+            message.error(error.response?.data?.message || 'Lỗi khi kiểm tra trạng thái');
+        }
+        setCheckingInvoice(false);
+    };
+
+    const handleSendInvoiceEmail = async () => {
+        if (!initialData?.id) return;
+        const email = form.getFieldValue('vat_email');
+        if (!email) {
+            message.warning('Vui lòng nhập Email Nhận Hóa Đơn');
+            return;
+        }
+        setSendingInvoiceEmail(true);
+        try {
+            const res = await api.post(`/sales/${initialData.id}/vat-invoice-email`, { email });
+            if (res.data.success) {
+                message.success('Đã gửi email hóa đơn cho khách hàng');
+            }
+        } catch (error: any) {
+            message.error(error.response?.data?.message || 'Lỗi khi gửi email');
+        }
+        setSendingInvoiceEmail(false);
+    };
+
     const handleExportExcel = async () => {
         try {
             setExportingExcel(true);
@@ -1176,11 +1243,75 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
-                                    <Form.Item name="vat_invoice_link" label="Link Hóa Đơn (PDF/Drive)">
+                                    <Form.Item name="vat_invoice_link" label="Link Hóa Đơn (Tự nhập tay nếu HĐ ngoài hệ thống)">
                                         <Input placeholder="https://..." prefix={<LinkOutlined />} />
                                     </Form.Item>
                                 </Col>
                             </Row>
+                            
+                            {/* EasyInvoice Section */}
+                            <Divider orientation="left">Tích Hợp EasyInvoice</Divider>
+                            <div style={{ background: '#fafafa', padding: 15, borderRadius: 8, border: '1px solid #f0f0f0' }}>
+                                {!vatData ? (
+                                    <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                                        <p style={{ color: '#666' }}>Chưa tạo hóa đơn trên EasyInvoice cho đơn hàng này.</p>
+                                        <Button 
+                                            type="primary" 
+                                            icon={<FileTextOutlined />} 
+                                            onClick={handleIssueInvoiceDraft}
+                                            loading={issuingInvoice}
+                                        >
+                                            Tạo Hóa Đơn Nháp
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <Row gutter={[16, 16]}>
+                                            <Col span={8}>
+                                                <div><span style={{ color: '#888' }}>Trạng thái: </span> 
+                                                    {vatData.invoiceStatus === 0 && <Tag color="orange">Bản nháp</Tag>}
+                                                    {vatData.invoiceStatus === 1 && <Tag color="blue">Đã ký</Tag>}
+                                                    {vatData.invoiceStatus === 2 && <Tag color="green">Đã khai thuế</Tag>}
+                                                    {vatData.invoiceStatus > 2 && <Tag color="red">Đã hủy/Thay thế</Tag>}
+                                                </div>
+                                            </Col>
+                                            <Col span={8}>
+                                                <div><span style={{ color: '#888' }}>Số hóa đơn: </span> <b>{vatData.invoiceNo || 'Chưa có'}</b></div>
+                                            </Col>
+                                            <Col span={8}>
+                                                <div><span style={{ color: '#888' }}>Mã tra cứu: </span> <b>{vatData.lookupCode || 'Chưa có'}</b></div>
+                                            </Col>
+                                        </Row>
+                                        <div style={{ marginTop: 15, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                            {vatData.linkView ? (
+                                                <Button type="primary" icon={<LinkOutlined />} href={vatData.linkView} target="_blank">
+                                                    Xem Hóa Đơn
+                                                </Button>
+                                            ) : (
+                                                <Button icon={<FileTextOutlined />} disabled>
+                                                    Chưa có Link
+                                                </Button>
+                                            )}
+                                            
+                                            <Button 
+                                                icon={<HistoryOutlined />} 
+                                                onClick={handleCheckInvoiceStatus}
+                                                loading={checkingInvoice}
+                                            >
+                                                Kiểm tra lại trạng thái
+                                            </Button>
+                                            
+                                            <Button 
+                                                icon={<MailOutlined />} 
+                                                onClick={handleSendInvoiceEmail}
+                                                loading={sendingInvoiceEmail}
+                                            >
+                                                Gửi Email cho KH
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </Form>
                 </Tabs.TabPane>

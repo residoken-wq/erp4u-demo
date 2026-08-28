@@ -124,6 +124,16 @@ const SystemSettingsPage: React.FC = () => {
                             children: <div style={{ padding: '24px 32px' }}><EmailSettingsTab /></div>
                         },
                         {
+                            key: 'easyinvoice',
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                                    <FileTextOutlined style={{ fontSize: 16 }} />
+                                    <span>Xuất Hóa Đơn (EasyInvoice)</span>
+                                </div>
+                            ),
+                            children: <div style={{ padding: '24px 32px' }}><EasyInvoiceConfigTab /></div>
+                        },
+                        {
                             key: 'operations',
                             label: (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
@@ -1407,6 +1417,82 @@ const SmtpConfigSubTab: React.FC = () => {
                     <Space size="middle">
                         <Button type="primary" icon={<SaveOutlined />} onClick={form.submit} loading={submitting} size="large">Lưu Cấu Hình Email</Button>
                         <Button icon={<MailOutlined />} onClick={handleTestSmtp} loading={testingSmtp} size="large">Gửi Thử Email Test</Button>
+                    </Space>
+                </Form>
+            )}
+        </Card>
+    );
+};
+
+const EasyInvoiceConfigTab: React.FC = () => {
+    const [form] = Form.useForm();
+    const [loading, setLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+
+    const fetchConfig = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get(`${API_URL}/system/easyinvoice`);
+            form.setFieldsValue(res.data);
+        } catch (error) {
+            message.error('Không thể tải cấu hình EasyInvoice');
+        }
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchConfig();
+    }, []);
+
+    const onFinish = async (values: any) => {
+        setSubmitting(true);
+        try {
+            await axios.post(`${API_URL}/system/easyinvoice`, values);
+            message.success('Đã lưu cấu hình EasyInvoice thành công!');
+        } catch (error) {
+            message.error('Lỗi khi lưu cấu hình');
+        }
+        setSubmitting(false);
+    };
+
+    return (
+        <Card bordered={false} size="small" style={{ background: '#fafafa', paddingTop: 8 }}>
+            <Alert message="Cấu hình hệ thống xuất hóa đơn điện tử EasyInvoice. URL test: http://api.softdreams.vn/ - URL production: https://api.easyinvoice.vn/" type="info" showIcon style={{ marginBottom: 20 }} />
+            {loading ? <Spin /> : (
+                <Form form={form} layout="vertical" onFinish={onFinish}>
+                    <Row gutter={24}>
+                        <Col span={24}>
+                            <Form.Item name="EASYINVOICE_URL" label="EasyInvoice API URL" rules={[{ required: true }]}>
+                                <Input placeholder="https://api.easyinvoice.vn/" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Row gutter={24}>
+                        <Col span={8}>
+                            <Form.Item name="EASYINVOICE_USERNAME" label="Username (Tên đăng nhập API)" rules={[{ required: true }]}>
+                                <Input placeholder="API" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="EASYINVOICE_PASSWORD" label="Password (Mật khẩu API)" rules={[{ required: true }]}>
+                                <Input.Password placeholder="Nhập mật khẩu" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="EASYINVOICE_TAX_CODE" label="Tax Code (Mã số thuế doanh nghiệp)" rules={[{ required: true }]}>
+                                <Input placeholder="031..." />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Row gutter={24}>
+                        <Col span={8}>
+                            <Form.Item name="EASYINVOICE_PATTERN" label="Mẫu Hóa Đơn (Pattern) mặc định">
+                                <Input placeholder="1C26TAA" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Space size="middle">
+                        <Button type="primary" icon={<SaveOutlined />} onClick={form.submit} loading={submitting} size="large">Lưu Cấu Hình</Button>
                     </Space>
                 </Form>
             )}

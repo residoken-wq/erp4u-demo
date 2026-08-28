@@ -19,8 +19,10 @@ import { PriceListRule } from './pricelist/price-list-rule.entity';
 // User Entity
 import { User } from '../users/entities/user.entity';
 
+import { HttpModule } from '@nestjs/axios';
 import { SalesController } from './sales.controller';
 import { SalesService } from './sales.service';
+import { EasyInvoiceService } from './easyinvoice.service';
 import { ProductsModule } from '../products/products.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { CustomersModule } from '../customers/customers.module';
@@ -60,10 +62,11 @@ import { AuthModule } from '../auth/auth.module';
     NotificationsModule,
     ProjectsModule,
     forwardRef(() => FinanceModule),
-    AuthModule
+    AuthModule,
+    HttpModule
   ],
   controllers: [SalesController],
-  providers: [SalesService],
-  exports: [SalesService],
+  providers: [SalesService, EasyInvoiceService],
+  exports: [SalesService, EasyInvoiceService],
 })
 export class SalesModule { }
