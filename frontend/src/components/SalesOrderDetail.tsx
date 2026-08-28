@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, Select, DatePicker, Button, Tabs, Row, Col, InputNumber, Divider, message, Tag, Popconfirm, Tooltip, Checkbox, Table, Switch, Dropdown, MenuProps } from 'antd';
 import { Drawer } from 'antd';
-import { PlusOutlined, SaveOutlined, CheckCircleOutlined, InfoCircleOutlined, MoreOutlined, HistoryOutlined, CopyOutlined, DeleteOutlined, LinkOutlined, PrinterOutlined, FileTextOutlined, AppstoreAddOutlined, LockOutlined, MenuOutlined, FileExcelOutlined } from '@ant-design/icons';
+import { PlusOutlined, SaveOutlined, CheckCircleOutlined, InfoCircleOutlined, MoreOutlined, HistoryOutlined, CopyOutlined, DeleteOutlined, LinkOutlined, PrinterOutlined, FileTextOutlined, AppstoreAddOutlined, LockOutlined, MenuOutlined, FileExcelOutlined, MailOutlined } from '@ant-design/icons';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import api from '../utils/api';

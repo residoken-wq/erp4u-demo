@@ -77,12 +77,13 @@ export class EasyInvoiceService {
         const password = config.EASYINVOICE_PASSWORD;
         const taxCode = config.EASYINVOICE_TAX_CODE;
         const pattern = config.EASYINVOICE_PATTERN;
+        const serial = config.EASYINVOICE_SERIAL;
 
         if (!username || !password || !taxCode) {
             throw new Error('EasyInvoice configuration is missing. Please configure in settings.');
         }
 
-        return { url, username, password, taxCode, pattern };
+        return { url, username, password, taxCode, pattern, serial };
     }
 
     private generateToken(httpMethod: string, username: string, password: string, taxCode: string): string {
@@ -186,7 +187,7 @@ export class EasyInvoiceService {
         
         // Basic customer info
         const buyer = order.contact_name || order.receiver_name || 'Khách hàng';
-        const cusName = order.vat_company_name || order.customer?.legal_name || order.customer?.name || buyer;
+        const cusName = order.vat_company_name || order.customer?.legal_name || order.customer?.name || '';
         const cusTaxCode = order.vat_tax_code || order.customer?.tax_code || '';
         const cusAddress = order.vat_address || order.customer?.legal_address || order.customer?.address || ' ';
         const cusPhone = order.contact_phone || order.receiver_phone || order.customer?.phone || '';
@@ -206,7 +207,7 @@ export class EasyInvoiceService {
                     <CusAddress>${this.escapeXml(cusAddress)}</CusAddress>
                     ${cusPhone ? `<CusPhone>${this.escapeXml(cusPhone)}</CusPhone>` : ''}
                     ${cusTaxCode ? `<CusTaxCode>${this.escapeXml(cusTaxCode)}</CusTaxCode>` : ''}
-                    <PaymentMethod>Chuyển khoản</PaymentMethod>
+                    <PaymentMethod>2 - Chuyển khoản</PaymentMethod>
                     <CurrencyUnit>VND</CurrencyUnit>
                     <Products>
                         ${productsXml}
@@ -231,6 +232,7 @@ export class EasyInvoiceService {
         const payload = {
             XmlData: xmlData,
             Pattern: config.pattern || undefined,
+            Serial: config.serial || undefined,
         };
 
         const result = await this.requestApi('api/publish/importInvoice', payload);

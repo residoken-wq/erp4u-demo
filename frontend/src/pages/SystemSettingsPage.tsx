@@ -1487,7 +1487,12 @@ const EasyInvoiceConfigTab: React.FC = () => {
                     <Row gutter={24}>
                         <Col span={8}>
                             <Form.Item name="EASYINVOICE_PATTERN" label="Mẫu Hóa Đơn (Pattern) mặc định">
-                                <Input placeholder="1C26TAA" />
+                                <Input placeholder="Ví dụ: 1" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="EASYINVOICE_SERIAL" label="Ký Hiệu Hóa Đơn (Serial) mặc định">
+                                <Input placeholder="Ví dụ: 1C26TAA" />
                             </Form.Item>
                         </Col>
                     </Row>

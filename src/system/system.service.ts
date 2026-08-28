@@ -196,7 +196,7 @@ export class SystemService {
 
     // --- EASYINVOICE CONFIG HELPER ---
     async getEasyInvoiceConfig() {
-        const keys = ['EASYINVOICE_URL', 'EASYINVOICE_USERNAME', 'EASYINVOICE_PASSWORD', 'EASYINVOICE_TAX_CODE', 'EASYINVOICE_PATTERN'];
+        const keys = ['EASYINVOICE_URL', 'EASYINVOICE_USERNAME', 'EASYINVOICE_PASSWORD', 'EASYINVOICE_TAX_CODE', 'EASYINVOICE_PATTERN', 'EASYINVOICE_SERIAL'];
         const configs = await this.configRepo.findByIds(keys);
         const result: any = {};
         keys.forEach(k => {
@@ -212,6 +212,7 @@ export class SystemService {
         await this.setValue('EASYINVOICE_PASSWORD', data.EASYINVOICE_PASSWORD || '', 'EasyInvoice Password');
         await this.setValue('EASYINVOICE_TAX_CODE', data.EASYINVOICE_TAX_CODE || '', 'EasyInvoice Tax Code');
         await this.setValue('EASYINVOICE_PATTERN', data.EASYINVOICE_PATTERN || '', 'EasyInvoice Pattern');
+        await this.setValue('EASYINVOICE_SERIAL', data.EASYINVOICE_SERIAL || '', 'EasyInvoice Serial');
         return { success: true };
     }
 
