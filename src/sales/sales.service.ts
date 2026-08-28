@@ -24,6 +24,7 @@ import { SalesTarget } from './sales-target.entity';
 import { Customer } from '../customers/customer.entity';
 import { ProjectsService } from '../projects/projects.service';
 import { Promotion } from './promotion.entity';
+import { EasyInvoiceService } from './easyinvoice.service';
 // --- CHECKLIST TEMPLATES ---
 const CHECKLIST_TEMPLATES: Record<string, Array<{ code: string; name: string; sort: number }>> = {
     QUOTATION: [
@@ -2533,9 +2534,9 @@ export class SalesService {
             where: { id: orderId },
             relations: ['items', 'items.product', 'customer']
         });
-        if (!order) throw new NotFoundException('Order not found');
+        if (!order.vat_invoice_data?.ikey) throw new Error('Hóa đơn chưa được tạo');
 
-        const result = await this.easyInvoiceService.previewInvoiceHtml(order);
+        const result = await this.easyInvoiceService.downloadInvoicePdf(order.vat_invoice_data.ikey);
         return { success: true, data: result }; // Có thể trả về link/base64 tùy EasyInvoice return type
     }
 
