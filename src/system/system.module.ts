@@ -46,6 +46,6 @@ import { AgentApiService } from './agent-api.service';
     ],
     controllers: [SystemController, DashboardController, AgentApiController],
     providers: [SystemService, ActivitySubscriber, UserContextService, EmailService, AgentApiService],
-    exports: [SystemService, UserContextService, AgentApiService]
+    exports: [SystemService, UserContextService, AgentApiService, EmailService]
 })
 export class SystemModule { }

@@ -113,6 +113,27 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
         setCheckingInvoice(false);
     };
 
+    const handleDownloadInvoicePdf = async () => {
+        if (!initialData?.id) return;
+        const hide = message.loading('Đang tải PDF...', 0);
+        try {
+            const res = await api.get(`/sales/${initialData.id}/easyinvoice-pdf`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `hoadon_${vatData?.ikey || initialData.id}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            hide();
+            message.success('Tải PDF thành công!');
+        } catch (error: any) {
+            hide();
+            message.error('Lỗi khi tải PDF');
+            console.error(error);
+        }
+    };
+
     const handleSendInvoiceEmail = async () => {
         if (!initialData?.id) return;
         const email = form.getFieldValue('vat_email');
@@ -1297,8 +1318,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                                         
                                         <Button 
                                             icon={<FilePdfOutlined />} 
-                                            href={`/api/sales/${initialData.id}/easyinvoice-pdf`} 
-                                            target="_blank"
+                                            onClick={handleDownloadInvoicePdf}
                                         >
                                             Tải PDF Hóa Đơn
                                         </Button>
@@ -1319,6 +1339,12 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                                             Gửi Email cho KH
                                         </Button>
                                         </div>
+                                        {vatData.lastEmailSentAt && (
+                                            <div style={{ marginTop: 15, fontSize: 13, color: '#666', borderTop: '1px solid #eee', paddingTop: 10 }}>
+                                                <InfoCircleOutlined style={{ marginRight: 5, color: '#1890ff' }} />
+                                                Đã gửi Email hóa đơn lần cuối vào lúc <b>{dayjs(vatData.lastEmailSentAt).format('HH:mm DD/MM/YYYY')}</b> tới địa chỉ: <b>{vatData.lastEmailSentTo}</b>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

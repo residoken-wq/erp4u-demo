@@ -1496,6 +1496,19 @@ const EasyInvoiceConfigTab: React.FC = () => {
                             </Form.Item>
                         </Col>
                     </Row>
+                    <Divider orientation="left">Cấu Hình Gửi Email Hóa Đơn</Divider>
+                    <Row gutter={24}>
+                        <Col span={12}>
+                            <Form.Item name="EASYINVOICE_EMAIL_FROM" label="Email Người Gửi (From)">
+                                <Input placeholder="Ví dụ: ketoan.erp4u@gmail.com" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item name="EASYINVOICE_EMAIL_CC" label="Danh sách CC (Cách nhau dấu phẩy)">
+                                <Input placeholder="Ví dụ: admin@erp4u.vn,ketoan2@erp4u.vn" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
                     <Space size="middle">
                         <Button type="primary" icon={<SaveOutlined />} onClick={form.submit} loading={submitting} size="large">Lưu Cấu Hình</Button>
                     </Space>

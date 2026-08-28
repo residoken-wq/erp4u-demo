@@ -123,6 +123,8 @@ export class SalesOrder {
       pattern: string;        // Ký hiệu HĐ
       serial: string;         // Ký hiệu mẫu số
       issuedAt: string;       // Timestamp phát hành từ ERP
+      lastEmailSentAt?: string; // Timestamp gửi email lần cuối
+      lastEmailSentTo?: string; // Địa chỉ email gửi lần cuối
   };
 
   // --- DỮ LIỆU HỢP ĐỒNG KHÁCH HÀNG ---

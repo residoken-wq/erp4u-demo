@@ -25,6 +25,7 @@ import { Customer } from '../customers/customer.entity';
 import { ProjectsService } from '../projects/projects.service';
 import { Promotion } from './promotion.entity';
 import { EasyInvoiceService } from './easyinvoice.service';
+import { EmailService } from '../common/services/email.service';
 // --- CHECKLIST TEMPLATES ---
 const CHECKLIST_TEMPLATES: Record<string, Array<{ code: string; name: string; sort: number }>> = {
     QUOTATION: [
@@ -86,6 +87,7 @@ export class SalesService {
         private projectsService: ProjectsService,
         @InjectRepository(Promotion) private promotionRepo: Repository<Promotion>,
         private easyInvoiceService: EasyInvoiceService,
+        private emailService: EmailService,
     ) { }
 
 
@@ -2554,12 +2556,72 @@ export class SalesService {
     }
 
     async sendVatInvoiceEmail(orderId: number, email: string) {
-        const order = await this.orderRepo.findOne({ where: { id: orderId } });
+        const order = await this.orderRepo.findOne({ 
+            where: { id: orderId },
+            relations: ['customer']
+        });
         if (!order || !order.vat_invoice_data || !order.vat_invoice_data.ikey) {
             throw new Error('Chưa có thông tin hóa đơn');
         }
 
-        await this.easyInvoiceService.sendEmailNotice(order.vat_invoice_data.ikey, email);
-        return { success: true, message: 'Đã gửi email thông báo phát hành hóa đơn' };
+        // 1. Tải PDF Hóa Đơn
+        const pdfBuffer = await this.downloadEasyInvoicePdfRaw(order.vat_invoice_data.ikey);
+        const fileName = `Hoadon_${order.vat_invoice_data.ikey}.pdf`;
+
+        // 2. Lấy cấu hình Email
+        const config = await this.systemService.getEasyInvoiceConfig();
+        const fromEmail = config.EASYINVOICE_EMAIL_FROM || undefined;
+        const ccEmails = config.EASYINVOICE_EMAIL_CC || undefined;
+
+        // 3. Tạo mẫu HTML (giống form EasyInvoice)
+        const htmlContent = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                <h2 style="color: #0056b3; text-align: center;">THÔNG BÁO PHÁT HÀNH HÓA ĐƠN ĐIỆN TỬ</h2>
+                <p>Kính gửi Quý Khách hàng: <strong>${order.vat_company_name || order.customer?.name || 'Quý khách'}</strong>,</p>
+                <p>Chúng tôi xin trân trọng thông báo về việc phát hành Hóa đơn điện tử của Quý khách như sau:</p>
+                <ul>
+                    <li><strong>Mã tra cứu hóa đơn:</strong> ${order.vat_invoice_data.lookupCode || 'Chưa có (Bản nháp)'}</li>
+                    <li><strong>Ký hiệu hóa đơn:</strong> ${order.vat_invoice_data.pattern || config.EASYINVOICE_PATTERN || ''} / ${order.vat_invoice_data.serial || config.EASYINVOICE_SERIAL || ''}</li>
+                    <li><strong>Số hóa đơn:</strong> ${order.vat_invoice_data.invoiceNo || 'Chưa cấp số'}</li>
+                    <li><strong>Ngày lập:</strong> ${order.vat_invoice_data.issueDate || order.vat_invoice_data.issuedAt || ''}</li>
+                </ul>
+                <p>Quý khách vui lòng kiểm tra file PDF đính kèm để xem chi tiết hóa đơn.</p>
+                ${order.vat_invoice_data.linkView ? `<p>Hoặc tra cứu trực tuyến tại: <a href="${order.vat_invoice_data.linkView}" target="_blank">${order.vat_invoice_data.linkView}</a></p>` : ''}
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+                <p style="font-size: 12px; color: #666; text-align: center;">
+                    Đây là email tự động từ hệ thống ERP, vui lòng không trả lời thư này.
+                </p>
+            </div>
+        `;
+
+        // 4. Gửi qua hệ thống ERP4U
+        const attachments = [{
+            filename: fileName,
+            content: pdfBuffer,
+            contentType: 'application/pdf'
+        }];
+
+        const subject = `[Hóa Đơn Điện Tử] - Thông báo phát hành hóa đơn - ${order.vat_company_name || 'Khách hàng'}`;
+
+        const isSent = await this.emailService.sendMail(
+            email, 
+            subject, 
+            htmlContent, 
+            attachments, 
+            ccEmails, 
+            fromEmail
+        );
+
+        if (!isSent) {
+            throw new Error('Không thể gửi email, vui lòng kiểm tra lại cấu hình SMTP.');
+        }
+
+        // 5. Ghi log hoạt động
+        order.vat_invoice_data.lastEmailSentAt = new Date().toISOString();
+        order.vat_invoice_data.lastEmailSentTo = email;
+        await this.orderRepo.save(order);
+        this.systemService.logAction('SALES', 'SEND_VAT_INVOICE_EMAIL', `Gửi email hóa đơn PDF cho khách hàng: ${email}`, null, 'System', String(orderId));
+
+        return { success: true, message: 'Đã gửi email thông báo phát hành hóa đơn kèm PDF' };
     }
 }

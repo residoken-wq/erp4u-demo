@@ -78,10 +78,10 @@ export class EmailService {
         }
     }
 
-    async sendMail(to: string, subject: string, html: string, attachments?: any[]): Promise<boolean> {
+    async sendMail(to: string, subject: string, html: string, attachments?: any[], cc?: string, fromOverride?: string): Promise<boolean> {
         const dbConfig = await this.getSmtpConfig();
         
-        let fromEmail = dbConfig['SMTP_FROM_EMAIL'] || this.configService.get<string>('SMTP_FROM') || 'noreply@erp4u.com';
+        let fromEmail = fromOverride || dbConfig['SMTP_FROM_EMAIL'] || this.configService.get<string>('SMTP_FROM') || 'noreply@erp4u.com';
         let fromName = dbConfig['SMTP_FROM_NAME'] || 'ERP4U';
         const from = `"${fromName}" <${fromEmail}>`;
         
@@ -94,13 +94,19 @@ export class EmailService {
         }
 
         try {
-            const info = await transporter.sendMail({
+            const mailOptions: any = {
                 from,
                 to,
                 subject,
                 html,
                 attachments
-            });
+            };
+            
+            if (cc) {
+                mailOptions.cc = cc;
+            }
+
+            const info = await transporter.sendMail(mailOptions);
             this.logger.log(`Email sent to ${to}: ${info.messageId}`);
             return true;
         } catch (error: any) {
