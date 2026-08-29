@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, Tag, Modal, Form, Input, Select, message, Space, Tooltip, Popconfirm, Row, Col, Statistic, Progress, Badge, Tabs, DatePicker } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined, MailOutlined, MessageOutlined, RocketOutlined, BarChartOutlined, TeamOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined, MailOutlined, MessageOutlined, RocketOutlined, BarChartOutlined, TeamOutlined, ThunderboltOutlined, CommentOutlined, InboxOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { API_URL } from '../config';
+
+// Lazy load TikTok pages
+const TikTokInboxPage = React.lazy(() => import('./TikTokInboxPage'));
+const TikTokCommentsPage = React.lazy(() => import('./TikTokCommentsPage'));
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -292,6 +296,24 @@ const MarketingPage: React.FC = () => {
                                 loading={loading}
                                 size="small"
                             />
+                        ),
+                    },
+                    {
+                        key: 'tiktok_inbox',
+                        label: <span><InboxOutlined /> TikTok Inbox</span>,
+                        children: (
+                            <React.Suspense fallback={<div style={{ textAlign: 'center', padding: 40 }}>Đang tải...</div>}>
+                                <TikTokInboxPage />
+                            </React.Suspense>
+                        ),
+                    },
+                    {
+                        key: 'tiktok_comments',
+                        label: <span><CommentOutlined /> TikTok Comments</span>,
+                        children: (
+                            <React.Suspense fallback={<div style={{ textAlign: 'center', padding: 40 }}>Đang tải...</div>}>
+                                <TikTokCommentsPage />
+                            </React.Suspense>
                         ),
                     },
                 ]}

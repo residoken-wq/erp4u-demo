@@ -63,8 +63,8 @@ const QuotationTemplate: React.FC<QuotationProps> = ({ data }) => {
                         {data.contact_name && (
                             <p style={{ marginBottom: 5 }}><b>Người liên hệ:</b> {data.contact_name} {data.contact_phone ? `- ${data.contact_phone}` : ''}</p>
                         )}
-                        {data.shipping_address && (
-                            <p style={{ marginBottom: 5, whiteSpace: 'pre-wrap' }}><b>Địa chỉ giao hàng:</b> {data.shipping_address}</p>
+                        {(data.shipping_address || data.customer?.address) && (
+                            <p style={{ marginBottom: 5, whiteSpace: 'pre-wrap' }}><b>Địa chỉ giao hàng:</b> {data.shipping_address || data.customer?.address || ''}</p>
                         )}
                         {(data.receiver_name || data.receiver_phone) && (
                             <p style={{ marginBottom: 0 }}><b>Người nhận:</b> {data.receiver_name || customerName} {data.receiver_phone ? `- ${data.receiver_phone}` : ''}</p>

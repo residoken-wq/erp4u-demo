@@ -468,7 +468,7 @@ const PortalQuotePage: React.FC = () => {
                 <div class="party-row">📞 ${customerPhone || data.receiver_phone || '...'}</div>
                 ${vatTax ? `<div class="party-row" style="margin-bottom: 5px;">MST: <b>${vatTax}</b></div>` : ''}
                 ${data.contact_name ? `<div class="party-row" style="margin-bottom: 5px;"><b>Người liên hệ:</b> ${data.contact_name} ${data.contact_phone ? `- ${data.contact_phone}` : ''}</div>` : ''}
-                <div class="party-row" style="margin-bottom: 5px; white-space: pre-wrap;"><b>Địa chỉ giao hàng:</b><br />${data.shipping_address || '...'}</div>
+                <div class="party-row" style="margin-bottom: 5px; white-space: pre-wrap;"><b>Địa chỉ giao hàng:</b><br />${data.shipping_address || data.customer?.address || '...'}</div>
                 ${(data.receiver_name || data.receiver_phone) ? `<div class="party-row"><b>Người nhận:</b> ${data.receiver_name || customerName} ${data.receiver_phone ? `- ${data.receiver_phone}` : ''}</div>` : ''}
             </div>
         </div>

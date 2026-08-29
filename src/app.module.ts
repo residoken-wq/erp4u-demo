@@ -34,6 +34,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
 import { WebsiteProjectsModule } from './website-projects/website-projects.module';
 import { QCModule } from './qc/qc.module';
 import { DesignsModule } from './designs/designs.module';
+import { TikTokModule } from './tiktok/tiktok.module';
 
 import { AnalyticsModule } from './analytics/analytics.module';
 
@@ -163,6 +164,11 @@ import { MarketingCampaign } from './marketing/entities/marketing-campaign.entit
 import { CustomerSegment } from './marketing/entities/customer-segment.entity';
 import { AutomationWorkflow } from './marketing/entities/automation-workflow.entity';
 
+// TikTok Entities
+import { TikTokMessage } from './tiktok/entities/tiktok-message.entity';
+import { TikTokComment } from './tiktok/entities/tiktok-comment.entity';
+import { TikTokConversation } from './tiktok/entities/tiktok-conversation.entity';
+
 // Announcement Entities
 import { Announcement } from './announcements/announcement.entity';
 import { AnnouncementRead } from './announcements/announcement-read.entity';
@@ -226,7 +232,9 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
             Promotion,
             AnalyticsVisitor,
             AiMessage,
-            CustomerLogo, PrintDesign, PrintSample, DesignOrder, DesignOrderItem
+            CustomerLogo, PrintDesign, PrintSample, DesignOrder, DesignOrderItem,
+            // TikTok
+            TikTokMessage, TikTokComment, TikTokConversation
           ],
           synchronize: configService.get<string>('NODE_ENV') !== 'production',
           subscribers: [],
@@ -248,6 +256,7 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
     AnalyticsModule, // Website Analytics tracking
     QCModule, // Quality Control module
     DesignsModule, // Printing & Embroidery Design Module
+    TikTokModule, // TikTok Shop inbox & comments integration
     TypeOrmModule.forFeature([User]), // Needed for ActivityInterceptor
   ],
   providers: [
