@@ -7,7 +7,7 @@ import {
     GlobalOutlined, SyncOutlined, SearchOutlined,
     EyeOutlined, DollarOutlined
 } from '@ant-design/icons';
-import axios from 'axios';
+import api from '../utils/api';
 
 const { Title, Text } = Typography;
 
@@ -37,7 +37,7 @@ export default function WebsiteProductsPage() {
     const loadProducts = async () => {
         setLoading(true);
         try {
-            const res = await axios.get('/api/products');
+            const res = await api.get('/products');
             setProducts(res.data);
         } catch (error) {
             message.error('Không thể tải danh sách sản phẩm');
@@ -48,7 +48,7 @@ export default function WebsiteProductsPage() {
 
     const handleToggleWebsite = async (product: Product, checked: boolean) => {
         try {
-            await axios.put(`/api/products/${product.id}`, {
+            await api.put(`/products/${product.id}`, {
                 show_on_website: checked
             });
             setProducts(products.map(p =>
@@ -62,7 +62,7 @@ export default function WebsiteProductsPage() {
 
     const handleUpdatePrice = async (id: number, price: number) => {
         try {
-            await axios.put(`/api/products/${id}`, { website_price: price });
+            await api.put(`/products/${id}`, { website_price: price });
             setProducts(products.map(p =>
                 p.id === id ? { ...p, website_price: price } : p
             ));
@@ -75,7 +75,7 @@ export default function WebsiteProductsPage() {
 
     const handleUpdateOrder = async (id: number, order: number) => {
         try {
-            await axios.put(`/api/products/${id}`, { website_order: order });
+            await api.put(`/products/${id}`, { website_order: order });
             setProducts(products.map(p =>
                 p.id === id ? { ...p, website_order: order } : p
             ));
