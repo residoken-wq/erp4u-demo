@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_URL } from '../../config';
 import { WizardConfigData, WizardCategoryL1, WizardCategoryL2 } from './types';
 import CategoryFunnel from './CategoryFunnel';
 import ConfiguratorAccordion from './ConfiguratorAccordion';
@@ -30,10 +31,9 @@ export default function PortalB2BCustomizer({ slug, token, onClose }: Props) {
     useEffect(() => {
         const loadData = async () => {
             try {
-                const apiUrl = (import.meta as any).env?.VITE_API_URL || 'https://localhost:3000/api';
                 const [settingsRes, configRes] = await Promise.all([
-                    fetch(`${apiUrl}/public/settings`),
-                    fetch(`${apiUrl}/public/wizard/config`)
+                    fetch(`${API_URL}/public/settings`),
+                    fetch(`${API_URL}/public/wizard/config`)
                 ]);
 
                 if (settingsRes.ok) {

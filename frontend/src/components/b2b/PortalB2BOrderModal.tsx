@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { API_URL } from '../../config';
 import { WizardCategoryL1, WizardCategoryL2, WizardCustomizationStep, WizardOption } from './types';
 
 interface Props {
@@ -70,8 +71,7 @@ export default function PortalB2BOrderModal({ isOpen, onClose, onSuccess, slug, 
 
         setIsSubmitting(true);
         try {
-            const apiUrl = (import.meta as any).env?.VITE_API_URL || 'https://localhost:3000/api';
-            const res = await fetch(`${apiUrl}/public/portal/custom-order/${slug}`, {
+            const res = await fetch(`${API_URL}/public/portal/custom-order/${slug}`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
