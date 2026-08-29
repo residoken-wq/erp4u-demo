@@ -236,7 +236,7 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
             // TikTok
             TikTokMessage, TikTokComment, TikTokConversation
           ],
-          synchronize: configService.get<string>('NODE_ENV') !== 'production',
+          synchronize: true, // Always sync demo database schema
           subscribers: [],
         };
       },
