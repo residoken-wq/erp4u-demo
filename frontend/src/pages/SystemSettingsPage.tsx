@@ -176,7 +176,7 @@ const CompanyConfigTab: React.FC = () => {
     const fetchCompanyInfo = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/system/company`);
+            const res = await axios.get(`/system/company`);
             form.setFieldsValue(res.data);
             if (res.data) {
                 setBankValues({
@@ -198,7 +198,7 @@ const CompanyConfigTab: React.FC = () => {
     const onFinish = async (values: any) => {
         setSaving(true);
         try {
-            await axios.post(`${API_URL}/system/company`, values);
+            await axios.post(`/system/company`, values);
             message.success('Đã lưu thông tin doanh nghiệp thành công!');
             setBankValues({
                 bank: values.COMPANY_BANK_NAME || '',
@@ -372,11 +372,11 @@ const PrintBrandingTab: React.FC = () => {
         setLoading(true);
         try {
             const [bRes, sRes, wRes, cRes, fRes] = await Promise.all([
-                axios.get(`${API_URL}/system/config/PRINT_HEADER_BANNER`).catch(() => ({ data: null })),
-                axios.get(`${API_URL}/system/config/COMPANY_STAMP_IMAGE`).catch(() => ({ data: null })),
-                axios.get(`${API_URL}/system/config/PORTAL_WATERMARK_IMAGE`).catch(() => ({ data: null })),
-                axios.get(`${API_URL}/system/config/PRINT_PRIMARY_COLOR`).catch(() => ({ data: null })),
-                axios.get(`${API_URL}/system/config/PRINT_CUSTOM_NOTE_FOOTER`).catch(() => ({ data: null })),
+                axios.get(`/system/config/PRINT_HEADER_BANNER`).catch(() => ({ data: null })),
+                axios.get(`/system/config/COMPANY_STAMP_IMAGE`).catch(() => ({ data: null })),
+                axios.get(`/system/config/PORTAL_WATERMARK_IMAGE`).catch(() => ({ data: null })),
+                axios.get(`/system/config/PRINT_PRIMARY_COLOR`).catch(() => ({ data: null })),
+                axios.get(`/system/config/PRINT_CUSTOM_NOTE_FOOTER`).catch(() => ({ data: null })),
             ]);
 
             if (bRes.data?.value) setBannerUrl(bRes.data.value);
@@ -398,12 +398,12 @@ const PrintBrandingTab: React.FC = () => {
         setSaving(true);
         try {
             await Promise.all([
-                axios.post(`${API_URL}/system/config`, {
+                axios.post(`/system/config`, {
                     key: 'PRINT_PRIMARY_COLOR',
                     value: primaryColor,
                     description: 'Màu chủ đạo cho bản in Báo giá & Đơn hàng'
                 }),
-                axios.post(`${API_URL}/system/config`, {
+                axios.post(`/system/config`, {
                     key: 'PRINT_CUSTOM_NOTE_FOOTER',
                     value: footerNote,
                     description: 'Ghi chú chân trang bản in'
@@ -423,12 +423,12 @@ const PrintBrandingTab: React.FC = () => {
 
         const hide = message.loading('Đang tải file lên...', 0);
         try {
-            const uploadRes = await axios.post(`${API_URL}/upload/image`, formData, {
+            const uploadRes = await axios.post(`/upload/image`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             const url = uploadRes.data?.url || uploadRes.data?.data?.url;
             if (url) {
-                await axios.post(`${API_URL}/system/config`, {
+                await axios.post(`/system/config`, {
                     key: targetConfigKey,
                     value: url,
                     description: `Cấu hình ảnh ${targetConfigKey}`
@@ -445,7 +445,7 @@ const PrintBrandingTab: React.FC = () => {
 
     const handleResetImage = async (targetConfigKey: string, setLocalState: (url: string) => void) => {
         try {
-            await axios.post(`${API_URL}/system/config`, {
+            await axios.post(`/system/config`, {
                 key: targetConfigKey,
                 value: '',
                 description: `Xóa cấu hình ảnh ${targetConfigKey}`
@@ -776,7 +776,7 @@ const ContractTemplatesTab: React.FC = () => {
 
     const fetchPlaceholders = async () => {
         try {
-            const res = await axios.get(`${API_URL}/system/config/CONTRACT_CUSTOM_PLACEHOLDERS`);
+            const res = await axios.get(`/system/config/CONTRACT_CUSTOM_PLACEHOLDERS`);
             if (res.data && res.data.value) {
                 const parsed = JSON.parse(res.data.value);
                 setCustomPlaceholders(parsed);
@@ -788,7 +788,7 @@ const ContractTemplatesTab: React.FC = () => {
     const fetchTemplates = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/system/templates`);
+            const res = await axios.get(`/system/templates`);
             setTemplates(res.data);
         } catch (e) { message.error('Lỗi tải danh sách mẫu'); }
         setLoading(false);
@@ -801,7 +801,7 @@ const ContractTemplatesTab: React.FC = () => {
 
     const handleSavePlaceholders = async (values: any) => {
         try {
-            await axios.post(`${API_URL}/system/config`, {
+            await axios.post(`/system/config`, {
                 key: 'CONTRACT_CUSTOM_PLACEHOLDERS',
                 value: JSON.stringify(values.placeholders || []),
                 description: 'Danh sách Placeholder Hợp đồng tự tạo'
@@ -816,7 +816,7 @@ const ContractTemplatesTab: React.FC = () => {
 
     const handleSave = async (values: any) => {
         try {
-            await axios.post(`${API_URL}/system/templates`, { ...values, id: editingTemplate?.id });
+            await axios.post(`/system/templates`, { ...values, id: editingTemplate?.id });
             message.success('Đã lưu mẫu hợp đồng');
             setModalOpen(false);
             fetchTemplates();
@@ -825,7 +825,7 @@ const ContractTemplatesTab: React.FC = () => {
 
     const handleDelete = async (id: number) => {
         try {
-            await axios.delete(`${API_URL}/system/templates/${id}`);
+            await axios.delete(`/system/templates/${id}`);
             message.success('Đã xóa mẫu');
             fetchTemplates();
         } catch (e) { message.error('Lỗi xóa mẫu'); }
@@ -1045,9 +1045,9 @@ const QuoteTermsSubTab: React.FC = () => {
     useEffect(() => {
         setLoading(true);
         Promise.all([
-            axios.get(`${API_URL}/system/config/QUOTE_TERMS_LIST`).catch(() => ({ data: null })),
-            axios.get(`${API_URL}/system/config/QUOTE_DEFAULT_TERMS`).catch(() => ({ data: null })),
-            axios.get(`${API_URL}/system/config/QUOTE_DEFAULT_NOTE`).catch(() => ({ data: null })),
+            axios.get(`/system/config/QUOTE_TERMS_LIST`).catch(() => ({ data: null })),
+            axios.get(`/system/config/QUOTE_DEFAULT_TERMS`).catch(() => ({ data: null })),
+            axios.get(`/system/config/QUOTE_DEFAULT_NOTE`).catch(() => ({ data: null })),
         ]).then(([listRes, termsRes, noteRes]) => {
             let list = [];
             if (listRes.data?.value) {
@@ -1065,12 +1065,12 @@ const QuoteTermsSubTab: React.FC = () => {
         setSaving(true);
         try {
             await Promise.all([
-                axios.post(`${API_URL}/system/config`, {
+                axios.post(`/system/config`, {
                     key: 'QUOTE_TERMS_LIST',
                     value: JSON.stringify(termsList),
                     description: 'Danh sách Điều khoản & Quy định cho Báo giá'
                 }),
-                axios.post(`${API_URL}/system/config`, {
+                axios.post(`/system/config`, {
                     key: 'QUOTE_DEFAULT_NOTE',
                     value: defaultNote,
                     description: 'Ghi chú mặc định cho Báo giá'
@@ -1185,9 +1185,9 @@ const OrderTermsSubTab: React.FC = () => {
     useEffect(() => {
         setLoading(true);
         Promise.all([
-            axios.get(`${API_URL}/system/config/ORDER_TERMS_LIST`).catch(() => ({ data: null })),
-            axios.get(`${API_URL}/system/config/ORDER_DEFAULT_TERMS`).catch(() => ({ data: null })),
-            axios.get(`${API_URL}/system/config/ORDER_DEFAULT_NOTE`).catch(() => ({ data: null })),
+            axios.get(`/system/config/ORDER_TERMS_LIST`).catch(() => ({ data: null })),
+            axios.get(`/system/config/ORDER_DEFAULT_TERMS`).catch(() => ({ data: null })),
+            axios.get(`/system/config/ORDER_DEFAULT_NOTE`).catch(() => ({ data: null })),
         ]).then(([listRes, termsRes, noteRes]) => {
             let list = [];
             if (listRes.data?.value) {
@@ -1205,12 +1205,12 @@ const OrderTermsSubTab: React.FC = () => {
         setSaving(true);
         try {
             await Promise.all([
-                axios.post(`${API_URL}/system/config`, {
+                axios.post(`/system/config`, {
                     key: 'ORDER_TERMS_LIST',
                     value: JSON.stringify(termsList),
                     description: 'Danh sách Điều khoản & Quy định cho Đơn hàng'
                 }),
-                axios.post(`${API_URL}/system/config`, {
+                axios.post(`/system/config`, {
                     key: 'ORDER_DEFAULT_NOTE',
                     value: defaultNote,
                     description: 'Ghi chú mặc định cho Đơn hàng'
@@ -1354,7 +1354,7 @@ const SmtpConfigSubTab: React.FC = () => {
     const fetchConfig = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/system/smtp`);
+            const res = await axios.get(`/system/smtp`);
             const data = { ...res.data, SMTP_SECURE: res.data.SMTP_SECURE === 'true' };
             form.setFieldsValue(data);
         } catch (error) {
@@ -1368,7 +1368,7 @@ const SmtpConfigSubTab: React.FC = () => {
         if (!testEmail) return;
         setTestingSmtp(true);
         try {
-            const res = await axios.post(`${API_URL}/system/smtp/test`, { email: testEmail });
+            const res = await axios.post(`/system/smtp/test`, { email: testEmail });
             if (res.data.success) {
                 message.success(res.data.message);
             } else {
@@ -1388,7 +1388,7 @@ const SmtpConfigSubTab: React.FC = () => {
         setSubmitting(true);
         try {
             const payload = { ...values, SMTP_SECURE: String(values.SMTP_SECURE) };
-            await axios.post(`${API_URL}/system/smtp`, payload);
+            await axios.post(`/system/smtp`, payload);
             message.success('Đã lưu cấu hình SMTP thành công!');
         } catch (error) {
             message.error('Lỗi khi lưu cấu hình');
@@ -1432,7 +1432,7 @@ const EasyInvoiceConfigTab: React.FC = () => {
     const fetchConfig = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/system/easyinvoice`);
+            const res = await axios.get(`/system/easyinvoice`);
             form.setFieldsValue(res.data);
         } catch (error) {
             message.error('Không thể tải cấu hình EasyInvoice');
@@ -1447,7 +1447,7 @@ const EasyInvoiceConfigTab: React.FC = () => {
     const onFinish = async (values: any) => {
         setSubmitting(true);
         try {
-            await axios.post(`${API_URL}/system/easyinvoice`, values);
+            await axios.post(`/system/easyinvoice`, values);
             message.success('Đã lưu cấu hình EasyInvoice thành công!');
         } catch (error) {
             message.error('Lỗi khi lưu cấu hình');
@@ -1528,7 +1528,7 @@ const EmailTemplatesSubTab: React.FC = () => {
     const fetchTemplates = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/system/email-templates`);
+            const res = await axios.get(`/system/email-templates`);
             setTemplates(res.data);
         } catch (e) { message.error('Lỗi tải danh sách mẫu email'); }
         setLoading(false);
@@ -1540,7 +1540,7 @@ const EmailTemplatesSubTab: React.FC = () => {
 
     const handleSave = async (values: any) => {
         try {
-            await axios.post(`${API_URL}/system/email-templates`, { ...values, id: editingTemplate?.id });
+            await axios.post(`/system/email-templates`, { ...values, id: editingTemplate?.id });
             message.success('Đã lưu mẫu email');
             setModalOpen(false);
             fetchTemplates();
@@ -1549,7 +1549,7 @@ const EmailTemplatesSubTab: React.FC = () => {
 
     const handleDelete = async (id: number) => {
         try {
-            await axios.delete(`${API_URL}/system/email-templates/${id}`);
+            await axios.delete(`/system/email-templates/${id}`);
             message.success('Đã xóa mẫu email');
             fetchTemplates();
         } catch (e) { message.error('Lỗi xóa mẫu email'); }
@@ -1649,7 +1649,7 @@ const SOProjectTemplateConfig: React.FC = () => {
     const fetchTemplate = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/system/so-project-template`);
+            const res = await axios.get(`/system/so-project-template`);
             setMilestones(res.data || []);
         } catch (e) {
             message.error('Lỗi tải template dự án SO');
@@ -1660,7 +1660,7 @@ const SOProjectTemplateConfig: React.FC = () => {
     const handleSaveTemplate = async () => {
         setSubmitting(true);
         try {
-            await axios.post(`${API_URL}/system/so-project-template`, milestones);
+            await axios.post(`/system/so-project-template`, milestones);
             message.success('Đã lưu Template Dự án thành công!');
         } catch (e) {
             message.error('Lỗi khi lưu Template');
@@ -1833,7 +1833,7 @@ const ApiKeysTab: React.FC = () => {
     const fetchTokens = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/system/api-tokens`);
+            const res = await axios.get(`/system/api-tokens`);
             setTokens(res.data);
         } catch (e) { message.error('Lỗi tải danh sách API Keys'); }
         setLoading(false);
@@ -1843,7 +1843,7 @@ const ApiKeysTab: React.FC = () => {
 
     const handleCreate = async (values: any) => {
         try {
-            const res = await axios.post(`${API_URL}/system/api-tokens`, values);
+            const res = await axios.post(`/system/api-tokens`, values);
             setGeneratedKey(res.data.api_key);
             message.success('Tạo API Key thành công');
             fetchTokens();
@@ -1852,7 +1852,7 @@ const ApiKeysTab: React.FC = () => {
 
     const handleRevoke = async (id: number) => {
         try {
-            await axios.delete(`${API_URL}/system/api-tokens/${id}`);
+            await axios.delete(`/system/api-tokens/${id}`);
             message.success('Đã thu hồi API Key');
             fetchTokens();
         } catch (e) { message.error('Lỗi thu hồi API Key'); }
@@ -1944,7 +1944,7 @@ const LinkConfigItem = ({ label, configKey, placeholder }: { label: string, conf
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        axios.get(`${API_URL}/system/config/${configKey}`).then(res => {
+        axios.get(`/system/config/${configKey}`).then(res => {
             if (res.data && res.data.value) setVal(res.data.value);
         });
     }, [configKey]);
@@ -1952,7 +1952,7 @@ const LinkConfigItem = ({ label, configKey, placeholder }: { label: string, conf
     const handleSave = async () => {
         setLoading(true);
         try {
-            await axios.post(`${API_URL}/system/config`, {
+            await axios.post(`/system/config`, {
                 key: configKey,
                 value: val,
                 description: label
@@ -1977,7 +1977,7 @@ const NumberConfigItem = ({ label, configKey, defaultValue }: { label: string, c
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        axios.get(`${API_URL}/system/config/${configKey}`).then(res => {
+        axios.get(`/system/config/${configKey}`).then(res => {
             if (res.data && res.data.value) setVal(Number(res.data.value));
         });
     }, [configKey]);
@@ -1985,7 +1985,7 @@ const NumberConfigItem = ({ label, configKey, defaultValue }: { label: string, c
     const handleSave = async () => {
         setLoading(true);
         try {
-            await axios.post(`${API_URL}/system/config`, {
+            await axios.post(`/system/config`, {
                 key: configKey,
                 value: String(val),
                 description: label
