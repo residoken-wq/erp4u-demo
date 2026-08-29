@@ -67,6 +67,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
     const [issuingInvoice, setIssuingInvoice] = useState(false);
     const [checkingInvoice, setCheckingInvoice] = useState(false);
     const [sendingInvoiceEmail, setSendingInvoiceEmail] = useState(false);
+    const [issueInvoiceModalOpen, setIssueInvoiceModalOpen] = useState(false);
     const [vatData, setVatData] = useState<any>(null);
 
     useEffect(() => {
@@ -77,7 +78,11 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
         }
     }, [initialData]);
 
-    const handleIssueInvoiceDraft = async () => {
+    const handleIssueInvoiceDraft = () => {
+        setIssueInvoiceModalOpen(true);
+    };
+
+    const confirmIssueInvoiceDraft = async () => {
         if (!initialData?.id) return;
         setIssuingInvoice(true);
         try {
@@ -94,6 +99,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             message.error(error.response?.data?.message || 'Lỗi khi tạo hóa đơn nháp');
         }
         setIssuingInvoice(false);
+        setIssueInvoiceModalOpen(false);
     };
 
     const handleCheckInvoiceStatus = async () => {
@@ -1472,6 +1478,113 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                         { title: 'Tổng tiền', dataIndex: 'total_amount', align: 'right' as const, render: (v: number) => <b style={{ color: 'red' }}>{Number(v || 0).toLocaleString()} ₫</b> }
                     ]}
                 />
+            </Modal>
+            <Modal
+                title="Xác nhận thông tin xuất hóa đơn"
+                open={issueInvoiceModalOpen}
+                onCancel={() => setIssueInvoiceModalOpen(false)}
+                onOk={confirmIssueInvoiceDraft}
+                confirmLoading={issuingInvoice}
+                okText="Xác nhận Tạo"
+                cancelText="Hủy"
+                width={800}
+            >
+                <Alert
+                    message="Vui lòng kiểm tra kỹ các thông tin dưới đây sẽ được đẩy sang EasyInvoice."
+                    type="info"
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                />
+                
+                <Card size="small" title="Thông tin người mua" style={{ marginBottom: 16 }}>
+                    <Row gutter={[16, 8]}>
+                        <Col span={8}><span style={{ color: '#888' }}>Tên đơn vị:</span></Col>
+                        <Col span={16}><b>{form.getFieldValue('vat_company_name') || initialData?.customer?.legal_name || initialData?.customer?.name || ''}</b></Col>
+                        
+                        <Col span={8}><span style={{ color: '#888' }}>Mã số thuế:</span></Col>
+                        <Col span={16}><b>{form.getFieldValue('vat_tax_code') || initialData?.customer?.tax_code || ''}</b></Col>
+                        
+                        <Col span={8}><span style={{ color: '#888' }}>Địa chỉ:</span></Col>
+                        <Col span={16}><b>{form.getFieldValue('vat_address') || initialData?.customer?.legal_address || initialData?.customer?.address || ''}</b></Col>
+                        
+                        <Col span={8}><span style={{ color: '#888' }}>Người mua hàng:</span></Col>
+                        <Col span={16}><b>{form.getFieldValue('contact_name') || form.getFieldValue('receiver_name') || 'Khách hàng'}</b></Col>
+                        
+                        <Col span={8}><span style={{ color: '#888' }}>Email nhận HĐ:</span></Col>
+                        <Col span={16}><b>{form.getFieldValue('vat_email') || initialData?.customer?.einvoice_email || ''}</b></Col>
+
+                        <Col span={8}><span style={{ color: '#888' }}>Hình thức thanh toán:</span></Col>
+                        <Col span={16}><b>2 - Chuyển khoản</b></Col>
+                    </Row>
+                </Card>
+
+                <Card size="small" title="Danh sách hàng hóa/dịch vụ">
+                    <Table
+                        dataSource={form.getFieldValue('items') || []}
+                        pagination={false}
+                        size="small"
+                        rowKey="id"
+                        columns={[
+                            {
+                                title: 'Tên hàng hóa, dịch vụ',
+                                dataIndex: 'vat_content',
+                                render: (text, record: any) => text || record.product?.name || record.sku || 'Sản phẩm'
+                            },
+                            {
+                                title: 'ĐVT',
+                                key: 'unit',
+                                render: () => 'Cái',
+                                width: 80
+                            },
+                            {
+                                title: 'Số lượng',
+                                dataIndex: 'quantity',
+                                align: 'right',
+                                width: 100
+                            },
+                            {
+                                title: 'Đơn giá',
+                                dataIndex: 'unit_price',
+                                align: 'right',
+                                render: (val) => val?.toLocaleString(),
+                                width: 120
+                            },
+                            {
+                                title: 'Thành tiền',
+                                key: 'total',
+                                align: 'right',
+                                render: (_, record: any) => ((record.quantity || 0) * (record.unit_price || 0)).toLocaleString(),
+                                width: 120
+                            }
+                        ]}
+                        summary={(pageData) => {
+                            let totalAmount = 0;
+                            pageData.forEach((item: any) => {
+                                totalAmount += (item.quantity || 0) * (item.unit_price || 0);
+                            });
+                            const vatRate = form.getFieldValue('vat_rate') || 0;
+                            const vatAmount = totalAmount * (vatRate / 100);
+                            const grandTotal = totalAmount + vatAmount;
+                            
+                            return (
+                                <>
+                                    <Table.Summary.Row>
+                                        <Table.Summary.Cell index={0} colSpan={4} align="right"><b>Cộng tiền hàng:</b></Table.Summary.Cell>
+                                        <Table.Summary.Cell index={1} align="right"><b>{totalAmount.toLocaleString()}</b></Table.Summary.Cell>
+                                    </Table.Summary.Row>
+                                    <Table.Summary.Row>
+                                        <Table.Summary.Cell index={0} colSpan={4} align="right"><b>Tiền thuế GTGT ({vatRate}%):</b></Table.Summary.Cell>
+                                        <Table.Summary.Cell index={1} align="right"><b>{vatAmount.toLocaleString()}</b></Table.Summary.Cell>
+                                    </Table.Summary.Row>
+                                    <Table.Summary.Row>
+                                        <Table.Summary.Cell index={0} colSpan={4} align="right"><b>Tổng tiền thanh toán:</b></Table.Summary.Cell>
+                                        <Table.Summary.Cell index={1} align="right"><b style={{ color: 'red' }}>{grandTotal.toLocaleString()}</b></Table.Summary.Cell>
+                                    </Table.Summary.Row>
+                                </>
+                            )
+                        }}
+                    />
+                </Card>
             </Modal>
         </Drawer>
     );
