@@ -530,6 +530,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                             </span>
                         )},
                         { title: 'Trạng thái', width: 100, align: 'center', render: (r: any) => {
+                            if (r.remaining <= 0) return <Tag color="blue" style={{ margin: 0 }}>Đã giao đủ</Tag>;
                             if (r.bookingStatus === 'CONFIRMED') return <Tag color="green" style={{ margin: 0 }}>Sẵn sàng</Tag>;
                             if (r.bookingStatus === 'TEMPORARY') return <Tag color="orange" style={{ margin: 0 }}>Chưa duyệt</Tag>;
                             

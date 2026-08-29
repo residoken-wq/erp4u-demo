@@ -584,7 +584,12 @@ const SalesPage: React.FC = () => {
                         setDeepLinkTab(null);
                         setDeepLinkHighlight(null);
                     }}
-                    onSuccess={fetchData}
+                    onSuccess={() => {
+                        fetchData();
+                        if (editingOrder && editingOrder.order_code) {
+                            api.get(`/sales/${editingOrder.order_code}`).then(res => setEditingOrder(res.data)).catch(() => {});
+                        }
+                    }}
                     initialData={editingOrder}
                     customers={customers}
                     products={products}

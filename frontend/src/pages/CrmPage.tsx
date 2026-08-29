@@ -734,7 +734,21 @@ const CrmPage: React.FC = () => {
                     ]} />
             </Card>
 
-            <SalesOrderDetail open={detailModalOpen} onClose={() => setDetailModalOpen(false)} onSuccess={fetchData} initialData={editingOrder} isQuotation={isQuotationMode} customers={allCustomers} products={products} users={users} />
+            <SalesOrderDetail 
+                open={detailModalOpen} 
+                onClose={() => setDetailModalOpen(false)} 
+                onSuccess={() => {
+                    fetchData();
+                    if (editingOrder && editingOrder.order_code) {
+                        api.get(`/sales/${editingOrder.order_code}`).then(res => setEditingOrder(res.data)).catch(() => {});
+                    }
+                }} 
+                initialData={editingOrder} 
+                isQuotation={isQuotationMode} 
+                customers={allCustomers} 
+                products={products} 
+                users={users} 
+            />
             <Modal title="Xem Trước" open={isPreviewOpen} onCancel={() => setIsPreviewOpen(false)} footer={null} width={900}>
                 <div id="printableArea"><QuotationTemplate data={editingOrder} /></div>
                 <div style={{ textAlign: 'center', marginTop: 20 }}><Button type="primary" onClick={() => { const c = document.getElementById('printableArea'); const w = window.open(); if (w && c) { w.document.write(c.innerHTML); w.print(); } }}>In Ngay</Button></div>
