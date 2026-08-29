@@ -16,6 +16,7 @@ import HeaderNotifications from './components/HeaderNotifications';
 import LoadingDisplay from './components/LoadingDisplay';
 import AiChatWidget from './components/common/AiChatWidget'; // <--- Import AI Widget
 import AnnouncementBanner from './components/common/AnnouncementBanner'; // <--- Import Announcement Banner
+import { LanguageSwitcher } from './components/common/LanguageSwitcher';
 
 const { Header, Content, Footer, Sider } = Layout;
 type MenuItem = Required<MenuProps>['items'][number];
@@ -314,6 +315,8 @@ const App: React.FC = () => {
                                     )}
 
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <LanguageSwitcher />
+                                        <div style={{ width: 10 }} />
                                         <HeaderNotifications />
                                         <div style={{ width: 20 }} />
                                         <Dropdown overlay={userMenu}>

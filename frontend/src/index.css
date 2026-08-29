@@ -63,3 +63,31 @@ h1, h2, h3, h4, h5, h6, .font-heading {
         max-width: 1600px !important;
     }
 }
+/* Hide Google Translate top bar */
+body {
+  top: 0 !important;
+}
+
+.skiptranslate {
+  display: none !important;
+}
+
+#google_translate_element {
+  display: none !important;
+}
+
+/* Hide Google Translate tooltip */
+.goog-te-balloon-frame {
+  display: none !important;
+}
+.goog-tooltip {
+  display: none !important;
+}
+.goog-tooltip:hover {
+  display: none !important;
+}
+.goog-text-highlight {
+  background-color: transparent !important;
+  border: none !important; 
+  box-shadow: none !important;
+}
