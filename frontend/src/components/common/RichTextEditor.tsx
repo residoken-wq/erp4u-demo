@@ -130,7 +130,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                     BlockQuote, Indent, IndentBlock, Image, ImageUpload,
                     ImageResize, ImageToolbar, ImageCaption, ImageInsert,
                     MediaEmbed, HtmlEmbed, SourceEditing, GeneralHtmlSupport,
-                    FontSize, FontColor, FontBackgroundColor
+                    FontSize, FontFamily, FontColor, FontBackgroundColor
                 } = await import('ckeditor5');
 
                 if (editorRef.current) return;
@@ -142,13 +142,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                         BlockQuote, Indent, IndentBlock,
                         Image, ImageUpload, ImageResize, ImageToolbar, ImageCaption, ImageInsert,
                         MediaEmbed, HtmlEmbed, SourceEditing, GeneralHtmlSupport,
-                        FontSize, FontColor, FontBackgroundColor
+                        FontSize, FontFamily, FontColor, FontBackgroundColor
                     ],
                     extraPlugins: [ERP4UUploadAdapterPlugin],
                     toolbar: {
                         items: [
                             'heading', '|',
-                            'fontSize', 'fontColor', 'fontBackgroundColor', '|',
+                            'fontFamily', 'fontSize', 'fontColor', 'fontBackgroundColor', '|',
                             'bold', 'italic', 'underline', '|',
                             'link', 'blockQuote', '|',
                             'bulletedList', 'numberedList', '|',

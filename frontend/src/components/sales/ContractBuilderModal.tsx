@@ -222,11 +222,12 @@ const ContractBuilderModal: React.FC<Props> = ({ open, onCancel, onSuccess, init
             });
             if (Object.keys(updates).length > 0) {
                 form.setFieldsValue(updates);
-                // Note: handleGeneratePreview is called debounced from Form onChange anyway but we can trigger it 
-                setTimeout(handleGeneratePreview, 200);
+                if (!isUsingSavedHtml) {
+                    setTimeout(handleGeneratePreview, 200);
+                }
             }
         }
-    }, [autoFillValues, orderVars, initialData, form]);
+    }, [autoFillValues, orderVars, initialData, form, isUsingSavedHtml]);
 
     const handleGeneratePreview = async () => {
         const values = form.getFieldsValue();
