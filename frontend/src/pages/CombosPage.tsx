@@ -8,6 +8,52 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import api from '../utils/api';
 import DraggableRow from '../components/common/DraggableRow';
 
+const ExpandedComboRow = ({ comboSku, productMap }: { comboSku: string, productMap: any }) => {
+    const [loading, setLoading] = useState(false);
+    const [items, setItems] = useState<any[]>([]);
+
+    useEffect(() => {
+        const fetchItems = async () => {
+            setLoading(true);
+            try {
+                const res = await api.get(`/products/combo/${encodeURIComponent(comboSku)}`);
+                const data = (res.data || []).map((comp: any) => ({
+                    sku: comp.child_product?.sku,
+                    quantity: comp.quantity,
+                    id: comp.id,
+                    name: comp.child_product?.name,
+                    unit: comp.child_product?.unit,
+                })).filter((item: any) => item.sku);
+                setItems(data);
+            } catch (e) {
+                console.error(e);
+            }
+            setLoading(false);
+        };
+        fetchItems();
+    }, [comboSku]);
+
+    const columns = [
+        { title: 'Mã SP', dataIndex: 'sku', key: 'sku', width: 150 },
+        { title: 'Tên Sản Phẩm (Sản phẩm con)', dataIndex: 'name', key: 'name', render: (t: any, r: any) => productMap[r.sku]?.name || t || 'N/A' },
+        { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity', width: 120 },
+        { title: 'ĐVT', dataIndex: 'unit', key: 'unit', width: 120, render: (t: any, r: any) => productMap[r.sku]?.unit || t },
+    ];
+
+    return (
+        <Table 
+            dataSource={items} 
+            columns={columns} 
+            pagination={false} 
+            size="small" 
+            loading={loading} 
+            rowKey="id" 
+            bordered={false}
+            style={{ margin: '10px 24px', border: '1px dashed #d9d9d9', borderRadius: '4px', padding: '10px', backgroundColor: '#fafafa' }}
+        />
+    );
+};
+
 const CombosPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [combos, setCombos] = useState<any[]>([]);
@@ -217,7 +263,16 @@ const CombosPage: React.FC = () => {
 
     return (
         <Card title="Quản lý Combo Quà Tặng" extra={<Space><Input prefix={<SearchOutlined />} placeholder="Tìm combo..." value={searchText} onChange={e => setSearchText(e.target.value)} style={{ width: 200 }} /><Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditingItem(null); form.resetFields(); setMetrics({ totalRefCost: 0, totalRefSell: 0, diff: 0, profit: 0 }); setIsModalOpen(true); }}>Tạo Combo</Button></Space>}>
-            <Table dataSource={filteredCombos} columns={columns} rowKey="id" loading={loading} />
+            <Table 
+                dataSource={filteredCombos} 
+                columns={columns} 
+                rowKey="id" 
+                loading={loading}
+                expandable={{
+                    expandedRowRender: (record) => <ExpandedComboRow comboSku={record.sku} productMap={productMap} />,
+                    rowExpandable: (record) => true,
+                }}
+            />
 
             <Modal
                 title={<span><GiftOutlined /> {editingItem ? `Chỉnh sửa: ${editingItem.sku}` : "Thiết lập Combo Mới"}</span>}
