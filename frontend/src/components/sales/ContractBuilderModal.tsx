@@ -539,11 +539,22 @@ const ContractBuilderModal: React.FC<Props> = ({ open, onCancel, onSuccess, init
                     <head>
                         <title>In Hợp Đồng - ${initialData.order_code}</title>
                         <style>
-                            body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; padding: 40px; }
-                            table { border-collapse: collapse; width: 100%; }
+                            body { 
+                                font-family: 'Times New Roman', serif; 
+                                font-size: 12pt; 
+                                line-height: 1.5; 
+                                padding: 2cm; /* Move margin to body to avoid header/footer */
+                                margin: 0;
+                            }
+                            table { border-collapse: collapse; width: 100%; page-break-inside: avoid; }
+                            tr, td { page-break-inside: avoid; }
                             th, td { border: 1px solid #000; padding: 5px; }
+                            /* Prevent signatures and other blocks from breaking */
+                            .keep-together { page-break-inside: avoid; }
                             @media print {
-                                @page { margin: 2cm; }
+                                @page { 
+                                    margin: 0; /* This removes the default header (date/title) and footer (about:blank) */
+                                }
                                 .no-print { display: none; }
                             }
                         </style>

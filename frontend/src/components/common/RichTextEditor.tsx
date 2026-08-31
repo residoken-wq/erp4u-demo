@@ -129,7 +129,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                     Heading, Link, List, Table, TableToolbar, Alignment,
                     BlockQuote, Indent, IndentBlock, Image, ImageUpload,
                     ImageResize, ImageToolbar, ImageCaption, ImageInsert,
-                    MediaEmbed, HtmlEmbed, SourceEditing, GeneralHtmlSupport
+                    MediaEmbed, HtmlEmbed, SourceEditing, GeneralHtmlSupport,
+                    FontSize, FontColor, FontBackgroundColor
                 } = await import('ckeditor5');
 
                 if (editorRef.current) return;
@@ -140,12 +141,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                         Heading, Link, List, Table, TableToolbar, Alignment,
                         BlockQuote, Indent, IndentBlock,
                         Image, ImageUpload, ImageResize, ImageToolbar, ImageCaption, ImageInsert,
-                        MediaEmbed, HtmlEmbed, SourceEditing, GeneralHtmlSupport
+                        MediaEmbed, HtmlEmbed, SourceEditing, GeneralHtmlSupport,
+                        FontSize, FontColor, FontBackgroundColor
                     ],
                     extraPlugins: [ERP4UUploadAdapterPlugin],
                     toolbar: {
                         items: [
                             'heading', '|',
+                            'fontSize', 'fontColor', 'fontBackgroundColor', '|',
                             'bold', 'italic', 'underline', '|',
                             'link', 'blockQuote', '|',
                             'bulletedList', 'numberedList', '|',
@@ -164,6 +167,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                             { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
                             { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' }
                         ]
+                    },
+                    fontSize: {
+                        options: [
+                            8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 32, 36
+                        ],
+                        supportAllValues: true
                     },
                     image: {
                         toolbar: ['imageTextAlternative', '|', 'imageResize'],
