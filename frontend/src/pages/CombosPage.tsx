@@ -37,7 +37,8 @@ const ExpandedComboRow = ({ comboSku, productMap }: { comboSku: string, productM
         { title: 'Mã SP', dataIndex: 'sku', key: 'sku', width: 150 },
         { title: 'Tên Sản Phẩm (Sản phẩm con)', dataIndex: 'name', key: 'name', render: (t: any, r: any) => productMap[r.sku]?.name || t || 'N/A' },
         { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity', width: 120 },
-        { title: 'ĐVT', dataIndex: 'unit', key: 'unit', width: 120, render: (t: any, r: any) => productMap[r.sku]?.unit || t },
+        { title: 'ĐVT', dataIndex: 'unit', key: 'unit', width: 100, render: (t: any, r: any) => productMap[r.sku]?.unit || t },
+        { title: 'Tồn kho thật', dataIndex: 'stock', key: 'stock', width: 120, align: 'right' as const, render: (t: any, r: any) => <span style={{ color: '#595959', fontWeight: 'bold' }}>{Number(productMap[r.sku]?.quantity_in_stock || 0).toLocaleString()}</span> },
     ];
 
     return (
@@ -101,6 +102,7 @@ const CombosPage: React.FC = () => {
             acc[sku] = {
                 price: Number(p.price) || 0,        // Giá bán lẻ
                 cost: Number(p.cost_price) || 0,    // Giá vốn
+                quantity_in_stock: Number(p.quantity_in_stock) || 0, // Tồn kho
                 name: p.label.split(' - ')[1],
                 unit: p.unit,
                 customer_description: p.customer_description // NEW
@@ -119,6 +121,7 @@ const CombosPage: React.FC = () => {
                     value: p.sku,
                     price: Number(p.base_price) || 0,
                     cost_price: Number(p.cost_price) || 0, // Lấy thêm giá vốn
+                    quantity_in_stock: Number(p.quantity_in_stock) || 0, // Tồn kho
                     unit: p.unit,
                     customer_description: p.customer_description // NEW
                 })));
@@ -250,6 +253,7 @@ const CombosPage: React.FC = () => {
         { title: 'Tên Combo', dataIndex: 'name' },
         { title: 'Giá vốn', dataIndex: 'cost_price', align: 'right' as const, render: (v: any) => <span style={{ color: 'red' }}>{Number(v).toLocaleString()} ₫</span>, hidden: !canViewCost },
         { title: 'Giá bán', dataIndex: 'base_price', align: 'right' as const, render: (v: any) => <Tag color="green" style={{ fontSize: 14 }}>{Number(v).toLocaleString()} ₫</Tag> },
+        { title: 'Tồn kho thật', dataIndex: 'quantity_in_stock', align: 'right' as const, render: (v: any) => <span style={{ color: '#595959', fontWeight: 'bold' }}>{Number(v || 0).toLocaleString()}</span> },
         {
             title: '', key: 'act', width: 100, align: 'center' as const,
             render: (r: any) => (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, Row, Col, Tag, message, Divider, Space, Popconfirm, Checkbox, Grid } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, DollarOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
@@ -23,6 +23,30 @@ const PayslipTab: React.FC<Props> = ({ employees, payslips, onRefresh }) => {
         const num = Number(v) || 0;
         return num.toLocaleString('vi-VN');
     };
+
+    const [searchText, setSearchText] = useState('');
+    const [dateRange, setDateRange] = useState<any>(null);
+
+    const filteredPayslips = useMemo(() => {
+        let result = payslips;
+        if (searchText) {
+            result = result.filter(p => p.employee?.full_name?.toLowerCase().includes(searchText.toLowerCase()));
+        }
+        if (dateRange && dateRange.length === 2) {
+            const start = dateRange[0].startOf('month');
+            const end = dateRange[1].endOf('month');
+            result = result.filter(p => {
+                // Tạo một ngày giả định đại diện cho phiếu lương (ngày 1 của tháng đó)
+                const pDate = dayjs(`${p.year}-${p.month}-01`);
+                return pDate.isAfter(start.subtract(1, 'day')) && pDate.isBefore(end.add(1, 'day'));
+            });
+        }
+        return result;
+    }, [payslips, searchText, dateRange]);
+
+    const totalFilteredNetSalary = useMemo(() => {
+        return filteredPayslips.reduce((sum, p) => sum + (Number(p.net_salary) || 0), 0);
+    }, [filteredPayslips]);
 
     // Calculate standard work days in a month based on work days per week (5 or 6)
     const calcStandardWorkDays = (year: number, month: number, daysPerWeek: number = 6): number => {
@@ -126,7 +150,16 @@ const PayslipTab: React.FC<Props> = ({ employees, payslips, onRefresh }) => {
         { title: 'Lương CB', dataIndex: 'base_salary', render: (v: number) => formatMoney(v) },
         { title: 'Công', dataIndex: 'actual_work_days', render: (v: any, r: any) => r.employee?.work_shift?.calc_type === 'HOURLY' ? `${v} giờ` : `${v} ngày` },
         { title: 'Tổng thu', dataIndex: 'gross_income', render: (v: number) => formatMoney(v) },
-        { title: 'Thực nhận', dataIndex: 'net_salary', render: (v: number) => <b style={{ color: 'green' }}>{formatMoney(v)}</b> },
+        { 
+            title: (
+                <div>
+                    Thực nhận<br/>
+                    <span style={{ color: 'green', fontSize: 13 }}>∑ {formatMoney(totalFilteredNetSalary)}</span>
+                </div>
+            ), 
+            dataIndex: 'net_salary', 
+            render: (v: number) => <b style={{ color: 'green' }}>{formatMoney(v)}</b> 
+        },
         {
             title: 'Trạng thái', dataIndex: 'is_paid', render: (p: boolean) => p ?
                 <Tag color="green" icon={<CheckCircleOutlined />}>Đã thanh toán</Tag> :
@@ -153,11 +186,27 @@ const PayslipTab: React.FC<Props> = ({ employees, payslips, onRefresh }) => {
 
     return (
         <>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setModal(true); }} style={{ marginBottom: 16 }}>
-                Tạo phiếu lương
-            </Button>
+            <Space style={{ marginBottom: 16 }}>
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => { form.resetFields(); setModal(true); }}>
+                    Tạo phiếu lương
+                </Button>
+                <Input.Search
+                    placeholder="Tìm tên nhân viên..."
+                    allowClear
+                    onSearch={val => setSearchText(val)}
+                    onChange={e => setSearchText(e.target.value)}
+                    style={{ width: 220 }}
+                />
+                <DatePicker.RangePicker 
+                    picker="month"
+                    format="MM/YYYY"
+                    onChange={(dates) => setDateRange(dates)}
+                    placeholder={['Từ tháng', 'Đến tháng']}
+                    allowClear
+                />
+            </Space>
             <Table
-                dataSource={payslips}
+                dataSource={filteredPayslips}
                 columns={columns}
                 rowKey="id"
                 size="small"
