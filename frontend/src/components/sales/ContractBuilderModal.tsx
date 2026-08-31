@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Modal, Form, Select, Button, Checkbox, Row, Col, Input, Divider, Card, AutoComplete, message, Spin } from 'antd';
-import { PrinterOutlined, ReloadOutlined, SaveOutlined, FileSyncOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+import { PrinterOutlined, ReloadOutlined, SaveOutlined, FileSyncOutlined, EyeOutlined, EyeInvisibleOutlined, SyncOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import AttachmentUpload from '../common/AttachmentUpload';
 import api from '../../utils/api';
@@ -80,6 +80,7 @@ const ContractBuilderModal: React.FC<Props> = ({ open, onCancel, onSuccess, init
 
     // Detect which text_content vars are used in current template
     const [activeTextContentVars, setActiveTextContentVars] = useState<string[]>([]);
+    const [isUsingSavedHtml, setIsUsingSavedHtml] = useState(false);
 
     // Fetch seller info on mount
     useEffect(() => {
@@ -116,16 +117,44 @@ const ContractBuilderModal: React.FC<Props> = ({ open, onCancel, onSuccess, init
 
             const initialVars = initialData.contract_variables || {};
             
+            const templateId = initialData.contract_template_id || (templates.length > 0 ? templates[0].id : undefined);
             form.setFieldsValue({
-                template_id: initialData.contract_template_id || (templates.length > 0 ? templates[0].id : undefined),
+                template_id: templateId,
                 include_product_list: initialVars.include_product_list !== false,
                 sign_date: initialVars.sign_date ? dayjs(initialVars.sign_date) : dayjs(),
                 is_contract_visible: initialVars.is_contract_visible !== false,
                 ...initialVars
             });
-            setTimeout(handleGeneratePreview, 100); // Initial preview
+
+            if (initialData.contract_html) {
+                setPreviewHtml(initialData.contract_html);
+                setIsUsingSavedHtml(true);
+                // Still need to extract variables from the template to show the correct form fields
+                const template = templates.find(t => t.id === templateId);
+                if (template) {
+                    extractVarsFromTemplate(template.content);
+                }
+            } else {
+                setIsUsingSavedHtml(false);
+                setTimeout(handleGeneratePreview, 100); // Initial preview
+            }
         }
     }, [open, initialData, templates]);
+
+    const extractVarsFromTemplate = (content: string) => {
+        const matches = content.match(/\{\{([^\}]+)\}\}/g);
+        let extractedVars: string[] = [];
+        if (matches) {
+            extractedVars = matches.map((m: string) => m.replace('{{', '').replace('}}', '').trim());
+            extractedVars = [...new Set(extractedVars)]; // unique
+            extractedVars = extractedVars.filter(v => !BUILT_IN_VARS.includes(v)); // Keep only custom
+        }
+        setCustomVariables(extractedVars);
+
+        // Detect which text_content vars are in template
+        const allVarsInTemplate = matches ? matches.map((m: string) => m.replace('{{', '').replace('}}', '').trim()) : [];
+        setActiveTextContentVars(TEXT_CONTENT_KEYS.filter(k => allVarsInTemplate.includes(k)));
+    };
 
     const suggestions = useMemo(() => {
         if (!initialData?.customer) return [];
@@ -212,19 +241,7 @@ const ContractBuilderModal: React.FC<Props> = ({ open, onCancel, onSuccess, init
 
         let content = template.content;
 
-        // Extract placeholders from template
-        const matches = content.match(/\{\{([^\}]+)\}\}/g);
-        let extractedVars: string[] = [];
-        if (matches) {
-            extractedVars = matches.map((m: string) => m.replace('{{', '').replace('}}', '').trim());
-            extractedVars = [...new Set(extractedVars)]; // unique
-            extractedVars = extractedVars.filter(v => !BUILT_IN_VARS.includes(v)); // Keep only custom
-        }
-        setCustomVariables(extractedVars);
-
-        // Detect which text_content vars are in template
-        const allVarsInTemplate = matches ? matches.map((m: string) => m.replace('{{', '').replace('}}', '').trim()) : [];
-        setActiveTextContentVars(TEXT_CONTENT_KEYS.filter(k => allVarsInTemplate.includes(k)));
+        extractVarsFromTemplate(content);
 
         const data: any = {
             customer_name: initialData.customer?.name || '...',
@@ -428,6 +445,7 @@ const ContractBuilderModal: React.FC<Props> = ({ open, onCancel, onSuccess, init
         // Append Appendix
         content += appendixHtml;
 
+        setIsUsingSavedHtml(false);
         setPreviewHtml(content);
     };
 
@@ -575,7 +593,10 @@ const ContractBuilderModal: React.FC<Props> = ({ open, onCancel, onSuccess, init
         >
             <Row gutter={24} style={{ height: '70vh' }}>
                 <Col span={7} style={{ borderRight: '1px solid #f0f0f0', height: '100%', overflowY: 'auto', paddingRight: 10 }}>
-                    <Form form={form} layout="vertical" onValuesChange={() => setTimeout(handleGeneratePreview, 200)}>
+                    <Form form={form} layout="vertical" onValuesChange={() => {
+                        // If they change any field, we regenerate preview from the template
+                        setTimeout(handleGeneratePreview, 200);
+                    }}>
                         <Card title="1. Thông Tin Chung" size="small" bordered={false}>
                             <Form.Item name="template_id" label="Mẫu Hợp Đồng">
                                 <Select options={templates.map(t => ({ label: t.name, value: t.id }))} />
@@ -711,6 +732,19 @@ const ContractBuilderModal: React.FC<Props> = ({ open, onCancel, onSuccess, init
                     </Form>
                 </Col>
                 <Col span={17} style={{ height: '100%', overflowY: 'auto', background: '#e8e8e8', padding: '20px 40px' }}>
+                    {isUsingSavedHtml && (
+                        <div style={{ marginBottom: 15, padding: '12px 16px', background: '#e6f4ff', border: '1px solid #91caff', borderRadius: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <div style={{ color: '#0958d9', fontWeight: 500, fontSize: 14 }}>Đang hiển thị bản Hợp đồng đã lưu</div>
+                                <div style={{ color: '#555', fontSize: 12, marginTop: 4 }}>
+                                    Mẫu hợp đồng có thể đã được thay đổi. Nhấn cập nhật để áp dụng mẫu mới nhất (không mất dữ liệu đã nhập).
+                                </div>
+                            </div>
+                            <Button type="primary" icon={<SyncOutlined />} onClick={handleGeneratePreview}>
+                                Cập nhật từ Mẫu
+                            </Button>
+                        </div>
+                    )}
                     {(saving || sellerLoading) && <Spin spinning style={{position: 'absolute', top: '50%', left: '50%', zIndex: 10}}/>}
                     <div
                         style={{
