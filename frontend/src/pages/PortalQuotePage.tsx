@@ -1229,14 +1229,14 @@ const PortalQuotePage: React.FC = () => {
                                         return (
                                             <Card
                                                 size="small"
-                                                style={{ marginBottom: 12, borderRadius: 8, border: '1px solid #f0f0f0' }}
-                                                bodyStyle={{ padding: 12 }}
+                                                style={{ marginBottom: 16, borderRadius: 12, border: '1px solid #f0f0f0', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}
+                                                bodyStyle={{ padding: 16 }}
                                             >
-                                                <div style={{ display: 'flex', gap: 12 }}>
+                                                <div style={{ display: 'flex', gap: 16 }}>
                                                     {/* Image */}
-                                                    <div style={{ width: 120, height: 120, flexShrink: 0, borderRadius: 6, overflow: 'hidden', border: '1px solid #eee' }}>
+                                                    <div style={{ width: 100, height: 100, flexShrink: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid #e8e8e8', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
                                                         {isImage ? (
-                                                            <Watermark {...getWatermarkProps('rgba(0,0,0,0.15)', 12)}>
+                                                            <Watermark {...getWatermarkProps('rgba(0,0,0,0.15)', 10)}>
                                                                 <img
                                                                     src={finalSrc} alt="prod"
                                                                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', cursor: 'pointer' }}
@@ -1247,27 +1247,61 @@ const PortalQuotePage: React.FC = () => {
                                                     </div>
 
                                                     {/* Content */}
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>
-                                                            {item.product?.customer_description || item.product_name_real || item.product?.name}
+                                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                                        <div style={{ fontWeight: 700, fontSize: 15, color: '#1f1f1f', marginBottom: 6, lineHeight: 1.4 }}>
+                                                            {item.vat_content || item.product_name_real || item.product?.name || item.sku}
                                                         </div>
-                                                        <div style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>{item.sku} {item.variant_color && `• ${item.variant_color}`}</div>
+                                                        <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                                            {item.sku && <Tag bordered={false} color="default" style={{ margin: 0, fontSize: 11, background: '#f5f5f5' }}>{item.sku}</Tag>}
+                                                            {item.variant_color && <Tag bordered={false} color="processing" style={{ margin: 0, fontSize: 11 }}>Màu: {item.variant_color}</Tag>}
+                                                        </div>
                                                         
-                                                        {!data.is_design_order && (
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                <div style={{ fontSize: 12 }}>
-                                                                    <b>{Number(item.quantity)}</b> x {Number(item.unit_price).toLocaleString()}
-                                                                </div>
-                                                                <div style={{ fontWeight: 700, fontSize: 14 }}>
-                                                                    {Number(item.subtotal).toLocaleString()}₫
+                                                        {item.product?.customer_description && (
+                                                            <div style={{ background: '#f9f9f9', padding: '8px 10px', borderRadius: 8, fontSize: 12, color: '#595959', marginBottom: 12, border: '1px solid #f0f0f0' }}>
+                                                                {item.product.customer_description.split('\n').map((line: string, idx: number) => {
+                                                                    const cleanLine = line.trim();
+                                                                    if (!cleanLine) return null;
+                                                                    return (
+                                                                        <div key={idx} style={{ display: 'flex', gap: 6, marginBottom: 4, alignItems: 'flex-start' }}>
+                                                                            <span style={{ color: '#bfbfbf', fontSize: 14, lineHeight: 1.2 }}>•</span>
+                                                                            <span style={{ lineHeight: 1.4 }}>{cleanLine.replace(/^[•-]\s*/, '')}</span>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+
+                                                        {data.status === 'QUOTATION' && item.price_ranges && Array.isArray(item.price_ranges) && item.price_ranges.length > 0 && (
+                                                            <div style={{ marginBottom: 12, padding: '8px 10px', background: '#fffbe6', border: '1px dashed #ffe58f', borderRadius: 8 }}>
+                                                                <div style={{ fontSize: 11, fontWeight: 700, color: '#d48806', marginBottom: 6 }}>🏷️ Tùy chọn mua nhiều:</div>
+                                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                                                    {item.price_ranges.map((pr: any, i: number) => (
+                                                                        <Tag key={i} color="warning" bordered={false} style={{ margin: 0, fontSize: 12, fontWeight: 600 }}>{pr.quantity} cái: {Number(pr.unit_price).toLocaleString()}đ/c</Tag>
+                                                                    ))}
                                                                 </div>
                                                             </div>
                                                         )}
+                                                        
+                                                        <div style={{ marginTop: 'auto' }}>
+                                                            {!data.is_design_order && (
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0f5ff', padding: '10px 12px', borderRadius: 8, border: '1px solid #d6e4ff' }}>
+                                                                    <div style={{ fontSize: 13, color: '#555' }}>
+                                                                        <span style={{ fontSize: 16, fontWeight: 800, color: '#1d39c4' }}>{Number(item.quantity)}</span> <span style={{ color: '#8c8c8c', margin: '0 4px' }}>x</span> <span style={{ fontWeight: 600 }}>{Number(item.unit_price).toLocaleString()}</span>
+                                                                    </div>
+                                                                    <div style={{ fontWeight: 800, fontSize: 16, color: '#cf1322' }}>
+                                                                        {Number(item.subtotal).toLocaleString()}₫
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                {item.vat_content && (
-                                                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed #f0f0f0', fontSize: 11, color: '#888' }}>
-                                                        {item.vat_content}
+                                                {item.customer_note && (
+                                                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px dashed #f0f0f0', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                                        <PushpinOutlined style={{ color: '#faad14', marginTop: 2 }} />
+                                                        <div style={{ fontSize: 12, color: '#d48806', fontStyle: 'italic', flex: 1, whiteSpace: 'pre-wrap' }}>
+                                                            {item.customer_note}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </Card>
@@ -1333,31 +1367,31 @@ const PortalQuotePage: React.FC = () => {
                                 const total = taxable + vatAmount + Number(data.shipping_fee || 0);
 
                                 return (
-                                    <div style={{ background: '#fafafa', padding: 12, borderRadius: 8, marginTop: 12 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
-                                            <span style={{ color: '#888' }}>Tổng tiền hàng</span>
-                                            <span style={{ fontWeight: 600, color: '#333' }}>{subTotal.toLocaleString()}</span>
+                                    <div style={{ background: '#fff', padding: 16, borderRadius: 12, marginTop: 16, border: '1px solid #f0f0f0', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: 14 }}>
+                                            <span style={{ color: '#8c8c8c' }}>Tổng tiền hàng</span>
+                                            <span style={{ fontWeight: 600, color: '#262626' }}>{subTotal.toLocaleString()}</span>
                                         </div>
                                         {discountAmount > 0 && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
-                                                <span style={{ color: '#888' }}>Giảm giá ({data.discount_rate}%)</span>
-                                                <span style={{ fontWeight: 600, color: 'green' }}>-{discountAmount.toLocaleString()}</span>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: 14 }}>
+                                                <span style={{ color: '#8c8c8c' }}>Giảm giá ({data.discount_rate}%)</span>
+                                                <span style={{ fontWeight: 600, color: '#52c41a' }}>-{discountAmount.toLocaleString()}</span>
                                             </div>
                                         )}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
-                                            <span style={{ color: '#888' }}>Thuế GTGT ({vatRate}%)</span>
-                                            <span style={{ fontWeight: 600, color: '#333' }}>{vatAmount.toLocaleString()}</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: 14 }}>
+                                            <span style={{ color: '#8c8c8c' }}>Thuế GTGT ({vatRate}%)</span>
+                                            <span style={{ fontWeight: 600, color: '#262626' }}>{vatAmount.toLocaleString()}</span>
                                         </div>
                                         {Number(data.shipping_fee || 0) > 0 && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
-                                                <span style={{ color: '#888' }}>Phí vận chuyển</span>
-                                                <span style={{ fontWeight: 600, color: '#333' }}>{Number(data.shipping_fee).toLocaleString()}</span>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: 14 }}>
+                                                <span style={{ color: '#8c8c8c' }}>Phí vận chuyển</span>
+                                                <span style={{ fontWeight: 600, color: '#262626' }}>{Number(data.shipping_fee).toLocaleString()}</span>
                                             </div>
                                         )}
-                                        <Divider style={{ margin: '8px 0' }} />
+                                        <Divider style={{ margin: '12px 0' }} />
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontWeight: 700, fontSize: 15 }}>TỔNG CỘNG</span>
-                                            <span style={{ fontWeight: 700, fontSize: 18, color: '#ff4d4f' }}>
+                                            <span style={{ fontWeight: 800, fontSize: 16, color: '#1890ff' }}>TỔNG CỘNG</span>
+                                            <span style={{ fontWeight: 800, fontSize: 20, color: '#cf1322' }}>
                                                 {total.toLocaleString()} ₫
                                             </span>
                                         </div>
