@@ -509,22 +509,26 @@ const PortalQuotePage: React.FC = () => {
             const customerDesc = item.product?.customer_description || '';
             let descLines = '';
             if (customerDesc) {
-                descLines = customerDesc.split('\n').map((line: string, idx: number) => {
-                    const cleanLine = line.trim();
-                    if (!cleanLine) return '';
+                if (/<\/?[a-z][\s\S]*>/i.test(customerDesc)) {
+                    descLines = '<div style="font-size:10px;color:#666;line-height:1.4;">' + customerDesc + '</div>';
+                } else {
+                    descLines = customerDesc.split('\n').map((line: string, idx: number) => {
+                        const cleanLine = line.trim();
+                        if (!cleanLine) return '';
 
-                    const comboMatch = cleanLine.match(/^•\s*(.*?)\s*\(x([\d\.]+)\)(?:\s*-\s*(.*))?$/);
-                    if (comboMatch) {
-                        const [_, name, qty, trailingDesc] = comboMatch;
-                        let res = idx > 0 ? '<div style="margin-top:6px; padding-top:6px; border-top:1px dashed #ddd;"></div>' : '';
-                        if (trailingDesc) {
-                            res += '<div style="padding-left:12px;margin-top:2px;font-size:10px;color:#666;font-style:italic;">. ' + trailingDesc + '</div>';
+                        const comboMatch = cleanLine.match(/^•\s*(.*?)\s*\(x([\d\.]+)\)(?:\s*-\s*(.*))?$/);
+                        if (comboMatch) {
+                            const [_, name, qty, trailingDesc] = comboMatch;
+                            let res = idx > 0 ? '<div style="margin-top:6px; padding-top:6px; border-top:1px dashed #ddd;"></div>' : '';
+                            if (trailingDesc) {
+                                res += '<div style="padding-left:12px;margin-top:2px;font-size:10px;color:#666;font-style:italic;">. ' + trailingDesc + '</div>';
+                            }
+                            return res;
                         }
-                        return res;
-                    }
 
-                    return '<div style="padding-left:12px;margin-top:2px;font-size:10px;color:#666;font-style:italic;">. ' + cleanLine.replace(/^[•-]\s*/, '') + '</div>';
-                }).join('');
+                        return '<div style="padding-left:12px;margin-top:2px;font-size:10px;color:#666;font-style:italic;">. ' + cleanLine.replace(/^[•-]\s*/, '') + '</div>';
+                    }).join('');
+                }
             }
             const customerNoteHTML = item.customer_note ? '<div style="margin-top:6px;font-size:10px;font-style:italic;color:#d46b08;">📌 ' + item.customer_note + '</div>' : '';
             const imgCell = '<div style="display:flex;flex-direction:column;align-items:center;">' + (imgSrc ? '<img src="' + imgSrc + '" style="width:80px;height:80px;object-fit:cover;border-radius:4px;border:1px solid #ddd;" onerror="this.style.display=\'none\'" />' : '<span style="color:#ccc;font-size:10px;">-</span>') + customerNoteHTML + '</div>';
@@ -918,35 +922,39 @@ const PortalQuotePage: React.FC = () => {
                                 <div style={{ fontSize: 12, color: '#8c8c8c', fontStyle: 'italic' }}>Chưa có mô tả chi tiết</div>
                             ) : (
                                 <div style={{ background: '#fff', padding: '4px 0' }}>
-                                    {customerDesc.split('\n').map((line: string, idx: number) => {
-                                        const cleanLine = line.trim();
-                                        if (!cleanLine) return null;
+                                    {/<\/?[a-z][\s\S]*>/i.test(customerDesc) ? (
+                                        <div className="html-desc-container" dangerouslySetInnerHTML={{ __html: customerDesc }} style={{ fontSize: 13, color: '#666', lineHeight: 1.5 }} />
+                                    ) : (
+                                        customerDesc.split('\n').map((line: string, idx: number) => {
+                                            const cleanLine = line.trim();
+                                            if (!cleanLine) return null;
 
-                                        // Regex to capture Combo Item: "• Name (xQty) - [Desc]"
-                                        const comboMatch = cleanLine.match(/^•\s*(.*?)\s*\(x([\d\.]+)\)(?:\s*-\s*(.*))?$/);
+                                            // Regex to capture Combo Item: "• Name (xQty) - [Desc]"
+                                            const comboMatch = cleanLine.match(/^•\s*(.*?)\s*\(x([\d\.]+)\)(?:\s*-\s*(.*))?$/);
 
-                                        if (comboMatch) {
-                                            const [_, name, qty, trailingDesc] = comboMatch;
+                                            if (comboMatch) {
+                                                const [_, name, qty, trailingDesc] = comboMatch;
+                                                return (
+                                                    <div key={idx} style={{ marginTop: idx > 0 ? 8 : 0, paddingTop: idx > 0 ? 8 : 0, borderTop: idx > 0 ? '1px dashed #e8e8e8' : 'none' }}>
+                                                        {trailingDesc && (
+                                                            <div style={{ paddingLeft: 16, marginTop: 2, display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                                                                <span style={{ fontSize: 14, color: '#999', lineHeight: 1 }}>.</span>
+                                                                <span style={{ fontSize: 13, color: '#666', fontStyle: 'italic', lineHeight: 1.4 }}>{trailingDesc}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+
+                                            // Regular line (or subsequent lines of a combo item description)
                                             return (
-                                                <div key={idx} style={{ marginTop: idx > 0 ? 8 : 0, paddingTop: idx > 0 ? 8 : 0, borderTop: idx > 0 ? '1px dashed #e8e8e8' : 'none' }}>
-                                                    {trailingDesc && (
-                                                        <div style={{ paddingLeft: 16, marginTop: 2, display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                                                            <span style={{ fontSize: 14, color: '#999', lineHeight: 1 }}>.</span>
-                                                            <span style={{ fontSize: 13, color: '#666', fontStyle: 'italic', lineHeight: 1.4 }}>{trailingDesc}</span>
-                                                        </div>
-                                                    )}
+                                                <div key={idx} style={{ paddingLeft: 16, marginTop: 2, display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                                                    <span style={{ fontSize: 14, color: '#999', lineHeight: 1 }}>.</span>
+                                                    <span style={{ fontSize: 13, color: '#666', fontStyle: 'italic', lineHeight: 1.4 }}>{cleanLine.replace(/^[•-]\s*/, '')}</span>
                                                 </div>
                                             );
-                                        }
-
-                                        // Regular line (or subsequent lines of a combo item description)
-                                        return (
-                                            <div key={idx} style={{ paddingLeft: 16, marginTop: 2, display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                                                <span style={{ fontSize: 14, color: '#999', lineHeight: 1 }}>.</span>
-                                                <span style={{ fontSize: 13, color: '#666', fontStyle: 'italic', lineHeight: 1.4 }}>{cleanLine.replace(/^[•-]\s*/, '')}</span>
-                                            </div>
-                                        );
-                                    })}
+                                        })
+                                    )}
                                 </div>
                             )}
 
@@ -1257,17 +1265,21 @@ const PortalQuotePage: React.FC = () => {
                                                         </div>
                                                         
                                                         {item.product?.customer_description && (
-                                                            <div style={{ background: '#f9f9f9', padding: '8px 10px', borderRadius: 8, fontSize: 12, color: '#595959', marginBottom: 12, border: '1px solid #f0f0f0' }}>
-                                                                {item.product.customer_description.split('\n').map((line: string, idx: number) => {
-                                                                    const cleanLine = line.trim();
-                                                                    if (!cleanLine) return null;
-                                                                    return (
-                                                                        <div key={idx} style={{ display: 'flex', gap: 6, marginBottom: 4, alignItems: 'flex-start' }}>
-                                                                            <span style={{ color: '#bfbfbf', fontSize: 14, lineHeight: 1.2 }}>•</span>
-                                                                            <span style={{ lineHeight: 1.4 }}>{cleanLine.replace(/^[•-]\s*/, '')}</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
+                                                            <div style={{ background: '#f9f9f9', padding: '8px 10px', borderRadius: 8, fontSize: 12, color: '#595959', marginBottom: 12, border: '1px solid #f0f0f0', overflow: 'hidden' }}>
+                                                                {/<\/?[a-z][\s\S]*>/i.test(item.product.customer_description) ? (
+                                                                    <div className="html-desc-container" dangerouslySetInnerHTML={{ __html: item.product.customer_description }} style={{ lineHeight: 1.5 }} />
+                                                                ) : (
+                                                                    item.product.customer_description.split('\n').map((line: string, idx: number) => {
+                                                                        const cleanLine = line.trim();
+                                                                        if (!cleanLine) return null;
+                                                                        return (
+                                                                            <div key={idx} style={{ display: 'flex', gap: 6, marginBottom: 4, alignItems: 'flex-start' }}>
+                                                                                <span style={{ color: '#bfbfbf', fontSize: 14, lineHeight: 1.2 }}>•</span>
+                                                                                <span style={{ lineHeight: 1.4 }}>{cleanLine.replace(/^[•-]\s*/, '')}</span>
+                                                                            </div>
+                                                                        );
+                                                                    })
+                                                                )}
                                                             </div>
                                                         )}
 
