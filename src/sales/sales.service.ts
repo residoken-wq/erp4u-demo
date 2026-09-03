@@ -249,7 +249,7 @@ export class SalesService {
     // --- LOGIC TÍNH TOÁN THANH TOÁN (Helper) ---
     private async calculatePaymentInfo(orderCode: string): Promise<{ paid_amount: number, deposit_date: any | null }> {
         const payments = await this.transRepo.find({ 
-            where: { reference_code: orderCode, type: 'INCOME' },
+            where: { reference_code: orderCode, type: 'INCOME', status: 'COMPLETED' },
             order: { date: 'ASC' }
         });
         const paid_amount = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
@@ -1555,6 +1555,7 @@ export class SalesService {
         const paidQuery = this.transRepo.createQueryBuilder('t')
             .select('COALESCE(SUM(t.amount), 0)', 'total')
             .where('t.reference_type = :type', { type: 'SALES' })
+            .andWhere('t.status = :status', { status: 'COMPLETED' })
             .andWhere('t.date BETWEEN :start AND :end', { start, end });
         if (assignedToId) {
             paidQuery.innerJoin(SalesOrder, 'o', 't.reference_code = o.order_code')
@@ -1594,6 +1595,7 @@ export class SalesService {
         const prevPaidQuery = this.transRepo.createQueryBuilder('t')
             .select('COALESCE(SUM(t.amount), 0)', 'total')
             .where('t.reference_type = :type', { type: 'SALES' })
+            .andWhere('t.status = :status', { status: 'COMPLETED' })
             .andWhere('t.date BETWEEN :start AND :end', { start: prevStart, end: prevEnd });
         if (assignedToId) {
             prevPaidQuery.innerJoin(SalesOrder, 'o', 't.reference_code = o.order_code')
@@ -2069,6 +2071,7 @@ export class SalesService {
                 .select('t.reference_code', 'code')
                 .addSelect('SUM(t.amount)', 'total')
                 .where('t.reference_type = :type', { type: 'SALES' })
+                .andWhere('t.status = :status', { status: 'COMPLETED' })
                 .andWhere('t.reference_code IN (:...codes)', { codes: orderCodes })
                 .groupBy('t.reference_code')
                 .getRawMany();
@@ -2141,6 +2144,7 @@ export class SalesService {
                 .select('t.date', 'date')
                 .addSelect('t.amount', 'amount')
                 .where('t.reference_type = :type', { type: 'SALES' })
+                .andWhere('t.status = :status', { status: 'COMPLETED' })
                 .andWhere('t.date BETWEEN :start AND :end', { start: startDate, end: endDate })
                 .getRawMany();
 
@@ -2219,6 +2223,7 @@ export class SalesService {
                 .addSelect('COALESCE(SUM(t.amount), 0)', 'total')
                 .innerJoin(SalesOrder, 'o', 't.reference_code = o.order_code')
                 .where('t.reference_type = :type', { type: 'SALES' })
+                .andWhere('t.status = :status', { status: 'COMPLETED' })
                 .andWhere('o.customer_id IN (:...cids)', { cids: customerIds })
                 .andWhere('t.date BETWEEN :start AND :end', { start, end })
                 .groupBy('o.customer_id');

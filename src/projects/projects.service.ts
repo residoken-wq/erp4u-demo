@@ -210,7 +210,7 @@ export class ProjectsService {
 
         // Get Transactions directly mapped to project
         const transactions = await this.transRepo.find({
-            where: { project_id: projectId }
+            where: { project_id: projectId, status: 'COMPLETED' }
         });
 
         // Get POs mapped to project
@@ -223,7 +223,7 @@ export class ProjectsService {
         let poTransactions: Transaction[] = [];
         if (poCodes.length > 0) {
             poTransactions = await this.transRepo.find({
-                where: { reference_code: In(poCodes) } // PO payments
+                where: { reference_code: In(poCodes), status: 'COMPLETED' } // PO payments
             });
         }
 

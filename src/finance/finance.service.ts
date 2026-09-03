@@ -63,6 +63,7 @@ export class FinanceService {
             partner_name: data.customerName || data.partnerName, // Support both keys
             attachments: data.attachments || [], // <--- Save Attachments
             allocations: data.allocations || null, // Lưu JSON phân bổ
+            status: data.status || 'COMPLETED',
         });
         const savedTrans = await this.transRepo.save(trans);
         
@@ -182,7 +183,7 @@ export class FinanceService {
         if (!order) return;
 
         const payments = await this.transRepo.find({ 
-            where: { reference_code: orderCode, type: 'INCOME' }
+            where: { reference_code: orderCode, type: 'INCOME', status: 'COMPLETED' }
         });
         const paid_amount = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
         
@@ -201,7 +202,12 @@ export class FinanceService {
 
     async updateTransaction(id: number, data: any) {
         await this.transRepo.update(id, data);
-        return this.transRepo.findOne({ where: { id } });
+        const updated = await this.transRepo.findOne({ where: { id } });
+        // Sync SO Payment Status if status was updated
+        if (updated && updated.type === 'INCOME' && updated.reference_code && updated.reference_type === 'SALES') {
+            await this.syncSOPaymentStatus(updated.reference_code);
+        }
+        return updated;
     }
 
     async getFinancialReport(month?: string, year?: string) {

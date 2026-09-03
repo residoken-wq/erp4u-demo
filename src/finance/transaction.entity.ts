@@ -12,6 +12,9 @@ export class Transaction {
   @Column()
   type: 'INCOME' | 'EXPENSE';
 
+  @Column({ default: 'COMPLETED' })
+  status: 'DRAFT' | 'COMPLETED' | 'CANCELLED';
+
   @Column('decimal', { precision: 15, scale: 2 })
   amount: number;
 

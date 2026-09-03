@@ -78,6 +78,7 @@ export class CashFlowService {
         const totalRaw = await this.transRepo.createQueryBuilder('t')
             .select("SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END)", 'totalIncome')
             .addSelect("SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END)", 'totalExpense')
+            .where('t.status = :status', { status: 'COMPLETED' })
             .getRawOne();
         const totalIncome = Number(totalRaw?.totalIncome || 0);
         const totalExpense = Number(totalRaw?.totalExpense || 0);
@@ -88,6 +89,7 @@ export class CashFlowService {
             .select("SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE 0 END)", 'todayIncome')
             .addSelect("SUM(CASE WHEN t.type = 'EXPENSE' THEN t.amount ELSE 0 END)", 'todayExpense')
             .where('t.date = :today', { today })
+            .andWhere('t.status = :status', { status: 'COMPLETED' })
             .getRawOne();
         const todayIncome = Number(todayRaw?.todayIncome || 0);
         const todayExpense = Number(todayRaw?.todayExpense || 0);
@@ -147,7 +149,7 @@ export class CashFlowService {
         const endStr = endDate.toISOString().split('T')[0];
 
         const transactions = await this.transRepo.find({
-            where: { date: Between(startStr, endStr) },
+            where: { date: Between(startStr, endStr), status: 'COMPLETED' },
             order: { date: 'ASC' }
         });
 
@@ -176,6 +178,7 @@ export class CashFlowService {
         const beforeTransRaw = await this.transRepo.createQueryBuilder('t')
             .select("SUM(CASE WHEN t.type = 'INCOME' THEN t.amount ELSE -t.amount END)", 'balance')
             .where('t.date < :startDate', { startDate: startStr })
+            .andWhere('t.status = :status', { status: 'COMPLETED' })
             .getRawOne();
         runningBalance = Number(beforeTransRaw?.balance || 0);
 

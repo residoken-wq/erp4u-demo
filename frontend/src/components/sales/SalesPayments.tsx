@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Table, Button, Statistic, Row, Col, Divider, Modal, Form, InputNumber, Radio, Input, message, DatePicker } from 'antd';
-import { DollarOutlined } from '@ant-design/icons';
+import { Table, Button, Statistic, Row, Col, Divider, Modal, Form, InputNumber, Radio, Input, message, DatePicker, Tag, Space, Tooltip } from 'antd';
+import { DollarOutlined, QrcodeOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
 import dayjs from 'dayjs';
 import AttachmentUpload from '../common/AttachmentUpload';
 import useMobile from '../../hooks/useMobile';
+import { getVietQRBankCode } from '../../utils/vietqr';
 
 interface Props {
     orderId: number;
@@ -19,6 +20,7 @@ interface Props {
 
 const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidAmount, customerName, customerId, orderStatus, onSuccess }) => {
     const [history, setHistory] = useState<any[]>([]);
+    const [settings, setSettings] = useState<any>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [amount, setAmount] = useState<number>(0);
     const [type, setType] = useState('DEPOSIT');
@@ -26,6 +28,7 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
     const [date, setDate] = useState(dayjs());
     const [attachments, setAttachments] = useState<string[]>([]);
     const [overpaymentAction, setOverpaymentAction] = useState<'REFUND' | 'CREDIT'>('CREDIT');
+    const [qrModalData, setQrModalData] = useState<any>(null);
     const isMobile = useMobile();
 
     const fetchHistory = async () => {
@@ -38,17 +41,27 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
         }
     };
 
+    const fetchSettings = async () => {
+        try {
+            const res = await api.get('/system/settings');
+            setSettings(res.data);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     useEffect(() => {
         fetchHistory();
+        fetchSettings();
     }, [orderCode]);
 
     const realTimePaidAmount = useMemo(() => {
-        return Math.round(history.reduce((sum, item) => sum + (Number(item.amount) || 0), 0));
+        return Math.round(history.reduce((sum, item) => sum + (item.status === 'COMPLETED' ? (Number(item.amount) || 0) : 0), 0));
     }, [history]);
 
     const remainingAmount = Math.round(totalAmount - realTimePaidAmount);
 
-    const handlePayment = async () => {
+    const handlePayment = async (status: 'DRAFT' | 'COMPLETED') => {
         if (amount <= 0) return message.warning('Nhập số tiền hợp lệ');
 
         const overpayment = amount - remainingAmount;
@@ -57,7 +70,7 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
         const prefix = type === 'DEPOSIT' ? '[ĐẶT CỌC]' : type === 'FINAL' ? '[TẤT TOÁN]' : '[THANH TOÁN]';
         let finalNote = `${prefix} ${note}`.trim();
 
-        if (isOverpaying) {
+        if (isOverpaying && status === 'COMPLETED') {
             finalNote += ` | Số dư: ${overpayment.toLocaleString()}đ - ${overpaymentAction === 'REFUND' ? 'Hoàn tiền' : 'Tạo Credit cho KH'}`;
         }
 
@@ -70,37 +83,40 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
                 note: finalNote,
                 customerName: customerName,
                 date: date,
-                attachments: attachments
+                attachments: attachments,
+                status: status
             });
 
-            // 2. If overpayment, handle based on action
-            if (isOverpaying && overpaymentAction === 'CREDIT') {
-                if (customerId) {
-                    await api.post(`/customers/${customerId}/credits`, {
+            // 2. If overpayment and COMPLETED, handle based on action
+            if (isOverpaying && status === 'COMPLETED') {
+                if (overpaymentAction === 'CREDIT') {
+                    if (customerId) {
+                        await api.post(`/customers/${customerId}/credits`, {
+                            amount: overpayment,
+                            type: 'ADD',
+                            reference_code: orderCode,
+                            note: `Số dư từ đơn ${orderCode} - Khách hàng: ${customerName}`,
+                        });
+                        message.success(`Đã tạo Credit ${overpayment.toLocaleString()}đ cho khách hàng!`);
+                    } else {
+                        message.warning(`Không thể tạo Credit vì không xác định được ID khách hàng.`);
+                    }
+                } else if (overpaymentAction === 'REFUND') {
+                    // Create refund expense transaction
+                    await api.post(`/finance/transactions`, {
+                        type: 'EXPENSE',
                         amount: overpayment,
-                        type: 'ADD',
                         reference_code: orderCode,
-                        note: `Số dư từ đơn ${orderCode} - Khách hàng: ${customerName}`,
+                        reference_type: 'SALES_REFUND',
+                        description: `[HOÀN TIỀN] Số dư từ đơn ${orderCode} - Khách hàng: ${customerName}`,
+                        partner_name: customerName,
+                        date: date?.format('YYYY-MM-DD') || new Date().toISOString().split('T')[0]
                     });
-                    message.success(`Đã tạo Credit ${overpayment.toLocaleString()}đ cho khách hàng!`);
-                } else {
-                    message.warning(`Không thể tạo Credit vì không xác định được ID khách hàng.`);
+                    message.success(`Đã ghi nhận hoàn tiền ${overpayment.toLocaleString()}đ!`);
                 }
-            } else if (isOverpaying && overpaymentAction === 'REFUND') {
-                // Create refund expense transaction
-                await api.post(`/finance/transactions`, {
-                    type: 'EXPENSE',
-                    amount: overpayment,
-                    reference_code: orderCode,
-                    reference_type: 'SALES_REFUND',
-                    description: `[HOÀN TIỀN] Số dư từ đơn ${orderCode} - Khách hàng: ${customerName}`,
-                    partner_name: customerName,
-                    date: date?.format('YYYY-MM-DD') || new Date().toISOString().split('T')[0]
-                });
-                message.success(`Đã ghi nhận hoàn tiền ${overpayment.toLocaleString()}đ!`);
             }
 
-            message.success('Đã lưu thanh toán!');
+            message.success(status === 'DRAFT' ? 'Đã tạo yêu cầu thanh toán (Nháp)!' : 'Đã lưu thanh toán!');
             setIsModalOpen(false);
             setAmount(0);
             setNote('');
@@ -111,6 +127,17 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
             onSuccess(); // Báo cho parent reload nếu cần
         } catch (e) {
             message.error('Lỗi lưu thanh toán');
+        }
+    };
+
+    const handleConfirmPayment = async (transactionId: number) => {
+        try {
+            await api.put(`/finance/transactions/${transactionId}`, { status: 'COMPLETED' });
+            message.success('Đã xác nhận thu tiền thành công!');
+            await fetchHistory();
+            onSuccess();
+        } catch (error) {
+            message.error('Lỗi khi xác nhận thanh toán!');
         }
     };
 
@@ -142,6 +169,21 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
         setNote('');
         setAttachments([]);
         setIsModalOpen(true);
+    };
+
+    const showQR = (item: any) => {
+        if (!settings) return message.warning('Chưa cấu hình tài khoản ngân hàng trong hệ thống.');
+        const rawBankCode = getVietQRBankCode(settings.bank);
+        if (!rawBankCode || !settings.bank_account) {
+            return message.warning('Cấu hình tài khoản ngân hàng chưa đầy đủ.');
+        }
+        setQrModalData({
+            amount: item.amount,
+            bankCode: rawBankCode,
+            bankAccount: settings.bank_account,
+            bankHolder: settings.bank_holder,
+            description: orderCode
+        });
     };
 
     return (
@@ -193,9 +235,43 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
                 bordered
                 columns={[
                     { title: 'Ngày tạo', dataIndex: 'created_at', render: (t: any) => dayjs(t).format('DD/MM/YYYY HH:mm'), width: 140 },
-                    { title: 'Ngày thanh toán', dataIndex: 'date', render: (t: any) => t ? dayjs(t).format('DD/MM/YYYY HH:mm') : '-', width: 140 },
-                    { title: 'Số tiền', dataIndex: 'amount', align: 'right' as const, render: (v: any) => <b style={{ color: 'green' }}>{Number(v).toLocaleString()}</b>, width: 120 },
+                    { title: 'Ngày TT', dataIndex: 'date', render: (t: any) => t ? dayjs(t).format('DD/MM/YYYY') : '-', width: 100 },
+                    { 
+                        title: 'Số tiền', 
+                        dataIndex: 'amount', 
+                        align: 'right' as const, 
+                        render: (v: any, r: any) => (
+                            <b style={{ color: r.status === 'COMPLETED' ? 'green' : '#faad14' }}>
+                                {Number(v).toLocaleString()}
+                            </b>
+                        ), 
+                        width: 120 
+                    },
                     { title: 'Nội dung', dataIndex: 'description' },
+                    {
+                        title: 'Trạng thái',
+                        dataIndex: 'status',
+                        width: 150,
+                        render: (status: string, r: any) => (
+                            <Space direction="vertical" size="small">
+                                {status === 'DRAFT' ? (
+                                    <Tag color="warning">Nháp (Chờ TT)</Tag>
+                                ) : (
+                                    <Tag color="success">Đã Thu</Tag>
+                                )}
+                                {status === 'DRAFT' && (
+                                    <Space size="small">
+                                        <Tooltip title="Xem QR">
+                                            <Button size="small" icon={<QrcodeOutlined />} onClick={() => showQR(r)} />
+                                        </Tooltip>
+                                        <Tooltip title="Xác nhận đã thu">
+                                            <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={() => handleConfirmPayment(r.id)} />
+                                        </Tooltip>
+                                    </Space>
+                                )}
+                            </Space>
+                        )
+                    },
                     {
                         title: 'Chứng từ', render: (r: any) => {
                             const isOrderCompleted = orderStatus === 'COMPLETED';
@@ -213,7 +289,22 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
                 ]}
             />
 
-            <Modal title="Thêm Đợt Thanh Toán" open={isModalOpen} onCancel={() => setIsModalOpen(false)} onOk={handlePayment}>
+            <Modal 
+                title="Thêm Đợt Thanh Toán" 
+                open={isModalOpen} 
+                onCancel={() => setIsModalOpen(false)}
+                footer={[
+                    <Button key="cancel" onClick={() => setIsModalOpen(false)}>
+                        Hủy
+                    </Button>,
+                    <Button key="draft" type="default" onClick={() => handlePayment('DRAFT')} style={{ borderColor: '#faad14', color: '#faad14' }}>
+                        Tạo Nháp (Lấy QR)
+                    </Button>,
+                    <Button key="submit" type="primary" onClick={() => handlePayment('COMPLETED')}>
+                        Lưu Đã Thu Tiền
+                    </Button>
+                ]}
+            >
                 <Form layout="vertical">
                     <Form.Item label="Ngày thanh toán">
                         <DatePicker
@@ -260,6 +351,32 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
                     </Form.Item>
                 </Form>
             </Modal>
+
+            {qrModalData && (
+                <Modal
+                    title="Mã VietQR Thanh Toán"
+                    open={!!qrModalData}
+                    onCancel={() => setQrModalData(null)}
+                    footer={null}
+                    width={400}
+                    centered
+                >
+                    <div style={{ textAlign: 'center' }}>
+                        <img 
+                            src={`https://img.vietqr.io/image/${qrModalData.bankCode}-${qrModalData.bankAccount}-compact2.jpg?amount=${Math.floor(qrModalData.amount)}&addInfo=${qrModalData.description}&accountName=${encodeURIComponent(qrModalData.bankHolder)}`} 
+                            alt="VietQR" 
+                            style={{ width: '100%', maxWidth: 300, borderRadius: 8, marginBottom: 16 }} 
+                        />
+                        <div style={{ fontSize: 16 }}>
+                            <b>Ngân hàng:</b> {settings?.bank}<br />
+                            <b>Số tài khoản:</b> {qrModalData.bankAccount}<br />
+                            <b>Chủ tài khoản:</b> {qrModalData.bankHolder}<br />
+                            <b>Số tiền:</b> <span style={{ color: 'red', fontWeight: 'bold' }}>{Number(qrModalData.amount).toLocaleString()}đ</span><br />
+                            <b>Nội dung:</b> {qrModalData.description}
+                        </div>
+                    </div>
+                </Modal>
+            )}
         </div>
     );
 };

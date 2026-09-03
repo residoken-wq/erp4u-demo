@@ -102,7 +102,7 @@ export class CustomersService {
 
                         // Fetch payments for this order
                         // We can optimize this by batch loading, but for now loop is simpler for logic
-                        const payments = await this.transRepo.find({ where: { reference_code: order.order_code, reference_type: 'SALES' } });
+                        const payments = await this.transRepo.find({ where: { reference_code: order.order_code, reference_type: 'SALES', status: 'COMPLETED' } });
                         const paidAmt = payments.reduce((acc, p) => acc + Number(p.amount), 0);
                         paid += paidAmt;
                     }
@@ -205,8 +205,8 @@ export class CustomersService {
             try {
                 const payments = await this.transRepo.find({
                     where: [
-                        { reference_code: order.order_code, type: 'INCOME' },
-                        { reference_code: order.order_code, reference_type: 'SALES' }
+                        { reference_code: order.order_code, type: 'INCOME', status: 'COMPLETED' },
+                        { reference_code: order.order_code, reference_type: 'SALES', status: 'COMPLETED' }
                     ]
                 });
                 paid = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
@@ -434,6 +434,7 @@ export class CustomersService {
             try {
                 payments = await this.transRepo.createQueryBuilder('t')
                     .where('t.reference_code IN (:...orderCodes)', { orderCodes })
+                    .andWhere('t.status = :status', { status: 'COMPLETED' })
                     .getMany();
             } catch (e) {
                 payments = [];

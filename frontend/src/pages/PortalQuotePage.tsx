@@ -1697,6 +1697,25 @@ const PortalQuotePage: React.FC = () => {
                                     const sellerBankHolder = data.company_info?.COMPANY_BANK_HOLDER || 'CTY TNHH TM DV TUONG LINH';
                                     const rawBankCode = getVietQRBankCode(sellerBankName);
                                     
+                                    const drafts = (data.payments || []).filter((p: any) => p.status === 'DRAFT');
+
+                                    if (drafts.length > 0) {
+                                        return (
+                                            <div>
+                                                {drafts.map((draft: any) => (
+                                                    <div key={draft.id} style={{ marginBottom: 16, padding: 12, border: '1px solid #faad14', borderRadius: 8, background: '#fffbe6' }}>
+                                                        <div style={{ color: '#d46b08', fontWeight: 'bold', marginBottom: 8 }}>YÊU CẦU THANH TOÁN</div>
+                                                        <img src={`https://img.vietqr.io/image/${rawBankCode}-${sellerBankAccount}-compact2.jpg?amount=${Math.floor(draft.amount)}&addInfo=${data.order_code}&accountName=${encodeURIComponent(sellerBankHolder)}`} alt="VietQR" style={{ width: 160 }} />
+                                                        <div style={{ marginTop: 8, fontSize: 13, textAlign: 'left', lineHeight: '1.5' }}>
+                                                            <div>Số tiền: <b style={{ color: 'red' }}>{Number(draft.amount).toLocaleString()}đ</b></div>
+                                                            {draft.description && <div>Nội dung: {draft.description}</div>}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    }
+
                                     return (
                                         <img src={`https://img.vietqr.io/image/${rawBankCode}-${sellerBankAccount}-compact2.jpg?amount=${Math.floor(qrAmount)}&addInfo=${data.order_code}&accountName=${encodeURIComponent(sellerBankHolder)}`} alt="VietQR" style={{ width: 160 }} />
                                     );
@@ -1710,12 +1729,19 @@ const PortalQuotePage: React.FC = () => {
                                     <List dataSource={data.payments} renderItem={(r: any) => {
                                         let text = r.type === 'INCOME' ? 'Thanh toán' : 'Hoàn tiền';
                                         let color = r.type === 'INCOME' ? 'success' : 'red';
+                                        if (r.status === 'DRAFT') {
+                                            text = 'Chờ thanh toán (Nháp)';
+                                            color = 'warning';
+                                        }
                                         let desc = r.description || '';
                                         const match = desc.match(/^\[(.*?)\]/);
                                         if (match) {
-                                            text = match[1]; desc = desc.replace(match[0], '').trim();
-                                            if (text.includes('ĐẶT CỌC')) color = 'orange';
-                                            if (text.includes('TẤT TOÁN')) color = 'blue';
+                                            if (r.status !== 'DRAFT') text = match[1]; 
+                                            desc = desc.replace(match[0], '').trim();
+                                            if (r.status !== 'DRAFT') {
+                                                if (match[1].includes('ĐẶT CỌC')) color = 'orange';
+                                                if (match[1].includes('TẤT TOÁN')) color = 'blue';
+                                            }
                                         }
                                         return (
                                             <div style={{ padding: '8px 0', borderBottom: '1px dashed #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1741,17 +1767,23 @@ const PortalQuotePage: React.FC = () => {
                                                 render: (r: any) => {
                                                     let text = r.type === 'INCOME' ? 'Thanh toán' : 'Hoàn tiền';
                                                     let color = r.type === 'INCOME' ? 'success' : 'red';
+                                                    if (r.status === 'DRAFT') {
+                                                        text = 'Chờ thanh toán (Nháp)';
+                                                        color = 'warning';
+                                                    }
                                                     let desc = r.description || '';
 
                                                     // Try to parse [TYPE] from description (saved in SalesPayments.tsx)
                                                     // Format: [ĐẶT CỌC] Note...
                                                     const match = desc.match(/^\[(.*?)\]/);
                                                     if (match) {
-                                                        text = match[1]; // e.g. "ĐẶT CỌC", "TẤT TOÁN"
+                                                        if (r.status !== 'DRAFT') text = match[1]; // e.g. "ĐẶT CỌC", "TẤT TOÁN"
                                                         desc = desc.replace(match[0], '').trim();
-                                                        if (text.includes('ĐẶT CỌC')) color = 'orange';
-                                                        if (text.includes('TẤT TOÁN')) color = 'blue';
-                                                        if (text.includes('THANH TOÁN')) color = 'green';
+                                                        if (r.status !== 'DRAFT') {
+                                                            if (match[1].includes('ĐẶT CỌC')) color = 'orange';
+                                                            if (match[1].includes('TẤT TOÁN')) color = 'blue';
+                                                            if (match[1].includes('THANH TOÁN')) color = 'green';
+                                                        }
                                                     }
 
                                                     return (
