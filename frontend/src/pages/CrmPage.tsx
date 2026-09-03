@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Table, Button, message, Card, Modal, Form, Input, Select, Space, Timeline, Drawer, Row, Col, Statistic, Divider, Popconfirm, Tooltip, Progress, Avatar, Tag, Badge, Tabs, InputNumber, Typography, DatePicker, List, Checkbox } from 'antd'; // <--- Đã thêm Tabs
-import { UserOutlined, ClockCircleOutlined, CheckOutlined, CloseOutlined, SendOutlined, DollarOutlined, FileTextOutlined, PlusOutlined, ReloadOutlined, EditOutlined, DeleteOutlined, PrinterOutlined, LinkOutlined, CopyOutlined, UnorderedListOutlined, BellOutlined, SearchOutlined, FilterOutlined, RiseOutlined, TagOutlined, CalendarOutlined, RightOutlined } from '@ant-design/icons';
+import { Table, Button, message, Card, Modal, Form, Input, Select, Space, Timeline, Drawer, Row, Col, Statistic, Divider, Popconfirm, Tooltip, Progress, Avatar, Tag, Badge, Tabs, InputNumber, Typography, DatePicker, List, Checkbox, Empty } from 'antd'; // <--- Đã thêm Tabs, Empty
+import { UserOutlined, ClockCircleOutlined, CheckOutlined, CloseOutlined, SendOutlined, DollarOutlined, FileTextOutlined, PlusOutlined, ReloadOutlined, EditOutlined, DeleteOutlined, PrinterOutlined, LinkOutlined, CopyOutlined, UnorderedListOutlined, BellOutlined, SearchOutlined, FilterOutlined, RiseOutlined, TagOutlined, CalendarOutlined, RightOutlined, PhoneOutlined } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
 import dayjs from 'dayjs';
@@ -32,8 +32,8 @@ const CrmPage: React.FC = () => {
 
     const handleMonthClick = (month: number) => {
         setSelectedMonth(month);
-        const start = dayjs().year(selectedYear).month(month - 1).startOf('month');
-        const end = dayjs().year(selectedYear).month(month - 1).endOf('month');
+        const start = dayjs().year(selectedYear).startOf('year').month(month - 1).startOf('month');
+        const end = dayjs().year(selectedYear).startOf('year').month(month - 1).endOf('month');
         setDateRange([start, end]);
     };
 
@@ -47,10 +47,10 @@ const CrmPage: React.FC = () => {
     const handleYearChange = (val: number) => {
         setSelectedYear(val);
         if (selectedMonth !== null) {
-            const start = dayjs().year(val).month(selectedMonth - 1).startOf('month');
-            const end = dayjs().year(val).month(selectedMonth - 1).endOf('month');
+            const start = dayjs().year(val).startOf('year').month(selectedMonth - 1).startOf('month');
+            const end = dayjs().year(val).startOf('year').month(selectedMonth - 1).endOf('month');
             setDateRange([start, end]);
-        } else {
+        } else if (dateRange[0] && dateRange[1]) {
             // If All selected, update year range
             const start = dayjs().year(val).startOf('year');
             const end = dayjs().year(val).endOf('year');
@@ -198,9 +198,13 @@ const CrmPage: React.FC = () => {
     // --- FILTERING ---
     const filterByDate = (list: any[]) => {
         if (!dateRange[0] || !dateRange[1]) return list;
+        const start = dateRange[0].startOf('day');
+        const end = dateRange[1].endOf('day');
         return list.filter(item => {
-            const date = dayjs(item.created_at);
-            return date.isBetween(dateRange[0], dateRange[1], 'day', '[]');
+            const rawDate = item.order_date || item.created_at;
+            if (!rawDate) return false;
+            const date = dayjs(rawDate);
+            return date.isValid() && date.isBetween(start, end, null, '[]');
         });
     };
 
@@ -212,14 +216,18 @@ const CrmPage: React.FC = () => {
     const getFilteredData = (data: any[]) => {
         let filtered = data;
         // Search
-        if (searchText) {
-            const lower = searchText.toLowerCase();
+        if (searchText && searchText.trim()) {
+            const lower = searchText.toLowerCase().trim();
             filtered = filtered.filter(item =>
                 item.code?.toLowerCase().includes(lower) ||
                 item.name?.toLowerCase().includes(lower) ||
                 item.phone?.toLowerCase().includes(lower) ||
                 item.customer?.name?.toLowerCase().includes(lower) ||
-                item.order_code?.toLowerCase().includes(lower)
+                item.customer?.phone?.toLowerCase().includes(lower) ||
+                item.customer_name?.toLowerCase().includes(lower) ||
+                item.order_code?.toLowerCase().includes(lower) ||
+                item.assigned_to?.full_name?.toLowerCase().includes(lower) ||
+                item.assigned_to?.username?.toLowerCase().includes(lower)
             );
         }
         return filtered;
@@ -528,7 +536,7 @@ const CrmPage: React.FC = () => {
 
     const quoteColumns = [
         { title: 'Mã BG', dataIndex: 'order_code', render: (t: any) => <Tag color="orange">#{t}</Tag> },
-        { title: 'Khách Hàng', dataIndex: 'customer', render: (c: any) => <b>{c?.name}</b> },
+        { title: 'Khách Hàng', dataIndex: 'customer', render: (c: any, r: any) => <b>{c?.name || r.customer_name || 'Khách lẻ'}</b> },
         { title: 'Giá Trị', dataIndex: 'total_amount', align: 'right' as const, render: (v: any) => <b style={{ color: '#cf1322' }}>{Number(v).toLocaleString()}</b> },
         { title: 'Phụ trách', dataIndex: 'assigned_to', render: (u: any) => u ? <Tag color="blue">{u.full_name || u.username}</Tag> : '-' },
         { title: 'Ngày tạo', dataIndex: 'order_date', render: (t: any) => <small>{t ? dayjs(t).format('DD/MM/YYYY') : '-'}</small> },
@@ -544,7 +552,7 @@ const CrmPage: React.FC = () => {
                     {canUpdate && <Popconfirm title="Xác nhận chốt đơn?" onConfirm={() => handleConvertQuote(r.id, true)}><Button type="primary" size="small" icon={<CheckOutlined />} /></Popconfirm>}
                     {canDelete && <Tooltip title="Xóa"><Button icon={<DeleteOutlined />} size="small" danger onClick={() => handleDeleteQuote(r.id)} /></Tooltip>}
                 </Space>
-            ) : <Tag color="default">Đã chốt</Tag>
+            ) : <Tag color={r.status === 'CANCELLED' ? 'error' : 'default'}>{r.status === 'CANCELLED' ? 'Đã hủy' : 'Đã chốt'}</Tag>
         }
     ];
 
@@ -560,54 +568,63 @@ const CrmPage: React.FC = () => {
                         style={{ width: isMobile ? 100 : 120 }}
                         options={years.map(y => ({ label: `${y}`, value: y }))}
                     />
-                    {/* Month Blocks - HIDE ON MOBILE */}
-                    {!isMobile && (
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
-                                const isActive = selectedMonth === m;
-                                return (
-                                    <div
-                                        key={m}
-                                        onClick={() => handleMonthClick(m)}
-                                        style={{
-                                            padding: '4px 12px',
-                                            borderRadius: 4,
-                                            cursor: 'pointer',
-                                            border: isActive ? '1px solid #1890ff' : '1px solid #d9d9d9',
-                                            background: isActive ? '#e6f7ff' : '#fff',
-                                            color: isActive ? '#1890ff' : '#666',
-                                            fontSize: 13,
-                                            transition: 'all 0.2s',
-                                            fontWeight: isActive ? 500 : 400
-                                        }}
-                                        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.borderColor = '#40a9ff'; }}
-                                        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.borderColor = '#d9d9d9'; }}
-                                    >
-                                        T{m}
-                                    </div>
-                                )
-                            })}
-                            {/* ALL BLOCK */}
-                            <div
-                                onClick={handleAllMonthClick}
-                                style={{
-                                    padding: '4px 12px',
-                                    borderRadius: 4,
-                                    cursor: 'pointer',
-                                    border: selectedMonth === null ? '1px solid #722ed1' : '1px solid #d9d9d9',
-                                    background: selectedMonth === null ? '#f9f0ff' : '#fff',
-                                    color: selectedMonth === null ? '#722ed1' : '#666',
-                                    fontSize: 13,
-                                    transition: 'all 0.2s',
-                                    fontWeight: selectedMonth === null ? 500 : 400
-                                }}
-                                onMouseEnter={(e) => { if (selectedMonth !== null) e.currentTarget.style.borderColor = '#b37feb'; }}
-                                onMouseLeave={(e) => { if (selectedMonth !== null) e.currentTarget.style.borderColor = '#d9d9d9'; }}
-                            >
-                                All
-                            </div>
+                    {/* Month Blocks - Horizontal scrollable on mobile */}
+                    <div style={{
+                        display: 'flex',
+                        gap: 4,
+                        overflowX: 'auto',
+                        paddingBottom: isMobile ? 4 : 0,
+                        maxWidth: isMobile ? '100%' : 'none',
+                        WebkitOverflowScrolling: 'touch',
+                        scrollbarWidth: 'none',
+                        msOverflowStyle: 'none'
+                    }}>
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
+                            const isActive = selectedMonth === m;
+                            return (
+                                <div
+                                    key={m}
+                                    onClick={() => handleMonthClick(m)}
+                                    style={{
+                                        padding: isMobile ? '3px 10px' : '4px 12px',
+                                        borderRadius: 4,
+                                        cursor: 'pointer',
+                                        border: isActive ? '1px solid #1890ff' : '1px solid #d9d9d9',
+                                        background: isActive ? '#e6f7ff' : '#fff',
+                                        color: isActive ? '#1890ff' : '#666',
+                                        fontSize: 13,
+                                        flexShrink: 0,
+                                        transition: 'all 0.2s',
+                                        fontWeight: isActive ? 500 : 400
+                                    }}
+                                    onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.borderColor = '#40a9ff'; }}
+                                    onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.borderColor = '#d9d9d9'; }}
+                                >
+                                    T{m}
+                                </div>
+                            );
+                        })}
+                        {/* ALL BLOCK */}
+                        <div
+                            onClick={handleAllMonthClick}
+                            style={{
+                                padding: isMobile ? '3px 10px' : '4px 12px',
+                                borderRadius: 4,
+                                cursor: 'pointer',
+                                border: selectedMonth === null ? '1px solid #722ed1' : '1px solid #d9d9d9',
+                                background: selectedMonth === null ? '#f9f0ff' : '#fff',
+                                color: selectedMonth === null ? '#722ed1' : '#666',
+                                fontSize: 13,
+                                flexShrink: 0,
+                                transition: 'all 0.2s',
+                                fontWeight: selectedMonth === null ? 500 : 400
+                            }}
+                            onMouseEnter={(e) => { if (selectedMonth !== null) e.currentTarget.style.borderColor = '#b37feb'; }}
+                            onMouseLeave={(e) => { if (selectedMonth !== null) e.currentTarget.style.borderColor = '#d9d9d9'; }}
+                        >
+                            All
                         </div>
-                    )}
+                    </div>
                 </div>
                 <RangePicker
                     style={{ width: isMobile ? '100%' : 260 }}
@@ -654,7 +671,7 @@ const CrmPage: React.FC = () => {
                     type="card"
                     items={[
                         {
-                            key: 'LEAD', label: <span><UserOutlined /> Leads ({leads.length})</span>,
+                            key: 'LEAD', label: <span><UserOutlined /> Leads ({dateFilteredLeads.length})</span>,
                             children: (
                                 <>
                                     <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
@@ -663,23 +680,93 @@ const CrmPage: React.FC = () => {
                                     {isMobile ? (
                                         <List
                                             dataSource={getFilteredData(dateFilteredLeads)}
-                                            pagination={{ pageSize: 8 }}
-                                            renderItem={(r: any) => (
-                                                <List.Item style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f0' }}>
-                                                    <div style={{ width: '100%' }} onClick={() => handleEditLead(r)}>
+                                            pagination={{ pageSize: 8, size: 'small', align: 'center' }}
+                                            locale={{ emptyText: <Empty description="Không có dữ liệu Lead" /> }}
+                                            renderItem={(r: any) => {
+                                                const statusKey = r.lead_status || 'NEW';
+                                                const statusLabel = statusLabels[statusKey] || statusKey;
+                                                const statusColor = statusColors[statusKey] || 'default';
+                                                const potentialVal = Number(r.potential_value) || 0;
+
+                                                return (
+                                                    <Card
+                                                        size="small"
+                                                        style={{
+                                                            marginBottom: 10,
+                                                            borderRadius: 8,
+                                                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                                            border: '1px solid #e8e8e8'
+                                                        }}
+                                                        bodyStyle={{ padding: 12 }}
+                                                    >
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                                                            <div>
-                                                                <div style={{ fontWeight: 600, fontSize: 14, color: '#333' }}>{r.customer?.name || '-'}</div>
-                                                                <div style={{ fontSize: 12, color: '#666' }}>{r.customer?.phone || '-'}</div>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                                <Avatar style={{ backgroundColor: '#1890ff' }} size="small">
+                                                                    {(r.name || 'U').charAt(0).toUpperCase()}
+                                                                </Avatar>
+                                                                <div>
+                                                                    <div style={{ fontWeight: 600, fontSize: 14, color: '#262626' }}>
+                                                                        <a onClick={() => { setCurrentCustomer(r); setFollowDrawerOpen(true); }}>
+                                                                            {r.name || 'Chưa đặt tên'}
+                                                                        </a>
+                                                                    </div>
+                                                                    <div style={{ fontSize: 12, color: '#8c8c8c' }}>
+                                                                        {r.code}
+                                                                        {r.phone && (
+                                                                            <>
+                                                                                {' • '}
+                                                                                <a href={`tel:${r.phone}`} onClick={(e) => e.stopPropagation()} style={{ color: '#1890ff' }}>
+                                                                                    <PhoneOutlined style={{ fontSize: 11 }} /> {r.phone}
+                                                                                </a>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <Tag color={r.status === 'WON' ? 'green' : r.status === 'LOST' ? 'red' : 'blue'}>{r.status}</Tag>
+                                                            <Tag color={statusColor} style={{ margin: 0 }}>{statusLabel}</Tag>
                                                         </div>
-                                                        <div style={{ fontSize: 12, color: '#999' }}>
-                                                            {r.assigned_to?.full_name || 'Chưa gán'} • {r.created_at ? dayjs(r.created_at).format('DD/MM/YYYY') : '-'}
+
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fafafa', padding: '6px 10px', borderRadius: 6, margin: '8px 0', fontSize: 12 }}>
+                                                            <div>
+                                                                <span style={{ color: '#8c8c8c' }}>Dự kiến: </span>
+                                                                <b style={{ color: potentialVal > 0 ? '#fa8c16' : '#bfbfbf' }}>
+                                                                    {potentialVal > 0 ? `${potentialVal.toLocaleString()}đ` : '-'}
+                                                                </b>
+                                                            </div>
+                                                            <div>
+                                                                <span style={{ color: '#8c8c8c' }}>Phụ trách: </span>
+                                                                <span style={{ color: '#595959', fontWeight: 500 }}>
+                                                                    {r.assigned_to?.full_name || r.assigned_to?.username || 'Chưa gán'}
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </List.Item>
-                                            )}
+
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 }}>
+                                                            <span style={{ fontSize: 11, color: '#bfbfbf' }}>
+                                                                {r.created_at ? dayjs(r.created_at).format('DD/MM/YYYY') : '-'}
+                                                            </span>
+                                                            <Space size={4}>
+                                                                <Tooltip title="Chăm sóc">
+                                                                    <Button size="small" icon={<ClockCircleOutlined />} onClick={() => { setCurrentCustomer(r); setFollowDrawerOpen(true); }} />
+                                                                </Tooltip>
+                                                                <Tooltip title="Nhắc việc">
+                                                                    <Button size="small" icon={<BellOutlined />} onClick={() => handleCreateTask(r, 'CRM')} />
+                                                                </Tooltip>
+                                                                {canUpdate && (
+                                                                    <Tooltip title="Sửa">
+                                                                        <Button size="small" icon={<EditOutlined />} onClick={() => handleEditLead(r)} />
+                                                                    </Tooltip>
+                                                                )}
+                                                                {canDelete && (
+                                                                    <Popconfirm title="Xóa Lead này?" onConfirm={() => handleDeleteLead(r.id)} okText="Xóa" cancelText="Hủy">
+                                                                        <Button size="small" danger icon={<DeleteOutlined />} />
+                                                                    </Popconfirm>
+                                                                )}
+                                                            </Space>
+                                                        </div>
+                                                    </Card>
+                                                );
+                                            }}
                                         />
                                     ) : (
                                         <Table
@@ -694,7 +781,7 @@ const CrmPage: React.FC = () => {
                             )
                         },
                         {
-                            key: 'QUOTE', label: <span><FileTextOutlined /> Báo Giá ({quotes.length})</span>,
+                            key: 'QUOTE', label: <span><FileTextOutlined /> Báo Giá ({dateFilteredQuotes.length})</span>,
                             children: (
                                 <>
                                     <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'flex-end' }}>
@@ -703,25 +790,82 @@ const CrmPage: React.FC = () => {
                                     {isMobile ? (
                                         <List
                                             dataSource={getFilteredData(dateFilteredQuotes)}
-                                            pagination={{ pageSize: 8 }}
+                                            pagination={{ pageSize: 8, size: 'small', align: 'center' }}
+                                            locale={{ emptyText: <Empty description="Không có dữ liệu Báo Giá" /> }}
                                             renderItem={(r: any) => {
                                                 const total = Number(r.total_amount) || 0;
+                                                const customerName = r.customer?.name || r.customer_name || 'Khách lẻ';
+                                                const isQuote = r.status === 'QUOTATION';
+                                                const isCancelled = r.status === 'CANCELLED';
+
                                                 return (
-                                                    <List.Item style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f0' }}>
-                                                        <div style={{ width: '100%' }} onClick={() => openDetailModal(r, true)}>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                                                                <div>
-                                                                    <div style={{ fontWeight: 600, fontSize: 14, color: '#1890ff' }}>{r.order_code || '-'}</div>
-                                                                    <div style={{ fontSize: 13, color: '#333' }}>{r.customer?.name || '-'}</div>
+                                                    <Card
+                                                        size="small"
+                                                        style={{
+                                                            marginBottom: 10,
+                                                            borderRadius: 8,
+                                                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                                            border: '1px solid #e8e8e8'
+                                                        }}
+                                                        bodyStyle={{ padding: 12 }}
+                                                    >
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                                                            <div>
+                                                                <Tag color="orange" style={{ fontWeight: 600, fontSize: 13, margin: 0 }}>
+                                                                    #{r.order_code}
+                                                                </Tag>
+                                                                <div style={{ fontWeight: 600, fontSize: 14, color: '#262626', marginTop: 4 }}>
+                                                                    {customerName}
                                                                 </div>
-                                                                <Tag color="orange">Báo Giá</Tag>
                                                             </div>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#666' }}>
-                                                                <span>{total.toLocaleString()}đ</span>
-                                                                <span>{r.order_date ? dayjs(r.order_date).format('DD/MM/YYYY') : '-'}</span>
+                                                            <Tag color={isQuote ? 'gold' : isCancelled ? 'red' : 'green'} style={{ margin: 0 }}>
+                                                                {isQuote ? 'Báo Giá' : isCancelled ? 'Đã Hủy' : 'Đã Chốt'}
+                                                            </Tag>
+                                                        </div>
+
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fafafa', padding: '6px 10px', borderRadius: 6, margin: '8px 0', fontSize: 12 }}>
+                                                            <div>
+                                                                <span style={{ color: '#8c8c8c' }}>Giá trị: </span>
+                                                                <b style={{ color: '#cf1322', fontSize: 13 }}>{total.toLocaleString()}đ</b>
+                                                            </div>
+                                                            <div style={{ textAlign: 'right' }}>
+                                                                <div style={{ color: '#595959', fontWeight: 500 }}>
+                                                                    {r.assigned_to?.full_name || r.assigned_to?.username || 'Chưa gán'}
+                                                                </div>
+                                                                <div style={{ fontSize: 11, color: '#8c8c8c' }}>
+                                                                    {r.order_date ? dayjs(r.order_date).format('DD/MM/YYYY') : '-'}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </List.Item>
+
+                                                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 4, paddingTop: 4 }}>
+                                                            <Tooltip title="Nhân bản">
+                                                                {canUpdate && <Button icon={<CopyOutlined />} size="small" onClick={() => handleCloneQuote(r)} />}
+                                                            </Tooltip>
+                                                            <Tooltip title="Copy Link Portal">
+                                                                <Button icon={<LinkOutlined />} size="small" onClick={() => handleCopyLink(r.uuid)} />
+                                                            </Tooltip>
+                                                            <Tooltip title="Xem Trước">
+                                                                <Button icon={<PrinterOutlined />} size="small" onClick={() => { openDetailModal(r); setTimeout(() => setIsPreviewOpen(true), 500); }} />
+                                                            </Tooltip>
+                                                            <Tooltip title="Sửa">
+                                                                {canUpdate && <Button icon={<EditOutlined />} size="small" onClick={() => openDetailModal(r, true)} />}
+                                                            </Tooltip>
+                                                            <Tooltip title="Nhắc việc">
+                                                                <Button size="small" icon={<BellOutlined />} onClick={() => handleCreateTask(r, 'SALES')} />
+                                                            </Tooltip>
+                                                            {isQuote && canUpdate && (
+                                                                <Popconfirm title="Xác nhận chốt đơn?" onConfirm={() => handleConvertQuote(r.id, true)} okText="Chốt" cancelText="Hủy">
+                                                                    <Button type="primary" size="small" icon={<CheckOutlined />} />
+                                                                </Popconfirm>
+                                                            )}
+                                                            {canDelete && (
+                                                                <Tooltip title="Xóa">
+                                                                    <Button icon={<DeleteOutlined />} size="small" danger onClick={() => handleDeleteQuote(r.id)} />
+                                                                </Tooltip>
+                                                            )}
+                                                        </div>
+                                                    </Card>
                                                 );
                                             }}
                                         />
@@ -749,13 +893,13 @@ const CrmPage: React.FC = () => {
                 products={products} 
                 users={users} 
             />
-            <Modal title="Xem Trước" open={isPreviewOpen} onCancel={() => setIsPreviewOpen(false)} footer={null} width={900}>
+            <Modal title="Xem Trước" open={isPreviewOpen} onCancel={() => setIsPreviewOpen(false)} footer={null} width={isMobile ? '100%' : 900} style={isMobile ? { top: 10, maxWidth: '100vw', padding: 8 } : undefined}>
                 <div id="printableArea"><QuotationTemplate data={editingOrder} /></div>
                 <div style={{ textAlign: 'center', marginTop: 20 }}><Button type="primary" onClick={() => { const c = document.getElementById('printableArea'); const w = window.open(); if (w && c) { w.document.write(c.innerHTML); w.print(); } }}>In Ngay</Button></div>
             </Modal>
             <QuickTaskModal open={taskModalOpen} onClose={() => setTaskModalOpen(false)} initialValues={taskInitialValues} />
 
-            <Modal title={editingLeadId ? "Cập nhật Lead" : "Tạo Lead"} open={isLeadModalOpen} onCancel={() => { setIsLeadModalOpen(false); formLead.resetFields(); }} onOk={() => formLead.submit()}>
+            <Modal title={editingLeadId ? "Cập nhật Lead" : "Tạo Lead"} open={isLeadModalOpen} onCancel={() => { setIsLeadModalOpen(false); formLead.resetFields(); }} onOk={() => formLead.submit()} width={isMobile ? '100%' : 520} style={isMobile ? { top: 10 } : undefined}>
                 <Form form={formLead} layout="vertical" onFinish={handleSaveLead}>
                     <Form.Item name="code" label="Mã Lead"><Input disabled /></Form.Item>
 
@@ -828,7 +972,7 @@ const CrmPage: React.FC = () => {
                 </Form>
             </Modal>
 
-            <Drawer title={`Chăm sóc: ${currentCustomer?.name}`} width={450} open={followDrawerOpen} onClose={() => setFollowDrawerOpen(false)} footer={<Button type="primary" block onClick={() => { setFollowDrawerOpen(false); setEditingOrder({ customer_id: currentCustomer.id }); setIsQuotationMode(true); setDetailModalOpen(true); }}>Tạo Báo Giá Ngay</Button>}>
+            <Drawer title={`Chăm sóc: ${currentCustomer?.name}`} width={isMobile ? '100%' : 450} open={followDrawerOpen} onClose={() => setFollowDrawerOpen(false)} footer={<Button type="primary" block onClick={() => { setFollowDrawerOpen(false); setEditingOrder({ customer_id: currentCustomer.id }); setIsQuotationMode(true); setDetailModalOpen(true); }}>Tạo Báo Giá Ngay</Button>}>
                 {/* Customer Info Section */}
                 <div style={{ background: '#f6f8fa', borderRadius: 8, padding: 12, marginBottom: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
