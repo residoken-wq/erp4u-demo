@@ -228,7 +228,11 @@ const SalesOrderItemsTable: React.FC<Props> = ({
                                     whiteSpace: 'pre-wrap',  // Support newlines in description
                                     marginTop: prodInfo.type === 'COMBO' ? 4 : 0
                                 }}>
-                                    {prodInfo.description || 'Chưa có mô tả'}
+                                    {prodInfo.description ? (
+                                        <div dangerouslySetInnerHTML={{ __html: prodInfo.description }} />
+                                    ) : (
+                                        'Chưa có mô tả'
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -375,7 +379,9 @@ const SalesOrderItemsTable: React.FC<Props> = ({
                                     />
                                     {prodInfo && (
                                         <div style={{ fontSize: 11, color: '#666', fontStyle: 'italic', marginTop: 4, whiteSpace: 'pre-wrap' }}>
-                                            {prodInfo.description}
+                                            {prodInfo.description ? (
+                                                <div dangerouslySetInnerHTML={{ __html: prodInfo.description }} />
+                                            ) : null}
                                         </div>
                                     )}
                                 </div>

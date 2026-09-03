@@ -30,7 +30,7 @@ export const getGoogleDriveImageUrl = (link: string, size: string = 'w200'): str
             return `https://drive.google.com/thumbnail?id=${id}&sz=${size}`;
         }
     } catch (e) {
-        return null;
+        return link;
     }
     return link;
 };

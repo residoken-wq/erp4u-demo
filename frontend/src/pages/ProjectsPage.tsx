@@ -118,11 +118,13 @@ const ProjectsPage: React.FC = () => {
         return name.substring(0, 2).toUpperCase();
     };
 
-    // Calculate dummy progress based on status if real tasks are not available
+    // Calculate progress based on real tasks
     const getProgress = (p: any) => {
         if (p.status === 'COMPLETED') return 100;
-        if (p.status === 'ACTIVE') return 45; // Placeholder
-        if (p.status === 'PLANNING') return 10; // Placeholder
+        if (p.tasks && p.tasks.length > 0) {
+            const doneTasks = p.tasks.filter((t: any) => t.status === 'DONE').length;
+            return Math.round((doneTasks / p.tasks.length) * 100);
+        }
         return 0;
     };
 
@@ -132,7 +134,7 @@ const ProjectsPage: React.FC = () => {
             render: (t: string, r: any) => (
                 <div style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 500 }} onClick={() => navigate(`/projects/${r.id}`)}>
                     <FolderOutlined style={{ marginRight: 8 }} />
-                    {r.project_type === 'SO_PROJECT' && <Tag color="megenta">Đơn Hàng</Tag>}
+                    {r.project_type === 'SO_PROJECT' && <Tag color="magenta" style={{ border: 'none', background: '#fff0f6', color: '#eb2f96' }}>Đơn Hàng</Tag>}
                     {t}
                 </div>
             )
@@ -160,7 +162,7 @@ const ProjectsPage: React.FC = () => {
         },
         {
             title: 'Progress',
-            render: (r: any) => <Progress percent={getProgress(r)} size="small" status={r.status === 'ACTIVE' ? 'active' : 'normal'} />
+            render: (r: any) => <Progress percent={getProgress(r)} size="small" strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }} status={r.status === 'ACTIVE' ? 'active' : 'normal'} />
         },
         {
             title: '', key: 'action', width: 60, align: 'right' as const,
@@ -196,43 +198,47 @@ const ProjectsPage: React.FC = () => {
             {/* Top Statistics Row */}
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 <Col xs={12} sm={12} md={6}>
-                    <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                        <Statistic
-                            title="Total Projects"
-                            value={stats.total}
-                            valueStyle={{ color: '#1890ff', fontWeight: 'bold' }}
-                            prefix={<ProjectOutlined />}
-                        />
+                    <Card bordered={false} className="stat-card stat-total" style={{ borderRadius: 16, overflow: 'hidden', position: 'relative' }}>
+                        <div style={{ position: 'relative', zIndex: 2 }}>
+                            <div style={{ color: '#fff', fontSize: 14, opacity: 0.85, marginBottom: 8 }}>Total Projects</div>
+                            <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <ProjectOutlined style={{ opacity: 0.8 }} /> {stats.total}
+                            </div>
+                        </div>
+                        <div className="stat-bg-blob blob-blue"></div>
                     </Card>
                 </Col>
                 <Col xs={12} sm={12} md={6}>
-                    <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                        <Statistic
-                            title="Active"
-                            value={stats.active}
-                            valueStyle={{ color: '#52c41a', fontWeight: 'bold' }}
-                            prefix={<CheckCircleOutlined />}
-                        />
+                    <Card bordered={false} className="stat-card stat-active" style={{ borderRadius: 16, overflow: 'hidden', position: 'relative' }}>
+                        <div style={{ position: 'relative', zIndex: 2 }}>
+                            <div style={{ color: '#fff', fontSize: 14, opacity: 0.85, marginBottom: 8 }}>Active</div>
+                            <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <CheckCircleOutlined style={{ opacity: 0.8 }} /> {stats.active}
+                            </div>
+                        </div>
+                        <div className="stat-bg-blob blob-green"></div>
                     </Card>
                 </Col>
                 <Col xs={12} sm={12} md={6}>
-                    <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                        <Statistic
-                            title="In Planning"
-                            value={stats.planning}
-                            valueStyle={{ color: '#faad14', fontWeight: 'bold' }}
-                            prefix={<ClockCircleOutlined />}
-                        />
+                    <Card bordered={false} className="stat-card stat-planning" style={{ borderRadius: 16, overflow: 'hidden', position: 'relative' }}>
+                        <div style={{ position: 'relative', zIndex: 2 }}>
+                            <div style={{ color: '#fff', fontSize: 14, opacity: 0.85, marginBottom: 8 }}>In Planning</div>
+                            <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <ClockCircleOutlined style={{ opacity: 0.8 }} /> {stats.planning}
+                            </div>
+                        </div>
+                        <div className="stat-bg-blob blob-orange"></div>
                     </Card>
                 </Col>
                 <Col xs={12} sm={12} md={6}>
-                    <Card bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                        <Statistic
-                            title="Completed"
-                            value={stats.completed}
-                            valueStyle={{ color: '#2f54eb', fontWeight: 'bold' }}
-                            prefix={<CheckCircleOutlined />}
-                        />
+                    <Card bordered={false} className="stat-card stat-completed" style={{ borderRadius: 16, overflow: 'hidden', position: 'relative' }}>
+                        <div style={{ position: 'relative', zIndex: 2 }}>
+                            <div style={{ color: '#fff', fontSize: 14, opacity: 0.85, marginBottom: 8 }}>Completed</div>
+                            <div style={{ color: '#fff', fontSize: 32, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <CheckCircleOutlined style={{ opacity: 0.8 }} /> {stats.completed}
+                            </div>
+                        </div>
+                        <div className="stat-bg-blob blob-purple"></div>
                     </Card>
                 </Col>
             </Row>
@@ -240,30 +246,30 @@ const ProjectsPage: React.FC = () => {
             {/* Main Content Card */}
             <Card
                 bordered={false}
-                style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
-                bodyStyle={{ padding: '20px 24px' }}
+                style={{ borderRadius: 16, boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}
+                bodyStyle={{ padding: isMobile ? '16px' : '20px 24px' }}
             >
                 {/* Toolbar */}
                 <Row justify="space-between" align="middle" style={{ marginBottom: 20 }}>
-                    <Col xs={24} md={12} style={{ display: 'flex', gap: 12, marginBottom: isMobile ? 16 : 0 }}>
+                    <Col xs={24} md={12} style={{ display: 'flex', gap: 12, marginBottom: isMobile ? 16 : 0, flexWrap: 'wrap' }}>
                         <Search
-                            placeholder="Search by name or manager..."
+                            placeholder="Search projects..."
                             allowClear
                             onChange={(e) => setSearchText(e.target.value)}
-                            style={{ width: 250 }}
+                            style={{ width: isMobile ? '100%' : 220 }}
                         />
                         <Select
                             defaultValue="ALL"
-                            style={{ width: 140 }}
+                            style={{ width: isMobile ? 'calc(50% - 6px)' : 130 }}
                             onChange={(val) => setFilterType(val)}
                         >
                             <Option value="ALL">All Types</Option>
                             <Option value="SO_PROJECT">SO Project</Option>
-                            <Option value="GENERAL">General Project</Option>
+                            <Option value="GENERAL">General</Option>
                         </Select>
                         <Select
                             defaultValue="ALL"
-                            style={{ width: 140 }}
+                            style={{ width: isMobile ? 'calc(50% - 6px)' : 130 }}
                             onChange={(val) => setFilterStatus(val)}
                         >
                             <Option value="ALL">All Status</Option>
@@ -273,7 +279,7 @@ const ProjectsPage: React.FC = () => {
                             <Option value="ON_HOLD">On Hold</Option>
                         </Select>
                     </Col>
-                    <Col xs={24} md={12} style={{ textAlign: isMobile ? 'left' : 'right', display: 'flex', justifyContent: isMobile ? 'flex-start' : 'flex-end', gap: 12 }}>
+                    <Col xs={24} md={12} style={{ textAlign: isMobile ? 'left' : 'right', display: 'flex', justifyContent: isMobile ? 'space-between' : 'flex-end', gap: 12 }}>
                         <Radio.Group value={viewMode} onChange={(e) => setViewMode(e.target.value)} buttonStyle="solid">
                             <Radio.Button value="grid"><AppstoreOutlined /></Radio.Button>
                             <Radio.Button value="list"><BarsOutlined /></Radio.Button>
@@ -300,10 +306,11 @@ const ProjectsPage: React.FC = () => {
                             onClick: () => navigate(`/projects/${record.id}`)
                         })}
                         style={{ cursor: 'pointer' }}
+                        scroll={{ x: 800 }}
                     />
                 ) : (
                     <List
-                        grid={{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 3, xl: 4, xxl: 4 }}
+                        grid={{ gutter: 20, xs: 1, sm: 2, md: 3, lg: 3, xl: 4, xxl: 4 }}
                         dataSource={filteredProjects}
                         loading={loading}
                         renderItem={r => (
@@ -312,54 +319,67 @@ const ProjectsPage: React.FC = () => {
                                     hoverable
                                     className="project-card"
                                     onClick={() => navigate(`/projects/${r.id}`)}
-                                    style={{ borderRadius: 12, border: '1px solid #f0f0f0', height: '100%', display: 'flex', flexDirection: 'column' }}
+                                    style={{ borderRadius: 16, border: '1px solid #f0f0f0', height: '100%', display: 'flex', flexDirection: 'column' }}
                                     bodyStyle={{ padding: 20, flex: 1, display: 'flex', flexDirection: 'column' }}
                                 >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                                            <Avatar size={40} style={{ backgroundColor: '#e6f7ff', color: '#1890ff', flexShrink: 0 }}>
-                                                <FolderOutlined style={{ fontSize: 20 }} />
-                                            </Avatar>
-                                            <div style={{ overflow: 'hidden' }}>
-                                                <Title level={5} style={{ margin: 0, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={r.title}>
-                                                    {r.project_type === 'SO_PROJECT' && <Tag color="magenta">Đơn Hàng</Tag>}
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flex: 1, minWidth: 0 }}>
+                                            <div style={{
+                                                width: 48, height: 48, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                                background: r.project_type === 'SO_PROJECT' ? 'linear-gradient(135deg, #ff7875 0%, #f5222d 100%)' : 'linear-gradient(135deg, #69c0ff 0%, #1890ff 100%)',
+                                                color: '#fff',
+                                                boxShadow: r.project_type === 'SO_PROJECT' ? '0 4px 12px rgba(245,34,45,0.2)' : '0 4px 12px rgba(24,144,255,0.2)'
+                                            }}>
+                                                <FolderOutlined style={{ fontSize: 24 }} />
+                                            </div>
+                                            <div style={{ overflow: 'hidden', flex: 1 }}>
+                                                <Title level={5} style={{ margin: 0, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#1f1f1f', fontWeight: 600 }} title={r.title}>
                                                     {r.title}
                                                 </Title>
-                                                <Text type="secondary" style={{ fontSize: 12 }}>
-                                                    {r.start_date ? dayjs(r.start_date).format('MMM DD') : 'TBD'} &rarr; {r.end_date ? dayjs(r.end_date).format('MMM DD') : 'TBD'}
-                                                </Text>
+                                                <Space size={4} wrap>
+                                                    {r.project_type === 'SO_PROJECT' && <Tag color="magenta" style={{ border: 'none', background: '#fff0f6', color: '#eb2f96', margin: 0, fontSize: 11 }}>Đơn Hàng</Tag>}
+                                                    <Text type="secondary" style={{ fontSize: 12 }}>
+                                                        {r.start_date ? dayjs(r.start_date).format('MMM DD') : 'TBD'} &rarr; {r.end_date ? dayjs(r.end_date).format('MMM DD') : 'TBD'}
+                                                    </Text>
+                                                </Space>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div style={{ marginBottom: 16, marginTop: 'auto' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                                            <Text type="secondary" style={{ fontSize: 13 }}>Progress</Text>
-                                            <Text strong style={{ fontSize: 13 }}>{getProgress(r)}%</Text>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                                            <Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>Progress</Text>
+                                            <Text strong style={{ fontSize: 13, color: getProgress(r) === 100 ? '#52c41a' : '#1890ff' }}>{getProgress(r)}%</Text>
                                         </div>
-                                        <Progress percent={getProgress(r)} showInfo={false} size="small" status={r.status === 'ACTIVE' ? 'active' : 'normal'} strokeColor={STATUS_COLORS[r.status] === 'default' ? undefined : STATUS_COLORS[r.status]} />
+                                        <Progress 
+                                            percent={getProgress(r)} 
+                                            showInfo={false} 
+                                            size="small" 
+                                            status={r.status === 'ACTIVE' ? 'active' : 'normal'} 
+                                            strokeColor={getProgress(r) === 100 ? '#52c41a' : { '0%': '#108ee9', '100%': '#87d068' }}
+                                        />
                                     </div>
 
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f0f0f0', paddingTop: 16, marginTop: 8 }}>
-                                        <Space>
+                                        <Space size={4}>
                                             <Tooltip title={r.manager?.full_name || 'Unassigned Manager'}>
                                                 {r.manager ? (
-                                                    <Avatar size="small" style={{ backgroundColor: '#1890ff' }}>{getInitials(r.manager.full_name)}</Avatar>
+                                                    <Avatar size="small" style={{ backgroundColor: '#1890ff', border: '1px solid #fff' }}>{getInitials(r.manager.full_name)}</Avatar>
                                                 ) : (
-                                                    <Avatar size="small" icon={<UserOutlined />} />
+                                                    <Avatar size="small" icon={<UserOutlined />} style={{ border: '1px solid #fff' }} />
                                                 )}
                                             </Tooltip>
                                             {(r.members?.length > 0) && (
                                                 <Avatar.Group maxCount={3} size="small" maxStyle={{ color: '#f56a00', backgroundColor: '#fde3cf' }}>
                                                     {r.members.map((m: any) => (
                                                         <Tooltip title={m.full_name} key={m.id}>
-                                                            <Avatar style={{ backgroundColor: '#87d068' }}>{getInitials(m.full_name)}</Avatar>
+                                                            <Avatar style={{ backgroundColor: '#87d068', border: '1px solid #fff' }}>{getInitials(m.full_name)}</Avatar>
                                                         </Tooltip>
                                                     ))}
                                                 </Avatar.Group>
                                             )}
                                         </Space>
-                                        <Tag color={STATUS_COLORS[r.status] || 'default'} style={{ margin: 0 }}>
+                                        <Tag color={STATUS_COLORS[r.status] || 'default'} style={{ margin: 0, borderRadius: 4, border: 'none', fontWeight: 500 }}>
                                             {STATUS_LABELS[r.status] || r.status}
                                         </Tag>
                                     </div>
@@ -398,7 +418,7 @@ const ProjectsPage: React.FC = () => {
                             <Form.Item name="project_type" label="Project Type">
                                 <Select size="large">
                                     <Option value="GENERAL">General Project</Option>
-                                    <Option value="SO_PROJECT" disabled>Sales Order Project (Auto-created)</Option>
+                                    <Option value="SO_PROJECT" disabled>Sales Order Project</Option>
                                 </Select>
                             </Form.Item>
                         </Col>
@@ -427,13 +447,51 @@ const ProjectsPage: React.FC = () => {
             </Modal>
 
             <style>{`
+                .stat-card {
+                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05) !important;
+                    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
+                }
+                .stat-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.1) !important;
+                }
+                .stat-total { background: linear-gradient(135deg, #1890ff 0%, #0050b3 100%); }
+                .stat-active { background: linear-gradient(135deg, #52c41a 0%, #237804 100%); }
+                .stat-planning { background: linear-gradient(135deg, #faad14 0%, #ad6800 100%); }
+                .stat-completed { background: linear-gradient(135deg, #722ed1 0%, #391085 100%); }
+                .stat-bg-blob {
+                    position: absolute;
+                    width: 120px;
+                    height: 120px;
+                    border-radius: 50%;
+                    filter: blur(25px);
+                    right: -20px;
+                    bottom: -30px;
+                    opacity: 0.2;
+                    z-index: 1;
+                    mix-blend-mode: overlay;
+                }
+                .blob-blue { background: #ffffff; }
+                .blob-green { background: #ffffff; }
+                .blob-orange { background: #ffffff; }
+                .blob-purple { background: #ffffff; }
+
                 .project-card {
                     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
                 }
                 .project-card:hover {
-                    transform: translateY(-4px);
-                    box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
-                    border-color: #e6f7ff !important;
+                    transform: translateY(-6px);
+                    box-shadow: 0 12px 24px rgba(0,0,0,0.08) !important;
+                    border-color: #bae7ff !important;
+                }
+                
+                /* Custom scrollbar for table */
+                .ant-table-body::-webkit-scrollbar {
+                    height: 8px;
+                }
+                .ant-table-body::-webkit-scrollbar-thumb {
+                    background: #d9d9d9;
+                    border-radius: 4px;
                 }
             `}</style>
         </div>
