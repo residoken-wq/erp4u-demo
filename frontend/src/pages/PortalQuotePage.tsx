@@ -1677,50 +1677,79 @@ const PortalQuotePage: React.FC = () => {
 
                         {/* --- PAYMENT HISTORY & QR --- */}
                         <Card title={<span><DollarOutlined /> Thanh Toán & Lịch Sử</span>} size="small" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.03)', borderRadius: 12 }}>
-                            <div style={{ textAlign: 'center', marginBottom: 20, padding: 10, background: '#fcfcfc', borderRadius: 8 }}>
-                                <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>Quét mã để thanh toán</div>
-                                {(() => {
-                                    const totalAmount = Number(data.total_amount) || 0;
-                                    const depositAmount = Number(data.deposit_amount) || 0;
-                                    const paidAmount = Number(data.paid_amount) || 0;
-                                    const remaining = totalAmount - paidAmount;
+                            {(() => {
+                                const totalAmount = Number(data.total_amount) || 0;
+                                const depositAmount = Number(data.deposit_amount) || 0;
+                                const paidAmount = Number(data.paid_amount) || 0;
+                                const remaining = totalAmount - paidAmount;
 
-                                    let qrAmount = totalAmount;
-                                    if (depositAmount > 0 && paidAmount === 0) {
-                                        qrAmount = depositAmount;
-                                    } else if (paidAmount > 0) {
-                                        qrAmount = remaining > 0 ? remaining : 0;
-                                    }
-                                    
-                                    const sellerBankName = data.company_info?.COMPANY_BANK_NAME || 'ACB - TP.HCM';
-                                    const sellerBankAccount = data.company_info?.COMPANY_BANK_ACCOUNT || '141847859';
-                                    const sellerBankHolder = data.company_info?.COMPANY_BANK_HOLDER || 'CTY TNHH TM DV TUONG LINH';
-                                    const rawBankCode = getVietQRBankCode(sellerBankName);
-                                    
-                                    const drafts = (data.payments || []).filter((p: any) => p.status === 'DRAFT');
+                                let qrAmount = totalAmount;
+                                if (depositAmount > 0 && paidAmount === 0) {
+                                    qrAmount = depositAmount;
+                                } else if (paidAmount > 0) {
+                                    qrAmount = remaining > 0 ? remaining : 0;
+                                }
+                                
+                                const sellerBankName = data.company_info?.COMPANY_BANK_NAME || 'ACB - TP.HCM';
+                                const sellerBankAccount = data.company_info?.COMPANY_BANK_ACCOUNT || '141847859';
+                                const sellerBankHolder = data.company_info?.COMPANY_BANK_HOLDER || 'CTY TNHH TM DV TUONG LINH';
+                                const rawBankCode = getVietQRBankCode(sellerBankName);
+                                
+                                const pendingDrafts = (data.payments || []).filter((p: any) => p.status === 'DRAFT');
+                                const hasPayments = data.payments && data.payments.length > 0;
 
-                                    if (drafts.length > 0) {
-                                        return (
-                                            <div>
-                                                {drafts.map((draft: any) => (
-                                                    <div key={draft.id} style={{ marginBottom: 16, padding: 12, border: '1px solid #faad14', borderRadius: 8, background: '#fffbe6' }}>
-                                                        <div style={{ color: '#d46b08', fontWeight: 'bold', marginBottom: 8 }}>YÊU CẦU THANH TOÁN</div>
-                                                        <img src={`https://img.vietqr.io/image/${rawBankCode}-${sellerBankAccount}-compact2.jpg?amount=${Math.floor(draft.amount)}&addInfo=${data.order_code}&accountName=${encodeURIComponent(sellerBankHolder)}`} alt="VietQR" style={{ width: 160 }} />
-                                                        <div style={{ marginTop: 8, fontSize: 13, textAlign: 'left', lineHeight: '1.5' }}>
-                                                            <div>Số tiền: <b style={{ color: 'red' }}>{Number(draft.amount).toLocaleString()}đ</b></div>
-                                                            {draft.description && <div>Nội dung: {draft.description}</div>}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        );
-                                    }
-
+                                // 1. Có thanh toán nháp (trạng thái khác Đã thu / Hoàn tất) -> CHỈ hiển thị mã QR cho các đợt này
+                                if (pendingDrafts.length > 0) {
                                     return (
-                                        <img src={`https://img.vietqr.io/image/${rawBankCode}-${sellerBankAccount}-compact2.jpg?amount=${Math.floor(qrAmount)}&addInfo=${data.order_code}&accountName=${encodeURIComponent(sellerBankHolder)}`} alt="VietQR" style={{ width: 160 }} />
+                                        <div style={{ textAlign: 'center', marginBottom: 20, padding: 10, background: '#fcfcfc', borderRadius: 8 }}>
+                                            <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>Quét mã để thanh toán</div>
+                                            {pendingDrafts.map((draft: any) => (
+                                                <div key={draft.id} style={{ marginBottom: 12, padding: 12, border: '1px solid #faad14', borderRadius: 8, background: '#fffbe6' }}>
+                                                    <div style={{ color: '#d46b08', fontWeight: 'bold', marginBottom: 8, fontSize: 14 }}>YÊU CẦU THANH TOÁN</div>
+                                                    <img 
+                                                        src={`https://img.vietqr.io/image/${rawBankCode}-${sellerBankAccount}-compact2.jpg?amount=${Math.floor(draft.amount)}&addInfo=${encodeURIComponent(data.order_code)}&accountName=${encodeURIComponent(sellerBankHolder)}`} 
+                                                        alt="VietQR" 
+                                                        style={{ width: 160, borderRadius: 6 }} 
+                                                    />
+                                                    <div style={{ marginTop: 8, fontSize: 13, textAlign: 'left', lineHeight: '1.6', background: '#fff', padding: '8px 12px', borderRadius: 6, border: '1px solid #ffe58f' }}>
+                                                        <div>Số tiền: <b style={{ color: '#cf1322', fontSize: 15 }}>{Number(draft.amount).toLocaleString()}đ</b></div>
+                                                        {draft.description && <div>Nội dung CK: <b>{draft.description}</b></div>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     );
-                                })()}
-                            </div>
+                                }
+
+                                // 2. Đã có các đợt thanh toán và tất cả đều đã Hoàn tất / Đã thu -> KHÔNG hiển thị mã QR
+                                if (hasPayments) {
+                                    return (
+                                        <div style={{ textAlign: 'center', margin: '10px 0 20px', padding: '16px 12px', background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f' }}>
+                                            <CheckCircleOutlined style={{ fontSize: 28, color: '#52c41a', marginBottom: 4 }} />
+                                            <div style={{ fontWeight: 600, color: '#389e0d', fontSize: 14 }}>
+                                                {remaining <= 0 ? 'Đã hoàn tất thanh toán' : 'Đã xác nhận các đợt thanh toán'}
+                                            </div>
+                                            <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
+                                                {remaining <= 0 
+                                                    ? 'Đơn hàng đã được thanh toán đầy đủ.' 
+                                                    : 'Hiện chưa có yêu cầu thanh toán đợt tiếp theo.'}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                // 3. Đơn hàng mới tinh chưa có bất kỳ thanh toán nào
+                                if (remaining > 0) {
+                                    return (
+                                        <div style={{ textAlign: 'center', marginBottom: 20, padding: 10, background: '#fcfcfc', borderRadius: 8 }}>
+                                            <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>Quét mã để thanh toán</div>
+                                            <img src={`https://img.vietqr.io/image/${rawBankCode}-${sellerBankAccount}-compact2.jpg?amount=${Math.floor(qrAmount)}&addInfo=${encodeURIComponent(data.order_code)}&accountName=${encodeURIComponent(sellerBankHolder)}`} alt="VietQR" style={{ width: 160 }} />
+                                        </div>
+                                    );
+                                }
+
+                                return null;
+                            })()}
 
                             <Divider orientation="left" style={{ fontSize: 12, color: '#bbb' }}>Chi tiết giao dịch</Divider>
 
@@ -1728,31 +1757,35 @@ const PortalQuotePage: React.FC = () => {
                                 isMobile ? (
                                     <List dataSource={data.payments} renderItem={(r: any) => {
                                         let text = r.type === 'INCOME' ? 'Thanh toán' : 'Hoàn tiền';
-                                        let color = r.type === 'INCOME' ? 'success' : 'red';
-                                        if (r.status === 'DRAFT') {
-                                            text = 'Chờ thanh toán (Nháp)';
-                                            color = 'warning';
-                                        }
+                                        let color = r.type === 'INCOME' ? 'blue' : 'red';
                                         let desc = r.description || '';
                                         const match = desc.match(/^\[(.*?)\]/);
                                         if (match) {
-                                            if (r.status !== 'DRAFT') text = match[1]; 
+                                            text = match[1];
                                             desc = desc.replace(match[0], '').trim();
-                                            if (r.status !== 'DRAFT') {
-                                                if (match[1].includes('ĐẶT CỌC')) color = 'orange';
-                                                if (match[1].includes('TẤT TOÁN')) color = 'blue';
-                                            }
+                                            if (match[1].includes('ĐẶT CỌC')) color = 'orange';
+                                            if (match[1].includes('TẤT TOÁN')) color = 'purple';
+                                            if (match[1].includes('THANH TOÁN')) color = 'blue';
                                         }
                                         return (
-                                            <div style={{ padding: '8px 0', borderBottom: '1px dashed #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ padding: '10px 0', borderBottom: '1px dashed #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <div>
-                                                    <div style={{ fontSize: 12, color: '#999' }}>{dayjs(r.date).format('DD/MM/YYYY')}</div>
-                                                    <div><Tag color={color}>{text}</Tag></div>
-                                                    {desc && <div style={{ fontSize: 11, color: '#666' }}>{desc}</div>}
+                                                    <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>{dayjs(r.date || r.created_at).format('DD/MM/YYYY')}</div>
+                                                    <Space size={4} wrap>
+                                                        <Tag color={color}>{text}</Tag>
+                                                        {r.status === 'DRAFT' ? (
+                                                            <Tag color="warning">Chờ thanh toán</Tag>
+                                                        ) : (
+                                                            <Tag color="success">Đã thu</Tag>
+                                                        )}
+                                                    </Space>
+                                                    {desc && <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>{desc}</div>}
                                                 </div>
-                                                <div style={{ fontWeight: 700, fontSize: 14 }}>{Number(r.amount).toLocaleString()}</div>
+                                                <div style={{ fontWeight: 700, fontSize: 14, color: r.status === 'DRAFT' ? '#faad14' : '#389e0d' }}>
+                                                    {Number(r.amount).toLocaleString()}đ
+                                                </div>
                                             </div>
-                                        )
+                                        );
                                     }} />
                                 ) : (
                                     <Table
@@ -1761,40 +1794,58 @@ const PortalQuotePage: React.FC = () => {
                                         pagination={false}
                                         size="small"
                                         columns={[
-                                            { title: 'Ngày', render: (r: any) => dayjs(r.date).format('DD/MM/YYYY') },
+                                            { 
+                                                title: 'Ngày', 
+                                                width: 100,
+                                                render: (r: any) => dayjs(r.date || r.created_at).format('DD/MM/YYYY') 
+                                            },
                                             {
                                                 title: 'Loại',
                                                 render: (r: any) => {
                                                     let text = r.type === 'INCOME' ? 'Thanh toán' : 'Hoàn tiền';
-                                                    let color = r.type === 'INCOME' ? 'success' : 'red';
-                                                    if (r.status === 'DRAFT') {
-                                                        text = 'Chờ thanh toán (Nháp)';
-                                                        color = 'warning';
-                                                    }
+                                                    let color = r.type === 'INCOME' ? 'blue' : 'red';
                                                     let desc = r.description || '';
 
-                                                    // Try to parse [TYPE] from description (saved in SalesPayments.tsx)
-                                                    // Format: [ĐẶT CỌC] Note...
                                                     const match = desc.match(/^\[(.*?)\]/);
                                                     if (match) {
-                                                        if (r.status !== 'DRAFT') text = match[1]; // e.g. "ĐẶT CỌC", "TẤT TOÁN"
+                                                        text = match[1];
                                                         desc = desc.replace(match[0], '').trim();
-                                                        if (r.status !== 'DRAFT') {
-                                                            if (match[1].includes('ĐẶT CỌC')) color = 'orange';
-                                                            if (match[1].includes('TẤT TOÁN')) color = 'blue';
-                                                            if (match[1].includes('THANH TOÁN')) color = 'green';
-                                                        }
+                                                        if (match[1].includes('ĐẶT CỌC')) color = 'orange';
+                                                        if (match[1].includes('TẤT TOÁN')) color = 'purple';
+                                                        if (match[1].includes('THANH TOÁN')) color = 'blue';
                                                     }
 
                                                     return (
                                                         <div>
                                                             <Tag color={color}>{text}</Tag>
-                                                            {desc && <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>{desc}</div>}
+                                                            {desc && <div style={{ fontSize: 11, color: '#888', marginTop: 3 }}>{desc}</div>}
                                                         </div>
                                                     );
                                                 }
                                             },
-                                            { title: 'Số tiền', align: 'right', render: (r: any) => <b>{Number(r.amount).toLocaleString()}</b> },
+                                            {
+                                                title: 'Trạng thái',
+                                                width: 130,
+                                                render: (r: any) => {
+                                                    if (r.status === 'DRAFT') {
+                                                        return <Tag color="warning">Chờ thanh toán</Tag>;
+                                                    }
+                                                    if (r.status === 'CANCELLED') {
+                                                        return <Tag color="default">Đã hủy</Tag>;
+                                                    }
+                                                    return <Tag color="success">Đã thu</Tag>;
+                                                }
+                                            },
+                                            { 
+                                                title: 'Số tiền', 
+                                                align: 'right' as const, 
+                                                width: 120,
+                                                render: (r: any) => (
+                                                    <b style={{ color: r.status === 'DRAFT' ? '#faad14' : (r.type === 'EXPENSE' ? 'red' : '#389e0d') }}>
+                                                        {Number(r.amount).toLocaleString()}
+                                                    </b>
+                                                ) 
+                                            },
                                         ]}
                                     />
                                 )

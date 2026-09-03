@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Table, Button, Statistic, Row, Col, Divider, Modal, Form, InputNumber, Radio, Input, message, DatePicker, Tag, Space, Tooltip } from 'antd';
-import { DollarOutlined, QrcodeOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Table, Button, Statistic, Row, Col, Divider, Modal, Form, InputNumber, Radio, Input, message, DatePicker, Tag, Space, Tooltip, Popconfirm } from 'antd';
+import { DollarOutlined, QrcodeOutlined, CheckCircleOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
 import dayjs from 'dayjs';
 import AttachmentUpload from '../common/AttachmentUpload';
@@ -20,8 +20,9 @@ interface Props {
 
 const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidAmount, customerName, customerId, orderStatus, onSuccess }) => {
     const [history, setHistory] = useState<any[]>([]);
-    const [settings, setSettings] = useState<any>(null);
+    const [companyConfig, setCompanyConfig] = useState<any>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingPayment, setEditingPayment] = useState<any>(null);
     const [amount, setAmount] = useState<number>(0);
     const [type, setType] = useState('DEPOSIT');
     const [note, setNote] = useState('');
@@ -41,18 +42,20 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
         }
     };
 
-    const fetchSettings = async () => {
+    const fetchCompanyConfig = async () => {
         try {
-            const res = await api.get('/system/settings');
-            setSettings(res.data);
+            const res = await api.get('/system/company');
+            setCompanyConfig(res.data);
+            return res.data;
         } catch (e) {
             console.error(e);
+            return null;
         }
     };
 
     useEffect(() => {
         fetchHistory();
-        fetchSettings();
+        fetchCompanyConfig();
     }, [orderCode]);
 
     const realTimePaidAmount = useMemo(() => {
@@ -61,7 +64,7 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
 
     const remainingAmount = Math.round(totalAmount - realTimePaidAmount);
 
-    const handlePayment = async (status: 'DRAFT' | 'COMPLETED') => {
+    const handlePayment = async (targetStatus: 'DRAFT' | 'COMPLETED') => {
         if (amount <= 0) return message.warning('Nhập số tiền hợp lệ');
 
         const overpayment = amount - remainingAmount;
@@ -70,54 +73,68 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
         const prefix = type === 'DEPOSIT' ? '[ĐẶT CỌC]' : type === 'FINAL' ? '[TẤT TOÁN]' : '[THANH TOÁN]';
         let finalNote = `${prefix} ${note}`.trim();
 
-        if (isOverpaying && status === 'COMPLETED') {
+        if (isOverpaying && targetStatus === 'COMPLETED') {
             finalNote += ` | Số dư: ${overpayment.toLocaleString()}đ - ${overpaymentAction === 'REFUND' ? 'Hoàn tiền' : 'Tạo Credit cho KH'}`;
         }
 
         try {
-            // 1. Create payment transaction
-            await api.post(`/finance/payment`, {
-                type: 'INCOME',
-                amount,
-                refCode: orderCode,
-                note: finalNote,
-                customerName: customerName,
-                date: date,
-                attachments: attachments,
-                status: status
-            });
+            if (editingPayment) {
+                // 1. Cập nhật thanh toán nháp hiện có
+                await api.put(`/finance/transactions/${editingPayment.id}`, {
+                    amount,
+                    date: date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                    description: finalNote,
+                    attachments: attachments,
+                    status: targetStatus
+                });
+                message.success(targetStatus === 'DRAFT' ? 'Đã cập nhật thanh toán nháp!' : 'Đã xác nhận thu tiền thành công!');
+            } else {
+                // 1. Tạo thanh toán mới
+                await api.post(`/finance/payment`, {
+                    type: 'INCOME',
+                    amount,
+                    refCode: orderCode,
+                    note: finalNote,
+                    customerName: customerName,
+                    date: date,
+                    attachments: attachments,
+                    status: targetStatus
+                });
 
-            // 2. If overpayment and COMPLETED, handle based on action
-            if (isOverpaying && status === 'COMPLETED') {
-                if (overpaymentAction === 'CREDIT') {
-                    if (customerId) {
-                        await api.post(`/customers/${customerId}/credits`, {
+                // 2. If overpayment and COMPLETED, handle based on action
+                if (isOverpaying && targetStatus === 'COMPLETED') {
+                    if (overpaymentAction === 'CREDIT') {
+                        if (customerId) {
+                            await api.post(`/customers/${customerId}/credits`, {
+                                amount: overpayment,
+                                type: 'ADD',
+                                reference_code: orderCode,
+                                note: `Số dư từ đơn ${orderCode} - Khách hàng: ${customerName}`,
+                            });
+                            message.success(`Đã tạo Credit ${overpayment.toLocaleString()}đ cho khách hàng!`);
+                        } else {
+                            message.warning(`Không thể tạo Credit vì không xác định được ID khách hàng.`);
+                        }
+                    } else if (overpaymentAction === 'REFUND') {
+                        // Create refund expense transaction
+                        await api.post(`/finance/transactions`, {
+                            type: 'EXPENSE',
                             amount: overpayment,
-                            type: 'ADD',
                             reference_code: orderCode,
-                            note: `Số dư từ đơn ${orderCode} - Khách hàng: ${customerName}`,
+                            reference_type: 'SALES_REFUND',
+                            description: `[HOÀN TIỀN] Số dư từ đơn ${orderCode} - Khách hàng: ${customerName}`,
+                            partner_name: customerName,
+                            date: date?.format('YYYY-MM-DD') || new Date().toISOString().split('T')[0]
                         });
-                        message.success(`Đã tạo Credit ${overpayment.toLocaleString()}đ cho khách hàng!`);
-                    } else {
-                        message.warning(`Không thể tạo Credit vì không xác định được ID khách hàng.`);
+                        message.success(`Đã ghi nhận hoàn tiền ${overpayment.toLocaleString()}đ!`);
                     }
-                } else if (overpaymentAction === 'REFUND') {
-                    // Create refund expense transaction
-                    await api.post(`/finance/transactions`, {
-                        type: 'EXPENSE',
-                        amount: overpayment,
-                        reference_code: orderCode,
-                        reference_type: 'SALES_REFUND',
-                        description: `[HOÀN TIỀN] Số dư từ đơn ${orderCode} - Khách hàng: ${customerName}`,
-                        partner_name: customerName,
-                        date: date?.format('YYYY-MM-DD') || new Date().toISOString().split('T')[0]
-                    });
-                    message.success(`Đã ghi nhận hoàn tiền ${overpayment.toLocaleString()}đ!`);
                 }
+
+                message.success(targetStatus === 'DRAFT' ? 'Đã tạo yêu cầu thanh toán (Nháp)!' : 'Đã lưu thanh toán!');
             }
 
-            message.success(status === 'DRAFT' ? 'Đã tạo yêu cầu thanh toán (Nháp)!' : 'Đã lưu thanh toán!');
             setIsModalOpen(false);
+            setEditingPayment(null);
             setAmount(0);
             setNote('');
             setDate(dayjs());
@@ -141,6 +158,54 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
         }
     };
 
+    const handleDeleteDraft = async (id: number) => {
+        try {
+            await api.delete(`/finance/transactions/${id}`);
+            message.success('Đã xóa đợt thanh toán nháp thành công!');
+            if (editingPayment?.id === id) {
+                setIsModalOpen(false);
+                setEditingPayment(null);
+            }
+            await fetchHistory();
+            onSuccess();
+        } catch (e) {
+            message.error('Lỗi khi xóa đợt thanh toán');
+        }
+    };
+
+    const handleOpenEdit = (item: any) => {
+        setEditingPayment(item);
+        setAmount(Number(item.amount) || 0);
+        setDate(item.date ? dayjs(item.date) : (item.created_at ? dayjs(item.created_at) : dayjs()));
+        setAttachments(item.attachments || []);
+
+        const desc = item.description || '';
+        let parsedType = 'DEPOSIT';
+        let parsedNote = desc;
+        const match = desc.match(/^\[(.*?)\]/);
+        if (match) {
+            if (match[1].includes('ĐẶT CỌC')) parsedType = 'DEPOSIT';
+            else if (match[1].includes('TẤT TOÁN')) parsedType = 'FINAL';
+            else if (match[1].includes('THANH TOÁN')) parsedType = 'PAYMENT';
+            parsedNote = desc.replace(match[0], '').trim();
+        }
+        setType(parsedType);
+        setNote(parsedNote);
+        setIsModalOpen(true);
+    };
+
+    const openModal = () => {
+        setEditingPayment(null);
+        // Gợi ý số tiền còn lại khi mở modal
+        const remain = totalAmount - realTimePaidAmount;
+        setAmount(remain > 0 ? remain : 0);
+        setNote('');
+        setType('DEPOSIT');
+        setDate(dayjs());
+        setAttachments([]);
+        setIsModalOpen(true);
+    };
+
     const handleUpdateAttachments = async (transactionId: number, newAttachments: string[]) => {
         // 1. Optimistic Update
         const oldHistory = [...history];
@@ -162,26 +227,29 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
         }
     };
 
-    const openModal = () => {
-        // Gợi ý số tiền còn lại khi mở modal
-        const remain = totalAmount - realTimePaidAmount;
-        setAmount(remain > 0 ? remain : 0);
-        setNote('');
-        setAttachments([]);
-        setIsModalOpen(true);
-    };
 
-    const showQR = (item: any) => {
-        if (!settings) return message.warning('Chưa cấu hình tài khoản ngân hàng trong hệ thống.');
-        const rawBankCode = getVietQRBankCode(settings.bank);
-        if (!rawBankCode || !settings.bank_account) {
-            return message.warning('Cấu hình tài khoản ngân hàng chưa đầy đủ.');
+
+    const showQR = async (item: any) => {
+        let config = companyConfig;
+        if (!config) {
+            config = await fetchCompanyConfig();
         }
+
+        const bankName = config?.COMPANY_BANK_NAME || 'ACB - TP.HCM';
+        const bankAccount = config?.COMPANY_BANK_ACCOUNT || '141847859';
+        const bankHolder = config?.COMPANY_BANK_HOLDER || 'CTY TNHH TM DV TUONG LINH';
+
+        if (!bankAccount) {
+            return message.warning('Chưa cấu hình tài khoản ngân hàng trong hệ thống (Cài đặt > Doanh nghiệp & Ngân hàng).');
+        }
+
+        const rawBankCode = getVietQRBankCode(bankName);
         setQrModalData({
             amount: item.amount,
             bankCode: rawBankCode,
-            bankAccount: settings.bank_account,
-            bankHolder: settings.bank_holder,
+            bankName: bankName,
+            bankAccount: bankAccount,
+            bankHolder: bankHolder,
             description: orderCode
         });
     };
@@ -251,7 +319,7 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
                     {
                         title: 'Trạng thái',
                         dataIndex: 'status',
-                        width: 150,
+                        width: 175,
                         render: (status: string, r: any) => (
                             <Space direction="vertical" size="small">
                                 {status === 'DRAFT' ? (
@@ -260,12 +328,26 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
                                     <Tag color="success">Đã Thu</Tag>
                                 )}
                                 {status === 'DRAFT' && (
-                                    <Space size="small">
+                                    <Space size={4}>
                                         <Tooltip title="Xem QR">
                                             <Button size="small" icon={<QrcodeOutlined />} onClick={() => showQR(r)} />
                                         </Tooltip>
+                                        <Tooltip title="Sửa thanh toán nháp">
+                                            <Button size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(r)} />
+                                        </Tooltip>
                                         <Tooltip title="Xác nhận đã thu">
                                             <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={() => handleConfirmPayment(r.id)} />
+                                        </Tooltip>
+                                        <Tooltip title="Xóa nháp">
+                                            <Popconfirm
+                                                title="Xóa đợt thanh toán nháp này?"
+                                                onConfirm={() => handleDeleteDraft(r.id)}
+                                                okText="Xóa"
+                                                cancelText="Hủy"
+                                                okButtonProps={{ danger: true }}
+                                            >
+                                                <Button size="small" danger icon={<DeleteOutlined />} />
+                                            </Popconfirm>
                                         </Tooltip>
                                     </Space>
                                 )}
@@ -290,18 +372,32 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
             />
 
             <Modal 
-                title="Thêm Đợt Thanh Toán" 
+                title={editingPayment ? `Chỉnh Sửa Đợt Thanh Toán Nháp (#${editingPayment.id})` : "Thêm Đợt Thanh Toán"} 
                 open={isModalOpen} 
-                onCancel={() => setIsModalOpen(false)}
+                onCancel={() => { setIsModalOpen(false); setEditingPayment(null); }}
                 footer={[
-                    <Button key="cancel" onClick={() => setIsModalOpen(false)}>
+                    editingPayment && (
+                        <Popconfirm
+                            key="delete"
+                            title="Xóa đợt thanh toán nháp này?"
+                            onConfirm={() => handleDeleteDraft(editingPayment.id)}
+                            okText="Xóa"
+                            cancelText="Hủy"
+                            okButtonProps={{ danger: true }}
+                        >
+                            <Button danger type="text" icon={<DeleteOutlined />} style={{ float: 'left' }}>
+                                Xóa Nháp
+                            </Button>
+                        </Popconfirm>
+                    ),
+                    <Button key="cancel" onClick={() => { setIsModalOpen(false); setEditingPayment(null); }}>
                         Hủy
                     </Button>,
                     <Button key="draft" type="default" onClick={() => handlePayment('DRAFT')} style={{ borderColor: '#faad14', color: '#faad14' }}>
-                        Tạo Nháp (Lấy QR)
+                        {editingPayment ? 'Lưu Nháp' : 'Tạo Nháp (Lấy QR)'}
                     </Button>,
                     <Button key="submit" type="primary" onClick={() => handlePayment('COMPLETED')}>
-                        Lưu Đã Thu Tiền
+                        {editingPayment ? 'Xác Nhận Đã Thu' : 'Lưu Đã Thu Tiền'}
                     </Button>
                 ]}
             >
@@ -358,21 +454,21 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
                     open={!!qrModalData}
                     onCancel={() => setQrModalData(null)}
                     footer={null}
-                    width={400}
+                    width={420}
                     centered
                 >
                     <div style={{ textAlign: 'center' }}>
                         <img 
-                            src={`https://img.vietqr.io/image/${qrModalData.bankCode}-${qrModalData.bankAccount}-compact2.jpg?amount=${Math.floor(qrModalData.amount)}&addInfo=${qrModalData.description}&accountName=${encodeURIComponent(qrModalData.bankHolder)}`} 
+                            src={`https://img.vietqr.io/image/${qrModalData.bankCode}-${qrModalData.bankAccount}-compact2.jpg?amount=${Math.floor(qrModalData.amount)}&addInfo=${encodeURIComponent(qrModalData.description)}&accountName=${encodeURIComponent(qrModalData.bankHolder)}`} 
                             alt="VietQR" 
-                            style={{ width: '100%', maxWidth: 300, borderRadius: 8, marginBottom: 16 }} 
+                            style={{ width: '100%', maxWidth: 280, borderRadius: 8, marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }} 
                         />
-                        <div style={{ fontSize: 16 }}>
-                            <b>Ngân hàng:</b> {settings?.bank}<br />
-                            <b>Số tài khoản:</b> {qrModalData.bankAccount}<br />
-                            <b>Chủ tài khoản:</b> {qrModalData.bankHolder}<br />
-                            <b>Số tiền:</b> <span style={{ color: 'red', fontWeight: 'bold' }}>{Number(qrModalData.amount).toLocaleString()}đ</span><br />
-                            <b>Nội dung:</b> {qrModalData.description}
+                        <div style={{ fontSize: 13, textAlign: 'left', background: '#fafafa', padding: 14, borderRadius: 8, border: '1px solid #f0f0f0', lineHeight: 1.8 }}>
+                            <div><b>Ngân hàng:</b> {qrModalData.bankName} <b>({qrModalData.bankCode})</b></div>
+                            <div><b>Số tài khoản:</b> <span style={{ color: '#1677ff', fontWeight: 700, fontSize: 15 }}>{qrModalData.bankAccount}</span></div>
+                            <div><b>Chủ tài khoản:</b> {qrModalData.bankHolder}</div>
+                            <div><b>Số tiền:</b> <span style={{ color: '#cf1322', fontWeight: 700, fontSize: 15 }}>{Number(qrModalData.amount).toLocaleString()}₫</span></div>
+                            <div><b>Nội dung CK:</b> <span style={{ fontWeight: 600, background: '#fff1f0', padding: '2px 6px', borderRadius: 4, color: '#cf1322' }}>{qrModalData.description}</span></div>
                         </div>
                     </div>
                 </Modal>
