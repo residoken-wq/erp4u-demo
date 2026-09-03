@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, Tag, Tabs, Descriptions, Modal, Form, Input, DatePicker, message, Row, Col, Progress, Select, Typography, Space, Avatar, Tooltip } from 'antd';
-import { PlusOutlined, ArrowLeftOutlined, EditOutlined, DeleteOutlined, WalletOutlined, DollarOutlined, LineChartOutlined, UserOutlined } from '@ant-design/icons';
+import { PlusOutlined, ArrowLeftOutlined, EditOutlined, DeleteOutlined, WalletOutlined, DollarOutlined, LineChartOutlined, UserOutlined, ProjectOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import dayjs from 'dayjs';
