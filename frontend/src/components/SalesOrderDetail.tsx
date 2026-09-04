@@ -18,6 +18,7 @@ import SampleImagesTab from './sales/SampleImagesTab';
 import ContractBuilderModal from './sales/ContractBuilderModal';
 import SalesActivityLogsTab from './sales/SalesActivityLogsTab';
 import useMobile from '../hooks/useMobile';
+import { cleanComboDescription } from '../utils/productDescription';
 
 const { Option } = Select;
 
@@ -267,11 +268,14 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             let rowIdx = sheet.rowCount + 1;
             for (let i = 0; i < orderItems.length; i++) {
                 const item = orderItems[i];
+                const isCombo = item.product?.product_type === 'COMBO';
+                const rawDesc = item.product?.customer_description || '';
+                const desc = isCombo ? cleanComboDescription(rawDesc) : rawDesc;
                 const tr = sheet.addRow([
                     i + 1,
                     '',
                     item.product_name_real || item.product?.name || item.sku,
-                    (item.product?.customer_description || '').replace(/\r\n/g, '\n').replace(/<[^>]*>?/gm, ''), // strip html if any
+                    desc.replace(/\r\n/g, '\n').replace(/<[^>]*>?/gm, ''), // strip html if any
                     item.product?.unit || 'Cái',
                     item.quantity,
                     item.unit_price,

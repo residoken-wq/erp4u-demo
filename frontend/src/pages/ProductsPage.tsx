@@ -678,11 +678,10 @@ const ProductsPage: React.FC = () => {
             .filter(c => c.child_product)
             .map(c => {
                 const p = c.child_product;
-                let desc = `- ${p.name} (x${c.quantity})`;
                 if (p.customer_description) {
-                    desc += `\n${p.customer_description}`;
+                    return p.customer_description;
                 }
-                return desc;
+                return `- ${p.name} (x${c.quantity})`;
             })
             .join('\n\n');
 

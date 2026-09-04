@@ -2,6 +2,7 @@ import React from 'react';
 import { Row, Col, Typography, Table, Tag, Image } from 'antd';
 import { CheckCircleFilled } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { cleanComboDescription } from '../utils/productDescription';
 
 const { Title, Text } = Typography;
 
@@ -106,7 +107,9 @@ const QuotationTemplate: React.FC<QuotationProps> = ({ data }) => {
                         title: 'Mô tả chi tiết',
                         width: '30%',
                         render: (r: any) => {
-                            const desc = r.product?.customer_description || r.product_desc || '';
+                            const isCombo = r.product?.product_type === 'COMBO';
+                            const rawDesc = r.product?.customer_description || r.product_desc || '';
+                            const desc = isCombo ? cleanComboDescription(rawDesc) : rawDesc;
                             return <div style={{ whiteSpace: 'pre-line', fontSize: 12, color: '#555' }}>{desc}</div>;
                         }
                     },

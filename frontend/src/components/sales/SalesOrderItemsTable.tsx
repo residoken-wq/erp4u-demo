@@ -6,6 +6,7 @@ import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } 
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { getGoogleDriveImageUrl } from '../../utils/googleDrive';
+import { cleanComboDescription } from '../../utils/productDescription';
 import ImageLinkCell from './ImageLinkCell';
 
 interface RowProps extends React.HTMLAttributes<HTMLTableRowElement> {
@@ -198,6 +199,9 @@ const SalesOrderItemsTable: React.FC<Props> = ({
             title: 'Sản phẩm', width: 350,
             render: (_: any, record: any, index: number) => {
                 const prodInfo = products.find(p => p.value === record.sku);
+                const isCombo = prodInfo?.type === 'COMBO' || record.product?.product_type === 'COMBO';
+                const rawDesc = prodInfo?.description || record.product?.customer_description || '';
+                const displayDesc = isCombo ? cleanComboDescription(rawDesc) : rawDesc;
                 const link = record.image_url;
                 const finalLink = link || (record.product ? record.product.image_url : null) || (prodInfo ? prodInfo.image_url : null);
                 const src = getGoogleDriveImageUrl(finalLink || '');
@@ -218,18 +222,18 @@ const SalesOrderItemsTable: React.FC<Props> = ({
                             onChange={(val) => onItemChange(index, 'sku', val)}
                             options={products}
                         />
-                        {prodInfo && (
+                        {(prodInfo || record.product) && (
                             <div style={{ marginTop: 4, lineHeight: '1.4' }}>
-                                {prodInfo.type === 'COMBO' && <Tag color="purple" style={{ fontSize: 10, marginRight: 4 }}><GiftOutlined /> Combo</Tag>}
+                                {isCombo && <Tag color="purple" style={{ fontSize: 10, marginRight: 4 }}><GiftOutlined /> Combo</Tag>}
                                 <div style={{
                                     fontSize: 11,
                                     color: '#666',
                                     fontStyle: 'italic',
                                     whiteSpace: 'pre-wrap',  // Support newlines in description
-                                    marginTop: prodInfo.type === 'COMBO' ? 4 : 0
+                                    marginTop: isCombo ? 4 : 0
                                 }}>
-                                    {prodInfo.description ? (
-                                        <div dangerouslySetInnerHTML={{ __html: prodInfo.description }} />
+                                    {displayDesc ? (
+                                        <div dangerouslySetInnerHTML={{ __html: displayDesc }} />
                                     ) : (
                                         'Chưa có mô tả'
                                     )}
@@ -355,6 +359,9 @@ const SalesOrderItemsTable: React.FC<Props> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {items.map((record, index) => {
                     const prodInfo = products.find(p => p.value === record.sku);
+                    const isCombo = prodInfo?.type === 'COMBO' || record.product?.product_type === 'COMBO';
+                    const rawDesc = prodInfo?.description || record.product?.customer_description || '';
+                    const displayDesc = isCombo ? cleanComboDescription(rawDesc) : rawDesc;
                     const finalLink = record.image_url || (record.product ? record.product.image_url : null) || (prodInfo ? prodInfo.image_url : null);
                     const src = getGoogleDriveImageUrl(finalLink || '');
                     const basePrice = prodInfo ? prodInfo.price : 0;
@@ -377,11 +384,14 @@ const SalesOrderItemsTable: React.FC<Props> = ({
                                         onChange={(val) => onItemChange(index, 'sku', val)}
                                         options={products}
                                     />
-                                    {prodInfo && (
-                                        <div style={{ fontSize: 11, color: '#666', fontStyle: 'italic', marginTop: 4, whiteSpace: 'pre-wrap' }}>
-                                            {prodInfo.description ? (
-                                                <div dangerouslySetInnerHTML={{ __html: prodInfo.description }} />
-                                            ) : null}
+                                    {(prodInfo || record.product) && (
+                                        <div style={{ marginTop: 4, lineHeight: '1.4' }}>
+                                            {isCombo && <Tag color="purple" style={{ fontSize: 10, marginRight: 4, marginBottom: 4 }}><GiftOutlined /> Combo</Tag>}
+                                            <div style={{ fontSize: 11, color: '#666', fontStyle: 'italic', whiteSpace: 'pre-wrap', marginTop: isCombo ? 4 : 0 }}>
+                                                {displayDesc ? (
+                                                    <div dangerouslySetInnerHTML={{ __html: displayDesc }} />
+                                                ) : null}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
