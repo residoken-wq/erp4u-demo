@@ -78,4 +78,10 @@ export class ProductsController {
   async calculateAllCosts() {
     return this.service.calculateAllCosts();
   }
+
+  @Get(':id/sales-history')
+  @RequirePermission('PRODUCT', 'can_view')
+  getSalesHistory(@Param('id') id: number) {
+    return this.service.getSalesHistory(Number(id));
+  }
 }

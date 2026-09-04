@@ -836,4 +836,30 @@ export class ProductsService {
     }
 
     async importFromExcel(b: Buffer) { return 0; }
+
+    async getSalesHistory(productId: number) {
+        const product = await this.productRepo.findOne({ where: { id: productId } });
+        if (!product) return [];
+
+        const sql = `
+            SELECT 
+                soi.id,
+                soi.sku,
+                soi.quantity,
+                soi.unit_price,
+                COALESCE(NULLIF(soi.total_price, 0), soi.subtotal, soi.quantity * soi.unit_price, 0) as total_price,
+                so.id as order_id,
+                so.order_code,
+                so.order_date,
+                COALESCE(so.customer_name, c.name, 'N/A') as customer_name,
+                so.status,
+                so.delivery_date
+            FROM sales_order_items soi
+            JOIN sales_orders so ON soi.order_id = so.id
+            LEFT JOIN customers c ON so.customer_id = c.id
+            WHERE soi.product_id = $1 OR soi.sku = $2
+            ORDER BY so.order_date DESC NULLS LAST, so.id DESC
+        `;
+        return this.productRepo.manager.query(sql, [product.id, product.sku]);
+    }
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Table, Button, message, Card, Modal, Form, Input, Select, Tag, Popconfirm, Row, Col, Divider, Tabs, InputNumber, Tooltip, Space, Badge, Checkbox, DatePicker, Dropdown, Slider, Popover, Alert } from 'antd';
 import type { MenuProps } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DollarOutlined, ExperimentOutlined, AppstoreOutlined, BuildOutlined, SettingOutlined, SyncOutlined, LinkOutlined, TagOutlined, FileTextOutlined, SendOutlined, ForkOutlined, ScissorOutlined, FolderOpenOutlined, EyeOutlined, PrinterOutlined, StarOutlined, StarFilled, BranchesOutlined, WarningOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DollarOutlined, ExperimentOutlined, AppstoreOutlined, BuildOutlined, SettingOutlined, SyncOutlined, LinkOutlined, TagOutlined, FileTextOutlined, SendOutlined, ForkOutlined, ScissorOutlined, FolderOpenOutlined, EyeOutlined, PrinterOutlined, StarOutlined, StarFilled, BranchesOutlined, WarningOutlined, CloseCircleOutlined, ApartmentOutlined, HistoryOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import api from '../utils/api';
 import useMobile from '../hooks/useMobile';
@@ -11,6 +11,7 @@ import {
     findSimilarProducts,
     calculateNameSimilarity
 } from '../utils/stringSimilarity';
+import { buildProductHierarchy, matchesHierarchySearch } from '../utils/productHierarchy';
 
 // --- IMPORTS CÁC COMPONENT ĐÃ TÁCH ---
 import ProductBOMTab from '../components/products/ProductBOMTab';
@@ -19,6 +20,8 @@ import ProductVariantsTab from '../components/products/ProductVariantsTab';
 import ProductPatternTab from '../components/products/ProductPatternTab';
 import ProductLogisticsTab from '../components/products/ProductLogisticsTab';
 import ProductSemiFinishedTab from '../components/products/ProductSemiFinishedTab'; // <--- MỚI
+import RootProductChildrenTable from '../components/products/RootProductChildrenTable';
+import ProductSalesHistoryTab from '../components/products/ProductSalesHistoryTab';
 // -------------------------------------
 
 const { TextArea } = Input;
@@ -336,7 +339,12 @@ const ProductsPage: React.FC = () => {
     };
 
     // --- FILTER VARIANT VS BASE ---
-    const [viewMode, setViewMode] = useState('MAIN'); // 'MAIN' | 'SEMI' | 'FLAGGED'
+    const [viewMode, setViewMode] = useState<string>('MAIN'); // 'MAIN' | 'SEMI' | 'FLAGGED' | 'ROOT'
+
+    // Phân tích cây phả hệ sản phẩm (Gốc Level 0 và các biến thể con)
+    const hierarchyResult = useMemo(() => {
+        return buildProductHierarchy(data);
+    }, [data]);
 
     // Kết quả phát hiện sản phẩm trùng lặp
     const duplicateDetectionResult = useMemo(() => {
@@ -351,13 +359,15 @@ const ProductsPage: React.FC = () => {
             candidates = candidates.filter(d => d.product_type === 'SEMI_FINISHED');
         } else if (viewMode === 'FLAGGED') {
             candidates = candidates.filter(d => d.is_flagged === true);
+        } else if (viewMode === 'ROOT') {
+            candidates = hierarchyResult.rootProducts;
         }
 
         return findDuplicateProductGroups(candidates, {
             threshold: duplicateThreshold / 100,
             sameCategoryOnly: duplicateSameCategoryOnly
         });
-    }, [data, viewMode, duplicateThreshold, duplicateSameCategoryOnly, duplicateFilterActive]);
+    }, [data, viewMode, duplicateThreshold, duplicateSameCategoryOnly, duplicateFilterActive, hierarchyResult]);
 
     // Map tra cứu nhanh thông tin trùng cho từng sản phẩm
     const duplicateInfoMap = useMemo(() => {
@@ -378,6 +388,8 @@ const ProductsPage: React.FC = () => {
             list = list.filter(d => d.product_type === 'SEMI_FINISHED');
         } else if (viewMode === 'FLAGGED') {
             list = list.filter(d => d.is_flagged === true);
+        } else if (viewMode === 'ROOT') {
+            list = hierarchyResult.rootProducts;
         }
 
         // 2. Filter by Duplicate Detection Mode
@@ -413,13 +425,17 @@ const ProductsPage: React.FC = () => {
             list = list.filter(d => d.product_type === 'COMBO');
         }
 
-        // 5. Filter by Search
+        // 5. Filter by Search (Nếu ở Tab ROOT: tìm kiếm cả sản phẩm gốc lẫn sản phẩm con)
         if (searchText) {
             const lower = searchText.toLowerCase();
-            list = list.filter(d =>
-                (d.name && d.name.toLowerCase().includes(lower)) ||
-                (d.sku && d.sku.toLowerCase().includes(lower))
-            );
+            if (viewMode === 'ROOT') {
+                list = list.filter(d => matchesHierarchySearch(d, d.descendants || d.children, searchText));
+            } else {
+                list = list.filter(d =>
+                    (d.name && d.name.toLowerCase().includes(lower)) ||
+                    (d.sku && d.sku.toLowerCase().includes(lower))
+                );
+            }
         }
 
         // Map Booking Stats if available
@@ -438,7 +454,7 @@ const ProductsPage: React.FC = () => {
         }
 
         return list;
-    }, [data, searchText, viewMode, filterCategory, filterType, filterMonth, bookingStats, duplicateFilterActive, duplicateDetectionResult, duplicateInfoMap]);
+    }, [data, searchText, viewMode, filterCategory, filterType, filterMonth, bookingStats, duplicateFilterActive, duplicateDetectionResult, duplicateInfoMap, hierarchyResult]);
 
 
     // Helper to extract ID from Drive Link and return thumbnail URL
@@ -557,6 +573,22 @@ const ProductsPage: React.FC = () => {
             render: (id: number) => <Tag color="blue">{getCategoryName(id)}</Tag>,
             filters: categories.map(c => ({ text: c.name, value: c.id })),
             onFilter: (value: any, record: any) => record.category_id === value,
+        },
+        {
+            title: 'SP Con (Biến thể)',
+            key: 'child_count',
+            width: 140,
+            align: 'center' as const,
+            hidden: viewMode !== 'ROOT',
+            render: (_: any, r: any) => {
+                const count = r.childCount || (r.children ? r.children.length : 0);
+                return (
+                    <Tag color="geekblue" style={{ fontWeight: 600, borderRadius: 12, padding: '2px 8px' }}>
+                        {count} SP con
+                    </Tag>
+                );
+            },
+            sorter: (a: any, b: any) => Number(a.childCount || 0) - Number(b.childCount || 0)
         },
         {
             title: 'Giá vốn', dataIndex: 'cost_price', width: 100, align: 'right' as const,
@@ -1023,7 +1055,20 @@ const ProductsPage: React.FC = () => {
                 items={[
                     { key: 'MAIN', label: <span><AppstoreOutlined /> {isMobile ? 'SP' : 'Danh Sách Sản Phẩm'}</span> },
                     { key: 'FLAGGED', label: <span><StarFilled style={{ color: '#faad14' }} /> {isMobile ? 'Ưu tiên' : 'Sản Phẩm Ưu Tiên'}</span> },
-                    { key: 'SEMI', label: <span><BuildOutlined /> {isMobile ? 'BOM' : 'Bán Thành Phẩm (BOM)'}</span> }
+                    { key: 'SEMI', label: <span><BuildOutlined /> {isMobile ? 'BOM' : 'Bán Thành Phẩm (BOM)'}</span> },
+                    { 
+                        key: 'ROOT', 
+                        label: (
+                            <span>
+                                <ApartmentOutlined /> {isMobile ? 'Gốc' : 'Sản Phẩm Gốc'}
+                                <Badge 
+                                    count={hierarchyResult.rootProducts.length} 
+                                    overflowCount={999} 
+                                    style={{ marginLeft: 6, backgroundColor: '#108ee9' }} 
+                                />
+                            </span>
+                        ) 
+                    }
                 ]}
                 style={{ marginBottom: 16 }}
             />
@@ -1035,6 +1080,16 @@ const ProductsPage: React.FC = () => {
                 size="middle" 
                 bordered
                 scroll={{ x: 'max-content', y: 'calc(100vh - 300px)' }} 
+                expandable={viewMode === 'ROOT' ? {
+                    expandedRowRender: (record: any) => (
+                        <RootProductChildrenTable 
+                            rootProduct={record} 
+                            onEditChild={openEdit} 
+                            canViewCost={canViewCost}
+                        />
+                    ),
+                    rowExpandable: (record: any) => (record.childCount || 0) > 0 || (record.children && record.children.length > 0)
+                } : undefined}
                 pagination={{
                     showSizeChanger: true,
                     pageSizeOptions: ['20', '50', '100'],
@@ -1216,10 +1271,10 @@ const ProductsPage: React.FC = () => {
                     // --------------------------
                     // --------------------------
                     {
-                        key: '5', label: <span><LinkOutlined /> Combo/Thành phần</span>,
+                        key: '5', label: <span><HistoryOutlined /> Lịch Sử Bán Hàng</span>,
                         disabled: !editingItem,
                         children: (
-                            <div >Combo Tab (Cần tạo component riêng)</div>
+                            <ProductSalesHistoryTab editingItem={editingItem} />
                         )
                     },
                     {
