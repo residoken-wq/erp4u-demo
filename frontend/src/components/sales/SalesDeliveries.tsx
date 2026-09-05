@@ -9,7 +9,7 @@ import {
 import api from '../../utils/api';
 import dayjs from 'dayjs';
 import AttachmentUpload from '../common/AttachmentUpload';
-import { parseWebsiteOrderNote, ParsedShippingInfo } from '../../utils/orderNoteParser';
+import { parseWebsiteOrderNote, ParsedShippingInfo, smartParseVietnameseAddress } from '../../utils/orderNoteParser';
 
 interface Props {
     order: any;
@@ -112,28 +112,67 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             message.warning('Vui lòng nhập địa chỉ giao hàng trước khi chuẩn hóa');
             return;
         }
+
+        // Bóc tách nhanh bằng bộ từ điển nội bộ
+        const localParsed = smartParseVietnameseAddress(targetAddr);
+        if (localParsed.province) setGhtkProvince(localParsed.province);
+        if (localParsed.district) setGhtkDistrict(localParsed.district);
+        if (localParsed.ward) setGhtkWard(localParsed.ward);
+        if (localParsed.street) setGhtkAddress(localParsed.street);
+
         try {
             setGhtkParseLoading(true);
             const res = await api.post('/shipping/ghtk/parse-address', { address: targetAddr });
             if (res.data?.success) {
-                setGhtkProvince(res.data.province || '');
-                setGhtkDistrict(res.data.district || '');
-                setGhtkWard(res.data.ward || '');
-                setGhtkAddress(res.data.street || targetAddr);
-                message.success('Đã chuẩn hóa địa chỉ cấp 4 theo GHTK');
+                const prov = res.data.province || localParsed.province || '';
+                const dist = res.data.district || localParsed.district || '';
+                const wrd = res.data.ward || localParsed.ward || '';
+                const str = res.data.street || localParsed.street || targetAddr;
+
+                setGhtkProvince(prov);
+                setGhtkDistrict(dist);
+                setGhtkWard(wrd);
+                setGhtkAddress(str);
+                message.success(`Đã chuẩn hóa: ${wrd ? wrd + ', ' : ''}${dist ? dist + ', ' : ''}${prov}`);
             }
         } catch (e: any) {
-            message.error(e.response?.data?.message || 'Không thể chuẩn hóa địa chỉ');
+            if (localParsed.province || localParsed.district) {
+                message.success(`Đã nhận diện: ${localParsed.ward ? localParsed.ward + ', ' : ''}${localParsed.district ? localParsed.district + ', ' : ''}${localParsed.province}`);
+            } else {
+                message.warning('Không thể tự động nhận diện, vui lòng điền Tỉnh/Quận');
+            }
         } finally {
             setGhtkParseLoading(false);
         }
     };
 
     const handleGhtkEstimateFee = async () => {
-        const prov = ghtkProvince || (shipAddress.split(',').pop() || '').trim();
-        const dist = ghtkDistrict || (shipAddress.split(',').slice(-2, -1)[0] || '').trim();
+        let prov = ghtkProvince;
+        let dist = ghtkDistrict;
+        let ward = ghtkWard;
+
+        // Nếu chưa có tỉnh hoặc huyện, tự động phân tích từ shipAddress
         if (!prov || !dist) {
-            message.warning('Vui lòng nhập hoặc chuẩn hóa Tỉnh/Thành và Quận/Huyện để tính cước');
+            const autoParsed = smartParseVietnameseAddress(shipAddress);
+            if (autoParsed.province) {
+                prov = autoParsed.province;
+                setGhtkProvince(prov);
+            }
+            if (autoParsed.district) {
+                dist = autoParsed.district;
+                setGhtkDistrict(dist);
+            }
+            if (autoParsed.ward && !ward) {
+                ward = autoParsed.ward;
+                setGhtkWard(ward);
+            }
+            if (autoParsed.street) {
+                setGhtkAddress(autoParsed.street);
+            }
+        }
+
+        if (!prov) {
+            message.warning('Vui lòng nhập Tỉnh/Thành giao hàng để tính cước');
             return;
         }
 
@@ -141,8 +180,8 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             setGhtkEstimateLoading(true);
             const res = await api.post('/shipping/ghtk/estimate-fee', {
                 province: prov,
-                district: dist,
-                ward: ghtkWard,
+                district: dist || prov,
+                ward: ward,
                 address: ghtkAddress || shipAddress,
                 weight: Number(packageWeight) || 500,
                 value: Number(order?.total_amount) || 0,
@@ -152,7 +191,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 const feeVal = Number(res.data.fee.fee) || 0;
                 setShippingCost(feeVal);
                 setEstimatedFeeInfo(res.data.fee);
-                message.success(`Cước GHTK ước tính: ${feeVal.toLocaleString()}đ`);
+                message.success(`Cước GHTK ước tính: ${feeVal.toLocaleString()}đ (${dist ? dist + ', ' : ''}${prov})`);
             }
         } catch (e: any) {
             message.error(e.response?.data?.message || 'Lỗi khi tính cước GHTK');
@@ -168,12 +207,11 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         if (parsed.receiverPhone) setShipContactPhone(parsed.receiverPhone);
         if (parsed.shippingAddress) {
             setShipAddress(parsed.shippingAddress);
-            if (parsed.addressParts) {
-                setGhtkProvince(parsed.addressParts.province || '');
-                setGhtkDistrict(parsed.addressParts.district || '');
-                setGhtkWard(parsed.addressParts.ward || '');
-                setGhtkAddress(parsed.addressParts.street || parsed.shippingAddress);
-            }
+            const addrParts = smartParseVietnameseAddress(parsed.shippingAddress);
+            setGhtkProvince(addrParts.province || '');
+            setGhtkDistrict(addrParts.district || '');
+            setGhtkWard(addrParts.ward || '');
+            setGhtkAddress(addrParts.street || parsed.shippingAddress);
         }
         if (parsed.deliveryNote) setShipNote(parsed.deliveryNote);
         setIsCod(parsed.isCod);
@@ -1178,6 +1216,54 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                     {/* GHTK ENHANCED PANEL */}
                     {shippingCarrier === 'GHTK' && (
                         <div style={{ background: '#ffffff', padding: 10, borderRadius: 6, border: '1px solid #d9f7be', marginTop: 8 }}>
+                            {/* GHTK LEVEL 4 ADDRESS INPUTS */}
+                            <div style={{ background: '#f6ffed', padding: '8px 10px', borderRadius: 6, border: '1px dashed #b7eb8f', marginBottom: 10 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                    <span style={{ fontSize: 12, fontWeight: 600, color: '#008444' }}>
+                                        📍 Phân tách địa chỉ GHTK (Cấp 4):
+                                    </span>
+                                    <Button 
+                                        size="small" 
+                                        type="link" 
+                                        icon={<CompassOutlined />} 
+                                        loading={ghtkParseLoading}
+                                        onClick={handleGhtkParseAddress}
+                                        style={{ fontSize: 11, padding: 0, height: 20 }}
+                                    >
+                                        ⚡ Tự động bóc tách từ địa chỉ
+                                    </Button>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                                    <div>
+                                        <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Tỉnh / Thành phố <span style={{ color: 'red' }}>*</span></div>
+                                        <Input 
+                                            size="small" 
+                                            placeholder="VD: Bà Rịa - Vũng Tàu" 
+                                            value={ghtkProvince} 
+                                            onChange={e => setGhtkProvince(e.target.value)} 
+                                        />
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Quận / Huyện <span style={{ color: 'red' }}>*</span></div>
+                                        <Input 
+                                            size="small" 
+                                            placeholder="VD: TP. Vũng Tàu" 
+                                            value={ghtkDistrict} 
+                                            onChange={e => setGhtkDistrict(e.target.value)} 
+                                        />
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Phường / Xã</div>
+                                        <Input 
+                                            size="small" 
+                                            placeholder="VD: Phường Thắng Nhất" 
+                                            value={ghtkWard} 
+                                            onChange={e => setGhtkWard(e.target.value)} 
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 8 }}>
                                 <div>
                                     <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>Kho lấy hàng (Pick Address):</div>
