@@ -35,6 +35,7 @@ import { WebsiteProjectsModule } from './website-projects/website-projects.modul
 import { QCModule } from './qc/qc.module';
 import { DesignsModule } from './designs/designs.module';
 import { TikTokModule } from './tiktok/tiktok.module';
+import { ShippingModule } from './shipping/shipping.module';
 
 import { AnalyticsModule } from './analytics/analytics.module';
 
@@ -257,6 +258,7 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
     QCModule, // Quality Control module
     DesignsModule, // Printing & Embroidery Design Module
     TikTokModule, // TikTok Shop inbox & comments integration
+    ShippingModule, // Shipping & GHTK carrier integration
     TypeOrmModule.forFeature([User]), // Needed for ActivityInterceptor
   ],
   providers: [

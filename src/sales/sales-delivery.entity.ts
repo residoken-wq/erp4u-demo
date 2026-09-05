@@ -51,6 +51,27 @@ export class SalesDelivery {
   @Column('decimal', { precision: 15, scale: 2, nullable: true, default: 0 })
   shipping_cost: number; // Chi phí vận chuyển
 
+  @Column({ nullable: true, default: 'OTHER' })
+  shipping_provider: string; // GHTK, GHN, OTHER
+
+  @Column('decimal', { precision: 15, scale: 2, default: 0 })
+  pick_money: number; // Tiền thu hộ COD
+
+  @Column('int', { default: 1 })
+  is_freeship: number; // 1: Shop trả cước, 0: Khách trả cước
+
+  @Column('int', { default: 500 })
+  weight_gram: number; // Trọng lượng gói hàng (gram)
+
+  @Column('int', { nullable: true })
+  shipping_status_id: number; // Mã trạng thái GHTK (-1 -> 13)
+
+  @Column({ nullable: true })
+  shipping_status_text: string; // Tên trạng thái vận đơn
+
+  @Column('jsonb', { nullable: true })
+  shipping_metadata: any; // Response GHTK, log tracking, pick address info
+
   @OneToMany(() => SalesDeliveryItem, (item) => item.delivery, { cascade: true })
   items: SalesDeliveryItem[];
 

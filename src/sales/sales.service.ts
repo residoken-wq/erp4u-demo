@@ -918,6 +918,7 @@ export class SalesService {
         }
 
         try {
+            const isGhtk = (data.shipping_carrier || '').toUpperCase().includes('GHTK') || data.shipping_provider === 'GHTK';
             const delivery = this.deliveryRepo.create({
                 code: deliveryCode,
                 order_id: orderId,
@@ -927,7 +928,18 @@ export class SalesService {
                 contact_name: data.contact_name,
                 contact_phone: data.contact_phone,
                 sales_order: order,
-                attachments: data.attachments || []
+                attachments: data.attachments || [],
+                status: data.status || 'PENDING_EXPORT',
+                shipping_carrier: data.shipping_carrier || (isGhtk ? 'GHTK' : null),
+                tracking_code: data.tracking_code || null,
+                shipping_cost: data.shipping_cost !== undefined ? Number(data.shipping_cost) : 0,
+                shipping_provider: data.shipping_provider || (isGhtk ? 'GHTK' : 'OTHER'),
+                pick_money: data.pick_money !== undefined ? Number(data.pick_money) : 0,
+                is_freeship: data.is_freeship !== undefined ? Number(data.is_freeship) : 1,
+                weight_gram: data.weight_gram !== undefined ? Number(data.weight_gram) : 500,
+                shipping_status_id: data.shipping_status_id || null,
+                shipping_status_text: data.shipping_status_text || null,
+                shipping_metadata: data.shipping_metadata || null
             });
 
             // Ensure proper instantiation of SalesDeliveryItem to guarantee cascade insert
@@ -945,7 +957,8 @@ export class SalesService {
             // NO AUTO DEDUCT STOCK HERE. 
             // Stock will be deducted when Inventory User confirms (PENDING_EXPORT -> SHIPPED).
 
-            return await this.orderRepo.save(order);
+            await this.orderRepo.save(order);
+            return savedDelivery;
         } catch (e) {
             this.logger.error('Lỗi khi tạo phiếu xuất kho:', e.stack);
             throw new BadRequestException('Lỗi hệ thống khi tạo phiếu xuất kho: ' + e.message);
@@ -963,6 +976,16 @@ export class SalesService {
         delivery.contact_phone = data.contact_phone;
         if (data.attachments) delivery.attachments = data.attachments; // <--- Update Attachments
         if (data.status) delivery.status = data.status; // <--- Update Status
+        if (data.shipping_carrier !== undefined) delivery.shipping_carrier = data.shipping_carrier;
+        if (data.tracking_code !== undefined) delivery.tracking_code = data.tracking_code;
+        if (data.shipping_cost !== undefined) delivery.shipping_cost = Number(data.shipping_cost);
+        if (data.shipping_provider !== undefined) delivery.shipping_provider = data.shipping_provider;
+        if (data.pick_money !== undefined) delivery.pick_money = Number(data.pick_money);
+        if (data.is_freeship !== undefined) delivery.is_freeship = Number(data.is_freeship);
+        if (data.weight_gram !== undefined) delivery.weight_gram = Number(data.weight_gram);
+        if (data.shipping_status_id !== undefined) delivery.shipping_status_id = data.shipping_status_id;
+        if (data.shipping_status_text !== undefined) delivery.shipping_status_text = data.shipping_status_text;
+        if (data.shipping_metadata !== undefined) delivery.shipping_metadata = data.shipping_metadata;
 
         if (data.items) {
             // Delete old items
