@@ -58,6 +58,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
     const [ghtkProvince, setGhtkProvince] = useState<string>('');
     const [ghtkDistrict, setGhtkDistrict] = useState<string>('');
     const [ghtkWard, setGhtkWard] = useState<string>('');
+    const [ghtkHamlet, setGhtkHamlet] = useState<string>('Khác');
     const [ghtkAddress, setGhtkAddress] = useState<string>('');
     const [ghtkParseLoading, setGhtkParseLoading] = useState<boolean>(false);
     const [ghtkEstimateLoading, setGhtkEstimateLoading] = useState<boolean>(false);
@@ -205,17 +206,24 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 const prov = res.data.province || localParsed.province || '';
                 const dist = res.data.district || localParsed.district || '';
                 const wrd = res.data.ward || localParsed.ward || '';
+                const ham = res.data.hamlet || localParsed.hamlet || 'Khác';
                 const str = res.data.street || localParsed.street || targetAddr;
 
                 setGhtkProvince(prov);
                 setGhtkDistrict(dist);
                 setGhtkWard(wrd);
+                setGhtkHamlet(ham);
                 setGhtkAddress(str);
-                message.success(`Đã chuẩn hóa: ${wrd ? wrd + ', ' : ''}${dist ? dist + ', ' : ''}${prov}`);
+                message.success(`Đã chuẩn hóa: ${wrd ? wrd + ', ' : ''}${dist ? dist + ', ' : ''}${prov} (Thôn/ấp: ${ham})`);
             }
         } catch (e: any) {
             if (localParsed.province || localParsed.district) {
-                message.success(`Đã nhận diện: ${localParsed.ward ? localParsed.ward + ', ' : ''}${localParsed.district ? localParsed.district + ', ' : ''}${localParsed.province}`);
+                setGhtkProvince(localParsed.province);
+                setGhtkDistrict(localParsed.district);
+                setGhtkWard(localParsed.ward);
+                setGhtkHamlet(localParsed.hamlet || 'Khác');
+                setGhtkAddress(localParsed.street);
+                message.success(`Đã nhận diện: ${localParsed.ward ? localParsed.ward + ', ' : ''}${localParsed.district ? localParsed.district + ', ' : ''}${localParsed.province} (Thôn/ấp: ${localParsed.hamlet || 'Khác'})`);
             } else {
                 message.warning('Không thể tự động nhận diện, vui lòng điền Tỉnh/Quận');
             }
@@ -289,6 +297,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             setGhtkProvince(addrParts.province || '');
             setGhtkDistrict(addrParts.district || '');
             setGhtkWard(addrParts.ward || '');
+            setGhtkHamlet(addrParts.hamlet || 'Khác');
             setGhtkAddress(addrParts.street || parsed.shippingAddress);
         }
         if (parsed.deliveryNote) setShipNote(parsed.deliveryNote);
@@ -344,12 +353,15 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
     const executePushGhtk = async (delivery: any) => {
         try {
             message.loading({ content: 'Đang gửi thông tin sang GHTK để tạo vận đơn...', key: 'push_ghtk' });
+            // Chuẩn hóa địa chỉ trực tiếp từ phiếu xuất kho này để không bị nhầm dữ liệu form
+            const parsed = smartParseVietnameseAddress(delivery.delivery_address || '');
             const res = await api.post(`/shipping/delivery/${delivery.id}/push-ghtk`, {
                 pick_address_id: selectedPickAddressId || ghtkConfig?.defaultPickAddressId,
-                province: ghtkProvince || (delivery.delivery_address?.split(',').pop() || '').trim(),
-                district: ghtkDistrict || (delivery.delivery_address?.split(',').slice(-2, -1)[0] || '').trim(),
-                ward: ghtkWard,
-                address: delivery.delivery_address,
+                province: parsed.province || ghtkProvince,
+                district: parsed.district || ghtkDistrict,
+                ward: parsed.ward || ghtkWard,
+                hamlet: parsed.hamlet || ghtkHamlet || 'Khác',
+                address: parsed.street || delivery.delivery_address,
                 note: delivery.note,
                 weight_gram: delivery.weight_gram || 500,
                 pick_money: delivery.pick_money || 0,
@@ -600,6 +612,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 setGhtkProvince(parsed.addressParts.province || '');
                 setGhtkDistrict(parsed.addressParts.district || '');
                 setGhtkWard(parsed.addressParts.ward || '');
+                setGhtkHamlet(parsed.addressParts.hamlet || 'Khác');
                 setGhtkAddress(parsed.addressParts.street || parsed.shippingAddress || '');
             }
         } else {
@@ -616,6 +629,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             setGhtkProvince('');
             setGhtkDistrict('');
             setGhtkWard('');
+            setGhtkHamlet('Khác');
             setGhtkAddress('');
         }
 
@@ -725,6 +739,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                             province: ghtkProvince,
                             district: ghtkDistrict,
                             ward: ghtkWard,
+                            hamlet: ghtkHamlet || 'Khác',
                             address: ghtkAddress || shipAddress,
                             note: shipNote,
                             weight_gram: packageWeight,
@@ -1404,7 +1419,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                         ⚡ Tự động bóc tách từ địa chỉ
                                     </Button>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1.2fr 1.4fr', gap: 8 }}>
                                     <div>
                                         <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Tỉnh / Thành phố <span style={{ color: 'red' }}>*</span></div>
                                         <Input 
@@ -1424,7 +1439,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                         />
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Phường / Xã</div>
+                                        <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Phường / Xã <span style={{ color: 'red' }}>*</span></div>
                                         <Input 
                                             size="small" 
                                             placeholder="VD: Phường Thắng Nhất" 
@@ -1432,6 +1447,27 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                             onChange={e => setGhtkWard(e.target.value)} 
                                         />
                                     </div>
+                                    <div>
+                                        <div style={{ fontSize: 11, color: '#555', marginBottom: 2, display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Thôn/Ấp/Xóm/Tổ</span>
+                                            <span style={{ color: '#8c8c8c', fontSize: 10 }}>(để "Khác" nếu ở phố)</span>
+                                        </div>
+                                        <Input 
+                                            size="small" 
+                                            placeholder="Khác" 
+                                            value={ghtkHamlet} 
+                                            onChange={e => setGhtkHamlet(e.target.value)} 
+                                        />
+                                    </div>
+                                </div>
+                                <div style={{ marginTop: 6 }}>
+                                    <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Số nhà / Tên đường:</div>
+                                    <Input 
+                                        size="small" 
+                                        placeholder="VD: 88/14 Nguyễn Hữu Cảnh" 
+                                        value={ghtkAddress} 
+                                        onChange={e => setGhtkAddress(e.target.value)} 
+                                    />
                                 </div>
                             </div>
 

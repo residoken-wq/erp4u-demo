@@ -96,13 +96,14 @@ const VIETNAM_PROVINCES = [
 
 function smartParseVietnameseAddress(rawAddress: string) {
     if (!rawAddress || !rawAddress.trim()) {
-        return { province: '', district: '', ward: '', street: '' };
+        return { province: '', district: '', ward: '', hamlet: 'Khác', street: '' };
     }
 
     const clean = rawAddress.trim();
     let province = '';
     let district = '';
     let ward = '';
+    let hamlet = '';
     let street = clean;
     let workText = clean;
 
@@ -136,6 +137,13 @@ function smartParseVietnameseAddress(rawAddress: string) {
         }
     }
 
+    // Bóc tách Thôn / Ấp / Xóm / Tổ / Bản / Buôn / Khu phố / Sóc / Đội
+    const hamletMatch = workText.match(/(?:thôn|ấp|xóm|tổ|tổ dân phố|khu phố|khóm|bản|buôn|sóc|đội)\\s+([0-9a-zA-Zà-ỹÀ-Ỹ\\s]+?)(?=\\s+(?:phường|p\\.|xã|x\\.|thị trấn|tt\\.|quận|huyện|thị xã|tx\\.|tp\\.|thành phố)|[\\,\\.]|$)/i);
+    if (hamletMatch) {
+        hamlet = hamletMatch[0].trim();
+        workText = workText.replace(hamletMatch[0], '').trim();
+    }
+
     if ((!province || !district) && clean.includes(',')) {
         const segments = clean.split(',').map(s => s.trim()).filter(Boolean);
         if (segments.length >= 4) {
@@ -150,20 +158,25 @@ function smartParseVietnameseAddress(rawAddress: string) {
         }
     }
 
-    const splitIndex = clean.search(/(?:phường|p\\.|xã|x\\.|thị trấn|tt\\.|quận|huyện|thị xã|tx\\.|tp\\.|thành phố)/i);
+    const splitIndex = clean.search(/(?:thôn|ấp|xóm|tổ|tổ dân phố|khu phố|khóm|bản|buôn|sóc|đội|phường|p\\.|xã|x\\.|thị trấn|tt\\.|quận|huyện|thị xã|tx\\.|tp\\.|thành phố)/i);
     if (splitIndex > 0) {
-        street = clean.substring(0, splitIndex).trim().replace(/[\\,\\-]+$/, '').trim();
+        street = clean.substring(0, splitIndex).trim().replace(/[\\,\\-\\s]+$/, '').replace(/^[\\,\\-\\s]+/, '').trim();
     } else {
-        street = workText.replace(/[\\,\\-]+$/, '').trim();
+        street = workText.replace(/[\\,\\-\\s]+$/, '').replace(/^[\\,\\-\\s]+/, '').trim();
     }
 
     const capitalize = (str: string) => str ? str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : '';
+    const capHamlet = capitalize(hamlet);
+    if (!street || street === ',' || street === '-') {
+        street = capHamlet || clean;
+    }
 
     return {
         province: province || '',
         district: capitalize(district) || '',
         ward: capitalize(ward) || '',
-        street: street || clean,
+        hamlet: capHamlet || 'Khác',
+        street: street,
     };
 }
 
@@ -358,6 +371,7 @@ export class GhtkService {
                         province: d.province || d.city || '',
                         district: d.district || '',
                         ward: d.ward || '',
+                        hamlet: d.hamlet || 'Khác',
                         street: d.street || d.address || '',
                         full_address: rawAddress,
                     };
@@ -375,6 +389,7 @@ export class GhtkService {
             province: parsed.province,
             district: parsed.district,
             ward: parsed.ward,
+            hamlet: parsed.hamlet || 'Khác',
             street: parsed.street,
             full_address: rawAddress,
         };
@@ -520,9 +535,11 @@ export class GhtkService {
         pick_province?: string;
         pick_district?: string;
         pick_ward?: string;
-        province: string;
-        district: string;
+        province?: string;
+        district?: string;
         ward?: string;
+        hamlet?: string;
+        street?: string;
         address?: string;
         note?: string;
         weight_gram?: number;
@@ -555,22 +572,49 @@ export class GhtkService {
         const pickMoney = options.pick_money !== undefined ? options.pick_money : Number(delivery.pick_money || 0);
         const totalWeight = (options.weight_gram || delivery.weight_gram || 500) / 1000; // Đổi gram sang kg
 
+        // Lấy thông tin kho lấy hàng thực tế từ GHTK
+        let pickInfo: any = {};
+        try {
+            const pickAddresses = await this.getPickAddresses();
+            const targetPickId = options.pick_address_id && options.pick_address_id !== 'DEFAULT'
+                ? options.pick_address_id
+                : cfg.defaultPickAddressId;
+            if (targetPickId && Array.isArray(pickAddresses)) {
+                pickInfo = pickAddresses.find((p: any) => String(p.pick_address_id) === String(targetPickId) || p.address === targetPickId) || pickAddresses[0] || {};
+            } else if (Array.isArray(pickAddresses) && pickAddresses.length > 0) {
+                pickInfo = pickAddresses[0] || {};
+            }
+        } catch (e) {
+            // bỏ qua lỗi nếu không lấy được pickAddresses
+        }
+
+        // Bóc tách & Chuẩn hóa địa chỉ người nhận (đảm bảo đầy đủ cấp 4 và thôn/ấp cho GHTK)
+        const rawRecipientAddress = options.address || delivery.delivery_address || '';
+        const parsedRecipient = smartParseVietnameseAddress(rawRecipientAddress);
+
+        const receiverProvince = (options.province || parsedRecipient.province || '').trim();
+        const receiverDistrict = (options.district || parsedRecipient.district || '').trim();
+        const receiverWard = (options.ward || parsedRecipient.ward || '').trim();
+        const receiverHamlet = (options.hamlet || parsedRecipient.hamlet || 'Khác').trim() || 'Khác';
+        const receiverStreet = (options.street || parsedRecipient.street || rawRecipientAddress).trim();
+
         const payload: any = {
             products,
             order: {
                 id: delivery.code, // Mã phiếu xuất kho làm partner_id
-                pick_name: options.pick_name || 'ERP4U',
+                pick_name: options.pick_name || pickInfo.pick_name || 'NỆM MẦM NON ERP4U',
                 pick_money: pickMoney,
-                pick_address: options.pick_address || 'Kho ERP4U',
-                pick_province: options.pick_province || 'Hồ Chí Minh',
-                pick_district: options.pick_district || 'Quận 7',
-                pick_ward: options.pick_ward || 'Tân Phú',
-                pick_tel: options.pick_tel || '0901234567',
+                pick_address: options.pick_address || pickInfo.address || 'Kho ERP4U',
+                pick_province: options.pick_province || pickInfo.province || 'TP Hồ Chí Minh',
+                pick_district: options.pick_district || pickInfo.district || 'TP. Thủ Đức',
+                pick_ward: options.pick_ward || pickInfo.ward || 'Phường Bình Trưng Tây',
+                pick_tel: options.pick_tel || pickInfo.pick_tel || '0931431128',
                 name: delivery.contact_name || delivery.sales_order?.receiver_name || 'Khách hàng',
-                address: options.address || delivery.delivery_address,
-                province: options.province,
-                district: options.district,
-                ward: options.ward || '',
+                address: receiverStreet,
+                province: receiverProvince,
+                district: receiverDistrict,
+                ward: receiverWard,
+                hamlet: receiverHamlet, // BẮT BUỘC cho GHTK API (nếu không có thôn/ấp thì gửi 'Khác')
                 tel: delivery.contact_phone || delivery.sales_order?.receiver_phone || '',
                 note: options.note || delivery.note || 'Cho xem hàng không cho thử',
                 is_freeship: isFreeship,
@@ -580,9 +624,11 @@ export class GhtkService {
             }
         };
 
-        if (options.pick_address_id && options.pick_address_id !== 'DEFAULT') {
+        if (pickInfo.pick_address_id) {
+            payload.order.pick_address_id = String(pickInfo.pick_address_id);
+        } else if (options.pick_address_id && options.pick_address_id !== 'DEFAULT') {
             payload.order.pick_address_id = options.pick_address_id;
-        } else if (cfg.defaultPickAddressId) {
+        } else if (cfg.defaultPickAddressId && cfg.defaultPickAddressId !== 'admin') {
             payload.order.pick_address_id = cfg.defaultPickAddressId;
         }
 

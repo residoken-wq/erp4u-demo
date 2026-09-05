@@ -12,9 +12,10 @@ export interface ParsedShippingInfo {
     isCod: boolean;
     suggestedCodAmount: number;
     deliveryNote: string;
-    // Heuristic địa chỉ cấp 4 sơ bộ
+    // Heuristic địa chỉ cấp 4 sơ bộ (kèm thôn/ấp)
     addressParts?: {
         street?: string;
+        hamlet?: string;
         ward?: string;
         district?: string;
         province?: string;
@@ -176,17 +177,18 @@ export const VIETNAM_PROVINCES = [
 ];
 
 /**
- * Bóc tách địa chỉ Việt Nam thông minh (hỗ trợ cả trường hợp không có dấu phẩy)
+ * Bóc tách địa chỉ Việt Nam thông minh (hỗ trợ cả trường hợp không có dấu phẩy và thôn/ấp)
  */
 export function smartParseVietnameseAddress(rawAddress: string) {
     if (!rawAddress || !rawAddress.trim()) {
-        return { province: '', district: '', ward: '', street: '' };
+        return { province: '', district: '', ward: '', hamlet: 'Khác', street: '' };
     }
 
     const clean = rawAddress.trim();
     let province = '';
     let district = '';
     let ward = '';
+    let hamlet = '';
     let street = clean;
     let workText = clean;
 
@@ -208,7 +210,7 @@ export function smartParseVietnameseAddress(rawAddress: string) {
     }
 
     // 2. Phân tích Phường/Xã/Thị trấn
-    const wardMatch = workText.match(/(?:phường|p\.|xã|x\.|thị trấn|tt\.)\s+([0-9a-zA-Zà-ỹÀ-Ỹ\s]+?)(?=\s+(?:quận|huyện|thị xã|tx\.|tp\.|thành phố)|[\,\.]|$)/i);
+    const wardMatch = workText.match(/(?:phường|p\\.|xã|x\\.|thị trấn|tt\\.)\\s+([0-9a-zA-Zà-ỹÀ-Ỹ\\s]+?)(?=\\s+(?:quận|huyện|thị xã|tx\\.|tp\\.|thành phố)|[\\,\\.]|$)/i);
     if (wardMatch) {
         ward = wardMatch[0].trim();
         workText = workText.replace(wardMatch[0], '').trim();
@@ -216,14 +218,21 @@ export function smartParseVietnameseAddress(rawAddress: string) {
 
     // 3. Phân tích Quận/Huyện/Thị xã/Thành phố nếu chưa có district
     if (!district) {
-        const distMatch = workText.match(/(?:quận|huyện|thị xã|tx\.|tp\.|thành phố)\s+([0-9a-zA-Zà-ỹÀ-Ỹ\s]+?)(?=[\,\.]|$)/i);
+        const distMatch = workText.match(/(?:quận|huyện|thị xã|tx\\.|tp\\.|thành phố)\\s+([0-9a-zA-Zà-ỹÀ-Ỹ\\s]+?)(?=[\,\.]|$)/i);
         if (distMatch) {
             district = distMatch[0].trim();
             workText = workText.replace(distMatch[0], '').trim();
         }
     }
 
-    // 4. Nếu có dấu phẩy mà chưa tìm thấy đủ, fallback sang cắt dấu phẩy
+    // 4. Phân tích Thôn / Ấp / Xóm / Tổ / Bản / Buôn / Khu phố / Sóc / Đội
+    const hamletMatch = workText.match(/(?:thôn|ấp|xóm|tổ|tổ dân phố|khu phố|khóm|bản|buôn|sóc|đội)\\s+([0-9a-zA-Zà-ỹÀ-Ỹ\\s]+?)(?=\\s+(?:phường|p\\.|xã|x\\.|thị trấn|tt\\.|quận|huyện|thị xã|tx\\.|tp\\.|thành phố)|[\\,\\.]|$)/i);
+    if (hamletMatch) {
+        hamlet = hamletMatch[0].trim();
+        workText = workText.replace(hamletMatch[0], '').trim();
+    }
+
+    // 5. Nếu có dấu phẩy mà chưa tìm thấy đủ, fallback sang cắt dấu phẩy
     if ((!province || !district) && clean.includes(',')) {
         const segments = clean.split(',').map(s => s.trim()).filter(Boolean);
         if (segments.length >= 4) {
@@ -238,24 +247,26 @@ export function smartParseVietnameseAddress(rawAddress: string) {
         }
     }
 
-    // 5. Bóc tách Tên đường / Số nhà (phần trước phường/xã hoặc quận/huyện)
-    const splitIndex = clean.search(/(?:phường|p\.|xã|x\.|thị trấn|tt\.|quận|huyện|thị xã|tx\.|tp\.|thành phố)/i);
+    // 6. Bóc tách Tên đường / Số nhà (phần trước thôn/ấp/phường/xã hoặc quận/huyện)
+    const splitIndex = clean.search(/(?:thôn|ấp|xóm|tổ|tổ dân phố|khu phố|khóm|bản|buôn|sóc|đội|phường|p\\.|xã|x\\.|thị trấn|tt\\.|quận|huyện|thị xã|tx\\.|tp\\.|thành phố)/i);
     if (splitIndex > 0) {
-        street = clean.substring(0, splitIndex).trim().replace(/[\,\-]+$/, '').trim();
+        street = clean.substring(0, splitIndex).trim().replace(/[\\,\\-\\s]+$/, '').replace(/^[\\,\\-\\s]+/, '').trim();
     } else {
-        street = workText.replace(/[\,\-]+$/, '').trim();
+        street = workText.replace(/[\\,\\-\\s]+$/, '').replace(/^[\\,\\-\\s]+/, '').trim();
     }
 
     const capitalize = (str: string) => str ? str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : '';
+    const capHamlet = capitalize(hamlet);
+    if (!street || street === ',' || street === '-') {
+        street = capHamlet || clean;
+    }
 
     return {
         province: province || '',
         district: capitalize(district) || '',
         ward: capitalize(ward) || '',
-        street: street || clean,
+        hamlet: capHamlet || 'Khác',
+        street: street,
     };
 }
 
-export function parseAddressHeuristic(fullAddress: string) {
-    return smartParseVietnameseAddress(fullAddress);
-}
