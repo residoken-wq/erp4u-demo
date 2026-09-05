@@ -13,8 +13,21 @@ export class ShippingController {
             apiUrl: cfg.apiUrl,
             isConfigured: !!cfg.token,
             isSandbox: cfg.isSandbox,
-            partnerCode: cfg.partnerCode ? `${cfg.partnerCode.slice(0, 4)}***` : '',
+            partnerCode: cfg.partnerCode || '',
+            maskedToken: cfg.token ? `${cfg.token.slice(0, 6)}...${cfg.token.slice(-4)}` : '',
+            hasToken: !!cfg.token,
+            defaultPickAddressId: cfg.defaultPickAddressId || '',
         };
+    }
+
+    @Post('config')
+    async saveConfig(@Body() body: any) {
+        return this.ghtkService.saveConfig(body);
+    }
+
+    @Post('test-connection')
+    async testConnection(@Body() body: any) {
+        return this.ghtkService.testConnection(body);
     }
 
     @Post('ghtk/parse-address')

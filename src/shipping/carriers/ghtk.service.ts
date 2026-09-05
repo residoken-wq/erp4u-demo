@@ -11,6 +11,7 @@ export interface GhtkConfig {
     token: string;
     partnerCode: string;
     isSandbox: boolean;
+    defaultPickAddressId?: string;
 }
 
 export interface GhtkFeeDto {
@@ -186,19 +187,133 @@ export class GhtkService {
         const configs = await this.configRepo.find();
         const configMap = new Map(configs.map(c => [c.key, c.value]));
 
-        const isSandbox = (configMap.get('GHTK_SANDBOX') || process.env.GHTK_SANDBOX || 'false').toLowerCase() === 'true';
+        const envSandbox = (process.env.GHTK_SANDBOX || '').toLowerCase() === 'true' || (process.env.GHTK_ENVIRONMENT || '').toUpperCase() === 'STAGING';
+        const isSandbox = configMap.has('GHTK_SANDBOX')
+            ? (configMap.get('GHTK_SANDBOX') || '').toLowerCase() === 'true'
+            : envSandbox;
+
         const defaultUrl = isSandbox ? 'https://services-staging.ghtklab.com' : 'https://services.giaohangtietkiem.vn';
 
         const apiUrl = configMap.get('GHTK_API_URL') || process.env.GHTK_API_URL || defaultUrl;
-        const token = configMap.get('GHTK_TOKEN') || process.env.GHTK_TOKEN || '';
-        const partnerCode = configMap.get('GHTK_PARTNER_CODE') || process.env.GHTK_PARTNER_CODE || '';
+        const token = configMap.get('GHTK_TOKEN') || configMap.get('GHTK_API_TOKEN') || process.env.GHTK_TOKEN || process.env.GHTK_API_TOKEN || '';
+        const partnerCode = configMap.get('GHTK_PARTNER_CODE') || configMap.get('GHTK_CLIENT_SOURCE') || process.env.GHTK_PARTNER_CODE || process.env.GHTK_CLIENT_SOURCE || '';
+        const defaultPickAddressId = configMap.get('GHTK_DEFAULT_PICK_ADDRESS_ID') || process.env.GHTK_DEFAULT_PICK_ADDRESS_ID || '';
 
         return {
             apiUrl: apiUrl.replace(/\/+$/, ''),
             token,
             partnerCode,
             isSandbox,
+            defaultPickAddressId,
         };
+    }
+
+    /**
+     * Lưu cấu hình GHTK vào bảng system_config
+     */
+    async saveConfig(data: {
+        token?: string;
+        apiUrl?: string;
+        isSandbox?: boolean;
+        partnerCode?: string;
+        defaultPickAddressId?: string;
+    }) {
+        const setConfigValue = async (key: string, value: string, description: string) => {
+            let item = await this.configRepo.findOne({ where: { key } });
+            if (!item) {
+                item = this.configRepo.create({ key, value, description });
+            } else {
+                item.value = value;
+                if (description) item.description = description;
+            }
+            return this.configRepo.save(item);
+        };
+
+        if (data.token !== undefined) {
+            await setConfigValue('GHTK_TOKEN', data.token.trim(), 'Token API Giao Hàng Tiết Kiệm (GHTK)');
+        }
+        if (data.isSandbox !== undefined) {
+            await setConfigValue('GHTK_SANDBOX', data.isSandbox ? 'true' : 'false', 'GHTK Môi trường Sandbox / Staging');
+        }
+        if (data.apiUrl !== undefined) {
+            await setConfigValue('GHTK_API_URL', data.apiUrl.trim(), 'GHTK API Base URL');
+        }
+        if (data.partnerCode !== undefined) {
+            await setConfigValue('GHTK_PARTNER_CODE', data.partnerCode.trim(), 'GHTK Partner Code / Client Source');
+        }
+        if (data.defaultPickAddressId !== undefined) {
+            await setConfigValue('GHTK_DEFAULT_PICK_ADDRESS_ID', data.defaultPickAddressId.trim(), 'Mã điểm lấy hàng mặc định GHTK');
+        }
+
+        return { success: true, message: 'Đã lưu cấu hình GHTK thành công' };
+    }
+
+    /**
+     * Kiểm tra kết nối tới GHTK API
+     */
+    async testConnection(dto?: { token?: string; apiUrl?: string; isSandbox?: boolean; partnerCode?: string }) {
+        const cfg = await this.getConfig();
+        const testToken = dto?.token !== undefined ? dto.token.trim() : cfg.token;
+        const testIsSandbox = dto?.isSandbox !== undefined ? dto.isSandbox : cfg.isSandbox;
+        const defaultUrl = testIsSandbox ? 'https://services-staging.ghtklab.com' : 'https://services.giaohangtietkiem.vn';
+        const testApiUrl = (dto?.apiUrl || cfg.apiUrl || defaultUrl).replace(/\/+$/, '');
+        const testPartnerCode = dto?.partnerCode !== undefined ? dto.partnerCode.trim() : cfg.partnerCode;
+
+        if (!testToken) {
+            return {
+                success: false,
+                message: 'Chưa có Token API GHTK để kiểm tra',
+                isConfigured: false,
+            };
+        }
+
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            'Token': testToken,
+        };
+        if (testPartnerCode) {
+            headers['X-Client-Source'] = testPartnerCode;
+        }
+
+        try {
+            let pickAddresses: any[] = [];
+            let endpointUsed = '/services/shipment/list_pick_add';
+
+            try {
+                const res = await axios.get(`${testApiUrl}/services/shipment/list_pick_add`, { headers, timeout: 10000 });
+                if (res.data?.success && Array.isArray(res.data?.data)) {
+                    pickAddresses = res.data.data;
+                }
+            } catch (err1: any) {
+                endpointUsed = '/open/api/v1/pick-address';
+                const res = await axios.get(`${testApiUrl}/open/api/v1/pick-address`, { headers, timeout: 10000 });
+                if (res.data?.success && Array.isArray(res.data?.data)) {
+                    pickAddresses = res.data.data;
+                }
+            }
+
+            return {
+                success: true,
+                message: `Kết nối GHTK thành công! Tài khoản hợp lệ (Tìm thấy ${pickAddresses.length} kho lấy hàng).`,
+                isConfigured: true,
+                isSandbox: testIsSandbox,
+                apiUrl: testApiUrl,
+                pickAddresses,
+                endpointUsed,
+            };
+        } catch (error: any) {
+            const status = error.response?.status;
+            let msg = error.response?.data?.message || error.message;
+            if (status === 401 || status === 403) {
+                msg = 'Token GHTK không hợp lệ hoặc tài khoản bị khóa quyền API (Mã lỗi HTTP ' + status + ')';
+            }
+            return {
+                success: false,
+                message: `Lỗi kết nối GHTK: ${msg}`,
+                isConfigured: false,
+                statusCode: status,
+            };
+        }
     }
 
     private async getHeaders() {
@@ -286,10 +401,18 @@ export class GhtkService {
         }
 
         try {
-            const url = `${cfg.apiUrl}/open/api/v1/pick-address`;
-            const res = await axios.get(url, { headers, timeout: 8000 });
-            if (res.data?.success && Array.isArray(res.data?.data)) {
-                return res.data.data;
+            // Thử endpoint chuẩn GHTK: GET /services/shipment/list_pick_add
+            try {
+                const res = await axios.get(`${cfg.apiUrl}/services/shipment/list_pick_add`, { headers, timeout: 8000 });
+                if (res.data?.success && Array.isArray(res.data?.data)) {
+                    return res.data.data;
+                }
+            } catch (err1) {
+                // Fallback sang Open API v1
+                const res = await axios.get(`${cfg.apiUrl}/open/api/v1/pick-address`, { headers, timeout: 8000 });
+                if (res.data?.success && Array.isArray(res.data?.data)) {
+                    return res.data.data;
+                }
             }
             return [];
         } catch (err: any) {
@@ -330,30 +453,56 @@ export class GhtkService {
         }
 
         try {
-            const url = `${cfg.apiUrl}/open/api/v1/order/fee`;
-            const params = {
-                pick_province: dto.pick_province || 'Hồ Chí Minh',
-                pick_district: dto.pick_district || 'Quận 7',
-                pick_ward: dto.pick_ward || '',
-                pick_address: dto.pick_address || '',
-                province: dto.province,
-                district: dto.district,
-                ward: dto.ward || '',
-                address: dto.address || '',
-                weight: Number(dto.weight) || 500, // gram
-                value: Number(dto.value) || 0,
-                transport: dto.transport || 'road',
-            };
-
-            const res = await axios.post(url, params, { headers, timeout: 10000 });
-            if (res.data?.success && res.data?.fee) {
-                return {
-                    success: true,
-                    fee: res.data.fee,
-                    is_mock: false,
+            // Thử endpoint chuẩn GHTK: GET /services/shipment/fee
+            try {
+                const queryParams = {
+                    pick_province: dto.pick_province || 'Hồ Chí Minh',
+                    pick_district: dto.pick_district || 'Quận 7',
+                    pick_ward: dto.pick_ward || '',
+                    pick_address: dto.pick_address || '',
+                    province: dto.province,
+                    district: dto.district,
+                    ward: dto.ward || '',
+                    address: dto.address || '',
+                    weight: Number(dto.weight) || 500, // gram
+                    value: Number(dto.value) || 0,
+                    transport: dto.transport || 'road',
+                    deliver_option: 'none',
                 };
+                const res = await axios.get(`${cfg.apiUrl}/services/shipment/fee`, { headers, params: queryParams, timeout: 10000 });
+                if (res.data?.success && res.data?.fee) {
+                    return {
+                        success: true,
+                        fee: res.data.fee,
+                        is_mock: false,
+                    };
+                }
+            } catch (errGet: any) {
+                // Fallback POST /open/api/v1/order/fee
+                const params = {
+                    pick_province: dto.pick_province || 'Hồ Chí Minh',
+                    pick_district: dto.pick_district || 'Quận 7',
+                    pick_ward: dto.pick_ward || '',
+                    pick_address: dto.pick_address || '',
+                    province: dto.province,
+                    district: dto.district,
+                    ward: dto.ward || '',
+                    address: dto.address || '',
+                    weight: Number(dto.weight) || 500,
+                    value: Number(dto.value) || 0,
+                    transport: dto.transport || 'road',
+                };
+                const res = await axios.post(`${cfg.apiUrl}/open/api/v1/order/fee`, params, { headers, timeout: 10000 });
+                if (res.data?.success && res.data?.fee) {
+                    return {
+                        success: true,
+                        fee: res.data.fee,
+                        is_mock: false,
+                    };
+                }
             }
-            throw new BadRequestException(res.data?.message || 'Không thể tính phí vận chuyển GHTK');
+
+            throw new BadRequestException('Không thể tính phí vận chuyển GHTK');
         } catch (err: any) {
             this.logger.error(`GHTK Calculate Fee Error: ${err.response?.data?.message || err.message}`);
             throw new BadRequestException(err.response?.data?.message || 'Lỗi khi gọi API tính cước GHTK: ' + err.message);
@@ -387,7 +536,8 @@ export class GhtkService {
         });
         if (!delivery) throw new NotFoundException('Không tìm thấy phiếu xuất kho');
 
-        if (delivery.tracking_code && delivery.shipping_carrier === 'GHTK' && delivery.shipping_status_id && delivery.shipping_status_id > 0) {
+        // Cho phép đẩy đè nếu mã hiện tại là mã Demo (GHTK-DEMO-...)
+        if (delivery.tracking_code && delivery.shipping_carrier === 'GHTK' && delivery.shipping_status_id && delivery.shipping_status_id > 0 && !delivery.tracking_code.startsWith('GHTK-DEMO')) {
             throw new BadRequestException(`Phiếu này đã có mã vận đơn GHTK: ${delivery.tracking_code}`);
         }
 
@@ -432,6 +582,8 @@ export class GhtkService {
 
         if (options.pick_address_id && options.pick_address_id !== 'DEFAULT') {
             payload.order.pick_address_id = options.pick_address_id;
+        } else if (cfg.defaultPickAddressId) {
+            payload.order.pick_address_id = cfg.defaultPickAddressId;
         }
 
         // Nếu chưa cấu hình Token: Chế độ Sandbox Simulation
@@ -440,7 +592,7 @@ export class GhtkService {
             delivery.shipping_carrier = 'GHTK';
             delivery.shipping_provider = 'GHTK';
             delivery.tracking_code = mockTrackingCode;
-            delivery.shipping_cost = 32000;
+            delivery.shipping_cost = 25000;
             delivery.pick_money = pickMoney;
             delivery.is_freeship = isFreeship;
             delivery.weight_gram = options.weight_gram || delivery.weight_gram || 500;
@@ -455,22 +607,37 @@ export class GhtkService {
             return {
                 success: true,
                 tracking_code: mockTrackingCode,
-                fee: 32000,
+                fee: 25000,
                 status: 'Chờ lấy hàng',
                 is_mock: true,
-                message: 'Đã tạo vận đơn GHTK mô phỏng thành công (do chưa nhập Token GHTK)',
+                message: 'Đã tạo vận đơn GHTK mô phỏng (do chưa cấu hình Token API GHTK)',
             };
         }
 
         try {
-            const url = `${cfg.apiUrl}/open/api/v1/order/sync`;
-            const res = await axios.post(url, payload, { headers, timeout: 15000 });
+            let res: any;
+            try {
+                // Endpoint chuẩn GHTK: POST /services/shipment/order
+                res = await axios.post(`${cfg.apiUrl}/services/shipment/order`, payload, { headers, timeout: 15000 });
+            } catch (errOrder: any) {
+                if (errOrder.response?.status === 404) {
+                    // Fallback sang /open/api/v1/order/sync
+                    res = await axios.post(`${cfg.apiUrl}/open/api/v1/order/sync`, payload, { headers, timeout: 15000 });
+                } else if (errOrder.response?.data?.code === 'ORDER_ID_EXIST' || errOrder.response?.data?.message?.includes('tồn tại')) {
+                    // Trùng mã partner id: Thêm hậu tố timestamp ngắn và gửi lại
+                    payload.order.id = `${delivery.code}-${Date.now().toString().slice(-4)}`;
+                    res = await axios.post(`${cfg.apiUrl}/services/shipment/order`, payload, { headers, timeout: 15000 });
+                } else {
+                    throw errOrder;
+                }
+            }
 
             if (res.data?.success && res.data?.order) {
                 const ghtkOrder = res.data.order;
+                const finalTrackingCode = ghtkOrder.label || ghtkOrder.label_id || ghtkOrder.tracking_id;
                 delivery.shipping_carrier = 'GHTK';
                 delivery.shipping_provider = 'GHTK';
-                delivery.tracking_code = ghtkOrder.label_id || ghtkOrder.tracking_id;
+                delivery.tracking_code = finalTrackingCode;
                 delivery.shipping_cost = Number(ghtkOrder.fee) || delivery.shipping_cost;
                 delivery.pick_money = pickMoney;
                 delivery.is_freeship = isFreeship;
@@ -479,6 +646,7 @@ export class GhtkService {
                 delivery.shipping_status_text = 'Chờ lấy hàng';
                 delivery.shipping_metadata = {
                     ...res.data,
+                    is_mock: false,
                     pushed_at: new Date().toISOString(),
                 };
 
@@ -489,7 +657,7 @@ export class GhtkService {
                     tracking_code: delivery.tracking_code,
                     fee: delivery.shipping_cost,
                     estimated_deliver_time: ghtkOrder.estimated_deliver_time,
-                    message: 'Đẩy đơn sang GHTK thành công!',
+                    message: `Đẩy đơn sang GHTK thành công! Mã vận đơn: ${delivery.tracking_code}`,
                 };
             }
 
@@ -521,8 +689,14 @@ export class GhtkService {
         }
 
         try {
-            const url = `${cfg.apiUrl}/open/api/v1/order/cancel/${delivery.tracking_code}`;
-            const res = await axios.post(url, {}, { headers, timeout: 10000 });
+            let res: any;
+            try {
+                // Endpoint chuẩn: POST /services/shipment/cancel/{tracking_code}
+                res = await axios.post(`${cfg.apiUrl}/services/shipment/cancel/${delivery.tracking_code}`, {}, { headers, timeout: 10000 });
+            } catch (e1) {
+                // Fallback: POST /open/api/v1/order/cancel/{tracking_code}
+                res = await axios.post(`${cfg.apiUrl}/open/api/v1/order/cancel/${delivery.tracking_code}`, {}, { headers, timeout: 10000 });
+            }
 
             if (res.data?.success) {
                 delivery.shipping_status_id = -1;
@@ -546,7 +720,7 @@ export class GhtkService {
 
         const cfg = await this.getConfig();
         // Link in nhãn chính thức từ GHTK
-        return `${cfg.apiUrl}/open/api/v1/order/label/${delivery.tracking_code}?original=pdf&page_size=${pageSize}`;
+        return `${cfg.apiUrl}/services/label/${delivery.tracking_code}?pageSize=${pageSize}`;
     }
 
     /**

@@ -10,7 +10,7 @@ import {
     InfoCircleOutlined, KeyOutlined, UploadOutlined, AuditOutlined, PrinterOutlined, 
     QrcodeOutlined, BgColorsOutlined, CheckCircleOutlined, ReloadOutlined, 
     SafetyCertificateOutlined, EyeOutlined, ProjectOutlined, DollarOutlined,
-    GlobalOutlined, BankOutlined, PhoneOutlined, PictureOutlined
+    GlobalOutlined, BankOutlined, PhoneOutlined, PictureOutlined, CarOutlined, ThunderboltOutlined
 } from '@ant-design/icons';
 import axios from '../utils/api';
 import { SketchPicker } from 'react-color';
@@ -132,6 +132,16 @@ const SystemSettingsPage: React.FC = () => {
                                 </div>
                             ),
                             children: <div style={{ padding: '24px 32px' }}><EasyInvoiceConfigTab /></div>
+                        },
+                        {
+                            key: 'shipping',
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                                    <CarOutlined style={{ fontSize: 16 }} />
+                                    <span>Vận Chuyển (GHTK)</span>
+                                </div>
+                            ),
+                            children: <div style={{ padding: '24px 32px' }}><GhtkConfigTab /></div>
                         },
                         {
                             key: 'operations',
@@ -1511,6 +1521,177 @@ const EasyInvoiceConfigTab: React.FC = () => {
                     </Row>
                     <Space size="middle">
                         <Button type="primary" icon={<SaveOutlined />} onClick={form.submit} loading={submitting} size="large">Lưu Cấu Hình</Button>
+                    </Space>
+                </Form>
+            )}
+        </Card>
+    );
+};
+
+const GhtkConfigTab: React.FC = () => {
+    const [form] = Form.useForm();
+    const [loading, setLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [testing, setTesting] = useState(false);
+    const [testResult, setTestResult] = useState<any>(null);
+    const [currentConfig, setCurrentConfig] = useState<any>(null);
+
+    const fetchConfig = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get('/shipping/config');
+            setCurrentConfig(res.data);
+            form.setFieldsValue({
+                GHTK_SANDBOX: res.data.isSandbox || false,
+                GHTK_API_URL: res.data.apiUrl || '',
+                GHTK_PARTNER_CODE: res.data.partnerCode || '',
+                GHTK_DEFAULT_PICK_ADDRESS_ID: res.data.defaultPickAddressId || '',
+            });
+        } catch (e) {
+            message.error('Không thể tải cấu hình GHTK');
+        }
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchConfig();
+    }, []);
+
+    const handleTest = async () => {
+        const values = form.getFieldsValue();
+        setTesting(true);
+        setTestResult(null);
+        try {
+            const res = await axios.post('/shipping/test-connection', {
+                token: values.GHTK_TOKEN || undefined,
+                isSandbox: values.GHTK_SANDBOX,
+                apiUrl: values.GHTK_API_URL || undefined,
+                partnerCode: values.GHTK_PARTNER_CODE || undefined,
+            });
+            setTestResult(res.data);
+            if (res.data.success) {
+                message.success('Kết nối GHTK thành công!');
+            } else {
+                message.error(res.data.message || 'Kết nối GHTK thất bại');
+            }
+        } catch (e: any) {
+            setTestResult({ success: false, message: e.response?.data?.message || e.message });
+            message.error('Lỗi khi kiểm tra kết nối GHTK');
+        } finally {
+            setTesting(false);
+        }
+    };
+
+    const handleSubmit = async (values: any) => {
+        setSubmitting(true);
+        try {
+            const payload: any = {
+                isSandbox: values.GHTK_SANDBOX,
+                apiUrl: values.GHTK_API_URL,
+                partnerCode: values.GHTK_PARTNER_CODE,
+                defaultPickAddressId: values.GHTK_DEFAULT_PICK_ADDRESS_ID,
+            };
+            if (values.GHTK_TOKEN && values.GHTK_TOKEN.trim()) {
+                payload.token = values.GHTK_TOKEN.trim();
+            }
+            await axios.post('/shipping/config', payload);
+            message.success('Đã lưu cấu hình GHTK thành công!');
+            fetchConfig();
+        } catch (e: any) {
+            message.error(e.response?.data?.message || 'Lỗi khi lưu cấu hình GHTK');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <Card title={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <CarOutlined style={{ color: '#008444' }} />
+                    <span>Cấu hình Đối tác Vận chuyển Giao Hàng Tiết Kiệm (GHTK)</span>
+                </div>
+                {currentConfig && (
+                    currentConfig.isConfigured ? (
+                        <Tag color="green">✅ Đã kết nối API ({currentConfig.isSandbox ? 'Staging / Lab' : 'Production'})</Tag>
+                    ) : (
+                        <Tag color="warning">⚠️ Chưa cấu hình Token (Chế độ Demo)</Tag>
+                    )
+                )}
+            </div>
+        }>
+            <Alert
+                message="Tích hợp Giao Hàng Tiết Kiệm (GHTK) cho phép xuất kho tự động sinh mã vận đơn, in phiếu giao A6, tra cước realtime và cập nhật trạng thái đơn hàng."
+                type="info"
+                showIcon
+                style={{ marginBottom: 20 }}
+            />
+
+            {loading ? <Spin /> : (
+                <Form form={form} layout="vertical" onFinish={handleSubmit}>
+                    <Row gutter={16}>
+                        <Col span={16}>
+                            <Form.Item
+                                name="GHTK_TOKEN"
+                                label="API Token GHTK"
+                                extra={currentConfig?.hasToken ? `Hiện tại đã có Token: ${currentConfig.maskedToken}. Để trống nếu không muốn đổi.` : "Lấy tại: Cổng Khách hàng GHTK > Thông tin shop / Tài khoản"}
+                            >
+                                <Input.Password placeholder="Nhập mã API Token bí mật từ GHTK..." />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="GHTK_SANDBOX" label="Môi trường kết nối">
+                                <Radio.Group
+                                    value={form.getFieldValue('GHTK_SANDBOX')}
+                                    onChange={e => form.setFieldsValue({ GHTK_SANDBOX: e.target.value })}
+                                >
+                                    <Radio.Button value={false}>Thực tế (Prod)</Radio.Button>
+                                    <Radio.Button value={true}>Thử nghiệm (Staging)</Radio.Button>
+                                </Radio.Group>
+                            </Form.Item>
+                        </Col>
+                    </Row>
+
+                    <Row gutter={16}>
+                        <Col span={8}>
+                            <Form.Item name="GHTK_PARTNER_CODE" label="Partner Code / Client Source">
+                                <Input placeholder="VD: S308157 hoặc ERP4U_ERP" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="GHTK_DEFAULT_PICK_ADDRESS_ID" label="Mã kho lấy hàng mặc định (pick_address_id)">
+                                <Input placeholder="Mã kho (VD: 88256)" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="GHTK_API_URL" label="Tùy chỉnh API URL (Tùy chọn)">
+                                <Input placeholder="Mặc định tự động theo môi trường" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+
+                    {testResult && (
+                        <Alert
+                            type={testResult.success ? 'success' : 'error'}
+                            showIcon
+                            style={{ marginBottom: 20 }}
+                            message={testResult.message}
+                            description={testResult.pickAddresses?.length > 0 && (
+                                <div style={{ marginTop: 4 }}>
+                                    <b>Danh sách kho lấy hàng:</b>{' '}
+                                    {testResult.pickAddresses.map((p: any) => `${p.pick_name || 'Kho'} - ${p.address}`).join(' | ')}
+                                </div>
+                            )}
+                        />
+                    )}
+
+                    <Space size="middle">
+                        <Button type="primary" style={{ background: '#008444', borderColor: '#008444' }} icon={<SaveOutlined />} onClick={form.submit} loading={submitting} size="large">
+                            Lưu Cấu Hình
+                        </Button>
+                        <Button icon={<ThunderboltOutlined />} onClick={handleTest} loading={testing} size="large">
+                            Kiểm Tra Kết Nối
+                        </Button>
                     </Space>
                 </Form>
             )}

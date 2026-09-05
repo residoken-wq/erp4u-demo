@@ -4,7 +4,7 @@ import {
     CarOutlined, CheckCircleOutlined, PrinterOutlined, MailOutlined, EditOutlined, 
     UploadOutlined, DeleteOutlined, AppstoreOutlined, ThunderboltOutlined, 
     CompassOutlined, FilePdfOutlined, HistoryOutlined, CloseCircleOutlined, 
-    SendOutlined, CalculatorOutlined, InfoCircleOutlined 
+    SendOutlined, CalculatorOutlined, InfoCircleOutlined, SettingOutlined 
 } from '@ant-design/icons';
 import api from '../../utils/api';
 import dayjs from 'dayjs';
@@ -68,6 +68,84 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
     const [trackingLoading, setTrackingLoading] = useState<boolean>(false);
     const [trackingDelivery, setTrackingDelivery] = useState<any>(null);
     const [trackingData, setTrackingData] = useState<any>(null);
+
+    // GHTK Config State
+    const [ghtkConfig, setGhtkConfig] = useState<any>({ isConfigured: false, apiUrl: '', isSandbox: false });
+    const [ghtkConfigModalOpen, setGhtkConfigModalOpen] = useState<boolean>(false);
+    const [ghtkTokenInput, setGhtkTokenInput] = useState<string>('');
+    const [ghtkIsSandboxInput, setGhtkIsSandboxInput] = useState<boolean>(false);
+    const [ghtkPartnerCodeInput, setGhtkPartnerCodeInput] = useState<string>('');
+    const [ghtkDefaultPickAddressInput, setGhtkDefaultPickAddressInput] = useState<string>('');
+    const [ghtkTestLoading, setGhtkTestLoading] = useState<boolean>(false);
+    const [ghtkSaveLoading, setGhtkSaveLoading] = useState<boolean>(false);
+    const [ghtkTestResult, setGhtkTestResult] = useState<any>(null);
+
+    const fetchGhtkConfig = async () => {
+        try {
+            const res = await api.get('/shipping/config');
+            if (res.data) {
+                setGhtkConfig(res.data);
+                if (res.data.isConfigured && res.data.defaultPickAddressId && !selectedPickAddressId) {
+                    setSelectedPickAddressId(res.data.defaultPickAddressId);
+                }
+            }
+        } catch (e) { }
+    };
+
+    const handleOpenGhtkConfig = () => {
+        setGhtkIsSandboxInput(ghtkConfig?.isSandbox || false);
+        setGhtkPartnerCodeInput(ghtkConfig?.partnerCode || '');
+        setGhtkDefaultPickAddressInput(ghtkConfig?.defaultPickAddressId || '');
+        setGhtkTokenInput('');
+        setGhtkTestResult(null);
+        setGhtkConfigModalOpen(true);
+    };
+
+    const handleTestGhtkConnection = async () => {
+        try {
+            setGhtkTestLoading(true);
+            setGhtkTestResult(null);
+            const res = await api.post('/shipping/test-connection', {
+                token: ghtkTokenInput || undefined,
+                isSandbox: ghtkIsSandboxInput,
+                partnerCode: ghtkPartnerCodeInput || undefined,
+            });
+            setGhtkTestResult(res.data);
+            if (res.data?.success) {
+                message.success('Kết nối GHTK thành công!');
+            } else {
+                message.error(res.data?.message || 'Kết nối GHTK thất bại');
+            }
+        } catch (e: any) {
+            setGhtkTestResult({ success: false, message: e.response?.data?.message || e.message });
+            message.error('Lỗi khi kiểm tra kết nối GHTK');
+        } finally {
+            setGhtkTestLoading(false);
+        }
+    };
+
+    const handleSaveGhtkConfig = async () => {
+        try {
+            setGhtkSaveLoading(true);
+            const payload: any = {
+                isSandbox: ghtkIsSandboxInput,
+                partnerCode: ghtkPartnerCodeInput,
+                defaultPickAddressId: ghtkDefaultPickAddressInput,
+            };
+            if (ghtkTokenInput.trim()) {
+                payload.token = ghtkTokenInput.trim();
+            }
+            await api.post('/shipping/config', payload);
+            message.success('Đã lưu cấu hình GHTK thành công!');
+            setGhtkConfigModalOpen(false);
+            await fetchGhtkConfig();
+            await fetchGhtkPickAddresses();
+        } catch (e: any) {
+            message.error(e.response?.data?.message || 'Không thể lưu cấu hình GHTK');
+        } finally {
+            setGhtkSaveLoading(false);
+        }
+    };
 
     // RESOLVE FULL CUSTOMER (to get contacts)
     const fullCustomer = customers.find(c => c.id === order?.customer?.id || c.id === order?.customer_id) || order?.customer || {};
@@ -263,29 +341,65 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         });
     };
 
+    const executePushGhtk = async (delivery: any) => {
+        try {
+            message.loading({ content: 'Đang gửi thông tin sang GHTK để tạo vận đơn...', key: 'push_ghtk' });
+            const res = await api.post(`/shipping/delivery/${delivery.id}/push-ghtk`, {
+                pick_address_id: selectedPickAddressId || ghtkConfig?.defaultPickAddressId,
+                province: ghtkProvince || (delivery.delivery_address?.split(',').pop() || '').trim(),
+                district: ghtkDistrict || (delivery.delivery_address?.split(',').slice(-2, -1)[0] || '').trim(),
+                ward: ghtkWard,
+                address: delivery.delivery_address,
+                note: delivery.note,
+                weight_gram: delivery.weight_gram || 500,
+                pick_money: delivery.pick_money || 0,
+                is_freeship: delivery.is_freeship !== undefined ? delivery.is_freeship : 1
+            });
+            const isMockPush = res.data?.is_mock;
+            message.success({ 
+                content: isMockPush
+                    ? `Đã tạo mã vận đơn GHTK mô phỏng: ${res.data?.tracking_code} (Chưa có Token thật)`
+                    : `Đã tạo mã vận đơn GHTK chính thức: ${res.data?.tracking_code}`, 
+                key: 'push_ghtk',
+                duration: 5
+            });
+            fetchHistory();
+        } catch (e: any) {
+            message.error({ content: e.response?.data?.message || 'Lỗi khi đẩy đơn GHTK', key: 'push_ghtk' });
+        }
+    };
+
     const handlePushSingleDeliveryGhtk = async (delivery: any) => {
+        const isDemo = delivery.tracking_code?.startsWith('GHTK-DEMO');
+        if (!ghtkConfig?.isConfigured) {
+            Modal.confirm({
+                title: 'Chưa cấu hình Token GHTK thật',
+                content: (
+                    <div>
+                        <p>Hệ thống hiện chưa cấu hình API Token của GHTK thật.</p>
+                        <p>Nếu tiếp tục đẩy đơn, hệ thống sẽ chỉ tạo <b>mã vận đơn mô phỏng (Demo)</b>.</p>
+                        <p>Bạn có muốn mở bảng cấu hình Token GHTK để kết nối thật ngay không?</p>
+                    </div>
+                ),
+                okText: 'Cấu hình Token ngay',
+                cancelText: 'Vẫn tạo Demo',
+                onOk: () => handleOpenGhtkConfig(),
+                onCancel: async () => {
+                    executePushGhtk(delivery);
+                }
+            });
+            return;
+        }
+
         Modal.confirm({
-            title: 'Đẩy vận đơn sang GHTK?',
-            content: `Xác nhận tạo đơn giao hàng cho phiếu xuất ${delivery.code} sang GHTK?`,
+            title: isDemo ? 'Đẩy lại vận đơn sang GHTK thật?' : 'Đẩy vận đơn sang GHTK?',
+            content: isDemo 
+                ? `Phiếu xuất ${delivery.code} hiện đang mang mã Demo (${delivery.tracking_code}). Xác nhận gửi thông tin sang GHTK thật để lấy mã vận đơn chính thức?`
+                : `Xác nhận tạo đơn giao hàng cho phiếu xuất ${delivery.code} sang GHTK?`,
             okText: 'Đẩy đơn',
             cancelText: 'Hủy',
             onOk: async () => {
-                try {
-                    const res = await api.post(`/shipping/delivery/${delivery.id}/push-ghtk`, {
-                        province: ghtkProvince || (delivery.delivery_address?.split(',').pop() || '').trim(),
-                        district: ghtkDistrict || (delivery.delivery_address?.split(',').slice(-2, -1)[0] || '').trim(),
-                        ward: ghtkWard,
-                        address: delivery.delivery_address,
-                        note: delivery.note,
-                        weight_gram: delivery.weight_gram || 500,
-                        pick_money: delivery.pick_money || 0,
-                        is_freeship: delivery.is_freeship !== undefined ? delivery.is_freeship : 1
-                    });
-                    message.success(`Đã tạo mã vận đơn GHTK: ${res.data?.tracking_code}`);
-                    fetchHistory();
-                } catch (e: any) {
-                    message.error(e.response?.data?.message || 'Lỗi khi đẩy đơn GHTK');
-                }
+                executePushGhtk(delivery);
             }
         });
     };
@@ -316,6 +430,8 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
     useEffect(() => {
         if (order?.id) fetchHistory();
         fetchCarriers();
+        fetchGhtkConfig();
+        fetchGhtkPickAddresses();
         api.get(`/system/company`).then(res => setCompanyConfig(res.data)).catch(() => { });
     }, [order]);
 
@@ -605,7 +721,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                     try {
                         message.loading({ content: 'Đang gửi thông tin sang GHTK để tạo vận đơn...', key: 'ghtk_push' });
                         const pushRes = await api.post(`/shipping/delivery/${newDeliveryId}/push-ghtk`, {
-                            pick_address_id: selectedPickAddressId,
+                            pick_address_id: selectedPickAddressId || ghtkConfig?.defaultPickAddressId,
                             province: ghtkProvince,
                             district: ghtkDistrict,
                             ward: ghtkWard,
@@ -615,8 +731,11 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                             pick_money: isCod ? pickMoney : 0,
                             is_freeship: isFreeship
                         });
+                        const isMockPush = pushRes.data?.is_mock;
                         message.success({ 
-                            content: `Xuất kho & tạo vận đơn GHTK thành công! Mã VĐ: ${pushRes.data?.tracking_code}`, 
+                            content: isMockPush
+                                ? `Đã tạo phiếu & mã vận đơn GHTK mô phỏng: ${pushRes.data?.tracking_code} (Chưa cấu hình Token GHTK)`
+                                : `Xuất kho & tạo vận đơn GHTK thành công! Mã VĐ: ${pushRes.data?.tracking_code}`, 
                             key: 'ghtk_push', 
                             duration: 5 
                         });
@@ -936,7 +1055,15 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                 <div style={{ marginTop: 4, fontSize: 12, color: '#1d39c4', background: '#f0f5ff', padding: '3px 6px', borderRadius: 4 }}>
                                     <CarOutlined style={{ marginRight: 4 }} />
                                     {r.shipping_carrier && <span>{r.shipping_carrier}</span>}
-                                    {r.tracking_code && <span> • <b>{r.tracking_code}</b></span>}
+                                    {r.tracking_code && (
+                                        <span>
+                                            {' • '}
+                                            <b>{r.tracking_code}</b>
+                                            {r.tracking_code.startsWith('GHTK-DEMO') && (
+                                                <Tag color="orange" style={{ marginLeft: 4, fontSize: 10 }}>Mã Demo</Tag>
+                                            )}
+                                        </span>
+                                    )}
                                     {Number(r.shipping_cost) > 0 && <span> • {Number(r.shipping_cost).toLocaleString()}đ</span>}
                                     {Number(r.pick_money) > 0 && <span style={{ color: '#d4380d', fontWeight: 500 }}> • COD: {Number(r.pick_money).toLocaleString()}đ</span>}
                                     {r.shipping_status_text && (
@@ -988,7 +1115,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                 <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(r)} />
                             </Tooltip>
                             {/* GHTK Action Buttons */}
-                            {r.shipping_carrier === 'GHTK' && r.tracking_code && (
+                            {r.shipping_carrier === 'GHTK' && r.tracking_code && !r.tracking_code.startsWith('GHTK-DEMO') && (
                                 <>
                                     <Tooltip title="In Vận Đơn GHTK (A6 PDF)">
                                         <Button size="small" style={{ color: '#008444', borderColor: '#008444' }} icon={<FilePdfOutlined />} onClick={() => handlePrintGhtkLabel(r)} />
@@ -1003,9 +1130,21 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                     )}
                                 </>
                             )}
-                            {r.shipping_carrier === 'GHTK' && !r.tracking_code && r.status !== 'DRAFT' && (
-                                <Tooltip title="Đẩy đơn sang GHTK để lấy mã vận đơn">
-                                    <Button size="small" type="primary" style={{ background: '#008444', borderColor: '#008444' }} icon={<SendOutlined />} onClick={() => handlePushSingleDeliveryGhtk(r)}>GHTK</Button>
+                            {/* Nút đẩy đơn GHTK: hiển thị nếu chưa có mã VĐ hoặc mã hiện tại là mã Demo */}
+                            {r.shipping_carrier === 'GHTK' && (!r.tracking_code || r.tracking_code.startsWith('GHTK-DEMO')) && (
+                                <Tooltip title={r.tracking_code?.startsWith('GHTK-DEMO') ? "Phiếu này đang mang mã Demo mô phỏng. Bấm để đẩy sang GHTK thật lấy mã chính thức!" : "Đẩy đơn sang GHTK để lấy mã vận đơn"}>
+                                    <Button 
+                                        size="small" 
+                                        type="primary" 
+                                        style={{ 
+                                            background: r.tracking_code?.startsWith('GHTK-DEMO') ? '#fa8c16' : '#008444', 
+                                            borderColor: r.tracking_code?.startsWith('GHTK-DEMO') ? '#fa8c16' : '#008444' 
+                                        }} 
+                                        icon={<SendOutlined />} 
+                                        onClick={() => handlePushSingleDeliveryGhtk(r)}
+                                    >
+                                        {r.tracking_code?.startsWith('GHTK-DEMO') ? 'Đẩy GHTK thật' : 'GHTK'}
+                                    </Button>
                                 </Tooltip>
                             )}
                             {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
@@ -1182,7 +1321,26 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                             {shippingCarrier === 'GHTK' ? '🚀 Vận chuyển Giao Hàng Tiết Kiệm (GHTK):' : 'Thông tin vận chuyển:'}
                         </div>
                         {shippingCarrier === 'GHTK' && (
-                            <Tag color="green" style={{ margin: 0 }}>GHTK API Connected</Tag>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {ghtkConfig?.isConfigured ? (
+                                    <Tag color="green" style={{ margin: 0 }}>
+                                        ✅ GHTK API Đã kết nối {ghtkConfig.isSandbox ? '(Staging)' : '(Production)'}
+                                    </Tag>
+                                ) : (
+                                    <Tag color="warning" style={{ margin: 0 }}>
+                                        ⚠️ GHTK Chế độ Mô phỏng (Chưa cấu hình Token)
+                                    </Tag>
+                                )}
+                                <Button 
+                                    size="small" 
+                                    type="link" 
+                                    icon={<SettingOutlined />} 
+                                    onClick={handleOpenGhtkConfig}
+                                    style={{ fontSize: 11, padding: 0, height: 20 }}
+                                >
+                                    Cấu hình
+                                </Button>
+                            </div>
                         )}
                     </div>
                     <div style={{ display: 'flex', gap: 10, marginBottom: 8 }}>
@@ -1216,6 +1374,19 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                     {/* GHTK ENHANCED PANEL */}
                     {shippingCarrier === 'GHTK' && (
                         <div style={{ background: '#ffffff', padding: 10, borderRadius: 6, border: '1px solid #d9f7be', marginTop: 8 }}>
+                            {!ghtkConfig?.isConfigured && (
+                                <Alert 
+                                    style={{ marginBottom: 10, fontSize: 12, padding: '6px 10px' }}
+                                    type="warning"
+                                    showIcon
+                                    message={
+                                        <span>
+                                            <b>Chưa cấu hình Token GHTK thật:</b> Đơn hàng khi tạo sẽ mang mã Demo mô phỏng (VD: <code>GHTK-DEMO-XXXXXX</code>) và chưa được truyền sang bưu cục GHTK.{' '}
+                                            <a onClick={handleOpenGhtkConfig} style={{ textDecoration: 'underline', fontWeight: 600 }}>Bấm vào đây để cấu hình Token GHTK</a>
+                                        </span>
+                                    }
+                                />
+                            )}
                             {/* GHTK LEVEL 4 ADDRESS INPUTS */}
                             <div style={{ background: '#f6ffed', padding: '8px 10px', borderRadius: 6, border: '1px dashed #b7eb8f', marginBottom: 10 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -1329,8 +1500,8 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                 </Button>
                                 {!editingDeliveryId && !isDraft && (
                                     <Checkbox checked={pushToGhtkDirectly} onChange={e => setPushToGhtkDirectly(e.target.checked)}>
-                                        <span style={{ fontSize: 12, color: '#008444', fontWeight: 500 }}>
-                                            🚀 Tự động đẩy đơn sang GHTK khi lưu phiếu
+                                        <span style={{ fontSize: 12, color: ghtkConfig?.isConfigured ? '#008444' : '#fa8c16', fontWeight: 500 }}>
+                                            🚀 {ghtkConfig?.isConfigured ? 'Tự động đẩy đơn sang GHTK khi lưu phiếu' : 'Tự động tạo vận đơn Demo khi lưu phiếu'}
                                         </span>
                                     </Checkbox>
                                 )}
@@ -1433,6 +1604,112 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                         )}
                     </div>
                 )}
+            </Modal>
+
+            {/* MODAL CẤU HÌNH NHANH GHTK */}
+            <Modal
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <CarOutlined style={{ color: '#008444' }} />
+                        <span>Cấu hình Kết nối Giao Hàng Tiết Kiệm (GHTK)</span>
+                    </div>
+                }
+                open={ghtkConfigModalOpen}
+                onCancel={() => setGhtkConfigModalOpen(false)}
+                footer={[
+                    <Button key="cancel" onClick={() => setGhtkConfigModalOpen(false)}>Đóng</Button>,
+                    <Button 
+                        key="test" 
+                        icon={<ThunderboltOutlined />} 
+                        loading={ghtkTestLoading} 
+                        onClick={handleTestGhtkConnection}
+                    >
+                        Kiểm tra kết nối
+                    </Button>,
+                    <Button 
+                        key="save" 
+                        type="primary" 
+                        style={{ background: '#008444', borderColor: '#008444' }} 
+                        loading={ghtkSaveLoading} 
+                        onClick={handleSaveGhtkConfig}
+                    >
+                        Lưu cấu hình
+                    </Button>
+                ]}
+                width={560}
+            >
+                <Alert 
+                    type="info" 
+                    showIcon 
+                    style={{ marginBottom: 16 }}
+                    message={
+                        <div style={{ fontSize: 12 }}>
+                            Lấy API Token tại: <b>Cổng Khách Hàng GHTK</b> &gt; <i>Thông tin shop / Tài khoản</i>.
+                            Token sẽ được lưu an toàn trong hệ thống để tạo vận đơn và tính phí ship tự động.
+                        </div>
+                    }
+                />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
+                            API Token GHTK <span style={{ color: 'red' }}>*</span>
+                        </div>
+                        <Input.Password
+                            placeholder={ghtkConfig?.hasToken ? `Đã có token (${ghtkConfig.maskedToken}). Nhập mới nếu muốn thay đổi.` : "Dán chuỗi API Token được GHTK cấp vào đây..."}
+                            value={ghtkTokenInput}
+                            onChange={e => setGhtkTokenInput(e.target.value)}
+                        />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Môi trường kết nối:</div>
+                            <Radio.Group 
+                                value={ghtkIsSandboxInput} 
+                                onChange={e => setGhtkIsSandboxInput(e.target.value)}
+                                style={{ width: '100%' }}
+                            >
+                                <Radio.Button value={false} style={{ width: '50%', textAlign: 'center' }}>Thực tế (Prod)</Radio.Button>
+                                <Radio.Button value={true} style={{ width: '50%', textAlign: 'center' }}>Thử nghiệm (Test)</Radio.Button>
+                            </Radio.Group>
+                        </div>
+
+                        <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Mã Đối Tác / Client Source:</div>
+                            <Input 
+                                placeholder="VD: S308157 hoặc PACE_ERP" 
+                                value={ghtkPartnerCodeInput}
+                                onChange={e => setGhtkPartnerCodeInput(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Mã kho lấy hàng mặc định (pick_address_id):</div>
+                        <Input 
+                            placeholder="Mã kho từ GHTK (VD: 88256, để trống hệ thống sẽ lấy kho đầu tiên)" 
+                            value={ghtkDefaultPickAddressInput}
+                            onChange={e => setGhtkDefaultPickAddressInput(e.target.value)}
+                        />
+                    </div>
+
+                    {ghtkTestResult && (
+                        <Alert 
+                            type={ghtkTestResult.success ? 'success' : 'error'}
+                            showIcon
+                            style={{ marginTop: 8 }}
+                            message={ghtkTestResult.message}
+                            description={
+                                ghtkTestResult.pickAddresses?.length > 0 && (
+                                    <div style={{ marginTop: 4, fontSize: 11 }}>
+                                        Kho nhận diện được: {ghtkTestResult.pickAddresses.map((p: any) => `${p.pick_name || 'Kho'} (${p.address})`).join('; ')}
+                                    </div>
+                                )
+                            }
+                        />
+                    )}
+                </div>
             </Modal>
         </div>
     );
