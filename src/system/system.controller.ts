@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { SystemService } from './system.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -52,8 +52,9 @@ export class SystemController {
     @UseGuards(JwtAuthGuard, PermissionsGuard)
     @RequirePermission('USERS', 'can_view')
     @Get('logs')
-    getLogs() {
-        return this.s.getLogs();
+    getLogs(@Query('limit') limit?: string) {
+        const parsedLimit = limit ? Math.min(Math.max(parseInt(limit, 10) || 5, 1), 100) : 100;
+        return this.s.getLogs(parsedLimit);
     }
 
     // --- API TOKENS ---

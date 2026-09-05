@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Customer, CustomerType } from './customer.entity';
 import { CustomerContact } from './customer-contact.entity';
 import { CustomerComment } from './customer-comment.entity';
@@ -80,44 +80,83 @@ export class CustomersService {
         return `${prefix}${nextNum.toString().padStart(4, '0')}`;
     }
 
-    async findAll() {
-        const customers = await this.customerRepo.find({
-            order: { id: 'DESC' },
-            relations: ['parent', 'contacts', 'assigned_to', 'orders'] // Load orders
-        });
+    async findAll(filter?: { type?: CustomerType; limit?: number; compact?: boolean }) {
+        const where: any = {};
+        if (filter?.type) {
+            where.type = filter.type;
+        }
 
-        // Calculate Revenue and Debt
-        // Note: For better performance with large data, use aggregation query instead of map
-        return Promise.all(customers.map(async (c) => {
+        // Fast path for compact preview (Dashboard, dropdowns, etc.)
+        if (filter?.compact) {
+            return this.customerRepo.find({
+                where,
+                order: { id: 'DESC' },
+                take: filter?.limit || 10,
+                relations: ['contacts']
+            });
+        }
+
+        const findOptions: any = {
+            order: { id: 'DESC' },
+            relations: ['parent', 'contacts', 'assigned_to', 'orders']
+        };
+        if (filter?.type) {
+            findOptions.where = where;
+        }
+        if (filter?.limit) {
+            findOptions.take = filter.limit;
+        }
+
+        const customers = await this.customerRepo.find(findOptions);
+
+        // Batch load payments for all relevant orders to avoid N+1 queries
+        const orderCodes: string[] = [];
+        for (const c of customers) {
+            if (c.orders && c.orders.length > 0) {
+                for (const order of c.orders) {
+                    if (order.status !== 'CANCELLED' && order.status !== 'QUOTATION' && order.order_code) {
+                        orderCodes.push(order.order_code);
+                    }
+                }
+            }
+        }
+
+        const paymentsMap = new Map<string, number>();
+        if (orderCodes.length > 0) {
+            const payments = await this.transRepo.find({
+                where: {
+                    reference_code: In(orderCodes),
+                    reference_type: 'SALES',
+                    status: 'COMPLETED'
+                },
+                select: ['reference_code', 'amount']
+            });
+            for (const p of payments) {
+                const current = paymentsMap.get(p.reference_code) || 0;
+                paymentsMap.set(p.reference_code, current + Number(p.amount || 0));
+            }
+        }
+
+        // Fast in-memory calculation
+        return customers.map((c) => {
             let revenue = 0;
             let paid = 0;
 
-            // Ensure orders is loaded
             if (c.orders && c.orders.length > 0) {
                 for (const order of c.orders) {
-                    // Only count non-cancelled, non-quotation (or maybe count quotation potential? No, usually revenue = sold)
-                    // Let's assume Valid orders are NOT Cancelled and NOT Quotation
                     if (order.status !== 'CANCELLED' && order.status !== 'QUOTATION') {
                         revenue += Number(order.total_amount || 0);
-
-                        // Fetch payments for this order
-                        // We can optimize this by batch loading, but for now loop is simpler for logic
-                        const payments = await this.transRepo.find({ where: { reference_code: order.order_code, reference_type: 'SALES', status: 'COMPLETED' } });
-                        const paidAmt = payments.reduce((acc, p) => acc + Number(p.amount), 0);
-                        paid += paidAmt;
+                        paid += paymentsMap.get(order.order_code) || 0;
                     }
                 }
             }
 
-            // Update runtime values (not saving to DB to avoid overhead, or should we?)
-            // User requested "Updated Value".
-            // We return enriched object.
             return {
                 ...c,
                 total_revenue: revenue,
                 current_debt: revenue - paid
             };
-        }));
+        });
     }
 
     // --- ADVANCED SEARCH FOR AI (VỚI THUẬT TOÁN TÍNH ĐIỂM RELEVANCE SCORE) ---

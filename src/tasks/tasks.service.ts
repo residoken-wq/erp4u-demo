@@ -16,11 +16,25 @@ export class TasksService {
         @InjectRepository(TaskTimeLog) private timeLogRepo: Repository<TaskTimeLog>,
     ) { }
 
-    async findAll() {
-        return this.taskRepo.find({
-            order: { created_at: 'DESC' },
-            relations: ['assignee', 'creator', 'project', 'milestone']
-        });
+    async findAll(filters?: { assignee_id?: number; status_not?: string; limit?: number }) {
+        const query = this.taskRepo.createQueryBuilder('task')
+            .leftJoinAndSelect('task.assignee', 'assignee')
+            .leftJoinAndSelect('task.creator', 'creator')
+            .leftJoinAndSelect('task.project', 'project')
+            .leftJoinAndSelect('task.milestone', 'milestone')
+            .orderBy('task.created_at', 'DESC');
+
+        if (filters?.assignee_id) {
+            query.andWhere('(task.assignee_id = :assignee_id OR task.creator_id = :assignee_id)', { assignee_id: filters.assignee_id });
+        }
+        if (filters?.status_not) {
+            query.andWhere('task.status != :status_not', { status_not: filters.status_not });
+        }
+        if (filters?.limit) {
+            query.take(filters.limit);
+        }
+
+        return query.getMany();
     }
 
     async create(data: any) {

@@ -34,7 +34,16 @@ const HeaderNotifications: React.FC = () => {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [hasNew, setHasNew] = useState(false);
-    const [useFirebase, setUseFirebase] = useState(true);
+
+    // Check if Firebase is valid or running in demo mode
+    const isFirebaseAvailable = () => {
+        if (import.meta.env.VITE_ENABLE_FIREBASE === 'false') return false;
+        const dbUrl = (database as any)?.app?.options?.databaseURL || '';
+        if (dbUrl.includes('erp4u') || dbUrl.includes('demo') || !dbUrl) return false;
+        return true;
+    };
+
+    const [useFirebase, setUseFirebase] = useState(isFirebaseAvailable);
 
     // Get user ID from localStorage
     const userStr = localStorage.getItem('user');

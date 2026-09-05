@@ -236,6 +236,7 @@ export class SystemService {
 
     async getLogs(limit: number = 100) {
         return this.logRepo.find({
+            select: ['id', 'module', 'action', 'description', 'username', 'full_name', 'timestamp'],
             order: { timestamp: 'DESC' },
             take: limit
         });

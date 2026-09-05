@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { CustomersService } from './customers.service';
+import { CustomerType } from './customer.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermission } from '../auth/permissions.decorator';
@@ -10,7 +11,17 @@ export class CustomersController {
   constructor(private readonly s: CustomersService) { }
 
   @Post() @RequirePermission('SALES', 'can_create') create(@Body() b: any) { return this.s.create(b); }
-  @Get() @RequirePermission('SALES', 'can_view') findAll() { return this.s.findAll(); }
+  @Get() @RequirePermission('SALES', 'can_view') findAll(
+    @Query('type') type?: CustomerType,
+    @Query('limit') limit?: string,
+    @Query('compact') compact?: string,
+  ) {
+    return this.s.findAll({
+      type,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      compact: compact === 'true',
+    });
+  }
   @Get(':id') @RequirePermission('SALES', 'can_view') findOne(@Param('id') id: number) { return this.s.findOne(id); }
   @Put(':id') @RequirePermission('SALES', 'can_update') update(@Param('id') id: number, @Body() b: any) { return this.s.update(id, b); }
   @Delete(':id') @RequirePermission('SALES', 'can_delete') remove(@Param('id') id: number) { return this.s.remove(id); }

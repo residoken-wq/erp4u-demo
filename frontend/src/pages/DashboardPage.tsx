@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Row, Col, Card, Statistic, Button, Typography, Tag, List, Avatar, Skeleton, Progress, Empty, Tooltip, Badge, Divider } from 'antd';
+import { Row, Col, Card, Statistic, Button, Typography, Tag, List, Avatar, Skeleton, Progress, Empty, Tooltip, Badge, Divider, Spin } from 'antd';
 import {
     ShoppingCartOutlined, DropboxOutlined, DollarOutlined,
     ClockCircleOutlined, UserOutlined, ShopOutlined, CheckCircleOutlined,
@@ -39,41 +39,85 @@ const DashboardPage: React.FC = () => {
         return !!(p && (p.can_view === true || p.can_view === 1));
     };
 
+    const [loadingStats, setLoadingStats] = useState(true);
+    const [loadingTasks, setLoadingTasks] = useState(true);
+    const [loadingLeads, setLoadingLeads] = useState(true);
+    const [loadingLogs, setLoadingLogs] = useState(true);
+
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [statRes, logRes, tasksRes, leadsRes] = await Promise.all([
-                    api.get('/system/dashboard/stats'),
-                    api.get('/system/logs?limit=5'),
-                    api.get('/tasks').catch(() => ({ data: [] })),
-                    api.get('/customers').catch(() => ({ data: [] }))
-                ]);
-                setStats(statRes.data);
-                setRecentLogs(logRes.data || []);
+        let isMounted = true;
 
-                // Filter tasks assigned to current user
-                const allTasks = tasksRes.data || [];
-                const userId = user?.id;
-                const filtered = allTasks.filter((t: any) =>
-                    t.status !== 'DONE' && (t.assigned_to_id === userId || t.assigned_to?.id === userId)
-                );
+        // 1. Fetch Primary Stats (renders top KPI cards instantly)
+        api.get('/system/dashboard/stats')
+            .then((res) => {
+                if (isMounted) setStats(res.data);
+            })
+            .catch((e) => console.error('Stats load error:', e))
+            .finally(() => {
+                if (isMounted) {
+                    setLoadingStats(false);
+                    setLoading(false);
+                }
+            });
+
+        // 2. Fetch Logs (5 items limit, minimal fields)
+        api.get('/system/logs?limit=5')
+            .then((res) => {
+                if (isMounted) {
+                    const data = res.data?.data || res.data || [];
+                    setRecentLogs(Array.isArray(data) ? data : []);
+                }
+            })
+            .catch((e) => console.error('Logs load error:', e))
+            .finally(() => {
+                if (isMounted) setLoadingLogs(false);
+            });
+
+        // 3. Fetch My Tasks (server filtered)
+        const userId = user?.id;
+        const taskUrl = userId
+            ? `/tasks?assigned_to_id=${userId}&status_not=DONE&limit=5`
+            : '/tasks?status_not=DONE&limit=5';
+        api.get(taskUrl)
+            .then((res) => {
+                if (!isMounted) return;
+                const allTasks = res.data?.data || res.data || [];
+                const filtered = Array.isArray(allTasks)
+                    ? allTasks.filter((t: any) =>
+                        t.status !== 'DONE' && (!userId || t.assigned_to_id === userId || t.assignee_id === userId || t.assigned_to?.id === userId || t.assignee?.id === userId)
+                    )
+                    : [];
                 setMyTasks(filtered.slice(0, 5));
+            })
+            .catch(() => {
+                if (isMounted) setMyTasks([]);
+            })
+            .finally(() => {
+                if (isMounted) setLoadingTasks(false);
+            });
 
-                // Filter incomplete leads (LEADs not yet CUSTOMER)
-                const allCustomers = leadsRes.data || [];
-                const leads = allCustomers.filter((c: any) =>
-                    c.type === 'LEAD' && (!c.orders || c.orders.length === 0 || c.orders.every((o: any) => o.status === 'QUOTATION'))
-                );
+        // 4. Fetch Incomplete Leads (compact mode, 5 items limit)
+        api.get('/customers?type=LEAD&limit=5&compact=true')
+            .then((res) => {
+                if (!isMounted) return;
+                const allCustomers = res.data?.data || res.data || [];
+                const leads = Array.isArray(allCustomers)
+                    ? allCustomers.filter((c: any) =>
+                        c.type === 'LEAD' && (!c.orders || c.orders.length === 0 || c.orders.every((o: any) => o.status === 'QUOTATION'))
+                    )
+                    : [];
                 setIncompleteLeads(leads.slice(0, 5));
+            })
+            .catch(() => {
+                if (isMounted) setIncompleteLeads([]);
+            })
+            .finally(() => {
+                if (isMounted) setLoadingLeads(false);
+            });
 
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
+        return () => {
+            isMounted = false;
         };
-
-        fetchData();
     }, []);
 
     // --- HELPER: Priority Color ---
@@ -312,11 +356,13 @@ const DashboardPage: React.FC = () => {
                             style={{ borderRadius: 16, height: '100%', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
                             extra={<Button type="link" onClick={() => navigate('/tasks')}>Xem tất cả <RightOutlined /></Button>}
                         >
-                            {myTasks.length > 0 ? (
-                                myTasks.map((task) => <TaskCard key={task.id} task={task} />)
-                            ) : (
-                                <Empty description="Không có công việc đang chờ" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                            )}
+                            <Spin spinning={loadingTasks}>
+                                {myTasks.length > 0 ? (
+                                    myTasks.map((task) => <TaskCard key={task.id} task={task} />)
+                                ) : (
+                                    <Empty description="Không có công việc đang chờ" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                                )}
+                            </Spin>
                         </Card>
                     </Col>
 
@@ -334,11 +380,13 @@ const DashboardPage: React.FC = () => {
                             style={{ borderRadius: 16, height: '100%', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
                             extra={<Button type="link" onClick={() => navigate('/customers')}>Xem tất cả <RightOutlined /></Button>}
                         >
-                            {incompleteLeads.length > 0 ? (
-                                incompleteLeads.map((lead) => <LeadCard key={lead.id} lead={lead} />)
-                            ) : (
-                                <Empty description="Không có lead cần chăm sóc" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                            )}
+                            <Spin spinning={loadingLeads}>
+                                {incompleteLeads.length > 0 ? (
+                                    incompleteLeads.map((lead) => <LeadCard key={lead.id} lead={lead} />)
+                                ) : (
+                                    <Empty description="Không có lead cần chăm sóc" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                                )}
+                            </Spin>
                         </Card>
                     </Col>
                 </Row>
@@ -380,25 +428,27 @@ const DashboardPage: React.FC = () => {
                             style={{ borderRadius: 16, height: '100%', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
                             extra={<a onClick={() => navigate('/system/logs')}>Xem tất cả</a>}
                         >
-                            <List
-                                itemLayout="horizontal"
-                                dataSource={recentLogs}
-                                locale={{ emptyText: 'Chưa có hoạt động' }}
-                                renderItem={(item: any) => (
-                                    <List.Item style={{ padding: '8px 0' }}>
-                                        <List.Item.Meta
-                                            avatar={<Avatar style={{ background: 'linear-gradient(135deg, #87d068, #52c41a)' }} icon={<CheckCircleOutlined />} size="small" />}
-                                            title={<Text style={{ fontSize: 12 }}>{item.action_type}</Text>}
-                                            description={
-                                                <div>
-                                                    <div style={{ fontSize: 11, color: '#666' }}>{item.description?.slice(0, 40)}...</div>
-                                                    <div style={{ fontSize: 10, color: '#999' }}>{dayjs(item.created_at).fromNow()}</div>
-                                                </div>
-                                            }
-                                        />
-                                    </List.Item>
-                                )}
-                            />
+                            <Spin spinning={loadingLogs}>
+                                <List
+                                    itemLayout="horizontal"
+                                    dataSource={recentLogs}
+                                    locale={{ emptyText: 'Chưa có hoạt động' }}
+                                    renderItem={(item: any) => (
+                                        <List.Item style={{ padding: '8px 0' }}>
+                                            <List.Item.Meta
+                                                avatar={<Avatar style={{ background: 'linear-gradient(135deg, #87d068, #52c41a)' }} icon={<CheckCircleOutlined />} size="small" />}
+                                                title={<Text style={{ fontSize: 12, fontWeight: 500 }}>{item.action || item.action_type || 'Hoạt động'}</Text>}
+                                                description={
+                                                    <div>
+                                                        <div style={{ fontSize: 11, color: '#666' }}>{item.description?.slice(0, 40)}...</div>
+                                                        <div style={{ fontSize: 10, color: '#999' }}>{dayjs(item.timestamp || item.created_at).fromNow()}</div>
+                                                    </div>
+                                                }
+                                            />
+                                        </List.Item>
+                                    )}
+                                />
+                            </Spin>
                         </Card>
                     </Col>
                 </Row>
