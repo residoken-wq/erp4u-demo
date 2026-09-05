@@ -24,6 +24,36 @@ export enum PaymentStatus {
   PAID = 'PAID'
 }
 
+export interface VatInvoiceItem {
+  sku?: string;
+  productName: string;
+  unit?: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  vatRate?: number;
+  vatAmount?: number;
+  amount?: number;
+}
+
+export interface VatInvoiceRecord {
+  ikey: string;           // = order_code, or order_code-2, ...
+  invoiceNo: string;      // Số HĐ
+  lookupCode: string;     // Mã tra cứu
+  linkView: string;       // URL tra cứu
+  issueDate: string;      // Ngày phát hành
+  invoiceStatus: number;  // Trạng thái (0: Nháp, 1: Đã ký, ...)
+  pattern: string;        // Ký hiệu HĐ
+  serial: string;         // Ký hiệu mẫu số
+  issuedAt: string;       // Timestamp phát hành từ ERP
+  totalAmount?: number;   // Tổng trước thuế
+  vatAmount?: number;     // Tiền thuế GTGT
+  grandTotal?: number;    // Tổng tiền thanh toán
+  items?: VatInvoiceItem[]; // Danh sách hàng hóa đã xuất
+  lastEmailSentAt?: string; // Timestamp gửi email lần cuối
+  lastEmailSentTo?: string; // Địa chỉ email gửi lần cuối
+}
+
 @Entity('sales_orders')
 export class SalesOrder {
   [key: string]: any; // TS suppression
@@ -113,19 +143,9 @@ export class SalesOrder {
   @Column({ type: 'boolean', default: true }) require_invoice: boolean;
 
   // --- DỮ LIỆU HÓA ĐƠN EASYINVOICE ---
-  @Column('jsonb', { nullable: true }) vat_invoice_data: {
-      ikey: string;           // = order_code
-      invoiceNo: string;      // Số HĐ
-      lookupCode: string;     // Mã tra cứu
-      linkView: string;       // URL tra cứu (= vat_invoice_link)
-      issueDate: string;      // Ngày phát hành
-      invoiceStatus: number;  // Trạng thái (0: Nháp, 1: Đã ký, ...)
-      pattern: string;        // Ký hiệu HĐ
-      serial: string;         // Ký hiệu mẫu số
-      issuedAt: string;       // Timestamp phát hành từ ERP
-      lastEmailSentAt?: string; // Timestamp gửi email lần cuối
-      lastEmailSentTo?: string; // Địa chỉ email gửi lần cuối
-  };
+  @Column('jsonb', { nullable: true }) vat_invoice_data: VatInvoiceRecord[] | VatInvoiceRecord;
+
+
 
   // --- DỮ LIỆU HỢP ĐỒNG KHÁCH HÀNG ---
   @Column('text', { nullable: true }) contract_html: string;

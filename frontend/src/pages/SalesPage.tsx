@@ -16,6 +16,25 @@ dayjs.extend(isBetween);
 
 const { RangePicker } = DatePicker;
 
+const getInvoiceSummary = (vatData: any) => {
+    if (!vatData) return { text: 'Chưa lấy HĐ', color: 'default', count: 0 };
+    const list = Array.isArray(vatData) ? vatData : (vatData.ikey ? [vatData] : []);
+    if (list.length === 0) return { text: 'Chưa lấy HĐ', color: 'default', count: 0 };
+    const latest = list[list.length - 1];
+    const status = latest?.invoiceStatus;
+    const statusText = status === 0 ? 'Bản nháp' :
+                       status === 1 ? 'Đã ký' :
+                       status === 2 ? 'Đã khai thuế' :
+                       status > 2 ? 'Đã hủy/Thay thế' : 'Chưa lấy HĐ';
+    const color = status === 0 ? 'orange' :
+                  status === 1 ? 'blue' :
+                  status === 2 ? 'green' :
+                  status > 2 ? 'red' : 'default';
+
+    const text = list.length > 1 ? `${list.length} HĐ (${statusText})` : statusText;
+    return { text, color, count: list.length };
+};
+
 const SalesPage: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -308,21 +327,16 @@ const SalesPage: React.FC = () => {
                                 <Progress percent={pct} size="small" steps={5} strokeColor={pct >= 100 ? '#52c41a' : '#1890ff'} showInfo={false} />
                                 <span style={{ fontSize: 11, color: pct >= 100 ? 'green' : '#666' }}>{pct}%</span>
                             </div>
-                            {r.require_invoice && (
-                                <Tooltip title={
-                                    r.vat_invoice_data?.invoiceStatus === 0 ? 'Bản nháp' :
-                                    r.vat_invoice_data?.invoiceStatus === 1 ? 'Đã ký' :
-                                    r.vat_invoice_data?.invoiceStatus === 2 ? 'Đã khai thuế' :
-                                    r.vat_invoice_data?.invoiceStatus > 2 ? 'Đã hủy/Thay thế' : 'Chưa lấy hóa đơn'
-                                }>
-                                    <Tag color={
-                                        r.vat_invoice_data?.invoiceStatus === 0 ? 'orange' :
-                                        r.vat_invoice_data?.invoiceStatus === 1 ? 'blue' :
-                                        r.vat_invoice_data?.invoiceStatus === 2 ? 'green' :
-                                        r.vat_invoice_data?.invoiceStatus > 2 ? 'red' : 'default'
-                                    } style={{ margin: 0 }}>Lấy hóa đơn</Tag>
-                                </Tooltip>
-                            )}
+                            {r.require_invoice && (() => {
+                                const inv = getInvoiceSummary(r.vat_invoice_data);
+                                return (
+                                    <Tooltip title={inv.text}>
+                                        <Tag color={inv.color} style={{ margin: 0 }}>
+                                            {inv.count > 1 ? `${inv.count} HĐ` : 'Lấy hóa đơn'}
+                                        </Tag>
+                                    </Tooltip>
+                                );
+                            })()}
                         </div>
                     </Tooltip>
                 )
@@ -536,14 +550,15 @@ const SalesPage: React.FC = () => {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, fontSize: 11, color: '#999' }}>
                                                 <span>{r.order_date ? dayjs(r.order_date).format('DD/MM/YYYY') : '-'}</span>
                                                 <span>{r.assigned_to?.full_name || '-'}</span>
-                                                {r.require_invoice && (
-                                                    <Tag color={
-                                                        r.vat_invoice_data?.invoiceStatus === 0 ? 'orange' :
-                                                        r.vat_invoice_data?.invoiceStatus === 1 ? 'blue' :
-                                                        r.vat_invoice_data?.invoiceStatus === 2 ? 'green' :
-                                                        r.vat_invoice_data?.invoiceStatus > 2 ? 'red' : 'default'
-                                                    } style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px', margin: 0 }}>Lấy hóa đơn</Tag>
-                                                )}
+                                                {r.require_invoice && (() => {
+                                                    const inv = getInvoiceSummary(r.vat_invoice_data);
+                                                    return (
+                                                        <Tag color={inv.color} style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px', margin: 0 }}>
+                                                            {inv.count > 1 ? `${inv.count} HĐ` : 'Lấy hóa đơn'}
+                                                        </Tag>
+                                                    );
+                                                })()}
+
                                             </div>
                                         </div>
                                         {/* Action buttons on mobile list item */}

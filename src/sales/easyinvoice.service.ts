@@ -140,16 +140,27 @@ export class EasyInvoiceService {
         });
     }
 
-    private buildInvoiceXml(order: SalesOrder): string {
+    private buildInvoiceXml(order: SalesOrder, customItems?: any[], ikey?: string): {
+        xml: string;
+        totalAmount: number;
+        totalVatAmount: number;
+        grandTotal: number;
+        items: any[];
+        ikey: string;
+    } {
         // Build product xml
         let productsXml = '';
         let totalAmount = 0;
+        const processedItems: any[] = [];
+        const itemsToProcess = (customItems && customItems.length > 0) ? customItems : (order.items || []);
         
-        if (order.items && order.items.length > 0) {
-            order.items.forEach((item, index) => {
-                const productName = item.vat_content || item.product?.name || item.sku || 'Sản phẩm';
-                const qty = item.quantity || 0;
-                const price = item.unit_price || 0;
+        if (itemsToProcess && itemsToProcess.length > 0) {
+            itemsToProcess.forEach((item, index) => {
+                const sku = item.sku || item.code || '';
+                const productName = item.vat_content || item.productName || item.product?.name || sku || 'Sản phẩm';
+                const unit = item.unit || 'Cái';
+                const qty = Number(item.quantity) || 0;
+                const price = Number(item.unit_price !== undefined ? item.unit_price : item.price) || 0;
                 const total = Number((qty * price).toFixed(6)); // Total trước thuế
                 const vatRate = order.vat_rate || 0;
                 let vatAmount = 0;
@@ -159,14 +170,25 @@ export class EasyInvoiceService {
                 const amount = total + vatAmount;
 
                 totalAmount += total;
+                processedItems.push({
+                    sku,
+                    productName,
+                    unit,
+                    quantity: qty,
+                    unit_price: price,
+                    total,
+                    vatRate,
+                    vatAmount,
+                    amount,
+                });
 
                 productsXml += `
                 <Product>
-                    <Code>${this.escapeXml(item.sku)}</Code>
+                    <Code>${this.escapeXml(sku)}</Code>
                     <No>${index + 1}</No>
                     <Feature>1</Feature>
                     <ProdName>${this.escapeXml(productName)}</ProdName>
-                    <ProdUnit>Cái</ProdUnit>
+                    <ProdUnit>${this.escapeXml(unit)}</ProdUnit>
                     <ProdQuantity>${qty}</ProdQuantity>
                     <ProdPrice>${price}</ProdPrice>
                     <Total>${total}</Total>
@@ -193,6 +215,7 @@ export class EasyInvoiceService {
         const cusAddress = order.vat_address || order.customer?.legal_address || order.customer?.address || ' ';
         const cusPhone = order.contact_phone || order.receiver_phone || order.customer?.phone || '';
         const cusEmail = order.vat_email || order.customer?.einvoice_email || '';
+        const invoiceIkey = ikey || order.order_code;
 
         const amountInWords = readNumberInVietnamese(grandTotal); 
 
@@ -200,7 +223,7 @@ export class EasyInvoiceService {
         <Invoices>
             <Inv>
                 <Invoice>
-                    <Ikey>${this.escapeXml(order.order_code)}</Ikey>
+                    <Ikey>${this.escapeXml(invoiceIkey)}</Ikey>
                     <CusCode>${order.customer_id || 'GUEST'}</CusCode>
                     <Buyer>${this.escapeXml(buyer)}</Buyer>
                     <CusName>${this.escapeXml(cusName)}</CusName>
@@ -222,16 +245,23 @@ export class EasyInvoiceService {
             </Inv>
         </Invoices>
         `;
-        return xml.trim();
+        return {
+            xml: xml.trim(),
+            totalAmount,
+            totalVatAmount,
+            grandTotal,
+            items: processedItems,
+            ikey: invoiceIkey,
+        };
     }
 
     // 1. Tạo hóa đơn nháp (API V.1)
-    async createDraftInvoice(order: SalesOrder) {
+    async createDraftInvoice(order: SalesOrder, customItems?: any[], ikey?: string) {
         const config = await this.getConfig();
-        const xmlData = this.buildInvoiceXml(order);
+        const { xml, totalAmount, totalVatAmount, grandTotal, items, ikey: invoiceIkey } = this.buildInvoiceXml(order, customItems, ikey);
         
         const payload = {
-            XmlData: xmlData,
+            XmlData: xml,
             Pattern: config.pattern || undefined,
             Serial: config.serial || undefined,
         };
@@ -242,7 +272,14 @@ export class EasyInvoiceService {
             throw new Error(`Lỗi tạo HĐ nháp: ${result.data.Message} - ${JSON.stringify(result.data.Data)}`);
         }
 
-        return result.data.Data;
+        return {
+            apiResult: result.data.Data,
+            totalAmount,
+            vatAmount: totalVatAmount,
+            grandTotal,
+            items,
+            ikey: invoiceIkey,
+        };
     }
 
     // 2. Tra cứu thông tin hóa đơn (Lấy LinkView, Status) (API V.25)
@@ -263,6 +300,39 @@ export class EasyInvoiceService {
         
         return null;
     }
+
+    // Tra cứu nhiều hóa đơn cùng lúc (API V.25)
+    async getInvoicesInfo(ikeys: string[]): Promise<any[]> {
+        if (!ikeys || ikeys.length === 0) return [];
+        const payload = {
+            Ikeys: ikeys
+        };
+
+        const result = await this.requestApi('api/publish/getInvoicesByIkeys', payload);
+        
+        if (result.data.Status !== 2 && result.data.Status !== '2') {
+            throw new Error(`Lỗi tra cứu thông tin: ${result.data.Message}`);
+        }
+
+        return result.data.Data?.Invoices || [];
+    }
+
+    // Xóa hóa đơn chưa ký số (API V.7)
+    async removeDraftInvoice(ikey: string, pattern?: string, serial?: string) {
+        const config = await this.getConfig();
+        const payload = {
+            Ikey: ikey,
+            Pattern: pattern || config.pattern || undefined,
+            Serial: serial || config.serial || undefined,
+        };
+
+        const result = await this.requestApi('api/business/removeUnsignedInvoice', payload);
+        if (result.data.Status !== 2 && result.data.Status !== '2') {
+            throw new Error(`Lỗi xóa HĐ nháp: ${result.data.Message}`);
+        }
+        return result.data;
+    }
+
 
     // 3. Tải Hóa đơn PDF / XML (API V.24)
     async downloadInvoicePdf(ikey: string): Promise<Buffer> {

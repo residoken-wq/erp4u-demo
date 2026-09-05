@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, Logger, BadRequestException } from '@nes
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { SalesOrder, SalesOrderStatus } from './sales-order.entity';
+import { SalesOrder, SalesOrderStatus, VatInvoiceRecord } from './sales-order.entity';
 import { SalesOrderItem, BookingStatus } from './sales-order-item.entity';
 import { ProductSample } from './product-sample.entity';
 import { SalesDelivery } from './sales-delivery.entity';
@@ -2470,7 +2470,14 @@ export class SalesService {
     }
 
     // --- EASYINVOICE INTEGRATION ---
-    async issueVatInvoice(orderId: number) {
+    normalizeVatInvoices(data: any): VatInvoiceRecord[] {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        if (typeof data === 'object' && data.ikey) return [data];
+        return [];
+    }
+
+    async issueVatInvoice(orderId: number, dto?: { items?: any[] }) {
         try {
             const order = await this.orderRepo.findOne({
                 where: { id: orderId },
@@ -2481,97 +2488,182 @@ export class SalesService {
                 throw new Error('Thiếu thông tin công ty xuất hóa đơn');
             }
 
-            this.logger.log(`[EasyInvoice] Issuing draft for SO #${order.order_code}, items: ${order.items?.length || 0}`);
+            const existingInvoices = this.normalizeVatInvoices(order.vat_invoice_data);
 
-            // Tạo hóa đơn nháp (Draft)
-            const draftResult = await this.easyInvoiceService.createDraftInvoice(order);
+            // Xác định Ikey mới:
+            // Hóa đơn 1: {order_code}
+            // Hóa đơn 2, 3...: {order_code}-2, {order_code}-3,...
+            let newIkey = order.order_code;
+            if (existingInvoices.length > 0) {
+                let maxSuffix = 1;
+                const baseCode = order.order_code;
+                existingInvoices.forEach(inv => {
+                    if (inv.ikey === baseCode) {
+                        maxSuffix = Math.max(maxSuffix, 1);
+                    } else if (inv.ikey && inv.ikey.startsWith(`${baseCode}-`)) {
+                        const numStr = inv.ikey.substring(`${baseCode}-`.length);
+                        const num = parseInt(numStr, 10);
+                        if (!isNaN(num)) {
+                            maxSuffix = Math.max(maxSuffix, num);
+                        }
+                    }
+                });
+                newIkey = `${baseCode}-${maxSuffix + 1}`;
+            }
+
+            const itemsToInvoice = (dto?.items && dto.items.length > 0) ? dto.items : order.items;
+            this.logger.log(`[EasyInvoice] Issuing draft for SO #${order.order_code}, ikey: ${newIkey}, items: ${itemsToInvoice?.length || 0}`);
+
+            // Tạo hóa đơn nháp (Draft) trên EasyInvoice
+            const draftResult = await this.easyInvoiceService.createDraftInvoice(order, itemsToInvoice, newIkey);
             
             this.logger.log(`[EasyInvoice] Draft result: ${JSON.stringify(draftResult)}`);
 
             // Lưu thông tin Draft vào DB
             const issuedAt = new Date().toISOString();
-            order.vat_invoice_data = {
-                ikey: order.order_code,
+            const newInvoiceRecord: VatInvoiceRecord = {
+                ikey: newIkey,
                 invoiceNo: '', // Chưa có số (Nháp)
                 lookupCode: '',
                 linkView: '',
                 issueDate: '',
                 invoiceStatus: 0, // 0: Nháp
-                pattern: draftResult?.Pattern || '',
-                serial: draftResult?.Serial || '',
-                issuedAt: issuedAt
+                pattern: draftResult.apiResult?.Pattern || '',
+                serial: draftResult.apiResult?.Serial || '',
+                issuedAt: issuedAt,
+                totalAmount: draftResult.totalAmount,
+                vatAmount: draftResult.vatAmount,
+                grandTotal: draftResult.grandTotal,
+                items: draftResult.items,
             };
+
+            const updatedInvoices = [...existingInvoices, newInvoiceRecord];
+            order.vat_invoice_data = updatedInvoices;
+            if (newInvoiceRecord.linkView) {
+                order.vat_invoice_link = newInvoiceRecord.linkView;
+            }
 
             await this.orderRepo.save(order);
             
-            this.systemService.logAction('SALES', 'CREATE_VAT_INVOICE_DRAFT', `Tạo hóa đơn VAT nháp cho SO ${order.order_code}`, null, 'System', String(order.id));
+            this.systemService.logAction('SALES', 'CREATE_VAT_INVOICE_DRAFT', `Tạo hóa đơn VAT nháp (${newIkey}) cho SO ${order.order_code}`, null, 'System', String(order.id));
 
-            return { success: true, message: 'Đã tạo hóa đơn nháp trên EasyInvoice', data: order.vat_invoice_data };
+            return { 
+                success: true, 
+                message: 'Đã tạo hóa đơn nháp trên EasyInvoice', 
+                data: updatedInvoices,
+                newInvoice: newInvoiceRecord 
+            };
         } catch (error: any) {
             this.logger.error(`[EasyInvoice] issueVatInvoice error for orderId=${orderId}: ${error.message}`, error.stack);
             return { success: false, message: error.message || 'Lỗi không xác định khi tạo hóa đơn nháp' };
         }
     }
 
-    async getVatInvoiceStatus(orderId: number) {
+    async getVatInvoiceStatus(orderId: number, ikey?: string) {
         const order = await this.orderRepo.findOne({ where: { id: orderId } });
-        if (!order || !order.vat_invoice_data || !order.vat_invoice_data.ikey) {
+        if (!order || !order.vat_invoice_data) {
             throw new Error('Chưa có thông tin hóa đơn cho đơn hàng này');
         }
 
-        const invoiceInfo = await this.easyInvoiceService.getInvoiceInfo(order.vat_invoice_data.ikey);
-        if (invoiceInfo) {
-            // Cập nhật lại db
-            order.vat_invoice_data = {
-                ...order.vat_invoice_data,
-                invoiceNo: invoiceInfo.No || order.vat_invoice_data.invoiceNo,
-                lookupCode: invoiceInfo.LookupCode || order.vat_invoice_data.lookupCode,
-                linkView: invoiceInfo.LinkView || order.vat_invoice_data.linkView,
-                issueDate: invoiceInfo.IssueDate || order.vat_invoice_data.issueDate,
-                invoiceStatus: invoiceInfo.InvoiceStatus !== undefined ? parseInt(invoiceInfo.InvoiceStatus) : order.vat_invoice_data.invoiceStatus,
-                pattern: invoiceInfo.Pattern || order.vat_invoice_data.pattern,
-                serial: invoiceInfo.Serial || order.vat_invoice_data.serial
-            };
-            
-            // Cập nhật linkView ra field cũ cho tương thích
-            if (invoiceInfo.LinkView) {
-                order.vat_invoice_link = invoiceInfo.LinkView;
-            }
-
-            await this.orderRepo.save(order);
-            return { success: true, data: order.vat_invoice_data };
+        const invoices = this.normalizeVatInvoices(order.vat_invoice_data);
+        if (invoices.length === 0) {
+            throw new Error('Chưa có thông tin hóa đơn cho đơn hàng này');
         }
-        
-        return { success: false, message: 'Không tìm thấy thông tin hóa đơn' };
+
+        let updated = false;
+
+        if (ikey) {
+            const invoice = invoices.find(i => i.ikey === ikey);
+            if (!invoice) throw new NotFoundException(`Không tìm thấy hóa đơn với mã ikey: ${ikey}`);
+
+            const invoiceInfo = await this.easyInvoiceService.getInvoiceInfo(ikey);
+            if (invoiceInfo) {
+                invoice.invoiceNo = invoiceInfo.No || invoice.invoiceNo;
+                invoice.lookupCode = invoiceInfo.LookupCode || invoice.lookupCode;
+                invoice.linkView = invoiceInfo.LinkView || invoice.linkView;
+                invoice.issueDate = invoiceInfo.IssueDate || invoice.issueDate;
+                invoice.invoiceStatus = invoiceInfo.InvoiceStatus !== undefined ? parseInt(invoiceInfo.InvoiceStatus) : invoice.invoiceStatus;
+                invoice.pattern = invoiceInfo.Pattern || invoice.pattern;
+                invoice.serial = invoiceInfo.Serial || invoice.serial;
+                updated = true;
+            }
+        } else {
+            // Check all invoices at once using EasyInvoice batch API V.25
+            const allIkeys = invoices.map(i => i.ikey).filter(Boolean);
+            if (allIkeys.length > 0) {
+                const invoiceInfoList = await this.easyInvoiceService.getInvoicesInfo(allIkeys);
+                if (invoiceInfoList && invoiceInfoList.length > 0) {
+                    invoiceInfoList.forEach(info => {
+                        const target = invoices.find(i => i.ikey === info.Ikey);
+                        if (target) {
+                            target.invoiceNo = info.No || target.invoiceNo;
+                            target.lookupCode = info.LookupCode || target.lookupCode;
+                            target.linkView = info.LinkView || target.linkView;
+                            target.issueDate = info.IssueDate || target.issueDate;
+                            target.invoiceStatus = info.InvoiceStatus !== undefined ? parseInt(info.InvoiceStatus) : target.invoiceStatus;
+                            target.pattern = info.Pattern || target.pattern;
+                            target.serial = info.Serial || target.serial;
+                            updated = true;
+                        }
+                    });
+                }
+            }
+        }
+
+        if (updated) {
+            order.vat_invoice_data = invoices;
+            const latestWithLink = [...invoices].reverse().find(i => i.linkView);
+            if (latestWithLink?.linkView) {
+                order.vat_invoice_link = latestWithLink.linkView;
+            }
+            await this.orderRepo.save(order);
+        }
+
+        return { success: true, data: invoices };
     }
 
     async downloadEasyInvoicePdfRaw(ikey: string) {
         return this.easyInvoiceService.downloadInvoicePdf(ikey);
     }
 
-    async previewVatInvoice(orderId: number) {
+    async previewVatInvoice(orderId: number, ikey?: string) {
         const order = await this.orderRepo.findOne({
             where: { id: orderId },
             relations: ['items', 'items.product', 'customer']
         });
-        if (!order.vat_invoice_data?.ikey) throw new Error('Hóa đơn chưa được tạo');
+        const invoices = this.normalizeVatInvoices(order?.vat_invoice_data);
+        const target = ikey ? invoices.find(i => i.ikey === ikey) : invoices[invoices.length - 1];
+        if (!target?.ikey) throw new Error('Hóa đơn chưa được tạo');
 
-        const result = await this.easyInvoiceService.downloadInvoicePdf(order.vat_invoice_data.ikey);
+        const result = await this.easyInvoiceService.downloadInvoicePdf(target.ikey);
         return { success: true, data: result }; // Có thể trả về link/base64 tùy EasyInvoice return type
     }
 
-    async sendVatInvoiceEmail(orderId: number, email: string) {
+    async sendVatInvoiceEmail(orderId: number, email: string, ikey?: string) {
         const order = await this.orderRepo.findOne({ 
             where: { id: orderId },
             relations: ['customer']
         });
-        if (!order || !order.vat_invoice_data || !order.vat_invoice_data.ikey) {
+        if (!order || !order.vat_invoice_data) {
             throw new Error('Chưa có thông tin hóa đơn');
         }
 
+        const invoices = this.normalizeVatInvoices(order.vat_invoice_data);
+        if (invoices.length === 0) {
+            throw new Error('Chưa có thông tin hóa đơn');
+        }
+
+        const targetInvoice = ikey 
+            ? invoices.find(i => i.ikey === ikey) 
+            : invoices[invoices.length - 1];
+
+        if (!targetInvoice || !targetInvoice.ikey) {
+            throw new Error(`Không tìm thấy hóa đơn ${ikey || ''}`);
+        }
+
         // 1. Tải PDF Hóa Đơn
-        const pdfBuffer = await this.downloadEasyInvoicePdfRaw(order.vat_invoice_data.ikey);
-        const fileName = `Hoadon_${order.vat_invoice_data.ikey}.pdf`;
+        const pdfBuffer = await this.downloadEasyInvoicePdfRaw(targetInvoice.ikey);
+        const fileName = `Hoadon_${targetInvoice.ikey}.pdf`;
 
         // 2. Lấy cấu hình Email
         const config = await this.systemService.getEasyInvoiceConfig();
@@ -2585,13 +2677,13 @@ export class SalesService {
                 <p>Kính gửi Quý Khách hàng: <strong>${order.vat_company_name || order.customer?.name || 'Quý khách'}</strong>,</p>
                 <p>Chúng tôi xin trân trọng thông báo về việc phát hành Hóa đơn điện tử của Quý khách như sau:</p>
                 <ul>
-                    <li><strong>Mã tra cứu hóa đơn:</strong> ${order.vat_invoice_data.lookupCode || 'Chưa có (Bản nháp)'}</li>
-                    <li><strong>Ký hiệu hóa đơn:</strong> ${order.vat_invoice_data.pattern || config.EASYINVOICE_PATTERN || ''} / ${order.vat_invoice_data.serial || config.EASYINVOICE_SERIAL || ''}</li>
-                    <li><strong>Số hóa đơn:</strong> ${order.vat_invoice_data.invoiceNo || 'Chưa cấp số'}</li>
-                    <li><strong>Ngày lập:</strong> ${order.vat_invoice_data.issueDate || order.vat_invoice_data.issuedAt || ''}</li>
+                    <li><strong>Mã tra cứu hóa đơn:</strong> ${targetInvoice.lookupCode || 'Chưa có (Bản nháp)'}</li>
+                    <li><strong>Ký hiệu hóa đơn:</strong> ${targetInvoice.pattern || config.EASYINVOICE_PATTERN || ''} / ${targetInvoice.serial || config.EASYINVOICE_SERIAL || ''}</li>
+                    <li><strong>Số hóa đơn:</strong> ${targetInvoice.invoiceNo || 'Chưa cấp số'}</li>
+                    <li><strong>Ngày lập:</strong> ${targetInvoice.issueDate || targetInvoice.issuedAt || ''}</li>
                 </ul>
                 <p>Quý khách vui lòng kiểm tra file PDF đính kèm để xem chi tiết hóa đơn.</p>
-                ${order.vat_invoice_data.linkView ? `<p>Hoặc tra cứu trực tuyến tại: <a href="${order.vat_invoice_data.linkView}" target="_blank">${order.vat_invoice_data.linkView}</a></p>` : ''}
+                ${targetInvoice.linkView ? `<p>Hoặc tra cứu trực tuyến tại: <a href="${targetInvoice.linkView}" target="_blank">${targetInvoice.linkView}</a></p>` : ''}
                 <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
                 <p style="font-size: 12px; color: #666; text-align: center;">
                     Đây là email tự động từ hệ thống ERP, vui lòng không trả lời thư này.
@@ -2606,7 +2698,7 @@ export class SalesService {
             contentType: 'application/pdf'
         }];
 
-        const subject = `[Hóa Đơn Điện Tử] - Thông báo phát hành hóa đơn - ${order.vat_company_name || 'Khách hàng'}`;
+        const subject = `[Hóa Đơn Điện Tử] - Thông báo phát hành hóa đơn (${targetInvoice.ikey}) - ${order.vat_company_name || 'Khách hàng'}`;
 
         const isSent = await this.emailService.sendMail(
             email, 
@@ -2622,11 +2714,49 @@ export class SalesService {
         }
 
         // 5. Ghi log hoạt động
-        order.vat_invoice_data.lastEmailSentAt = new Date().toISOString();
-        order.vat_invoice_data.lastEmailSentTo = email;
+        targetInvoice.lastEmailSentAt = new Date().toISOString();
+        targetInvoice.lastEmailSentTo = email;
+        order.vat_invoice_data = invoices;
         await this.orderRepo.save(order);
-        this.systemService.logAction('SALES', 'SEND_VAT_INVOICE_EMAIL', `Gửi email hóa đơn PDF cho khách hàng: ${email}`, null, 'System', String(orderId));
+        this.systemService.logAction('SALES', 'SEND_VAT_INVOICE_EMAIL', `Gửi email hóa đơn PDF (${targetInvoice.ikey}) cho khách hàng: ${email}`, null, 'System', String(orderId));
 
         return { success: true, message: 'Đã gửi email thông báo phát hành hóa đơn kèm PDF' };
     }
+
+    async deleteDraftVatInvoice(orderId: number, ikey: string) {
+        const order = await this.orderRepo.findOne({ where: { id: orderId } });
+        if (!order || !order.vat_invoice_data) {
+            throw new NotFoundException('Không tìm thấy thông tin hóa đơn');
+        }
+
+        const invoices = this.normalizeVatInvoices(order.vat_invoice_data);
+        const invoiceIndex = invoices.findIndex(i => i.ikey === ikey);
+        if (invoiceIndex === -1) {
+            throw new NotFoundException(`Không tìm thấy hóa đơn với mã ikey: ${ikey}`);
+        }
+
+        const target = invoices[invoiceIndex];
+        if (target.invoiceStatus !== 0) {
+            throw new BadRequestException('Chỉ có thể xóa hóa đơn ở trạng thái Bản nháp (chưa ký số).');
+        }
+
+        // Cố gắng gọi EasyInvoice xóa nếu có thể
+        try {
+            await this.easyInvoiceService.removeDraftInvoice(target.ikey, target.pattern, target.serial);
+        } catch (e: any) {
+            this.logger.warn(`Could not remove draft from EasyInvoice server: ${e.message}`);
+        }
+
+        // Xóa khỏi danh sách hóa đơn của order
+        invoices.splice(invoiceIndex, 1);
+        order.vat_invoice_data = invoices;
+        const latestWithLink = [...invoices].reverse().find(i => i.linkView);
+        order.vat_invoice_link = latestWithLink?.linkView || '';
+
+        await this.orderRepo.save(order);
+        this.systemService.logAction('SALES', 'DELETE_VAT_INVOICE_DRAFT', `Xóa hóa đơn VAT nháp (${ikey}) của SO ${order.order_code}`, null, 'System', String(order.id));
+
+        return { success: true, message: 'Đã xóa hóa đơn nháp thành công', data: invoices };
+    }
+
 }

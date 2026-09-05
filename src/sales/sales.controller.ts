@@ -144,42 +144,55 @@ export class SalesController {
     // --- EASYINVOICE APIS ---
     @Post(':id/issue-vat-invoice')
     @RequirePermission('SALES', 'can_update')
-    issueVatInvoice(@Param('id') id: number) {
-        return this.s.issueVatInvoice(Number(id));
+    issueVatInvoice(@Param('id') id: number, @Body() body?: { items?: any[] }) {
+        return this.s.issueVatInvoice(Number(id), body);
     }
 
     @Get(':id/vat-invoice-status')
     @RequirePermission('SALES', 'can_view')
-    getVatInvoiceStatus(@Param('id') id: number) {
-        return this.s.getVatInvoiceStatus(Number(id));
+    getVatInvoiceStatus(@Param('id') id: number, @Query('ikey') ikey?: string) {
+        return this.s.getVatInvoiceStatus(Number(id), ikey);
     }
 
     @Get(':id/vat-invoice-preview')
     @RequirePermission('SALES', 'can_view')
-    previewVatInvoice(@Param('id') id: number) {
-        return this.s.previewVatInvoice(Number(id));
+    previewVatInvoice(@Param('id') id: number, @Query('ikey') ikey?: string) {
+        return this.s.previewVatInvoice(Number(id), ikey);
     }
 
     @Post(':id/vat-invoice-email')
     @RequirePermission('SALES', 'can_update')
-    sendVatInvoiceEmail(@Param('id') id: number, @Body('email') email: string) {
-        return this.s.sendVatInvoiceEmail(Number(id), email);
+    sendVatInvoiceEmail(@Param('id') id: number, @Body() body: { email: string; ikey?: string }) {
+        return this.s.sendVatInvoiceEmail(Number(id), body.email, body.ikey);
+    }
+
+    @Delete(':id/vat-invoice/:ikey')
+    @RequirePermission('SALES', 'can_update')
+    deleteDraftVatInvoice(@Param('id') id: number, @Param('ikey') ikey: string) {
+        return this.s.deleteDraftVatInvoice(Number(id), ikey);
     }
 
     @Get(':id/easyinvoice-pdf')
     @RequirePermission('SALES', 'can_view')
-    async downloadEasyInvoicePdf(@Param('id') id: number, @Res() res: Response) {
+    async downloadEasyInvoicePdf(@Param('id') id: number, @Query('ikey') ikey: string, @Res() res: Response) {
         try {
             const order = await this.s.findOne(Number(id));
-            if (!order || !order.vat_invoice_data || !order.vat_invoice_data.ikey) {
+            if (!order || !order.vat_invoice_data) {
                 return res.status(404).send('Không tìm thấy hóa đơn hoặc chưa tạo Hóa đơn nháp.');
             }
+
+            const invoices = this.s.normalizeVatInvoices(order.vat_invoice_data);
+            const targetInvoice = ikey ? invoices.find(i => i.ikey === ikey) : invoices[invoices.length - 1];
+
+            if (!targetInvoice || !targetInvoice.ikey) {
+                return res.status(404).send('Không tìm thấy hóa đơn cần tải.');
+            }
             
-            const pdfBuffer = await this.s.downloadEasyInvoicePdfRaw(order.vat_invoice_data.ikey);
+            const pdfBuffer = await this.s.downloadEasyInvoicePdfRaw(targetInvoice.ikey);
             
             res.set({
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': `inline; filename="hoadon_${order.vat_invoice_data.ikey}.pdf"`,
+                'Content-Disposition': `inline; filename="hoadon_${targetInvoice.ikey}.pdf"`,
                 'Content-Length': pdfBuffer.length,
             });
             
@@ -188,6 +201,7 @@ export class SalesController {
             return res.status(500).send(`Lỗi tải Hóa đơn: ${error.message}`);
         }
     }
+
 
     // Portal APIs
     @Get('portal/:uuid') getPortal(@Param('uuid') uuid: string) { return this.s.getQuoteByUuid(uuid); }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, Select, DatePicker, Button, Tabs, Row, Col, InputNumber, Divider, message, Tag, Popconfirm, Tooltip, Checkbox, Table, Switch, Dropdown, MenuProps, Alert, Card } from 'antd';
 import { Drawer } from 'antd';
-import { PlusOutlined, SaveOutlined, CheckCircleOutlined, InfoCircleOutlined, MoreOutlined, HistoryOutlined, CopyOutlined, DeleteOutlined, LinkOutlined, PrinterOutlined, FileTextOutlined, AppstoreAddOutlined, LockOutlined, MenuOutlined, FileExcelOutlined, MailOutlined, FilePdfOutlined } from '@ant-design/icons';
+import { PlusOutlined, SaveOutlined, CheckCircleOutlined, InfoCircleOutlined, MoreOutlined, HistoryOutlined, CopyOutlined, DeleteOutlined, LinkOutlined, PrinterOutlined, FileTextOutlined, AppstoreAddOutlined, LockOutlined, MenuOutlined, FileExcelOutlined, MailOutlined, FilePdfOutlined, SyncOutlined, EyeOutlined } from '@ant-design/icons';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import api from '../utils/api';
@@ -64,34 +64,140 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
 
     const [exportingExcel, setExportingExcel] = useState(false);
 
-    // EasyInvoice State
+    // EasyInvoice State (Multi-invoice support)
     const [issuingInvoice, setIssuingInvoice] = useState(false);
-    const [checkingInvoice, setCheckingInvoice] = useState(false);
+    const [checkingInvoiceIkey, setCheckingInvoiceIkey] = useState<string | null>(null);
+    const [checkingAllInvoices, setCheckingAllInvoices] = useState(false);
+    const [downloadingInvoiceIkey, setDownloadingInvoiceIkey] = useState<string | null>(null);
     const [sendingInvoiceEmail, setSendingInvoiceEmail] = useState(false);
+    const [deletingInvoiceIkey, setDeletingInvoiceIkey] = useState<string | null>(null);
     const [issueInvoiceModalOpen, setIssueInvoiceModalOpen] = useState(false);
-    const [vatData, setVatData] = useState<any>(null);
+    const [invoiceDraftItems, setInvoiceDraftItems] = useState<any[]>([]);
+    const [vatDataList, setVatDataList] = useState<any[]>([]);
+
+    // Detail modal for viewing products of an existing invoice
+    const [viewItemsModalOpen, setViewItemsModalOpen] = useState(false);
+    const [viewingInvoice, setViewingInvoice] = useState<any>(null);
+
+    // Email modal
+    const [sendEmailModalOpen, setSendEmailModalOpen] = useState(false);
+    const [emailInvoiceTarget, setEmailInvoiceTarget] = useState<any>(null);
+    const [emailRecipient, setEmailRecipient] = useState('');
+
+    const normalizeInvoices = (data: any): any[] => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        if (typeof data === 'object' && data.ikey) return [data];
+        return [];
+    };
 
     useEffect(() => {
         if (initialData?.vat_invoice_data) {
-            setVatData(initialData.vat_invoice_data);
+            setVatDataList(normalizeInvoices(initialData.vat_invoice_data));
         } else {
-            setVatData(null);
+            setVatDataList([]);
         }
     }, [initialData]);
 
+    const getAlreadyInvoicedQuantityMap = (invoices: any[], currentItems: any[]) => {
+        const qtyMap: Record<string, number> = {};
+        invoices.forEach((inv) => {
+            if (inv.invoiceStatus === 5) return; // ignore cancelled
+            if (inv.items && Array.isArray(inv.items) && inv.items.length > 0) {
+                inv.items.forEach((item: any) => {
+                    const key = item.sku || item.productName;
+                    if (key) {
+                        qtyMap[key] = (qtyMap[key] || 0) + (Number(item.quantity) || 0);
+                    }
+                });
+            } else {
+                // Legacy invoice without items array: assume it exported the whole SO items
+                currentItems.forEach((item: any) => {
+                    const key = item.sku || item.vat_content || item.product?.name;
+                    if (key) {
+                        qtyMap[key] = (qtyMap[key] || 0) + (Number(item.quantity) || 0);
+                    }
+                });
+            }
+        });
+        return qtyMap;
+    };
+
     const handleIssueInvoiceDraft = () => {
+        const itemsToUse = (orderItems && orderItems.length > 0) 
+            ? orderItems 
+            : (initialData?.items || []);
+
+        const alreadyMap = getAlreadyInvoicedQuantityMap(vatDataList, itemsToUse);
+        const draftItems = itemsToUse.map((item: any, idx: number) => {
+            const key = item.sku || item.vat_content || item.product?.name;
+            const orderQty = Number(item.quantity) || 0;
+            const invoicedQty = key ? (alreadyMap[key] || 0) : 0;
+            const remainingQty = Math.max(0, orderQty - invoicedQty);
+            const unitPrice = Number(item.unit_price) || 0;
+            // Default to remaining quantity if > 0, else 0 (or orderQty if 1st invoice)
+            const defaultQty = (vatDataList.length === 0) ? orderQty : remainingQty;
+            return {
+                id: item.id || `draft-${idx}`,
+                key: item.key || `draft-${idx}`,
+                sku: item.sku || '',
+                productName: item.vat_content || item.product?.name || item.sku || 'Sản phẩm',
+                unit: 'Cái',
+                unit_price: unitPrice,
+                order_quantity: orderQty,
+                already_invoiced_quantity: invoicedQty,
+                remaining_quantity: remainingQty,
+                quantity: defaultQty,
+                total: defaultQty * unitPrice,
+            };
+        });
+        setInvoiceDraftItems(draftItems);
         setIssueInvoiceModalOpen(true);
+    };
+
+    const handleDraftItemQtyChange = (index: number, val: number | null) => {
+        const newItems = [...invoiceDraftItems];
+        const qty = val !== null ? Math.max(0, val) : 0;
+        newItems[index] = {
+            ...newItems[index],
+            quantity: qty,
+            total: qty * (newItems[index].unit_price || 0),
+        };
+        setInvoiceDraftItems(newItems);
+    };
+
+    const handleRemoveDraftItem = (index: number) => {
+        const newItems = [...invoiceDraftItems];
+        newItems.splice(index, 1);
+        setInvoiceDraftItems(newItems);
+    };
+
+    const handleResetDraftItems = () => {
+        handleIssueInvoiceDraft();
     };
 
     const confirmIssueInvoiceDraft = async () => {
         if (!initialData?.id) return;
+        const validItems = invoiceDraftItems.filter(i => (Number(i.quantity) || 0) > 0);
+        if (validItems.length === 0) {
+            message.warning('Vui lòng chọn ít nhất 1 sản phẩm có số lượng > 0 để xuất hóa đơn');
+            return;
+        }
+
         setIssuingInvoice(true);
         try {
-            const res = await api.post(`/sales/${initialData.id}/issue-vat-invoice`);
+            const res = await api.post(`/sales/${initialData.id}/issue-vat-invoice`, {
+                items: validItems
+            });
             if (res.data.success) {
                 message.success('Đã tạo hóa đơn nháp thành công!');
-                setVatData(res.data.data);
-                form.setFieldsValue({ vat_invoice_link: res.data.data?.linkView });
+                const updatedList = normalizeInvoices(res.data.data);
+                setVatDataList(updatedList);
+                const latestWithLink = [...updatedList].reverse().find(i => i.linkView);
+                if (latestWithLink?.linkView) {
+                    form.setFieldsValue({ vat_invoice_link: latestWithLink.linkView });
+                }
+                setIssueInvoiceModalOpen(false);
                 onSuccess(); // Refresh list
             } else {
                 message.error(res.data.message || 'Lỗi khi tạo hóa đơn nháp');
@@ -100,35 +206,46 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             message.error(error.response?.data?.message || 'Lỗi khi tạo hóa đơn nháp');
         }
         setIssuingInvoice(false);
-        setIssueInvoiceModalOpen(false);
     };
 
-    const handleCheckInvoiceStatus = async () => {
+    const handleCheckInvoiceStatus = async (ikey?: string) => {
         if (!initialData?.id) return;
-        setCheckingInvoice(true);
+        if (ikey) {
+            setCheckingInvoiceIkey(ikey);
+        } else {
+            setCheckingAllInvoices(true);
+        }
+
         try {
-            const res = await api.get(`/sales/${initialData.id}/vat-invoice-status`);
+            const query = ikey ? `?ikey=${encodeURIComponent(ikey)}` : '';
+            const res = await api.get(`/sales/${initialData.id}/vat-invoice-status${query}`);
             if (res.data.success) {
-                message.success('Đã cập nhật trạng thái hóa đơn mới nhất');
-                setVatData(res.data.data);
-                form.setFieldsValue({ vat_invoice_link: res.data.data.linkView });
+                message.success(ikey ? `Đã cập nhật trạng thái HĐ ${ikey}` : 'Đã cập nhật trạng thái tất cả hóa đơn');
+                const updatedList = normalizeInvoices(res.data.data);
+                setVatDataList(updatedList);
+                const latestWithLink = [...updatedList].reverse().find(i => i.linkView);
+                if (latestWithLink?.linkView) {
+                    form.setFieldsValue({ vat_invoice_link: latestWithLink.linkView });
+                }
                 onSuccess();
             }
         } catch (error: any) {
             message.error(error.response?.data?.message || 'Lỗi khi kiểm tra trạng thái');
         }
-        setCheckingInvoice(false);
+        setCheckingInvoiceIkey(null);
+        setCheckingAllInvoices(false);
     };
 
-    const handleDownloadInvoicePdf = async () => {
-        if (!initialData?.id) return;
-        const hide = message.loading('Đang tải PDF...', 0);
+    const handleDownloadInvoicePdf = async (invoice: any) => {
+        if (!initialData?.id || !invoice?.ikey) return;
+        setDownloadingInvoiceIkey(invoice.ikey);
+        const hide = message.loading(`Đang tải PDF hóa đơn (${invoice.ikey})...`, 0);
         try {
-            const res = await api.get(`/sales/${initialData.id}/easyinvoice-pdf`, { responseType: 'blob' });
+            const res = await api.get(`/sales/${initialData.id}/easyinvoice-pdf?ikey=${encodeURIComponent(invoice.ikey)}`, { responseType: 'blob' });
             const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `hoadon_${vatData?.ikey || initialData.id}.pdf`);
+            link.setAttribute('download', `hoadon_${invoice.invoiceNo || invoice.ikey}.pdf`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -139,26 +256,71 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             message.error('Lỗi khi tải PDF');
             console.error(error);
         }
+        setDownloadingInvoiceIkey(null);
     };
 
-    const handleSendInvoiceEmail = async () => {
-        if (!initialData?.id) return;
-        const email = form.getFieldValue('vat_email');
-        if (!email) {
+    const handleOpenSendEmailModal = (invoice: any) => {
+        setEmailInvoiceTarget(invoice);
+        setEmailRecipient(form.getFieldValue('vat_email') || initialData?.customer?.einvoice_email || initialData?.customer?.email || '');
+        setSendEmailModalOpen(true);
+    };
+
+    const confirmSendInvoiceEmail = async () => {
+        if (!initialData?.id || !emailInvoiceTarget?.ikey) return;
+        if (!emailRecipient) {
             message.warning('Vui lòng nhập Email Nhận Hóa Đơn');
             return;
         }
         setSendingInvoiceEmail(true);
         try {
-            const res = await api.post(`/sales/${initialData.id}/vat-invoice-email`, { email });
+            const res = await api.post(`/sales/${initialData.id}/vat-invoice-email`, {
+                email: emailRecipient,
+                ikey: emailInvoiceTarget.ikey
+            });
             if (res.data.success) {
-                message.success('Đã gửi email hóa đơn cho khách hàng');
+                message.success(`Đã gửi email hóa đơn (${emailInvoiceTarget.ikey}) cho khách hàng`);
+                setVatDataList(prev => prev.map(inv => {
+                    if (inv.ikey === emailInvoiceTarget.ikey) {
+                        return {
+                            ...inv,
+                            lastEmailSentAt: new Date().toISOString(),
+                            lastEmailSentTo: emailRecipient
+                        };
+                    }
+                    return inv;
+                }));
+                setSendEmailModalOpen(false);
             }
         } catch (error: any) {
             message.error(error.response?.data?.message || 'Lỗi khi gửi email');
         }
         setSendingInvoiceEmail(false);
     };
+
+    const handleDeleteDraftInvoice = async (ikey: string) => {
+        if (!initialData?.id || !ikey) return;
+        setDeletingInvoiceIkey(ikey);
+        try {
+            const res = await api.delete(`/sales/${initialData.id}/vat-invoice/${encodeURIComponent(ikey)}`);
+            if (res.data.success) {
+                message.success(`Đã xóa hóa đơn nháp (${ikey}) thành công`);
+                const updatedList = normalizeInvoices(res.data.data);
+                setVatDataList(updatedList);
+                const latestWithLink = [...updatedList].reverse().find(i => i.linkView);
+                form.setFieldsValue({ vat_invoice_link: latestWithLink?.linkView || '' });
+                onSuccess();
+            }
+        } catch (error: any) {
+            message.error(error.response?.data?.message || 'Lỗi khi xóa hóa đơn nháp');
+        }
+        setDeletingInvoiceIkey(null);
+    };
+
+    const handleViewInvoiceItems = (invoice: any) => {
+        setViewingInvoice(invoice);
+        setViewItemsModalOpen(true);
+    };
+
 
     const handleExportExcel = async () => {
         try {
@@ -1283,81 +1445,208 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                             </Row>
                             
                             {/* EasyInvoice Section */}
-                            <Divider orientation="left">Tích Hợp EasyInvoice</Divider>
+                            <Divider orientation="left">
+                                <Space>
+                                    <span>Tích Hợp EasyInvoice</span>
+                                    {vatDataList.length > 0 && <Tag color="blue">{vatDataList.length} hóa đơn</Tag>}
+                                </Space>
+                            </Divider>
+
                             <div style={{ background: '#fafafa', padding: 15, borderRadius: 8, border: '1px solid #f0f0f0' }}>
-                                {!vatData ? (
-                                    <div style={{ textAlign: 'center', padding: '10px 0' }}>
-                                        <p style={{ color: '#666' }}>Chưa tạo hóa đơn trên EasyInvoice cho đơn hàng này.</p>
-                                        <Button 
-                                            type="primary" 
-                                            icon={<FileTextOutlined />} 
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                                    <div style={{ fontSize: 13, color: '#666', fontWeight: 500 }}>
+                                        {vatDataList.length > 0 
+                                            ? `Đã tạo / phát hành ${vatDataList.length} hóa đơn trên hệ thống EasyInvoice:`
+                                            : 'Chưa tạo hóa đơn trên EasyInvoice cho đơn hàng này.'}
+                                    </div>
+                                    <Space size="small">
+                                        {vatDataList.length > 0 && (
+                                            <Button
+                                                icon={<SyncOutlined />}
+                                                onClick={() => handleCheckInvoiceStatus()}
+                                                loading={checkingAllInvoices}
+                                            >
+                                                Đồng bộ tất cả trạng thái
+                                            </Button>
+                                        )}
+                                        <Button
+                                            type="primary"
+                                            icon={<FileTextOutlined />}
                                             onClick={handleIssueInvoiceDraft}
                                             loading={issuingInvoice}
                                         >
-                                            Tạo Hóa Đơn Nháp
+                                            {vatDataList.length > 0 ? '+ Tạo Thêm Hóa Đơn Nháp' : 'Tạo Hóa Đơn Nháp'}
                                         </Button>
+                                    </Space>
+                                </div>
+
+                                {vatDataList.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '16px 0', color: '#888' }}>
+                                        <p style={{ margin: 0 }}>Nhấn nút "Tạo Hóa Đơn Nháp" để kiểm tra số lượng và đẩy dữ liệu sang EasyInvoice.</p>
                                     </div>
                                 ) : (
-                                    <div>
-                                        <Row gutter={[16, 16]}>
-                                            <Col span={8}>
-                                                <div><span style={{ color: '#888' }}>Trạng thái: </span> 
-                                                    {vatData.invoiceStatus === 0 && <Tag color="orange">Bản nháp</Tag>}
-                                                    {vatData.invoiceStatus === 1 && <Tag color="blue">Đã ký</Tag>}
-                                                    {vatData.invoiceStatus === 2 && <Tag color="green">Đã khai thuế</Tag>}
-                                                    {vatData.invoiceStatus > 2 && <Tag color="red">Đã hủy/Thay thế</Tag>}
-                                                </div>
-                                            </Col>
-                                            <Col span={8}>
-                                                <div><span style={{ color: '#888' }}>Số hóa đơn: </span> <b>{vatData.invoiceNo || 'Chưa có'}</b></div>
-                                            </Col>
-                                            <Col span={8}>
-                                                <div><span style={{ color: '#888' }}>Mã tra cứu: </span> <b>{vatData.lookupCode || 'Chưa có'}</b></div>
-                                            </Col>
-                                        </Row>
-                                        <div style={{ marginTop: 15, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                            {vatData.linkView ? (
-                                            <Button type="primary" icon={<LinkOutlined />} href={vatData.linkView} target="_blank">
-                                                Portal Hóa Đơn
-                                            </Button>
-                                        ) : (
-                                            <Button icon={<FileTextOutlined />} disabled>
-                                                Chưa có Link
-                                            </Button>
-                                        )}
-                                        
-                                        <Button 
-                                            icon={<FilePdfOutlined />} 
-                                            onClick={handleDownloadInvoicePdf}
-                                        >
-                                            Tải PDF Hóa Đơn
-                                        </Button>
+                                    <>
+                                        <Table
+                                            dataSource={vatDataList}
+                                            rowKey={(r) => r.ikey || r.invoiceNo || Math.random().toString()}
+                                            pagination={false}
+                                            size="small"
+                                            bordered
+                                            scroll={{ x: 750 }}
+                                            columns={[
+                                                {
+                                                    title: 'STT',
+                                                    key: 'stt',
+                                                    width: 45,
+                                                    align: 'center',
+                                                    render: (_: any, __: any, index: number) => index + 1
+                                                },
+                                                {
+                                                    title: 'Mã Ikey',
+                                                    dataIndex: 'ikey',
+                                                    key: 'ikey',
+                                                    width: 140,
+                                                    render: (val: string) => <Tag color="geekblue" style={{ fontFamily: 'monospace' }}>{val}</Tag>
+                                                },
+                                                {
+                                                    title: 'Số HĐ',
+                                                    dataIndex: 'invoiceNo',
+                                                    key: 'invoiceNo',
+                                                    width: 100,
+                                                    render: (val: string) => val ? <b style={{ color: '#096dd9' }}>{val}</b> : <span style={{ color: '#999', fontStyle: 'italic' }}>Chưa cấp số</span>
+                                                },
+                                                {
+                                                    title: 'Mã tra cứu',
+                                                    dataIndex: 'lookupCode',
+                                                    key: 'lookupCode',
+                                                    width: 110,
+                                                    render: (val: string) => val || <span style={{ color: '#bbb' }}>-</span>
+                                                },
+                                                {
+                                                    title: 'Ngày lập',
+                                                    key: 'date',
+                                                    width: 100,
+                                                    render: (_: any, r: any) => {
+                                                        const d = r.issueDate || r.issuedAt;
+                                                        return d ? dayjs(d).format('DD/MM/YYYY') : '-';
+                                                    }
+                                                },
+                                                {
+                                                    title: 'Trạng thái',
+                                                    dataIndex: 'invoiceStatus',
+                                                    key: 'status',
+                                                    width: 120,
+                                                    render: (status: number) => {
+                                                        if (status === 0) return <Tag color="orange">Bản nháp</Tag>;
+                                                        if (status === 1) return <Tag color="blue">Đã ký</Tag>;
+                                                        if (status === 2) return <Tag color="green">Đã khai thuế</Tag>;
+                                                        if (status === 3) return <Tag color="purple">Bị thay thế</Tag>;
+                                                        if (status === 4) return <Tag color="magenta">Bị điều chỉnh</Tag>;
+                                                        if (status === 5) return <Tag color="red">Đã hủy</Tag>;
+                                                        return <Tag color="default">Trạng thái {status}</Tag>;
+                                                    }
+                                                },
+                                                {
+                                                    title: 'Tổng tiền',
+                                                    dataIndex: 'grandTotal',
+                                                    key: 'grandTotal',
+                                                    align: 'right',
+                                                    width: 120,
+                                                    render: (val: number) => val !== undefined && val !== null
+                                                        ? <b style={{ color: '#d4380d' }}>{Number(val).toLocaleString()} ₫</b>
+                                                        : '-'
+                                                },
+                                                {
+                                                    title: 'Thao tác',
+                                                    key: 'action',
+                                                    align: 'center',
+                                                    width: 220,
+                                                    render: (_: any, r: any) => (
+                                                        <Space size={4} wrap>
+                                                            {r.linkView ? (
+                                                                <Tooltip title="Mở Portal EasyInvoice">
+                                                                    <Button size="small" type="primary" icon={<LinkOutlined />} href={r.linkView} target="_blank" />
+                                                                </Tooltip>
+                                                            ) : (
+                                                                <Tooltip title="Chưa có Link Portal">
+                                                                    <Button size="small" icon={<LinkOutlined />} disabled />
+                                                                </Tooltip>
+                                                            )}
 
-                                        <Button 
-                                            icon={<HistoryOutlined />} 
-                                            onClick={handleCheckInvoiceStatus}
-                                            loading={checkingInvoice}
-                                        >
-                                            Kiểm tra lại trạng thái
-                                        </Button>
-                                        
-                                        <Button 
-                                            icon={<MailOutlined />} 
-                                            onClick={handleSendInvoiceEmail}
-                                            loading={sendingInvoiceEmail}
-                                        >
-                                            Gửi Email cho KH
-                                        </Button>
-                                        </div>
-                                        {vatData.lastEmailSentAt && (
-                                            <div style={{ marginTop: 15, fontSize: 13, color: '#666', borderTop: '1px solid #eee', paddingTop: 10 }}>
+                                                            <Tooltip title="Tải PDF Hóa Đơn">
+                                                                <Button
+                                                                    size="small"
+                                                                    icon={<FilePdfOutlined />}
+                                                                    onClick={() => handleDownloadInvoicePdf(r)}
+                                                                    loading={downloadingInvoiceIkey === r.ikey}
+                                                                />
+                                                            </Tooltip>
+
+                                                            <Tooltip title="Kiểm tra trạng thái HĐ này">
+                                                                <Button
+                                                                    size="small"
+                                                                    icon={<HistoryOutlined />}
+                                                                    onClick={() => handleCheckInvoiceStatus(r.ikey)}
+                                                                    loading={checkingInvoiceIkey === r.ikey}
+                                                                />
+                                                            </Tooltip>
+
+                                                            <Tooltip title="Gửi Email HĐ cho KH">
+                                                                <Button
+                                                                    size="small"
+                                                                    icon={<MailOutlined />}
+                                                                    onClick={() => handleOpenSendEmailModal(r)}
+                                                                />
+                                                            </Tooltip>
+
+                                                            {r.items && r.items.length > 0 && (
+                                                                <Tooltip title="Xem chi tiết các mặt hàng đã xuất của HĐ này">
+                                                                    <Button
+                                                                        size="small"
+                                                                        icon={<EyeOutlined />}
+                                                                        onClick={() => handleViewInvoiceItems(r)}
+                                                                    />
+                                                                </Tooltip>
+                                                            )}
+
+                                                            {r.invoiceStatus === 0 && (
+                                                                <Popconfirm
+                                                                    title="Bạn có chắc chắn muốn xóa bản nháp hóa đơn này?"
+                                                                    onConfirm={() => handleDeleteDraftInvoice(r.ikey)}
+                                                                    okText="Xóa"
+                                                                    cancelText="Hủy"
+                                                                    okButtonProps={{ danger: true }}
+                                                                >
+                                                                    <Tooltip title="Xóa hóa đơn nháp">
+                                                                        <Button
+                                                                            size="small"
+                                                                            danger
+                                                                            icon={<DeleteOutlined />}
+                                                                            loading={deletingInvoiceIkey === r.ikey}
+                                                                        />
+                                                                    </Tooltip>
+                                                                </Popconfirm>
+                                                            )}
+                                                        </Space>
+                                                    )
+                                                }
+                                            ]}
+                                        />
+
+                                        {vatDataList.some(inv => inv.lastEmailSentAt) && (
+                                            <div style={{ marginTop: 12, fontSize: 12, color: '#666', borderTop: '1px dashed #e8e8e8', paddingTop: 8 }}>
                                                 <InfoCircleOutlined style={{ marginRight: 5, color: '#1890ff' }} />
-                                                Đã gửi Email hóa đơn lần cuối vào lúc <b>{dayjs(vatData.lastEmailSentAt).format('HH:mm DD/MM/YYYY')}</b> tới địa chỉ: <b>{vatData.lastEmailSentTo}</b>
+                                                Lịch sử gửi email gần nhất: {vatDataList.filter(inv => inv.lastEmailSentAt).map(inv => (
+                                                    <span key={inv.ikey} style={{ marginRight: 15 }}>
+                                                        <b>{inv.ikey}</b>: {dayjs(inv.lastEmailSentAt).format('HH:mm DD/MM/YYYY')} tới <i>{inv.lastEmailSentTo}</i>
+                                                    </span>
+                                                ))}
                                             </div>
                                         )}
-                                    </div>
+                                    </>
                                 )}
                             </div>
+
                         </div>
                     </Form>
                 </Tabs.TabPane>
@@ -1483,18 +1772,31 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                     ]}
                 />
             </Modal>
+            {/* MODAL TẠO HÓA ĐƠN NHÁP EASYINVOICE */}
             <Modal
-                title="Xác nhận thông tin xuất hóa đơn"
+                title="Xác nhận thông tin & Chọn sản phẩm xuất hóa đơn"
                 open={issueInvoiceModalOpen}
                 onCancel={() => setIssueInvoiceModalOpen(false)}
                 onOk={confirmIssueInvoiceDraft}
                 confirmLoading={issuingInvoice}
-                okText="Xác nhận Tạo"
+                okText="Xác nhận Tạo HĐ"
                 cancelText="Hủy"
-                width={800}
+                width={950}
+                footer={[
+                    <Button key="reset" onClick={handleResetDraftItems} style={{ float: 'left' }}>
+                        Khôi phục danh sách
+                    </Button>,
+                    <Button key="cancel" onClick={() => setIssueInvoiceModalOpen(false)}>
+                        Hủy
+                    </Button>,
+                    <Button key="ok" type="primary" loading={issuingInvoice} onClick={confirmIssueInvoiceDraft}>
+                        Xác nhận Tạo HĐ
+                    </Button>
+                ]}
             >
                 <Alert
-                    message="Vui lòng kiểm tra kỹ các thông tin dưới đây sẽ được đẩy sang EasyInvoice."
+                    message="Kiểm tra kỹ thông tin người mua và số lượng mặt hàng cần xuất cho hóa đơn này."
+                    description="Hệ thống đã tính toán sẵn SL đã xuất từ các hóa đơn trước đó và gợi ý số lượng còn lại."
                     type="info"
                     showIcon
                     style={{ marginBottom: 16 }}
@@ -1522,74 +1824,220 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                     </Row>
                 </Card>
 
-                <Card size="small" title="Danh sách hàng hóa/dịch vụ">
+                <Card 
+                    size="small" 
+                    title={
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>Danh sách hàng hóa / dịch vụ xuất hóa đơn ({invoiceDraftItems.length} mặt hàng)</span>
+                        </div>
+                    }
+                >
                     <Table
-                        dataSource={form.getFieldValue('items') || []}
+                        dataSource={invoiceDraftItems}
                         pagination={false}
                         size="small"
-                        rowKey="id"
+                        rowKey={(r, idx) => r.key || r.sku || String(idx)}
+                        bordered
                         columns={[
                             {
+                                title: 'STT',
+                                key: 'stt',
+                                width: 40,
+                                align: 'center',
+                                render: (_: any, __: any, index: number) => index + 1
+                            },
+                            {
                                 title: 'Tên hàng hóa, dịch vụ',
-                                dataIndex: 'vat_content',
-                                render: (text, record: any) => text || record.product?.name || record.sku || 'Sản phẩm'
+                                dataIndex: 'productName',
+                                render: (text: string, record: any) => (
+                                    <div>
+                                        <b>{text}</b>
+                                        {record.sku && <div style={{ fontSize: 11, color: '#888' }}>SKU: {record.sku}</div>}
+                                    </div>
+                                )
                             },
                             {
                                 title: 'ĐVT',
-                                key: 'unit',
-                                render: () => 'Cái',
-                                width: 80
-                            },
-                            {
-                                title: 'Số lượng',
-                                dataIndex: 'quantity',
-                                align: 'right',
-                                width: 100
+                                dataIndex: 'unit',
+                                width: 60,
+                                align: 'center',
+                                render: (v: string) => v || 'Cái'
                             },
                             {
                                 title: 'Đơn giá',
                                 dataIndex: 'unit_price',
                                 align: 'right',
-                                render: (val) => val?.toLocaleString(),
-                                width: 120
+                                width: 100,
+                                render: (val: number) => val ? val.toLocaleString() : '0'
+                            },
+                            {
+                                title: 'SL Đơn',
+                                dataIndex: 'order_quantity',
+                                align: 'center',
+                                width: 75,
+                                render: (val: number) => <b>{val || 0}</b>
+                            },
+                            {
+                                title: 'Đã xuất',
+                                dataIndex: 'already_invoiced_quantity',
+                                align: 'center',
+                                width: 75,
+                                render: (val: number) => (
+                                    <Tag color={val > 0 ? 'orange' : 'default'} style={{ margin: 0 }}>
+                                        {val || 0}
+                                    </Tag>
+                                )
+                            },
+                            {
+                                title: 'Còn lại',
+                                dataIndex: 'remaining_quantity',
+                                align: 'center',
+                                width: 75,
+                                render: (val: number) => (
+                                    <Tag color={val > 0 ? 'green' : 'default'} style={{ margin: 0 }}>
+                                        {val || 0}
+                                    </Tag>
+                                )
+                            },
+                            {
+                                title: 'Xuất đợt này',
+                                key: 'quantity',
+                                align: 'center',
+                                width: 105,
+                                render: (_: any, record: any, index: number) => (
+                                    <InputNumber
+                                        min={0}
+                                        value={record.quantity}
+                                        onChange={(val) => handleDraftItemQtyChange(index, val)}
+                                        style={{ width: '100%' }}
+                                    />
+                                )
                             },
                             {
                                 title: 'Thành tiền',
                                 key: 'total',
                                 align: 'right',
-                                render: (_, record: any) => ((record.quantity || 0) * (record.unit_price || 0)).toLocaleString(),
-                                width: 120
+                                width: 115,
+                                render: (_: any, record: any) => (
+                                    <b style={{ color: '#096dd9' }}>
+                                        {((Number(record.quantity) || 0) * (Number(record.unit_price) || 0)).toLocaleString()} ₫
+                                    </b>
+                                )
+                            },
+                            {
+                                title: '',
+                                key: 'action',
+                                width: 45,
+                                align: 'center',
+                                render: (_: any, __: any, index: number) => (
+                                    <Tooltip title="Bỏ mặt hàng này khỏi hóa đơn đợt này">
+                                        <Button
+                                            type="text"
+                                            danger
+                                            size="small"
+                                            icon={<DeleteOutlined />}
+                                            onClick={() => handleRemoveDraftItem(index)}
+                                        />
+                                    </Tooltip>
+                                )
                             }
                         ]}
                         summary={(pageData) => {
                             let totalAmount = 0;
                             pageData.forEach((item: any) => {
-                                totalAmount += (item.quantity || 0) * (item.unit_price || 0);
+                                totalAmount += (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
                             });
-                            const vatRate = form.getFieldValue('vat_rate') || 0;
+                            const vatRate = Number(form.getFieldValue('vat_rate')) || 0;
                             const vatAmount = totalAmount * (vatRate / 100);
                             const grandTotal = totalAmount + vatAmount;
                             
                             return (
                                 <>
                                     <Table.Summary.Row>
-                                        <Table.Summary.Cell index={0} colSpan={4} align="right"><b>Cộng tiền hàng:</b></Table.Summary.Cell>
-                                        <Table.Summary.Cell index={1} align="right"><b>{totalAmount.toLocaleString()}</b></Table.Summary.Cell>
+                                        <Table.Summary.Cell index={0} colSpan={7} align="right"><b>Cộng tiền hàng:</b></Table.Summary.Cell>
+                                        <Table.Summary.Cell index={1} colSpan={2} align="right"><b>{totalAmount.toLocaleString()} ₫</b></Table.Summary.Cell>
+                                        <Table.Summary.Cell index={2} />
                                     </Table.Summary.Row>
                                     <Table.Summary.Row>
-                                        <Table.Summary.Cell index={0} colSpan={4} align="right"><b>Tiền thuế GTGT ({vatRate}%):</b></Table.Summary.Cell>
-                                        <Table.Summary.Cell index={1} align="right"><b>{vatAmount.toLocaleString()}</b></Table.Summary.Cell>
+                                        <Table.Summary.Cell index={0} colSpan={7} align="right"><b>Tiền thuế GTGT ({vatRate}%):</b></Table.Summary.Cell>
+                                        <Table.Summary.Cell index={1} colSpan={2} align="right"><b>{vatAmount.toLocaleString()} ₫</b></Table.Summary.Cell>
+                                        <Table.Summary.Cell index={2} />
                                     </Table.Summary.Row>
                                     <Table.Summary.Row>
-                                        <Table.Summary.Cell index={0} colSpan={4} align="right"><b>Tổng tiền thanh toán:</b></Table.Summary.Cell>
-                                        <Table.Summary.Cell index={1} align="right"><b style={{ color: 'red' }}>{grandTotal.toLocaleString()}</b></Table.Summary.Cell>
+                                        <Table.Summary.Cell index={0} colSpan={7} align="right"><b>Tổng tiền thanh toán:</b></Table.Summary.Cell>
+                                        <Table.Summary.Cell index={1} colSpan={2} align="right"><b style={{ color: '#d4380d', fontSize: 14 }}>{grandTotal.toLocaleString()} ₫</b></Table.Summary.Cell>
+                                        <Table.Summary.Cell index={2} />
                                     </Table.Summary.Row>
                                 </>
-                            )
+                            );
                         }}
                     />
                 </Card>
             </Modal>
+
+            {/* MODAL XEM CHI TIẾT SẢN PHẨM CỦA HÓA ĐƠN */}
+            <Modal
+                title={`Chi tiết mặt hàng hóa đơn (${viewingInvoice?.ikey || ''})`}
+                open={viewItemsModalOpen}
+                onCancel={() => setViewItemsModalOpen(false)}
+                footer={[
+                    <Button key="close" onClick={() => setViewItemsModalOpen(false)}>
+                        Đóng
+                    </Button>
+                ]}
+                width={750}
+            >
+                {viewingInvoice && (
+                    <>
+                        <div style={{ marginBottom: 12 }}>
+                            <span>Số hóa đơn: <b>{viewingInvoice.invoiceNo || 'Bản nháp'}</b></span>
+                            <span style={{ marginLeft: 20 }}>Mã tra cứu: <b>{viewingInvoice.lookupCode || '-'}</b></span>
+                            <span style={{ marginLeft: 20 }}>Tổng tiền: <b style={{ color: '#d4380d' }}>{Number(viewingInvoice.grandTotal || 0).toLocaleString()} ₫</b></span>
+                        </div>
+                        <Table
+                            dataSource={viewingInvoice.items || []}
+                            pagination={false}
+                            size="small"
+                            rowKey={(r, idx) => r.sku || String(idx)}
+                            bordered
+                            columns={[
+                                { title: 'STT', key: 'stt', width: 50, align: 'center', render: (_: any, __: any, idx: number) => idx + 1 },
+                                { title: 'Mã SKU', dataIndex: 'sku', key: 'sku', width: 120 },
+                                { title: 'Tên sản phẩm', dataIndex: 'productName', key: 'productName' },
+                                { title: 'ĐVT', dataIndex: 'unit', key: 'unit', width: 70, align: 'center', render: (v: string) => v || 'Cái' },
+                                { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity', width: 85, align: 'right', render: (v: number) => <b>{v}</b> },
+                                { title: 'Đơn giá', dataIndex: 'unit_price', key: 'unit_price', width: 110, align: 'right', render: (v: number) => Number(v || 0).toLocaleString() },
+                                { title: 'Thành tiền', dataIndex: 'total', key: 'total', width: 120, align: 'right', render: (v: number) => <b>{Number(v || 0).toLocaleString()} ₫</b> },
+                            ]}
+                        />
+                    </>
+                )}
+            </Modal>
+
+            {/* MODAL XÁC NHẬN GỬI EMAIL HÓA ĐƠN */}
+            <Modal
+                title={`Gửi Email Hóa Đơn Điện Tử (${emailInvoiceTarget?.ikey || ''})`}
+                open={sendEmailModalOpen}
+                onCancel={() => setSendEmailModalOpen(false)}
+                onOk={confirmSendInvoiceEmail}
+                confirmLoading={sendingInvoiceEmail}
+                okText="Gửi Email"
+                cancelText="Hủy"
+            >
+                <div style={{ marginBottom: 15 }}>
+                    <p>Hệ thống sẽ gửi file PDF hóa đơn kèm thông tin tra cứu tới email khách hàng.</p>
+                    <div style={{ marginBottom: 8, fontSize: 13, color: '#555' }}>
+                        Email người nhận:
+                    </div>
+                    <Input
+                        placeholder="Nhập email nhận hóa đơn..."
+                        value={emailRecipient}
+                        onChange={(e) => setEmailRecipient(e.target.value)}
+                        prefix={<MailOutlined />}
+                    />
+                </div>
+            </Modal>
+
         </Drawer>
     );
 };
