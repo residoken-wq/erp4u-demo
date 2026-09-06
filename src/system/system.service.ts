@@ -363,6 +363,8 @@ export class SystemService {
             'footer_slogan', 'footer_copyright', 'footer_bg', 'footer_text_color',
             // Blog selection
             'blog_selection_type',
+            // Widget 360 Classroom
+            'widget_360_enabled', 'widget_360_tooltip', 'widget_360_badge', 'widget_360_panorama_url',
         ];
 
         // JSON array keys
@@ -457,6 +459,9 @@ export class SystemService {
         result['topbar_enabled'] = result['topbar_enabled'] === 'true';
         result['topbar_speed'] = Number(result['topbar_speed']) || 20;
         result['hero_mask_opacity'] = Number(result['hero_mask_opacity']) || 40;
+        result['widget_360_enabled'] = result['widget_360_enabled'] !== 'false';
+        result['widget_360_tooltip'] = result['widget_360_tooltip'] || 'Khám phá Lớp học 360°';
+        result['widget_360_badge'] = result['widget_360_badge'] || '360°';
 
         return result;
     }
@@ -475,6 +480,8 @@ export class SystemService {
             'footer_slogan', 'footer_copyright', 'footer_bg', 'footer_text_color',
             // Blog selection
             'blog_selection_type',
+            // Widget 360 string fields
+            'widget_360_tooltip', 'widget_360_badge', 'widget_360_panorama_url',
         ];
 
         // Save simple string keys
@@ -492,6 +499,7 @@ export class SystemService {
         if (data.topbar_enabled !== undefined) await this.setValue('topbar_enabled', String(data.topbar_enabled), 'Home Page Topbar');
         if (data.topbar_speed !== undefined) await this.setValue('topbar_speed', String(data.topbar_speed), 'Home Page Topbar Speed');
         if (data.hero_mask_opacity !== undefined) await this.setValue('hero_mask_opacity', String(data.hero_mask_opacity), 'Home Page Hero Mask Opacity');
+        if (data.widget_360_enabled !== undefined) await this.setValue('widget_360_enabled', String(data.widget_360_enabled), 'Widget 360 Enabled');
 
         // Save Features as JSON
         if (data.features) {

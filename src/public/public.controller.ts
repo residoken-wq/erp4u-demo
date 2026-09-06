@@ -87,7 +87,9 @@ export class PublicController {
             'section_categories_text', 'section_about_text', 'section_journey_text',
             'section_projects_text', 'section_partners_text', 'section_testimonials_text', 'section_blog_text',
             // Missing configurations
-            'product_tags_config', 'hidden_pages'
+            'product_tags_config', 'hidden_pages',
+            // Widget 360 Classroom
+            'widget_360_enabled', 'widget_360_tooltip', 'widget_360_badge', 'widget_360_panorama_url'
         ];
         const configs = await this.configRepo.find({
             where: { key: In(cmsKeys) }
