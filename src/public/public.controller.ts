@@ -89,7 +89,7 @@ export class PublicController {
             // Missing configurations
             'product_tags_config', 'hidden_pages',
             // Widget 360 Classroom
-            'widget_360_enabled', 'widget_360_tooltip', 'widget_360_badge', 'widget_360_panorama_url'
+            'widget_360_enabled', 'widget_360_tooltip', 'widget_360_badge', 'widget_360_panorama_url', 'widget_360_renderer_mode'
         ];
         const configs = await this.configRepo.find({
             where: { key: In(cmsKeys) }
@@ -177,6 +177,12 @@ export class PublicController {
             section_partners_text: result.section_partners_text || '',
             section_testimonials_text: result.section_testimonials_text || '',
             section_blog_text: result.section_blog_text || '',
+            // Widget 360 Classroom
+            widget_360_enabled: result.widget_360_enabled !== undefined && result.widget_360_enabled !== '' ? result.widget_360_enabled : 'true',
+            widget_360_tooltip: result.widget_360_tooltip || 'Khám phá Lớp học 360°',
+            widget_360_badge: result.widget_360_badge || '360°',
+            widget_360_panorama_url: result.widget_360_panorama_url || '',
+            widget_360_renderer_mode: result.widget_360_renderer_mode || 'guided2d',
             // Legacy fields for backward compatibility
             title: result.site_name || 'ERP4U',
             logo: result.logo_url || '/logo.png',

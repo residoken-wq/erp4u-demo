@@ -364,7 +364,7 @@ export class SystemService {
             // Blog selection
             'blog_selection_type',
             // Widget 360 Classroom
-            'widget_360_enabled', 'widget_360_tooltip', 'widget_360_badge', 'widget_360_panorama_url',
+            'widget_360_enabled', 'widget_360_tooltip', 'widget_360_badge', 'widget_360_panorama_url', 'widget_360_renderer_mode',
         ];
 
         // JSON array keys
@@ -458,10 +458,11 @@ export class SystemService {
         result['products_limit'] = Number(result['products_limit']) || 4;
         result['topbar_enabled'] = result['topbar_enabled'] === 'true';
         result['topbar_speed'] = Number(result['topbar_speed']) || 20;
-        result['hero_mask_opacity'] = Number(result['hero_mask_opacity']) || 40;
-        result['widget_360_enabled'] = result['widget_360_enabled'] !== 'false';
+        result['widget_360_enabled'] = result['widget_360_enabled'] !== 'false' && result['widget_360_enabled'] !== false && result['widget_360_enabled'] !== '0';
         result['widget_360_tooltip'] = result['widget_360_tooltip'] || 'Khám phá Lớp học 360°';
         result['widget_360_badge'] = result['widget_360_badge'] || '360°';
+        result['widget_360_panorama_url'] = result['widget_360_panorama_url'] || '';
+        result['widget_360_renderer_mode'] = result['widget_360_renderer_mode'] || 'guided2d';
 
         return result;
     }
@@ -481,7 +482,7 @@ export class SystemService {
             // Blog selection
             'blog_selection_type',
             // Widget 360 string fields
-            'widget_360_tooltip', 'widget_360_badge', 'widget_360_panorama_url',
+            'widget_360_tooltip', 'widget_360_badge', 'widget_360_panorama_url', 'widget_360_renderer_mode',
         ];
 
         // Save simple string keys
