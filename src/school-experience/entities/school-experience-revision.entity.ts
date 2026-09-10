@@ -51,8 +51,14 @@ export class SchoolExperienceRevision {
             roleId: string;
             stepCode: string;
             assetUrl: string;
+            mediaDesktopUrl?: string;
+            mediaMobileUrl?: string;
             mediaType: 'image' | 'video';
             status: 'available' | 'missing' | 'error';
+            focalPoint?: [number, number]; // [x, y] in percentage 0-100
+            actionBounds?: { x: number; y: number; width: number; height: number }; // percentage 0-100
+            faceBounds?: { x: number; y: number; width: number; height: number }; // percentage 0-100
+            description?: string;
         }>;
         mapConfig: {
             quickRoute: string[];

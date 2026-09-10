@@ -158,8 +158,14 @@ export class SchoolExperienceService {
                     roleId: role,
                     stepCode: step,
                     assetUrl: `/images/tour360/r7/${role}/${step}.webp`,
+                    mediaDesktopUrl: `/images/tour360/r7/${role}/${step}.webp`,
+                    mediaMobileUrl: `/images/tour360/r7/${role}/${step}.webp`,
                     mediaType: 'image',
                     status: 'available',
+                    focalPoint: [50, 50],
+                    actionBounds: { x: 30, y: 40, width: 40, height: 40 },
+                    faceBounds: { x: 35, y: 15, width: 30, height: 25 },
+                    description: `Minh họa góc nhìn ${role} - ${step}`,
                 };
             });
         });
@@ -304,6 +310,29 @@ export class SchoolExperienceService {
             if (missingSlots.length > 0) {
                 throw new BadRequestException(
                     `Không thể xuất bản: Chuỗi minh họa R7 còn ${missingSlots.length} ô thiếu hình ảnh (${missingSlots.slice(0, 3).join(', ')}...)`
+                );
+            }
+
+            // Mobile Crop Bounds Safety Check
+            const invalidBoundsSlots: string[] = [];
+            Object.entries(matrix).forEach(([slotKey, slotData]: [string, any]) => {
+                if (slotData?.faceBounds) {
+                    const { x, y, width, height } = slotData.faceBounds;
+                    if (x < 0 || y < 0 || width <= 0 || height <= 0 || x + width > 100 || y + height > 100) {
+                        invalidBoundsSlots.push(`${slotKey} (vùng mặt vượt biên)`);
+                    }
+                }
+                if (slotData?.actionBounds) {
+                    const { x, y, width, height } = slotData.actionBounds;
+                    if (x < 0 || y < 0 || width <= 0 || height <= 0 || x + width > 100 || y + height > 100) {
+                        invalidBoundsSlots.push(`${slotKey} (vùng hành động vượt biên)`);
+                    }
+                }
+            });
+
+            if (invalidBoundsSlots.length > 0) {
+                throw new BadRequestException(
+                    `Không thể xuất bản: Tọa độ vùng an toàn di động không hợp lệ tại: ${invalidBoundsSlots.slice(0, 3).join(', ')}`
                 );
             }
         }
