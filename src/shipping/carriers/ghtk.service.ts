@@ -180,6 +180,20 @@ function smartParseVietnameseAddress(rawAddress: string) {
     };
 }
 
+export function extractAddressString(val: any, fallback = ''): string {
+    if (!val) return fallback;
+    if (typeof val === 'string') return val.trim();
+    if (typeof val === 'number') return String(val);
+    if (typeof val === 'object') {
+        if (val.name && typeof val.name === 'string') return val.name.trim();
+        if (val.title && typeof val.title === 'string') return val.title.trim();
+        if (val.address_name && typeof val.address_name === 'string') return val.address_name.trim();
+        if (val.address && typeof val.address === 'string') return val.address.trim();
+        return fallback;
+    }
+    return String(val).trim();
+}
+
 @Injectable()
 export class GhtkService {
     private readonly logger = new Logger(GhtkService.name);
@@ -368,11 +382,11 @@ export class GhtkService {
                     return {
                         success: true,
                         source: 'GHTK_API',
-                        province: d.province || d.city || '',
-                        district: d.district || '',
-                        ward: d.ward || '',
-                        hamlet: d.hamlet || 'Khác',
-                        street: d.street || d.address || '',
+                        province: extractAddressString(d.province || d.city),
+                        district: extractAddressString(d.district),
+                        ward: extractAddressString(d.ward),
+                        hamlet: extractAddressString(d.hamlet, 'Khác'),
+                        street: extractAddressString(d.street || d.address, rawAddress),
                         full_address: rawAddress,
                     };
                 }
@@ -468,17 +482,26 @@ export class GhtkService {
         }
 
         try {
+            const safePickProvince = extractAddressString(dto.pick_province, 'Hồ Chí Minh');
+            const safePickDistrict = extractAddressString(dto.pick_district, 'Quận 7');
+            const safePickWard = extractAddressString(dto.pick_ward, '');
+            const safePickAddress = extractAddressString(dto.pick_address, '');
+            const safeProvince = extractAddressString(dto.province);
+            const safeDistrict = extractAddressString(dto.district);
+            const safeWard = extractAddressString(dto.ward);
+            const safeAddress = extractAddressString(dto.address);
+
             // Thử endpoint chuẩn GHTK: GET /services/shipment/fee
             try {
                 const queryParams = {
-                    pick_province: dto.pick_province || 'Hồ Chí Minh',
-                    pick_district: dto.pick_district || 'Quận 7',
-                    pick_ward: dto.pick_ward || '',
-                    pick_address: dto.pick_address || '',
-                    province: dto.province,
-                    district: dto.district,
-                    ward: dto.ward || '',
-                    address: dto.address || '',
+                    pick_province: safePickProvince,
+                    pick_district: safePickDistrict,
+                    pick_ward: safePickWard,
+                    pick_address: safePickAddress,
+                    province: safeProvince,
+                    district: safeDistrict,
+                    ward: safeWard,
+                    address: safeAddress,
                     weight: Number(dto.weight) || 500, // gram
                     value: Number(dto.value) || 0,
                     transport: dto.transport || 'road',
@@ -495,14 +518,14 @@ export class GhtkService {
             } catch (errGet: any) {
                 // Fallback POST /open/api/v1/order/fee
                 const params = {
-                    pick_province: dto.pick_province || 'Hồ Chí Minh',
-                    pick_district: dto.pick_district || 'Quận 7',
-                    pick_ward: dto.pick_ward || '',
-                    pick_address: dto.pick_address || '',
-                    province: dto.province,
-                    district: dto.district,
-                    ward: dto.ward || '',
-                    address: dto.address || '',
+                    pick_province: safePickProvince,
+                    pick_district: safePickDistrict,
+                    pick_ward: safePickWard,
+                    pick_address: safePickAddress,
+                    province: safeProvince,
+                    district: safeDistrict,
+                    ward: safeWard,
+                    address: safeAddress,
                     weight: Number(dto.weight) || 500,
                     value: Number(dto.value) || 0,
                     transport: dto.transport || 'road',
@@ -592,11 +615,11 @@ export class GhtkService {
         const rawRecipientAddress = options.address || delivery.delivery_address || '';
         const parsedRecipient = smartParseVietnameseAddress(rawRecipientAddress);
 
-        const receiverProvince = (options.province || parsedRecipient.province || '').trim();
-        const receiverDistrict = (options.district || parsedRecipient.district || '').trim();
-        const receiverWard = (options.ward || parsedRecipient.ward || '').trim();
-        const receiverHamlet = (options.hamlet || parsedRecipient.hamlet || 'Khác').trim() || 'Khác';
-        const receiverStreet = (options.street || parsedRecipient.street || rawRecipientAddress).trim();
+        const receiverProvince = extractAddressString(options.province || parsedRecipient.province);
+        const receiverDistrict = extractAddressString(options.district || parsedRecipient.district);
+        const receiverWard = extractAddressString(options.ward || parsedRecipient.ward);
+        const receiverHamlet = extractAddressString(options.hamlet || parsedRecipient.hamlet, 'Khác') || 'Khác';
+        const receiverStreet = extractAddressString(options.street || parsedRecipient.street, rawRecipientAddress);
 
         const payload: any = {
             products,

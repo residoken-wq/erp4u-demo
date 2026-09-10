@@ -11,6 +11,20 @@ import dayjs from 'dayjs';
 import AttachmentUpload from '../common/AttachmentUpload';
 import { parseWebsiteOrderNote, ParsedShippingInfo, smartParseVietnameseAddress } from '../../utils/orderNoteParser';
 
+const extractAddressString = (val: any, fallback = ''): string => {
+    if (!val) return fallback;
+    if (typeof val === 'string') return val.trim();
+    if (typeof val === 'number') return String(val);
+    if (typeof val === 'object') {
+        if (val.name && typeof val.name === 'string') return val.name.trim();
+        if (val.title && typeof val.title === 'string') return val.title.trim();
+        if (val.address_name && typeof val.address_name === 'string') return val.address_name.trim();
+        if (val.address && typeof val.address === 'string') return val.address.trim();
+        return fallback;
+    }
+    return String(val).trim();
+};
+
 interface Props {
     order: any;
     products: any[];
@@ -194,20 +208,20 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
 
         // Bóc tách nhanh bằng bộ từ điển nội bộ
         const localParsed = smartParseVietnameseAddress(targetAddr);
-        if (localParsed.province) setGhtkProvince(localParsed.province);
-        if (localParsed.district) setGhtkDistrict(localParsed.district);
-        if (localParsed.ward) setGhtkWard(localParsed.ward);
-        if (localParsed.street) setGhtkAddress(localParsed.street);
+        if (localParsed.province) setGhtkProvince(extractAddressString(localParsed.province));
+        if (localParsed.district) setGhtkDistrict(extractAddressString(localParsed.district));
+        if (localParsed.ward) setGhtkWard(extractAddressString(localParsed.ward));
+        if (localParsed.street) setGhtkAddress(extractAddressString(localParsed.street));
 
         try {
             setGhtkParseLoading(true);
             const res = await api.post('/shipping/ghtk/parse-address', { address: targetAddr });
             if (res.data?.success) {
-                const prov = res.data.province || localParsed.province || '';
-                const dist = res.data.district || localParsed.district || '';
-                const wrd = res.data.ward || localParsed.ward || '';
-                const ham = res.data.hamlet || localParsed.hamlet || 'Khác';
-                const str = res.data.street || localParsed.street || targetAddr;
+                const prov = extractAddressString(res.data.province || localParsed.province, '');
+                const dist = extractAddressString(res.data.district || localParsed.district, '');
+                const wrd = extractAddressString(res.data.ward || localParsed.ward, '');
+                const ham = extractAddressString(res.data.hamlet || localParsed.hamlet, 'Khác');
+                const str = extractAddressString(res.data.street || localParsed.street, targetAddr);
 
                 setGhtkProvince(prov);
                 setGhtkDistrict(dist);
@@ -218,12 +232,18 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             }
         } catch (e: any) {
             if (localParsed.province || localParsed.district) {
-                setGhtkProvince(localParsed.province);
-                setGhtkDistrict(localParsed.district);
-                setGhtkWard(localParsed.ward);
-                setGhtkHamlet(localParsed.hamlet || 'Khác');
-                setGhtkAddress(localParsed.street);
-                message.success(`Đã nhận diện: ${localParsed.ward ? localParsed.ward + ', ' : ''}${localParsed.district ? localParsed.district + ', ' : ''}${localParsed.province} (Thôn/ấp: ${localParsed.hamlet || 'Khác'})`);
+                const safeProv = extractAddressString(localParsed.province);
+                const safeDist = extractAddressString(localParsed.district);
+                const safeWrd = extractAddressString(localParsed.ward);
+                const safeHam = extractAddressString(localParsed.hamlet, 'Khác');
+                const safeStr = extractAddressString(localParsed.street, targetAddr);
+
+                setGhtkProvince(safeProv);
+                setGhtkDistrict(safeDist);
+                setGhtkWard(safeWrd);
+                setGhtkHamlet(safeHam);
+                setGhtkAddress(safeStr);
+                message.success(`Đã nhận diện: ${safeWrd ? safeWrd + ', ' : ''}${safeDist ? safeDist + ', ' : ''}${safeProv} (Thôn/ấp: ${safeHam})`);
             } else {
                 message.warning('Không thể tự động nhận diện, vui lòng điền Tỉnh/Quận');
             }
@@ -233,27 +253,27 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
     };
 
     const handleGhtkEstimateFee = async () => {
-        let prov = ghtkProvince;
-        let dist = ghtkDistrict;
-        let ward = ghtkWard;
+        let prov = extractAddressString(ghtkProvince);
+        let dist = extractAddressString(ghtkDistrict);
+        let ward = extractAddressString(ghtkWard);
 
         // Nếu chưa có tỉnh hoặc huyện, tự động phân tích từ shipAddress
         if (!prov || !dist) {
             const autoParsed = smartParseVietnameseAddress(shipAddress);
             if (autoParsed.province) {
-                prov = autoParsed.province;
+                prov = extractAddressString(autoParsed.province);
                 setGhtkProvince(prov);
             }
             if (autoParsed.district) {
-                dist = autoParsed.district;
+                dist = extractAddressString(autoParsed.district);
                 setGhtkDistrict(dist);
             }
             if (autoParsed.ward && !ward) {
-                ward = autoParsed.ward;
+                ward = extractAddressString(autoParsed.ward);
                 setGhtkWard(ward);
             }
             if (autoParsed.street) {
-                setGhtkAddress(autoParsed.street);
+                setGhtkAddress(extractAddressString(autoParsed.street));
             }
         }
 
@@ -268,7 +288,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 province: prov,
                 district: dist || prov,
                 ward: ward,
-                address: ghtkAddress || shipAddress,
+                address: extractAddressString(ghtkAddress || shipAddress),
                 weight: Number(packageWeight) || 500,
                 value: Number(order?.total_amount) || 0,
             });
@@ -357,11 +377,11 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             const parsed = smartParseVietnameseAddress(delivery.delivery_address || '');
             const res = await api.post(`/shipping/delivery/${delivery.id}/push-ghtk`, {
                 pick_address_id: selectedPickAddressId || ghtkConfig?.defaultPickAddressId,
-                province: parsed.province || ghtkProvince,
-                district: parsed.district || ghtkDistrict,
-                ward: parsed.ward || ghtkWard,
-                hamlet: parsed.hamlet || ghtkHamlet || 'Khác',
-                address: parsed.street || delivery.delivery_address,
+                province: extractAddressString(parsed.province || ghtkProvince),
+                district: extractAddressString(parsed.district || ghtkDistrict),
+                ward: extractAddressString(parsed.ward || ghtkWard),
+                hamlet: extractAddressString(parsed.hamlet || ghtkHamlet, 'Khác'),
+                address: extractAddressString(parsed.street || delivery.delivery_address),
                 note: delivery.note,
                 weight_gram: delivery.weight_gram || 500,
                 pick_money: delivery.pick_money || 0,
@@ -736,11 +756,11 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                         message.loading({ content: 'Đang gửi thông tin sang GHTK để tạo vận đơn...', key: 'ghtk_push' });
                         const pushRes = await api.post(`/shipping/delivery/${newDeliveryId}/push-ghtk`, {
                             pick_address_id: selectedPickAddressId || ghtkConfig?.defaultPickAddressId,
-                            province: ghtkProvince,
-                            district: ghtkDistrict,
-                            ward: ghtkWard,
-                            hamlet: ghtkHamlet || 'Khác',
-                            address: ghtkAddress || shipAddress,
+                            province: extractAddressString(ghtkProvince),
+                            district: extractAddressString(ghtkDistrict),
+                            ward: extractAddressString(ghtkWard),
+                            hamlet: extractAddressString(ghtkHamlet, 'Khác'),
+                            address: extractAddressString(ghtkAddress || shipAddress),
                             note: shipNote,
                             weight_gram: packageWeight,
                             pick_money: isCod ? pickMoney : 0,
@@ -1284,7 +1304,11 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                     />
                     {(ghtkProvince || ghtkDistrict || ghtkWard) && (
                         <div style={{ fontSize: 11, color: '#008444', background: '#f6ffed', border: '1px dashed #b7eb8f', borderRadius: 4, padding: '3px 8px', marginTop: 4 }}>
-                            📍 <b>GHTK Cấp 4:</b> {ghtkWard ? `${ghtkWard}, ` : ''}{ghtkDistrict ? `${ghtkDistrict}, ` : ''}{ghtkProvince || ''}
+                            📍 <b>GHTK Cấp 4:</b> {[
+                                extractAddressString(ghtkWard),
+                                extractAddressString(ghtkDistrict),
+                                extractAddressString(ghtkProvince)
+                            ].filter(Boolean).join(', ')}
                         </div>
                     )}
                 </div>
@@ -1425,7 +1449,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                         <Input 
                                             size="small" 
                                             placeholder="VD: Bà Rịa - Vũng Tàu" 
-                                            value={ghtkProvince} 
+                                            value={extractAddressString(ghtkProvince)} 
                                             onChange={e => setGhtkProvince(e.target.value)} 
                                         />
                                     </div>
@@ -1434,7 +1458,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                         <Input 
                                             size="small" 
                                             placeholder="VD: TP. Vũng Tàu" 
-                                            value={ghtkDistrict} 
+                                            value={extractAddressString(ghtkDistrict)} 
                                             onChange={e => setGhtkDistrict(e.target.value)} 
                                         />
                                     </div>
@@ -1443,7 +1467,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                         <Input 
                                             size="small" 
                                             placeholder="VD: Phường Thắng Nhất" 
-                                            value={ghtkWard} 
+                                            value={extractAddressString(ghtkWard)} 
                                             onChange={e => setGhtkWard(e.target.value)} 
                                         />
                                     </div>
@@ -1455,7 +1479,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                         <Input 
                                             size="small" 
                                             placeholder="Khác" 
-                                            value={ghtkHamlet} 
+                                            value={extractAddressString(ghtkHamlet)} 
                                             onChange={e => setGhtkHamlet(e.target.value)} 
                                         />
                                     </div>
@@ -1465,7 +1489,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                     <Input 
                                         size="small" 
                                         placeholder="VD: 88/14 Nguyễn Hữu Cảnh" 
-                                        value={ghtkAddress} 
+                                        value={extractAddressString(ghtkAddress)} 
                                         onChange={e => setGhtkAddress(e.target.value)} 
                                     />
                                 </div>
