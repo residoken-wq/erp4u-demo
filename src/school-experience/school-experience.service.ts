@@ -162,6 +162,9 @@ export class SchoolExperienceService {
                     mediaMobileUrl: `/images/tour360/r7/${role}/${step}.webp`,
                     mediaType: 'image',
                     status: 'available',
+                    assetReady: true,
+                    runtimeTested: false,
+                    visualAccepted: false,
                     focalPoint: [50, 50],
                     actionBounds: { x: 30, y: 40, width: 40, height: 40 },
                     faceBounds: { x: 35, y: 15, width: 30, height: 25 },
@@ -297,14 +300,21 @@ export class SchoolExperienceService {
             throw new BadRequestException('Không có bản nháp nào để xuất bản');
         }
 
-        // Integrity Check: If R7 is illustrated_sequence, verify that reachable slots are not missing
+        // Integrity Check: If R7 is illustrated_sequence, verify that all 18 canonical slots are present and non-empty
         if (draft.config_data.r7RenderMode === 'illustrated_sequence') {
             const matrix = draft.config_data.r7MediaMatrix || {};
+            const roles = ['co-an', 'me-linh', 'be-may'];
+            const steps = ['h0-greet', 'h1-table', 'h2-label', 'h3-ready', 'h4-transfer', 'h5-received'];
             const missingSlots: string[] = [];
-            Object.entries(matrix).forEach(([slotKey, slotData]: [string, any]) => {
-                if (!slotData?.assetUrl || slotData?.status === 'missing') {
-                    missingSlots.push(slotKey);
-                }
+
+            roles.forEach(role => {
+                steps.forEach(step => {
+                    const key = `r7/${role}/${step}`;
+                    const slotData = matrix[key];
+                    if (!slotData?.assetUrl || slotData?.status === 'missing') {
+                        missingSlots.push(key);
+                    }
+                });
             });
 
             if (missingSlots.length > 0) {
