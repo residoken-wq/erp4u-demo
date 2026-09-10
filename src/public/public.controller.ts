@@ -71,7 +71,8 @@ export class PublicController {
     async getSettings(
         @Headers('origin') origin?: string,
         @Headers('referer') referer?: string,
-        @Headers('x-forwarded-host') xForwardedHost?: string
+        @Headers('x-forwarded-host') xForwardedHost?: string,
+        @Headers('host') host?: string
     ) {
         // Fetch settings from CMS config keys (lowercase format from Website CMS)
         const cmsKeys = [
@@ -118,10 +119,23 @@ export class PublicController {
             result[key] = val;
         });
 
+        const hostHeader = (host || xForwardedHost || '').toLowerCase();
+        const originHeader = (origin || '').toLowerCase();
+        const refererHeader = (referer || '').toLowerCase();
+
         const isBeta = 
-            (origin && origin.includes('localhost:5173')) || 
-            (referer && referer.includes('localhost:5173')) || 
-            (xForwardedHost && xForwardedHost.includes('localhost:5173'));
+            hostHeader.includes('localhost:5173') || 
+            hostHeader.startsWith('beta.') || 
+            hostHeader.includes('localhost') ||
+            hostHeader.includes('127.0.0.1') ||
+            originHeader.includes('localhost:5173') || 
+            originHeader.includes('beta.') || 
+            originHeader.includes('localhost') ||
+            originHeader.includes('127.0.0.1') ||
+            refererHeader.includes('localhost:5173') || 
+            refererHeader.includes('beta.') ||
+            refererHeader.includes('localhost') ||
+            refererHeader.includes('127.0.0.1');
 
         // Return public system settings formatted for website
         return {
@@ -184,8 +198,8 @@ export class PublicController {
             section_partners_text: result.section_partners_text || '',
             section_testimonials_text: result.section_testimonials_text || '',
             section_blog_text: result.section_blog_text || '',
-            // Widget 360 Classroom
-            widget_360_enabled: result.widget_360_enabled !== undefined && result.widget_360_enabled !== '' ? result.widget_360_enabled : 'true',
+            // Widget 360 Classroom (Always forced true on beta domain for internal testing/experience)
+            widget_360_enabled: isBeta ? 'true' : (result.widget_360_enabled !== undefined && result.widget_360_enabled !== '' ? result.widget_360_enabled : 'true'),
             widget_360_tooltip: result.widget_360_tooltip || 'Khám phá Lớp học 360°',
             widget_360_badge: result.widget_360_badge || '360°',
             widget_360_panorama_url: result.widget_360_panorama_url || '',
