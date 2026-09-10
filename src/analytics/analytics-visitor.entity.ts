@@ -20,6 +20,12 @@ export class AnalyticsVisitor {
     @Column({ type: 'varchar', length: 100, nullable: true })
     country: string;
 
+    @Column({ type: 'varchar', length: 100, nullable: true })
+    city: string;
+
+    @Column({ type: 'boolean', default: false })
+    is_bot: boolean;
+
     @CreateDateColumn()
     created_at: Date;
 }
