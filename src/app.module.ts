@@ -38,6 +38,8 @@ import { TikTokModule } from './tiktok/tiktok.module';
 import { ShippingModule } from './shipping/shipping.module';
 
 import { AnalyticsModule } from './analytics/analytics.module';
+import { SchoolExperienceModule } from './school-experience/school-experience.module';
+import { SchoolExperienceRevision } from './school-experience/entities/school-experience-revision.entity';
 
 // Entities
 import { Product } from './products/product.entity';
@@ -235,7 +237,9 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
             AiMessage,
             CustomerLogo, PrintDesign, PrintSample, DesignOrder, DesignOrderItem,
             // TikTok
-            TikTokMessage, TikTokComment, TikTokConversation
+            TikTokMessage, TikTokComment, TikTokConversation,
+            // School Experience (Instruction 10)
+            SchoolExperienceRevision
           ],
           synchronize: true, // Always sync demo database schema
           subscribers: [],
@@ -259,6 +263,7 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
     DesignsModule, // Printing & Embroidery Design Module
     TikTokModule, // TikTok Shop inbox & comments integration
     ShippingModule, // Shipping & GHTK carrier integration
+    SchoolExperienceModule, // ERP4U-360 School Experience CMS & revisions
     TypeOrmModule.forFeature([User]), // Needed for ActivityInterceptor
   ],
   providers: [

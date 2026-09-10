@@ -16,6 +16,7 @@ import { WebProject } from '../website-projects/entities/web-project.entity';
 import { HrService } from '../hr/hr.service';
 import { JobPostStatus } from '../hr/entities/job-post.entity';
 import { DesignsService } from '../designs/designs.service';
+import { SchoolExperienceService } from '../school-experience/school-experience.service';
 
 @Controller('public')
 export class PublicController {
@@ -41,7 +42,8 @@ export class PublicController {
         private readonly salesService: SalesService,
         private readonly systemService: SystemService,
         private readonly hrService: HrService,
-        private readonly designsService: DesignsService
+        private readonly designsService: DesignsService,
+        private readonly schoolExperienceService: SchoolExperienceService
     ) { }
 
     // ... (settings code)
@@ -49,6 +51,11 @@ export class PublicController {
     // ========================================
     // PUBLIC CONFIG APIs
     // ========================================
+
+    @Get('school-experience')
+    async getSchoolExperienceConfig() {
+        return this.schoolExperienceService.getPublishedConfig();
+    }
 
     @Get('home-config')
     async getHomeConfig() {
