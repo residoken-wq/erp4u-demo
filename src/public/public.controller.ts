@@ -867,12 +867,21 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
             }
         }
         
-        // --- ATTACH EMPLOYEE PHONE TO ASSIGNED_TO ---
+        // --- ATTACH EMPLOYEE PHONE & EMAIL TO ASSIGNED_TO ---
+        if (isDesignOrder && !quote.assigned_to) {
+            quote.assigned_to = quote.sales_order?.assigned_to || quote.designer;
+        }
+
         if (quote.assigned_to?.id) {
             try {
                 const employee = await this.hrService.findEmployeeByUserId(quote.assigned_to.id);
-                if (employee && employee.phone) {
-                    (quote.assigned_to as any).phone = employee.phone;
+                if (employee) {
+                    if (employee.phone && !(quote.assigned_to as any).phone) {
+                        (quote.assigned_to as any).phone = employee.phone;
+                    }
+                    if (employee.user?.email && !(quote.assigned_to as any).email) {
+                        (quote.assigned_to as any).email = employee.user.email;
+                    }
                 }
             } catch (e) {
                 // Ignore if HR module fails

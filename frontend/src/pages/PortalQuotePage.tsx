@@ -200,7 +200,8 @@ const PortalQuotePage: React.FC = () => {
         const sellerAddress = data.company_info?.COMPANY_ADDRESS || '74/21/24 Nguyễn Khuyến, P. Bình Thạnh, TP. HCM, VN';
         const sellerPhone = data.company_info?.COMPANY_PHONE || '0983.882210 - 0983.796654';
         const sellerTaxCode = data.company_info?.COMPANY_TAX_CODE || '0311.874.522';
-        const sellerEmail = data.company_info?.COMPANY_EMAIL || 'nemmanonerp4u@gmail.com';
+        const saleAgentEmail = (data.assigned_to?.email || data.sale_agent?.email || data.sale_email || data.created_by?.email)?.trim();
+        const sellerEmail = saleAgentEmail || data.company_info?.COMPANY_EMAIL || 'nemmanonerp4u@gmail.com';
         const sellerBankName = data.company_info?.COMPANY_BANK_NAME || 'ACB - TP.HCM';
         const sellerBankAccount = data.company_info?.COMPANY_BANK_ACCOUNT || '141847859';
         const sellerBankHolder = data.company_info?.COMPANY_BANK_HOLDER || 'CTY TNHH TM DV TUONG LINH';

@@ -50,8 +50,8 @@ const QuotationTemplate: React.FC<QuotationProps> = ({ data }) => {
                         <p style={{ marginBottom: 5 }}>📍 74/21/24 Nguyễn Khuyến, Phường Bình Thạnh, TP. Hồ Chí Minh</p>
                         <p style={{ marginBottom: 5 }}>📞 0983.882210 - 0983.796654</p>
                         <p style={{ marginBottom: 5 }}><b>MST:</b> 0311.874.522</p>
-                        <p style={{ marginBottom: 5 }}><b>Email:</b> nemmanonerp4u@gmail.com</p>
-                        <p style={{ marginBottom: 0 }}><b>Sale Agent:</b> {data.created_by?.full_name || data.created_by?.name || data.sale_agent?.name || data.sale_name || '...'} - {data.created_by?.phone || data.sale_agent?.phone || data.sale_phone || '...'}</p>
+                        <p style={{ marginBottom: 5 }}><b>Email:</b> {(data.assigned_to?.email || data.created_by?.email || data.sale_agent?.email || data.sale_email)?.trim() || 'nemmanonerp4u@gmail.com'}</p>
+                        <p style={{ marginBottom: 0 }}><b>Sale Agent:</b> {data.assigned_to?.full_name || data.created_by?.full_name || data.created_by?.name || data.sale_agent?.name || data.sale_name || '...'} - {data.assigned_to?.phone || data.created_by?.phone || data.sale_agent?.phone || data.sale_phone || '...'}</p>
                     </div>
                 </Col>
                 <Col span={12}>
