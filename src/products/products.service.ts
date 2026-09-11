@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject, forwardRef, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef, BadRequestException, ConflictException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial, In } from 'typeorm';
 import { Product } from './product.entity';
@@ -15,7 +15,7 @@ import { CategoriesService } from '../categories/categories.service';
 import { CreateVariantDto } from './dto/create-variant.dto';
 
 @Injectable()
-export class ProductsService {
+export class ProductsService implements OnModuleInit {
     constructor(
         @InjectRepository(Product) private productRepo: Repository<Product>,
         @InjectRepository(BOM) private bomRepo: Repository<BOM>,
@@ -30,6 +30,41 @@ export class ProductsService {
         @Inject(forwardRef(() => CategoriesService)) private categoriesService: CategoriesService,
     ) { }
 
+    async onModuleInit() {
+        try {
+            // Auto-create product_packing_specs table in production where synchronize is disabled
+            await this.productRepo.manager.query(`
+                CREATE TABLE IF NOT EXISTS product_packing_specs (
+                    id SERIAL PRIMARY KEY,
+                    category_id INTEGER,
+                    product_id INTEGER,
+                    name VARCHAR(150) NOT NULL,
+                    package_type VARCHAR(50) DEFAULT 'KIEN',
+                    quantity_per_package NUMERIC(10, 2) DEFAULT 1,
+                    length_cm NUMERIC(10, 2) NOT NULL,
+                    width_cm NUMERIC(10, 2) NOT NULL,
+                    height_cm NUMERIC(10, 2) NOT NULL,
+                    weight_gram NUMERIC(10, 2) DEFAULT 0,
+                    volumetric_weight_gram NUMERIC(10, 2) DEFAULT 0,
+                    note TEXT,
+                    is_default BOOLEAN DEFAULT false,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            `);
+
+            // Also ensure dimensions and packing spec columns exist on sales_deliveries in production
+            await this.productRepo.manager.query(`
+                ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_length NUMERIC(10, 2);
+                ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_width NUMERIC(10, 2);
+                ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_height NUMERIC(10, 2);
+                ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_count INTEGER DEFAULT 1;
+                ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS packing_spec_name VARCHAR(150);
+            `);
+        } catch (e) {
+            console.error('[ProductsService] Error initializing product_packing_specs table or delivery columns:', e);
+        }
+    }
 
     async findAll() {
         const products = await this.productRepo.find({
@@ -869,20 +904,25 @@ export class ProductsService {
     // PACKING SPECS (QUY CÁCH ĐÓNG GÓI)
     // ==========================================
     async getPackingSpecs(query?: { category_id?: number; product_id?: number }) {
-        const qb = this.packingSpecRepo.createQueryBuilder('spec')
-            .leftJoinAndSelect('spec.category', 'category')
-            .leftJoinAndSelect('spec.product', 'product')
-            .orderBy('spec.category_id', 'ASC')
-            .addOrderBy('spec.quantity_per_package', 'ASC');
+        try {
+            const qb = this.packingSpecRepo.createQueryBuilder('spec')
+                .leftJoinAndSelect('spec.category', 'category')
+                .leftJoinAndSelect('spec.product', 'product')
+                .orderBy('spec.category_id', 'ASC')
+                .addOrderBy('spec.quantity_per_package', 'ASC');
 
-        if (query?.category_id) {
-            qb.andWhere('spec.category_id = :catId', { catId: query.category_id });
-        }
-        if (query?.product_id) {
-            qb.andWhere('spec.product_id = :pId', { pId: query.product_id });
-        }
+            if (query?.category_id) {
+                qb.andWhere('spec.category_id = :catId', { catId: query.category_id });
+            }
+            if (query?.product_id) {
+                qb.andWhere('spec.product_id = :pId', { pId: query.product_id });
+            }
 
-        return qb.getMany();
+            return await qb.getMany();
+        } catch (e) {
+            console.error('[ProductsService] getPackingSpecs error:', e);
+            return [];
+        }
     }
 
     async createPackingSpec(data: any) {

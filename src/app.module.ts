@@ -49,6 +49,7 @@ import { ProductComponent } from './products/product-component.entity';
 import { ProductRouting } from './products/product-routing.entity';
 import { ProductLogistics } from './products/product-logistics.entity';
 import { ProductPattern } from './products/product-pattern.entity';
+import { ProductPackingSpec } from './products/entities/product-packing-spec.entity';
 
 import { SalesOrder } from './sales/sales-order.entity';
 import { SalesOrderItem } from './sales/sales-order-item.entity';
@@ -199,7 +200,7 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
           database: configService.get<string>('DB_DATABASE') || 'erp4u_db',
           ssl: dbUrl && dbUrl.includes('sslmode=require') ? { rejectUnauthorized: false } : undefined,
           entities: [
-            Product, Material, BOM, ProductComponent, ProductRouting, ProductLogistics, ProductPattern,
+            Product, Material, BOM, ProductComponent, ProductRouting, ProductLogistics, ProductPattern, ProductPackingSpec,
             SalesOrder, SalesOrderItem, ProductSample, SalesDelivery, SalesDeliveryItem, SalesComment,
             SalesChecklist, SalesChecklistItem,
             PriceList, PriceListRule, SalesOrderVersion, SalesTarget,
