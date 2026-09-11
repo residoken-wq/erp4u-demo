@@ -8,6 +8,7 @@ import { ProductRouting } from './product-routing.entity';
 import { ProductLogistics } from './product-logistics.entity';
 import { ProductPattern } from './product-pattern.entity';
 import { ProductWebsiteConfig } from './entities/product-website-config.entity';
+import { ProductPackingSpec } from './entities/product-packing-spec.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { SupplierMaterial } from '../suppliers/supplier-material.entity';
 import { CategoriesService } from '../categories/categories.service';
@@ -25,6 +26,7 @@ export class ProductsService {
         @InjectRepository(Supplier) private supplierRepo: Repository<Supplier>,
         @InjectRepository(SupplierMaterial) private priceRepo: Repository<SupplierMaterial>,
         @InjectRepository(ProductWebsiteConfig) private websiteConfigRepo: Repository<ProductWebsiteConfig>,
+        @InjectRepository(ProductPackingSpec) private packingSpecRepo: Repository<ProductPackingSpec>,
         @Inject(forwardRef(() => CategoriesService)) private categoriesService: CategoriesService,
     ) { }
 
@@ -861,5 +863,87 @@ export class ProductsService {
             ORDER BY so.order_date DESC NULLS LAST, so.id DESC
         `;
         return this.productRepo.manager.query(sql, [product.id, product.sku]);
+    }
+
+    // ==========================================
+    // PACKING SPECS (QUY CÁCH ĐÓNG GÓI)
+    // ==========================================
+    async getPackingSpecs(query?: { category_id?: number; product_id?: number }) {
+        const qb = this.packingSpecRepo.createQueryBuilder('spec')
+            .leftJoinAndSelect('spec.category', 'category')
+            .leftJoinAndSelect('spec.product', 'product')
+            .orderBy('spec.category_id', 'ASC')
+            .addOrderBy('spec.quantity_per_package', 'ASC');
+
+        if (query?.category_id) {
+            qb.andWhere('spec.category_id = :catId', { catId: query.category_id });
+        }
+        if (query?.product_id) {
+            qb.andWhere('spec.product_id = :pId', { pId: query.product_id });
+        }
+
+        return qb.getMany();
+    }
+
+    async createPackingSpec(data: any) {
+        const length = Number(data.length_cm) || 0;
+        const width = Number(data.width_cm) || 0;
+        const height = Number(data.height_cm) || 0;
+        const volumetric = data.volumetric_weight_gram !== undefined && data.volumetric_weight_gram !== null
+            ? Number(data.volumetric_weight_gram)
+            : Math.round((length * width * height) / 6);
+
+        const spec = this.packingSpecRepo.create({
+            category_id: data.category_id ? Number(data.category_id) : null,
+            product_id: data.product_id ? Number(data.product_id) : null,
+            name: data.name?.trim(),
+            package_type: data.package_type || 'Bao tải',
+            quantity_per_package: Number(data.quantity_per_package) || 1,
+            length_cm: length,
+            width_cm: width,
+            height_cm: height,
+            weight_gram: Number(data.weight_gram) || 0,
+            volumetric_weight_gram: volumetric,
+            note: data.note || null,
+            is_default: !!data.is_default,
+        });
+
+        return this.packingSpecRepo.save(spec);
+    }
+
+    async updatePackingSpec(id: number, data: any) {
+        const spec = await this.packingSpecRepo.findOne({ where: { id } });
+        if (!spec) throw new NotFoundException('Không tìm thấy quy cách đóng gói');
+
+        const length = data.length_cm !== undefined ? Number(data.length_cm) : spec.length_cm;
+        const width = data.width_cm !== undefined ? Number(data.width_cm) : spec.width_cm;
+        const height = data.height_cm !== undefined ? Number(data.height_cm) : spec.height_cm;
+        const volumetric = data.volumetric_weight_gram !== undefined && data.volumetric_weight_gram !== null
+            ? Number(data.volumetric_weight_gram)
+            : Math.round((length * width * height) / 6);
+
+        Object.assign(spec, {
+            category_id: data.category_id !== undefined ? (data.category_id ? Number(data.category_id) : null) : spec.category_id,
+            product_id: data.product_id !== undefined ? (data.product_id ? Number(data.product_id) : null) : spec.product_id,
+            name: data.name !== undefined ? data.name.trim() : spec.name,
+            package_type: data.package_type !== undefined ? data.package_type : spec.package_type,
+            quantity_per_package: data.quantity_per_package !== undefined ? Number(data.quantity_per_package) : spec.quantity_per_package,
+            length_cm: length,
+            width_cm: width,
+            height_cm: height,
+            weight_gram: data.weight_gram !== undefined ? Number(data.weight_gram) : spec.weight_gram,
+            volumetric_weight_gram: volumetric,
+            note: data.note !== undefined ? data.note : spec.note,
+            is_default: data.is_default !== undefined ? !!data.is_default : spec.is_default,
+        });
+
+        return this.packingSpecRepo.save(spec);
+    }
+
+    async deletePackingSpec(id: number) {
+        const spec = await this.packingSpecRepo.findOne({ where: { id } });
+        if (!spec) throw new NotFoundException('Không tìm thấy quy cách đóng gói');
+        await this.packingSpecRepo.remove(spec);
+        return { message: 'Đã xóa quy cách đóng gói' };
     }
 }

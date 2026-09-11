@@ -61,7 +61,22 @@ export class SalesDelivery {
   is_freeship: number; // 1: Shop trả cước, 0: Khách trả cước
 
   @Column('int', { default: 500 })
-  weight_gram: number; // Trọng lượng gói hàng (gram)
+  weight_gram: number; // Trọng lượng gói hàng tính cước (gram)
+
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  package_length: number; // Chiều dài kiện (cm)
+
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  package_width: number; // Chiều rộng kiện (cm)
+
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  package_height: number; // Chiều cao kiện (cm)
+
+  @Column('int', { default: 1 })
+  package_count: number; // Số lượng kiện hàng
+
+  @Column({ nullable: true })
+  packing_spec_name: string; // Tên quy cách đóng gói áp dụng (VD: 10 bộ/kiện)
 
   @Column('int', { nullable: true })
   shipping_status_id: number; // Mã trạng thái GHTK (-1 -> 13)

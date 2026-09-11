@@ -24,6 +24,7 @@ type MenuItem = Required<MenuProps>['items'][number];
 // Lazy Load Pages
 const ProductsPage = React.lazy(() => import('./pages/ProductsPage'));
 const CombosPage = React.lazy(() => import('./pages/CombosPage'));
+const PackingSpecsPage = React.lazy(() => import('./pages/PackingSpecsPage'));
 const UploadPage = React.lazy(() => import('./pages/UploadPage'));
 const MaterialsPage = React.lazy(() => import('./pages/MaterialsPage'));
 const SuppliersPage = React.lazy(() => import('./pages/SuppliersPage'));
@@ -155,7 +156,8 @@ const App: React.FC = () => {
             items.push(getItem('Quản lý sản phẩm', 'sub_prod', <ShopOutlined />, [
                 getItem(<Link to="/categories">Danh mục & Định giá</Link>, 'cat_page'),
                 getItem(<Link to="/products">Sản phẩm (Lẻ)</Link>, '2'),
-                getItem(<Link to="/combos">Combo sản phẩm</Link>, 'combo_page')
+                getItem(<Link to="/combos">Combo sản phẩm</Link>, 'combo_page'),
+                getItem(<Link to="/packing-specs">Quy cách đóng gói (Packing List)</Link>, 'packing_specs_page')
             ]));
         }
 
@@ -340,6 +342,7 @@ const App: React.FC = () => {
                                                         <Route path="/products" element={<ProductsPage />} />
                                                         <Route path="/combos" element={<CombosPage />} />
                                                         <Route path="/categories" element={<CategoriesPage />} />
+                                                        <Route path="/packing-specs" element={<PackingSpecsPage />} />
                                                         <Route path="/website-products" element={<WebsiteProductsPage />} />
                                                     </>
                                                 )}

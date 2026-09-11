@@ -937,6 +937,11 @@ export class SalesService {
                 pick_money: data.pick_money !== undefined ? Number(data.pick_money) : 0,
                 is_freeship: data.is_freeship !== undefined ? Number(data.is_freeship) : 1,
                 weight_gram: data.weight_gram !== undefined ? Number(data.weight_gram) : 500,
+                package_length: data.package_length !== undefined && data.package_length !== null ? Number(data.package_length) : null,
+                package_width: data.package_width !== undefined && data.package_width !== null ? Number(data.package_width) : null,
+                package_height: data.package_height !== undefined && data.package_height !== null ? Number(data.package_height) : null,
+                package_count: data.package_count !== undefined && data.package_count !== null ? Number(data.package_count) : 1,
+                packing_spec_name: data.packing_spec_name || null,
                 shipping_status_id: data.shipping_status_id || null,
                 shipping_status_text: data.shipping_status_text || null,
                 shipping_metadata: data.shipping_metadata || null
@@ -983,6 +988,11 @@ export class SalesService {
         if (data.pick_money !== undefined) delivery.pick_money = Number(data.pick_money);
         if (data.is_freeship !== undefined) delivery.is_freeship = Number(data.is_freeship);
         if (data.weight_gram !== undefined) delivery.weight_gram = Number(data.weight_gram);
+        if (data.package_length !== undefined) delivery.package_length = data.package_length !== null ? Number(data.package_length) : null;
+        if (data.package_width !== undefined) delivery.package_width = data.package_width !== null ? Number(data.package_width) : null;
+        if (data.package_height !== undefined) delivery.package_height = data.package_height !== null ? Number(data.package_height) : null;
+        if (data.package_count !== undefined) delivery.package_count = Number(data.package_count) || 1;
+        if (data.packing_spec_name !== undefined) delivery.packing_spec_name = data.packing_spec_name;
         if (data.shipping_status_id !== undefined) delivery.shipping_status_id = data.shipping_status_id;
         if (data.shipping_status_text !== undefined) delivery.shipping_status_text = data.shipping_status_text;
         if (data.shipping_metadata !== undefined) delivery.shipping_metadata = data.shipping_metadata;

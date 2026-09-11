@@ -4,7 +4,8 @@ import {
     CarOutlined, CheckCircleOutlined, PrinterOutlined, MailOutlined, EditOutlined, 
     UploadOutlined, DeleteOutlined, AppstoreOutlined, ThunderboltOutlined, 
     CompassOutlined, FilePdfOutlined, HistoryOutlined, CloseCircleOutlined, 
-    SendOutlined, CalculatorOutlined, InfoCircleOutlined, SettingOutlined 
+    SendOutlined, CalculatorOutlined, InfoCircleOutlined, SettingOutlined,
+    InboxOutlined, WarningOutlined
 } from '@ant-design/icons';
 import api from '../../utils/api';
 import dayjs from 'dayjs';
@@ -66,6 +67,15 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
     const [isCod, setIsCod] = useState<boolean>(false);
     const [isFreeship, setIsFreeship] = useState<number>(1); // 1: Shop trả cước, 0: Khách trả
     const [packageWeight, setPackageWeight] = useState<number>(500); // grams
+    // Packing Specs & Dimensions state
+    const [packingSpecs, setPackingSpecs] = useState<any[]>([]);
+    const [selectedPackingSpecId, setSelectedPackingSpecId] = useState<number | null>(null);
+    const [packageLength, setPackageLength] = useState<number | null>(null);
+    const [packageWidth, setPackageWidth] = useState<number | null>(null);
+    const [packageHeight, setPackageHeight] = useState<number | null>(null);
+    const [packageCount, setPackageCount] = useState<number>(1);
+    const [packingSpecName, setPackingSpecName] = useState<string>('');
+    const [packageActualWeight, setPackageActualWeight] = useState<number | null>(null);
     const [pushToGhtkDirectly, setPushToGhtkDirectly] = useState<boolean>(true);
     const [ghtkPickAddresses, setGhtkPickAddresses] = useState<any[]>([]);
     const [selectedPickAddressId, setSelectedPickAddressId] = useState<string>('');
@@ -197,6 +207,74 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 }
             }
         } catch (e) { }
+    };
+
+    const fetchPackingSpecs = async () => {
+        try {
+            const res = await api.get('/products/packing-specs');
+            setPackingSpecs(Array.isArray(res.data) ? res.data : []);
+        } catch (e) { }
+    };
+
+    const handleSelectPackingSpec = (specId: number | null) => {
+        setSelectedPackingSpecId(specId);
+        if (!specId) {
+            setPackingSpecName('');
+            return;
+        }
+        const spec = packingSpecs.find((s: any) => s.id === specId);
+        if (!spec) return;
+
+        setPackingSpecName(spec.name);
+        const l = spec.length_cm !== null && spec.length_cm !== undefined ? Number(spec.length_cm) : null;
+        const w = spec.width_cm !== null && spec.width_cm !== undefined ? Number(spec.width_cm) : null;
+        const h = spec.height_cm !== null && spec.height_cm !== undefined ? Number(spec.height_cm) : null;
+        const actW = spec.weight_gram !== null && spec.weight_gram !== undefined ? Number(spec.weight_gram) : null;
+
+        setPackageLength(l);
+        setPackageWidth(w);
+        setPackageHeight(h);
+        setPackageActualWeight(actW);
+
+        // Tính số kiện gợi ý: Tổng số lượng các sản phẩm xuất / số lượng mỗi kiện
+        const totalShipQty = shipItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+        const qtyPerPkg = Number(spec.quantity_per_package) || 1;
+        const suggestedCount = Math.max(1, Math.ceil(totalShipQty / qtyPerPkg));
+        setPackageCount(suggestedCount);
+
+        // Tính trọng lượng thể tích quy đổi: L * W * H / 6 (gram)
+        if (l && w && h) {
+            const volWeightGram = Math.round((l * w * h) / 6);
+            const billablePerPkg = Math.max(actW || 0, volWeightGram);
+            const totalSuggestedWeight = (billablePerPkg > 0 ? billablePerPkg : 500) * suggestedCount;
+            setPackageWeight(totalSuggestedWeight);
+        } else if (actW) {
+            setPackageWeight(actW * suggestedCount);
+        }
+    };
+
+    const handleDimensionOrCountChange = (
+        newL?: number | null, 
+        newW?: number | null, 
+        newH?: number | null, 
+        newCount?: number | null
+    ) => {
+        const l = newL !== undefined ? newL : packageLength;
+        const w = newW !== undefined ? newW : packageWidth;
+        const h = newH !== undefined ? newH : packageHeight;
+        const count = newCount !== undefined ? (newCount || 1) : (packageCount || 1);
+
+        if (newL !== undefined) setPackageLength(newL);
+        if (newW !== undefined) setPackageWidth(newW);
+        if (newH !== undefined) setPackageHeight(newH);
+        if (newCount !== undefined) setPackageCount(count);
+
+        if (l && w && h) {
+            const volPerPkg = Math.round((Number(l) * Number(w) * Number(h)) / 6);
+            const billablePerPkg = Math.max(packageActualWeight || 0, volPerPkg);
+            const totalSuggestedWeight = billablePerPkg * Math.max(1, count);
+            setPackageWeight(totalSuggestedWeight);
+        }
     };
 
     const handleGhtkParseAddress = async () => {
@@ -464,6 +542,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         fetchCarriers();
         fetchGhtkConfig();
         fetchGhtkPickAddresses();
+        fetchPackingSpecs();
         api.get(`/system/company`).then(res => setCompanyConfig(res.data)).catch(() => { });
     }, [order]);
 
@@ -653,6 +732,16 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             setGhtkAddress('');
         }
 
+        // Reset packing specs & dimensions state
+        setSelectedPackingSpecId(null);
+        setPackageLength(null);
+        setPackageWidth(null);
+        setPackageHeight(null);
+        setPackageCount(1);
+        setPackingSpecName('');
+        setPackageActualWeight(null);
+        fetchPackingSpecs();
+
         fetchGhtkPickAddresses();
         setIsModalOpen(true);
     };
@@ -677,6 +766,23 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         setIsFreeship(delivery.is_freeship !== undefined ? Number(delivery.is_freeship) : 1);
         setPackageWeight(Number(delivery.weight_gram) || 500);
         setPushToGhtkDirectly(false);
+
+        // Load packing specs & dimensions
+        setPackageLength(delivery.package_length !== null && delivery.package_length !== undefined ? Number(delivery.package_length) : null);
+        setPackageWidth(delivery.package_width !== null && delivery.package_width !== undefined ? Number(delivery.package_width) : null);
+        setPackageHeight(delivery.package_height !== null && delivery.package_height !== undefined ? Number(delivery.package_height) : null);
+        setPackageCount(delivery.package_count || 1);
+        setPackingSpecName(delivery.packing_spec_name || '');
+        setPackageActualWeight(null);
+
+        const matched = packingSpecs.find((s: any) => s.name === delivery.packing_spec_name);
+        if (matched) {
+            setSelectedPackingSpecId(matched.id);
+            setPackageActualWeight(Number(matched.weight_gram) || null);
+        } else {
+            setSelectedPackingSpecId(null);
+        }
+        fetchPackingSpecs();
 
         // Check if note has parsed info
         const parsed = parseWebsiteOrderNote(order?.note, order);
@@ -740,6 +846,11 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 pick_money: isCod ? pickMoney : 0,
                 is_freeship: isFreeship,
                 weight_gram: packageWeight,
+                package_length: packageLength !== null && packageLength !== undefined ? Number(packageLength) : null,
+                package_width: packageWidth !== null && packageWidth !== undefined ? Number(packageWidth) : null,
+                package_height: packageHeight !== null && packageHeight !== undefined ? Number(packageHeight) : null,
+                package_count: packageCount || 1,
+                packing_spec_name: packingSpecName || null,
                 status: isDraft ? 'DRAFT' : (editingDeliveryId ? shipStatus : 'PENDING_EXPORT')
             };
 
@@ -884,6 +995,16 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                         <div class="info-label">Xuất tại kho:</div>
                         <div class="info-val">Kho Thành Phẩm (Trung tâm)</div>
                     </div>
+                    ${delivery.packing_spec_name || delivery.package_length ? `
+                    <div class="info-row">
+                        <div class="info-label">Quy cách đóng gói:</div>
+                        <div class="info-val">
+                            <b>${delivery.packing_spec_name || 'Đóng gói chuẩn'}</b>
+                            ${delivery.package_count ? ` - <b>${delivery.package_count}</b> kiện` : ''} 
+                            ${delivery.package_length ? ` (KT: ${delivery.package_length}x${delivery.package_width}x${delivery.package_height} cm)` : ''}
+                            ${delivery.weight_gram ? ` - TL cước: ${delivery.weight_gram}g` : ''}
+                        </div>
+                    </div>` : ''}
                     ${delivery.note ? `<div class="info-row"><div class="info-label">Ghi chú phiếu:</div><div class="info-val">${delivery.note}</div></div>` : ''}
                 </div>
 
@@ -1086,6 +1207,14 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                     title: 'Chi tiết', width: '35%', render: (r: any) => (
                         <div>
                             <div>{r.items?.map((i: any) => `${i.sku} (x${i.quantity})`).join(', ')}</div>
+                            {(r.packing_spec_name || r.package_length || (r.package_count && r.package_count > 1)) && (
+                                <div style={{ marginTop: 3, fontSize: 11, color: '#389e0d', background: '#f6ffed', padding: '2px 6px', borderRadius: 4, border: '1px solid #b7eb8f', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <InboxOutlined />
+                                    <span><b>{r.packing_spec_name || 'Đóng gói'}:</b> {r.package_count || 1} kiện</span>
+                                    {r.package_length && <span>({r.package_length}×{r.package_width}×{r.package_height}cm)</span>}
+                                    {r.weight_gram && <span style={{ color: '#8c8c8c' }}>• {r.weight_gram}g</span>}
+                                </div>
+                            )}
                             {(r.shipping_carrier || r.tracking_code || Number(r.shipping_cost) > 0) && (
                                 <div style={{ marginTop: 4, fontSize: 12, color: '#1d39c4', background: '#f0f5ff', padding: '3px 6px', borderRadius: 4 }}>
                                     <CarOutlined style={{ marginRight: 4 }} />
@@ -1410,6 +1539,140 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                         </div>
                     </div>
 
+                    {/* PACKING SPEC & PACKAGE DIMENSIONS */}
+                    <div style={{ background: '#f9f0ff', padding: '10px 12px', borderRadius: 6, border: '1px solid #d3adf7', marginTop: 10, marginBottom: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#531dab', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <InboxOutlined /> Quy cách đóng gói & Kích thước kiện hàng (Packing Specs):
+                            </span>
+                            <span style={{ fontSize: 11, color: '#722ed1' }}>
+                                💡 Nhập kích thước ➜ Tự gợi ý TL quy đổi (có thể sửa tay)
+                            </span>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
+                            <div>
+                                <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Mẫu quy cách có sẵn:</div>
+                                <Select
+                                    style={{ width: '100%' }}
+                                    size="small"
+                                    allowClear
+                                    placeholder="-- Chọn mẫu quy cách --"
+                                    value={selectedPackingSpecId || undefined}
+                                    onChange={(val) => handleSelectPackingSpec(val || null)}
+                                    options={packingSpecs.map((spec: any) => {
+                                        const relevantCategoryIds = (order.items || []).map((it: any) => {
+                                            const p = products.find((prod: any) => prod.value === it.sku);
+                                            return p?.category_id;
+                                        }).filter(Boolean);
+                                        const relevantProductIds = (order.items || []).map((it: any) => {
+                                            const p = products.find((prod: any) => prod.value === it.sku);
+                                            return p?.id;
+                                        }).filter(Boolean);
+                                        const isMatched = (spec.category_id && relevantCategoryIds.includes(spec.category_id)) ||
+                                                          (spec.product_id && relevantProductIds.includes(spec.product_id));
+                                        const prefix = isMatched ? '★ ' : '';
+                                        return {
+                                            value: spec.id,
+                                            label: `${prefix}${spec.name} (${spec.quantity_per_package} SP/k - ${spec.length_cm}x${spec.width_cm}x${spec.height_cm}cm)`
+                                        };
+                                    })}
+                                />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Tên quy cách hiển thị:</div>
+                                <Input
+                                    size="small"
+                                    placeholder="VD: 5 bộ/kiện"
+                                    value={packingSpecName}
+                                    onChange={e => setPackingSpecName(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Số kiện hàng:</div>
+                                <InputNumber
+                                    size="small"
+                                    style={{ width: '100%' }}
+                                    min={1}
+                                    value={packageCount}
+                                    onChange={(v) => handleDimensionOrCountChange(undefined, undefined, undefined, v || 1)}
+                                    addonAfter="kiện"
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.3fr', gap: 8, marginBottom: 4 }}>
+                            <div>
+                                <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Dài (Length):</div>
+                                <InputNumber
+                                    size="small"
+                                    style={{ width: '100%' }}
+                                    min={0}
+                                    placeholder="Dài"
+                                    addonAfter="cm"
+                                    value={packageLength}
+                                    onChange={(v) => handleDimensionOrCountChange(v, undefined, undefined, undefined)}
+                                />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Rộng (Width):</div>
+                                <InputNumber
+                                    size="small"
+                                    style={{ width: '100%' }}
+                                    min={0}
+                                    placeholder="Rộng"
+                                    addonAfter="cm"
+                                    value={packageWidth}
+                                    onChange={(v) => handleDimensionOrCountChange(undefined, v, undefined, undefined)}
+                                />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Cao (Height):</div>
+                                <InputNumber
+                                    size="small"
+                                    style={{ width: '100%' }}
+                                    min={0}
+                                    placeholder="Cao"
+                                    addonAfter="cm"
+                                    value={packageHeight}
+                                    onChange={(v) => handleDimensionOrCountChange(undefined, undefined, v, undefined)}
+                                />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 11, color: '#555', marginBottom: 2, display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>TL tính cước:</span>
+                                    {packageLength && packageWidth && packageHeight ? (
+                                        <span style={{ fontSize: 10, color: '#722ed1', fontWeight: 500 }}>
+                                            Thể tích: {Math.round((Number(packageLength) * Number(packageWidth) * Number(packageHeight)) / 6000 * 10) / 10}kg/k
+                                        </span>
+                                    ) : null}
+                                </div>
+                                <InputNumber
+                                    style={{ width: '100%' }}
+                                    size="small"
+                                    addonAfter="gram"
+                                    value={packageWeight}
+                                    onChange={(v: any) => setPackageWeight(v || 500)}
+                                    placeholder="Gram"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Bulky Warning Alert */}
+                        {((Number(packageLength) > 100 || Number(packageWidth) > 100 || Number(packageHeight) > 100 || (Number(packageWeight) / Math.max(1, packageCount || 1)) > 20000)) && (
+                            <Alert
+                                style={{ marginTop: 6, fontSize: 11, padding: '4px 8px' }}
+                                type="warning"
+                                showIcon
+                                message={
+                                    <span>
+                                        <b>⚠️ Cảnh báo hàng cồng kềnh:</b> Kiện hàng có kích thước &gt; 100cm hoặc nặng &gt; 20kg. Vận chuyển GHTK Express có thể tính phụ phí cồng kềnh BBS hoặc hạn chế lấy bằng xe máy. Vui lòng tự điều phối phương thức giao nhận phù hợp!
+                                    </span>
+                                }
+                            />
+                        )}
+                    </div>
+
                     {/* GHTK ENHANCED PANEL */}
                     {shippingCarrier === 'GHTK' && (
                         <div style={{ background: '#ffffff', padding: 10, borderRadius: 6, border: '1px solid #d9f7be', marginTop: 8 }}>
@@ -1495,31 +1758,19 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 8 }}>
-                                <div>
-                                    <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>Kho lấy hàng (Pick Address):</div>
-                                    <Select
-                                        style={{ width: '100%' }}
-                                        size="small"
-                                        value={selectedPickAddressId || undefined}
-                                        onChange={setSelectedPickAddressId}
-                                        placeholder="Chọn kho lấy hàng"
-                                        options={ghtkPickAddresses.map((p: any) => ({
-                                            value: p.pick_address_id || p.address,
-                                            label: `${p.pick_name || 'Kho'} - ${p.address}`
-                                        }))}
-                                    />
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>Trọng lượng gói hàng:</div>
-                                    <InputNumber
-                                        style={{ width: '100%' }}
-                                        size="small"
-                                        addonAfter="gram"
-                                        value={packageWeight}
-                                        onChange={(v: any) => setPackageWeight(v || 500)}
-                                    />
-                                </div>
+                            <div style={{ marginBottom: 8 }}>
+                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>Kho lấy hàng (Pick Address):</div>
+                                <Select
+                                    style={{ width: '100%' }}
+                                    size="small"
+                                    value={selectedPickAddressId || undefined}
+                                    onChange={setSelectedPickAddressId}
+                                    placeholder="Chọn kho lấy hàng"
+                                    options={ghtkPickAddresses.map((p: any) => ({
+                                        value: p.pick_address_id || p.address,
+                                        label: `${p.pick_name || 'Kho'} - ${p.address}`
+                                    }))}
+                                />
                             </div>
 
                             <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>

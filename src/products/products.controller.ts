@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateVariantDto } from './dto/create-variant.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -9,6 +9,35 @@ import { RequirePermission } from '../auth/permissions.decorator';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ProductsController {
   constructor(private readonly service: ProductsService) { }
+
+  // --- API PACKING SPECS (QUY CÁCH ĐÓNG GÓI) ---
+  @Get('packing-specs')
+  @RequirePermission('PRODUCT', 'can_view')
+  getPackingSpecs(@Query('category_id') categoryId?: string, @Query('product_id') productId?: string) {
+    return this.service.getPackingSpecs({
+      category_id: categoryId ? Number(categoryId) : undefined,
+      product_id: productId ? Number(productId) : undefined,
+    });
+  }
+
+  @Post('packing-specs')
+  @RequirePermission('PRODUCT', 'can_create')
+  createPackingSpec(@Body() b: any) {
+    return this.service.createPackingSpec(b);
+  }
+
+  @Put('packing-specs/:id')
+  @RequirePermission('PRODUCT', 'can_update')
+  updatePackingSpec(@Param('id') id: number, @Body() b: any) {
+    return this.service.updatePackingSpec(Number(id), b);
+  }
+
+  @Delete('packing-specs/:id')
+  @RequirePermission('PRODUCT', 'can_delete')
+  deletePackingSpec(@Param('id') id: number) {
+    return this.service.deletePackingSpec(Number(id));
+  }
+  // ---------------------------------------------
 
   @Get() @RequirePermission('PRODUCT', 'can_view') findAll() { return this.service.findAll(); }
   @Get(':id') @RequirePermission('PRODUCT', 'can_view') findOne(@Param('id') id: number) { return this.service.findOne(Number(id)); }
