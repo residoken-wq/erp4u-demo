@@ -1569,12 +1569,22 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                             const p = products.find((prod: any) => prod.value === it.sku);
                                             return p?.id;
                                         }).filter(Boolean);
-                                        const isMatched = (spec.category_id && relevantCategoryIds.includes(spec.category_id)) ||
-                                                          (spec.product_id && relevantProductIds.includes(spec.product_id));
-                                        const prefix = isMatched ? '★ ' : '';
+
+                                        const specCatIds = Array.isArray(spec.category_ids) && spec.category_ids.length > 0
+                                            ? spec.category_ids
+                                            : (spec.category_id ? [spec.category_id] : []);
+                                        const specProdIds = Array.isArray(spec.product_ids) && spec.product_ids.length > 0
+                                            ? spec.product_ids
+                                            : (spec.product_id ? [spec.product_id] : []);
+
+                                        const isMatched = specCatIds.some((id: number) => relevantCategoryIds.includes(id)) ||
+                                                          specProdIds.some((id: number) => relevantProductIds.includes(id));
+                                        const isGlobal = specCatIds.length === 0 && specProdIds.length === 0;
+                                        const prefix = isMatched ? '★ ' : (isGlobal ? '🌐 ' : '');
+                                        const catNames = (spec.categories || []).map((c: any) => c.name).join(', ') || spec.category?.name || '';
                                         return {
                                             value: spec.id,
-                                            label: `${prefix}${spec.name} (${spec.quantity_per_package} SP/k - ${spec.length_cm}x${spec.width_cm}x${spec.height_cm}cm)`
+                                            label: `${prefix}${spec.name}${catNames ? ` [${catNames}]` : ''} (${spec.quantity_per_package} SP/k - ${spec.length_cm}x${spec.width_cm}x${spec.height_cm}cm)`
                                         };
                                     })}
                                 />

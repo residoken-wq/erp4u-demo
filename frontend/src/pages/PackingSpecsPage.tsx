@@ -16,8 +16,12 @@ interface PackingSpec {
     id: number;
     category_id?: number;
     category?: { id: number; name: string; code: string };
+    category_ids?: number[];
+    categories?: Array<{ id: number; name: string; code: string }>;
     product_id?: number;
     product?: { id: number; name: string; sku: string };
+    product_ids?: number[];
+    products?: Array<{ id: number; name: string; sku: string }>;
     name: string;
     package_type: string;
     quantity_per_package: number;
@@ -95,6 +99,8 @@ const PackingSpecsPage: React.FC = () => {
         setEditingId(null);
         form.resetFields();
         form.setFieldsValue({
+            category_ids: [],
+            product_ids: [],
             package_type: 'Bao tải',
             quantity_per_package: 1,
             length_cm: 0,
@@ -109,9 +115,18 @@ const PackingSpecsPage: React.FC = () => {
     const handleOpenEdit = (record: PackingSpec) => {
         setEditingId(record.id);
         form.resetFields();
+
+        const catIds = Array.isArray(record.category_ids) && record.category_ids.length > 0
+            ? record.category_ids
+            : (record.category_id ? [record.category_id] : []);
+
+        const prodIds = Array.isArray(record.product_ids) && record.product_ids.length > 0
+            ? record.product_ids
+            : (record.product_id ? [record.product_id] : []);
+
         form.setFieldsValue({
-            category_id: record.category_id || undefined,
-            product_id: record.product_id || undefined,
+            category_ids: catIds,
+            product_ids: prodIds,
             name: record.name,
             package_type: record.package_type || 'Bao tải',
             quantity_per_package: record.quantity_per_package,
@@ -165,10 +180,17 @@ const PackingSpecsPage: React.FC = () => {
     // Filter specs
     const filteredSpecs = useMemo(() => {
         return specs.filter(s => {
-            const matchCat = filterCategoryId ? s.category_id === filterCategoryId : true;
+            const catIds = Array.isArray(s.category_ids) && s.category_ids.length > 0
+                ? s.category_ids
+                : (s.category_id ? [s.category_id] : []);
+            const matchCat = filterCategoryId ? (catIds.length === 0 || catIds.includes(filterCategoryId)) : true;
             const search = searchText.trim().toLowerCase();
+            const catNames = (s.categories || []).map(c => c.name).join(' ').toLowerCase();
+            const prodNames = (s.products || []).map(p => `${p.sku} ${p.name}`).join(' ').toLowerCase();
             const matchSearch = !search || 
                 s.name.toLowerCase().includes(search) || 
+                catNames.includes(search) ||
+                prodNames.includes(search) ||
                 (s.category?.name || '').toLowerCase().includes(search) ||
                 (s.product?.name || '').toLowerCase().includes(search) ||
                 (s.product?.sku || '').toLowerCase().includes(search) ||
@@ -194,19 +216,43 @@ const PackingSpecsPage: React.FC = () => {
             )
         },
         {
-            title: 'Loại SP / Danh mục',
-            key: 'category',
-            render: (_: any, r: PackingSpec) => (
-                <div>
-                    {r.category ? (
-                        <Tag color="purple" style={{ fontWeight: 500 }}>{r.category.name}</Tag>
-                    ) : r.product ? (
-                        <Tag color="geekblue">{r.product.sku} - {r.product.name}</Tag>
-                    ) : (
-                        <Tag>Tất cả sản phẩm</Tag>
-                    )}
-                </div>
-            )
+            title: 'Loại sản phẩm áp dụng',
+            key: 'categories',
+            render: (_: any, r: PackingSpec) => {
+                const catList = r.categories && r.categories.length > 0 
+                    ? r.categories 
+                    : (r.category ? [r.category] : []);
+                const prodList = r.products && r.products.length > 0
+                    ? r.products
+                    : (r.product ? [r.product] : []);
+
+                if (catList.length === 0 && prodList.length === 0) {
+                    return <Tag color="default">🌐 Tất cả sản phẩm</Tag>;
+                }
+
+                return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {catList.length > 0 && (
+                            <Space wrap size={[4, 4]}>
+                                {catList.map(c => (
+                                    <Tag color="purple" key={c.id} style={{ margin: 0 }}>
+                                        {c.name}
+                                    </Tag>
+                                ))}
+                            </Space>
+                        )}
+                        {prodList.length > 0 && (
+                            <Space wrap size={[4, 4]}>
+                                {prodList.map(p => (
+                                    <Tag color="geekblue" key={p.id} style={{ margin: 0 }}>
+                                        SP: {p.sku || p.name}
+                                    </Tag>
+                                ))}
+                            </Space>
+                        )}
+                    </div>
+                );
+            }
         },
         {
             title: 'SL / Kiện',
@@ -435,11 +481,17 @@ const PackingSpecsPage: React.FC = () => {
                     <Row gutter={12}>
                         <Col span={14}>
                             <Form.Item 
-                                name="category_id" 
-                                label="Áp dụng cho Danh mục sản phẩm"
-                                help="Để trống nếu quy cách này dùng chung cho mọi sản phẩm"
+                                name="category_ids" 
+                                label="Loại sản phẩm áp dụng (Chọn nhiều loại / Multi-choice)"
+                                help="Chọn một hoặc nhiều loại SP. Để trống nếu áp dụng chung cho mọi loại SP."
                             >
-                                <Select placeholder="Chọn danh mục áp dụng (VD: Nệm Mầm Non)" allowClear>
+                                <Select 
+                                    mode="multiple" 
+                                    placeholder="Chọn một hoặc nhiều loại sản phẩm..." 
+                                    allowClear
+                                    maxTagCount="responsive"
+                                    style={{ width: '100%' }}
+                                >
                                     {categories.map(c => (
                                         <Option key={c.id} value={c.id}>{c.name}</Option>
                                     ))}
@@ -453,6 +505,32 @@ const PackingSpecsPage: React.FC = () => {
                                 rules={[{ required: true, message: 'Nhập số lượng SP' }]}
                             >
                                 <InputNumber style={{ width: '100%' }} min={1} addonAfter="bộ/sp" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+
+                    <Row gutter={12}>
+                        <Col span={24}>
+                            <Form.Item 
+                                name="product_ids" 
+                                label="Sản phẩm cụ thể áp dụng (Tùy chọn - Multi-choice)"
+                                help="Tùy chọn: Chọn nếu chỉ muốn giới hạn cho một số mã sản phẩm cụ thể."
+                            >
+                                <Select 
+                                    mode="multiple" 
+                                    placeholder="Chọn các sản phẩm cụ thể nếu cần..." 
+                                    allowClear
+                                    maxTagCount="responsive"
+                                    showSearch
+                                    filterOption={(input, option) =>
+                                        String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+                                    }
+                                    style={{ width: '100%' }}
+                                >
+                                    {products.map(p => (
+                                        <Option key={p.id} value={p.id}>{p.sku} - {p.name}</Option>
+                                    ))}
+                                </Select>
                             </Form.Item>
                         </Col>
                     </Row>

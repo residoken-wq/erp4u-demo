@@ -15,6 +15,10 @@ export class ProductPackingSpec {
   @JoinColumn({ name: 'category_id' })
   category: Category;
 
+  // Danh sách ID các loại sản phẩm / danh mục áp dụng (multi-choice)
+  @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
+  category_ids: number[];
+
   @Index()
   @Column({ nullable: true })
   product_id: number;
@@ -22,6 +26,10 @@ export class ProductPackingSpec {
   @ManyToOne(() => Product, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'product_id' })
   product: Product;
+
+  // Danh sách ID các sản phẩm cụ thể áp dụng (multi-choice)
+  @Column({ type: 'jsonb', nullable: true, default: () => "'[]'" })
+  product_ids: number[];
 
   @Column()
   name: string; // Tên quy cách: "01 bộ/kiện", "05 bộ/kiện", "10 bộ/kiện", "15 bộ/kiện"...

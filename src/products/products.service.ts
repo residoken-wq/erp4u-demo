@@ -12,6 +12,7 @@ import { ProductPackingSpec } from './entities/product-packing-spec.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { SupplierMaterial } from '../suppliers/supplier-material.entity';
 import { CategoriesService } from '../categories/categories.service';
+import { Category } from '../categories/category.entity';
 import { CreateVariantDto } from './dto/create-variant.dto';
 
 @Injectable()
@@ -38,6 +39,8 @@ export class ProductsService implements OnModuleInit {
                     id SERIAL PRIMARY KEY,
                     category_id INTEGER,
                     product_id INTEGER,
+                    category_ids JSONB DEFAULT '[]'::jsonb,
+                    product_ids JSONB DEFAULT '[]'::jsonb,
                     name VARCHAR(150) NOT NULL,
                     package_type VARCHAR(50) DEFAULT 'KIEN',
                     quantity_per_package NUMERIC(10, 2) DEFAULT 1,
@@ -51,6 +54,20 @@ export class ProductsService implements OnModuleInit {
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
+            `);
+
+            // Ensure category_ids and product_ids exist if table was already created
+            await this.productRepo.manager.query(`
+                ALTER TABLE product_packing_specs ADD COLUMN IF NOT EXISTS category_ids JSONB DEFAULT '[]'::jsonb;
+                ALTER TABLE product_packing_specs ADD COLUMN IF NOT EXISTS product_ids JSONB DEFAULT '[]'::jsonb;
+                
+                UPDATE product_packing_specs 
+                SET category_ids = json_build_array(category_id) 
+                WHERE category_id IS NOT NULL AND (category_ids IS NULL OR category_ids = '[]'::jsonb);
+
+                UPDATE product_packing_specs 
+                SET product_ids = json_build_array(product_id) 
+                WHERE product_id IS NOT NULL AND (product_ids IS NULL OR product_ids = '[]'::jsonb);
             `);
 
             // Also ensure dimensions and packing spec columns exist on sales_deliveries in production
@@ -905,20 +922,50 @@ export class ProductsService implements OnModuleInit {
     // ==========================================
     async getPackingSpecs(query?: { category_id?: number; product_id?: number }) {
         try {
-            const qb = this.packingSpecRepo.createQueryBuilder('spec')
-                .leftJoinAndSelect('spec.category', 'category')
-                .leftJoinAndSelect('spec.product', 'product')
-                .orderBy('spec.category_id', 'ASC')
-                .addOrderBy('spec.quantity_per_package', 'ASC');
+            const specs = await this.packingSpecRepo.find({
+                order: { id: 'ASC' },
+                relations: ['category', 'product']
+            });
+
+            // Map all categories and products for multi-choice references
+            const allCategories = await this.productRepo.manager.find(Category);
+            const catMap = new Map(allCategories.map(c => [c.id, c]));
+
+            const allProducts = await this.productRepo.find({
+                select: ['id', 'name', 'sku', 'category_id']
+            });
+            const prodMap = new Map(allProducts.map(p => [p.id, p]));
+
+            const enriched = specs.map(s => {
+                let catIds = Array.isArray(s.category_ids) && s.category_ids.length > 0 
+                    ? s.category_ids 
+                    : (s.category_id ? [s.category_id] : []);
+                let prodIds = Array.isArray(s.product_ids) && s.product_ids.length > 0
+                    ? s.product_ids
+                    : (s.product_id ? [s.product_id] : []);
+
+                const categories = catIds.map(id => catMap.get(id)).filter(Boolean);
+                const products = prodIds.map(id => prodMap.get(id)).filter(Boolean);
+
+                return {
+                    ...s,
+                    category_ids: catIds,
+                    product_ids: prodIds,
+                    categories,
+                    products
+                };
+            });
 
             if (query?.category_id) {
-                qb.andWhere('spec.category_id = :catId', { catId: query.category_id });
+                const catId = Number(query.category_id);
+                return enriched.filter(s => s.category_ids.length === 0 || s.category_ids.includes(catId));
             }
             if (query?.product_id) {
-                qb.andWhere('spec.product_id = :pId', { pId: query.product_id });
+                const pId = Number(query.product_id);
+                return enriched.filter(s => s.product_ids.length === 0 || s.product_ids.includes(pId));
             }
 
-            return await qb.getMany();
+            return enriched;
         } catch (e) {
             console.error('[ProductsService] getPackingSpecs error:', e);
             return [];
@@ -933,9 +980,19 @@ export class ProductsService implements OnModuleInit {
             ? Number(data.volumetric_weight_gram)
             : Math.round((length * width * height) / 6);
 
+        const categoryIds = Array.isArray(data.category_ids)
+            ? data.category_ids.map(Number).filter(Boolean)
+            : (data.category_id ? [Number(data.category_id)] : []);
+
+        const productIds = Array.isArray(data.product_ids)
+            ? data.product_ids.map(Number).filter(Boolean)
+            : (data.product_id ? [Number(data.product_id)] : []);
+
         const spec = this.packingSpecRepo.create({
-            category_id: data.category_id ? Number(data.category_id) : null,
-            product_id: data.product_id ? Number(data.product_id) : null,
+            category_id: categoryIds[0] || null,
+            product_id: productIds[0] || null,
+            category_ids: categoryIds,
+            product_ids: productIds,
             name: data.name?.trim(),
             package_type: data.package_type || 'Bao tải',
             quantity_per_package: Number(data.quantity_per_package) || 1,
@@ -962,9 +1019,29 @@ export class ProductsService implements OnModuleInit {
             ? Number(data.volumetric_weight_gram)
             : Math.round((length * width * height) / 6);
 
+        let categoryIds = spec.category_ids || [];
+        if (data.category_ids !== undefined) {
+            categoryIds = Array.isArray(data.category_ids)
+                ? data.category_ids.map(Number).filter(Boolean)
+                : (data.category_id ? [Number(data.category_id)] : []);
+        } else if (data.category_id !== undefined) {
+            categoryIds = data.category_id ? [Number(data.category_id)] : [];
+        }
+
+        let productIds = spec.product_ids || [];
+        if (data.product_ids !== undefined) {
+            productIds = Array.isArray(data.product_ids)
+                ? data.product_ids.map(Number).filter(Boolean)
+                : (data.product_id ? [Number(data.product_id)] : []);
+        } else if (data.product_id !== undefined) {
+            productIds = data.product_id ? [Number(data.product_id)] : [];
+        }
+
         Object.assign(spec, {
-            category_id: data.category_id !== undefined ? (data.category_id ? Number(data.category_id) : null) : spec.category_id,
-            product_id: data.product_id !== undefined ? (data.product_id ? Number(data.product_id) : null) : spec.product_id,
+            category_id: categoryIds[0] || null,
+            product_id: productIds[0] || null,
+            category_ids: categoryIds,
+            product_ids: productIds,
             name: data.name !== undefined ? data.name.trim() : spec.name,
             package_type: data.package_type !== undefined ? data.package_type : spec.package_type,
             quantity_per_package: data.quantity_per_package !== undefined ? Number(data.quantity_per_package) : spec.quantity_per_package,
