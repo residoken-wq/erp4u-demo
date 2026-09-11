@@ -5,12 +5,17 @@ import {
     UploadOutlined, DeleteOutlined, AppstoreOutlined, ThunderboltOutlined, 
     CompassOutlined, FilePdfOutlined, HistoryOutlined, CloseCircleOutlined, 
     SendOutlined, CalculatorOutlined, InfoCircleOutlined, SettingOutlined,
-    InboxOutlined, WarningOutlined
+    InboxOutlined, WarningOutlined, MessageOutlined, CopyOutlined, FileTextOutlined
 } from '@ant-design/icons';
 import api from '../../utils/api';
 import dayjs from 'dayjs';
 import AttachmentUpload from '../common/AttachmentUpload';
 import { parseWebsiteOrderNote, ParsedShippingInfo, smartParseVietnameseAddress } from '../../utils/orderNoteParser';
+import { 
+    DEFAULT_DELIVERY_NOTICE_TEMPLATES, 
+    DeliveryNoticeTemplate, 
+    formatDeliveryNotice 
+} from '../../utils/deliveryNoticeHelper';
 
 const extractAddressString = (val: any, fallback = ''): string => {
     if (!val) return fallback;
@@ -104,6 +109,15 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
     const [ghtkTestLoading, setGhtkTestLoading] = useState<boolean>(false);
     const [ghtkSaveLoading, setGhtkSaveLoading] = useState<boolean>(false);
     const [ghtkTestResult, setGhtkTestResult] = useState<any>(null);
+
+    // Delivery Notice Templates & State
+    const [deliveryNoticeTemplates, setDeliveryNoticeTemplates] = useState<DeliveryNoticeTemplate[]>(DEFAULT_DELIVERY_NOTICE_TEMPLATES);
+    const [selectedNoticeTemplateId, setSelectedNoticeTemplateId] = useState<string>('standard_b2b');
+    const [deliveryNotice, setDeliveryNotice] = useState<string>('');
+    const [viewNoticeModalOpen, setViewNoticeModalOpen] = useState<boolean>(false);
+    const [selectedDeliveryForNotice, setSelectedDeliveryForNotice] = useState<any>(null);
+    const [editingSavedNotice, setEditingSavedNotice] = useState<string>('');
+    const [isSavingNotice, setIsSavingNotice] = useState<boolean>(false);
 
     const fetchGhtkConfig = async () => {
         try {
@@ -544,6 +558,16 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         fetchGhtkPickAddresses();
         fetchPackingSpecs();
         api.get(`/system/company`).then(res => setCompanyConfig(res.data)).catch(() => { });
+        api.get(`/system/config/DELIVERY_NOTICE_TEMPLATES`).then(res => {
+            if (res.data?.value) {
+                try {
+                    const parsed = JSON.parse(res.data.value);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        setDeliveryNoticeTemplates(parsed);
+                    }
+                } catch (e) { }
+            }
+        }).catch(() => { });
     }, [order]);
 
     // Fetch combo components for COMBO products
@@ -669,11 +693,120 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         }
     };
 
+    // Helper methods for Delivery Notice
+    const handleNoticeTemplateSelect = (tplId: string, currentShipItems = shipItems, customShipDate = shipDate, customAddress = shipAddress, customContactName = shipContactName, customContactPhone = shipContactPhone, customCarrier = shippingCarrier, customIsCod = isCod, customPickMoney = pickMoney) => {
+        setSelectedNoticeTemplateId(tplId);
+        const tpl = deliveryNoticeTemplates.find(t => t.id === tplId) || deliveryNoticeTemplates[0] || DEFAULT_DELIVERY_NOTICE_TEMPLATES[0];
+        if (!tpl) return;
+        const generated = formatDeliveryNotice(tpl.content, {
+            order,
+            delivery: {
+                id: editingDeliveryId,
+                code: editingDeliveryId ? (history.find(h => h.id === editingDeliveryId)?.code) : `PXK-${dayjs(customShipDate || shipDate).format('DDMMYY')}-XXXX`,
+                delivery_date: customShipDate || shipDate,
+                delivery_address: customAddress !== undefined ? customAddress : shipAddress,
+                contact_name: customContactName !== undefined ? customContactName : shipContactName,
+                contact_phone: customContactPhone !== undefined ? customContactPhone : shipContactPhone,
+                shipping_carrier: customCarrier !== undefined ? customCarrier : shippingCarrier
+            },
+            shipItems: currentShipItems || shipItems,
+            shipDate: customShipDate || shipDate,
+            shipAddress: customAddress !== undefined ? customAddress : shipAddress,
+            shipContactName: customContactName !== undefined ? customContactName : shipContactName,
+            shipContactPhone: customContactPhone !== undefined ? customContactPhone : shipContactPhone,
+            shippingCarrier: customCarrier !== undefined ? customCarrier : shippingCarrier,
+            isCod: customIsCod !== undefined ? customIsCod : isCod,
+            pickMoney: customPickMoney !== undefined ? customPickMoney : pickMoney,
+            companyConfig: companyConfig || {},
+            products: products
+        });
+        setDeliveryNotice(generated);
+    };
+
+    const handleRegenerateNotice = () => {
+        const tpl = deliveryNoticeTemplates.find(t => t.id === selectedNoticeTemplateId) || deliveryNoticeTemplates[0] || DEFAULT_DELIVERY_NOTICE_TEMPLATES[0];
+        const generated = formatDeliveryNotice(tpl.content, {
+            order,
+            delivery: {
+                id: editingDeliveryId,
+                code: editingDeliveryId ? (history.find(h => h.id === editingDeliveryId)?.code) : `PXK-${dayjs(shipDate).format('DDMMYY')}-XXXX`,
+                delivery_date: shipDate,
+                delivery_address: shipAddress,
+                contact_name: shipContactName,
+                contact_phone: shipContactPhone,
+                shipping_carrier: shippingCarrier
+            },
+            shipItems: shipItems,
+            shipDate: shipDate,
+            shipAddress: shipAddress,
+            shipContactName: shipContactName,
+            shipContactPhone: shipContactPhone,
+            shippingCarrier: shippingCarrier,
+            isCod: isCod,
+            pickMoney: pickMoney,
+            companyConfig: companyConfig || {},
+            products: products
+        });
+        setDeliveryNotice(generated);
+        message.success('Đã cập nhật lại nội dung thông báo theo dữ liệu phiếu xuất!');
+    };
+
+    const handleCopyNotice = (text: string) => {
+        if (!text) {
+            message.warning('Chưa có nội dung để sao chép');
+            return;
+        }
+        navigator.clipboard.writeText(text);
+        message.success('Đã sao chép nội dung thông báo vào bộ nhớ tạm (Clipboard)!');
+    };
+
+    const openViewNoticeModal = (delivery: any) => {
+        setSelectedDeliveryForNotice(delivery);
+        if (delivery.delivery_notice) {
+            setEditingSavedNotice(delivery.delivery_notice);
+        } else {
+            const defaultTpl = deliveryNoticeTemplates.find(t => t.isDefault) || deliveryNoticeTemplates[0] || DEFAULT_DELIVERY_NOTICE_TEMPLATES[0];
+            const generated = formatDeliveryNotice(defaultTpl.content, {
+                order,
+                delivery,
+                shipItems: delivery.items || [],
+                shipDate: delivery.delivery_date,
+                shipAddress: delivery.delivery_address,
+                shipContactName: delivery.contact_name,
+                shipContactPhone: delivery.contact_phone,
+                shippingCarrier: delivery.shipping_carrier,
+                isCod: Number(delivery.pick_money) > 0,
+                pickMoney: delivery.pick_money,
+                companyConfig: companyConfig || {},
+                products
+            });
+            setEditingSavedNotice(generated);
+        }
+        setViewNoticeModalOpen(true);
+    };
+
+    const handleSaveDeliveryNoticeOnly = async () => {
+        if (!selectedDeliveryForNotice?.id) return;
+        try {
+            setIsSavingNotice(true);
+            await api.put(`/sales/delivery/${selectedDeliveryForNotice.id}`, {
+                delivery_notice: editingSavedNotice
+            });
+            message.success('Đã lưu nội dung thông báo giao hàng');
+            setViewNoticeModalOpen(false);
+            fetchHistory();
+        } catch (e: any) {
+            message.error(e.response?.data?.message || 'Lỗi khi lưu thông báo');
+        } finally {
+            setIsSavingNotice(false);
+        }
+    };
+
     const openCreateModal = () => {
         setEditingDeliveryId(null);
         setIsDraft(false);
         setShipStatus('PENDING_EXPORT');
-        setShipItems(summaryData.map((d: any) => {
+        const initialShipItems = summaryData.map((d: any) => {
             const canShip = d.bookingStatus === 'CONFIRMED' && d.remaining > 0;
             return {
                 sku: d.sku, 
@@ -681,7 +814,8 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 quantity: canShip ? d.remaining : 0,
                 bookingStatus: d.bookingStatus
             };
-        }));
+        });
+        setShipItems(initialShipItems);
         setShipNote('');
 
         // Auto-fill defaults
@@ -695,10 +829,24 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         const parsed = parseWebsiteOrderNote(order?.note, order);
         setWebsiteOrderParsed(parsed);
 
+        let initialAddress = '';
+        let initialContactName = '';
+        let initialContactPhone = '';
+        let initialCarrier = '';
+        let initialIsCod = false;
+        let initialPickMoney = 0;
+
         if (parsed.isWebsiteOrder) {
-            setShipAddress(parsed.shippingAddress || order.shipping_address || fullCustomer?.address || '');
-            setShipContactName(parsed.receiverName || order.receiver_name || contactList[0]?.full_name || fullCustomer?.name || '');
-            setShipContactPhone(parsed.receiverPhone || order.receiver_phone || contactList[0]?.phone || fullCustomer?.phone || '');
+            initialAddress = parsed.shippingAddress || order.shipping_address || fullCustomer?.address || '';
+            initialContactName = parsed.receiverName || order.receiver_name || contactList[0]?.full_name || fullCustomer?.name || '';
+            initialContactPhone = parsed.receiverPhone || order.receiver_phone || contactList[0]?.phone || fullCustomer?.phone || '';
+            initialCarrier = 'GHTK';
+            initialIsCod = parsed.isCod;
+            initialPickMoney = parsed.suggestedCodAmount;
+
+            setShipAddress(initialAddress);
+            setShipContactName(initialContactName);
+            setShipContactPhone(initialContactPhone);
             setShipNote(parsed.deliveryNote || '');
             setIsCod(parsed.isCod);
             setPickMoney(parsed.suggestedCodAmount);
@@ -715,9 +863,16 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 setGhtkAddress(parsed.addressParts.street || parsed.shippingAddress || '');
             }
         } else {
-            setShipAddress(order.shipping_address || fullCustomer?.address || '');
-            setShipContactName(order.receiver_name || contactList[0]?.full_name || fullCustomer?.name || '');
-            setShipContactPhone(order.receiver_phone || contactList[0]?.phone || fullCustomer?.phone || '');
+            initialAddress = order.shipping_address || fullCustomer?.address || '';
+            initialContactName = order.receiver_name || contactList[0]?.full_name || fullCustomer?.name || '';
+            initialContactPhone = order.receiver_phone || contactList[0]?.phone || fullCustomer?.phone || '';
+            initialCarrier = order.shipping_carrier || '';
+            initialIsCod = false;
+            initialPickMoney = 0;
+
+            setShipAddress(initialAddress);
+            setShipContactName(initialContactName);
+            setShipContactPhone(initialContactPhone);
             setShipNote('');
             setShippingCarrier(order.shipping_carrier || '');
             setIsCod(false);
@@ -731,6 +886,25 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             setGhtkHamlet('Khác');
             setGhtkAddress('');
         }
+
+        // Initialize Delivery Notice from default template
+        const defaultTpl = deliveryNoticeTemplates.find(t => t.isDefault) || deliveryNoticeTemplates[0] || DEFAULT_DELIVERY_NOTICE_TEMPLATES[0];
+        setSelectedNoticeTemplateId(defaultTpl?.id || 'standard_b2b');
+        const initNotice = formatDeliveryNotice(defaultTpl?.content || '', {
+            order,
+            delivery: { code: `PXK-${dayjs().format('DDMMYY')}-XXXX` },
+            shipItems: initialShipItems,
+            shipDate: dayjs(),
+            shipAddress: initialAddress,
+            shipContactName: initialContactName,
+            shipContactPhone: initialContactPhone,
+            shippingCarrier: initialCarrier,
+            isCod: initialIsCod,
+            pickMoney: initialPickMoney,
+            companyConfig: companyConfig || {},
+            products
+        });
+        setDeliveryNotice(initNotice);
 
         // Reset packing specs & dimensions state
         setSelectedPackingSpecId(null);
@@ -803,6 +977,30 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             };
         });
         setShipItems(mergedItems);
+
+        // Delivery Notice in Edit Modal
+        if (delivery.delivery_notice) {
+            setDeliveryNotice(delivery.delivery_notice);
+        } else {
+            const defaultTpl = deliveryNoticeTemplates.find(t => t.isDefault) || deliveryNoticeTemplates[0] || DEFAULT_DELIVERY_NOTICE_TEMPLATES[0];
+            setSelectedNoticeTemplateId(defaultTpl?.id || 'standard_b2b');
+            const generated = formatDeliveryNotice(defaultTpl?.content || '', {
+                order,
+                delivery,
+                shipItems: mergedItems,
+                shipDate: dayjs(delivery.delivery_date),
+                shipAddress: delivery.delivery_address || '',
+                shipContactName: delivery.contact_name || '',
+                shipContactPhone: delivery.contact_phone || '',
+                shippingCarrier: delivery.shipping_carrier || '',
+                isCod: Number(delivery.pick_money) > 0,
+                pickMoney: Number(delivery.pick_money) || 0,
+                companyConfig: companyConfig || {},
+                products
+            });
+            setDeliveryNotice(generated);
+        }
+
         fetchGhtkPickAddresses();
         setIsModalOpen(true);
     };
@@ -851,6 +1049,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 package_height: packageHeight !== null && packageHeight !== undefined ? Number(packageHeight) : null,
                 package_count: packageCount || 1,
                 packing_spec_name: packingSpecName || null,
+                delivery_notice: deliveryNotice,
                 status: isDraft ? 'DRAFT' : (editingDeliveryId ? shipStatus : 'PENDING_EXPORT')
             };
 
@@ -1321,6 +1520,14 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                     </Tooltip>
                                 </>
                             )}
+                            <Tooltip title="Thông báo giao hàng (Xem / Sao chép / Sửa)">
+                                <Button 
+                                    size="small" 
+                                    style={{ color: '#108ee9', borderColor: '#91d5ff' }} 
+                                    icon={<MessageOutlined />} 
+                                    onClick={() => openViewNoticeModal(r)} 
+                                />
+                            </Tooltip>
                             <Tooltip title="Gửi Email thông báo khách hàng">
                                 <Button size="small" icon={<MailOutlined />} onClick={async () => {
                                     try {
@@ -1858,6 +2065,49 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                         />
                     )}
                 ]} />
+
+                {/* KHU VỰC THÔNG BÁO GIAO HÀNG (GỬI ZALO / KHÁCH HÀNG) */}
+                <Divider style={{ margin: '16px 0 12px 0' }} />
+                <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <MessageOutlined style={{ color: '#1677ff', fontSize: 16 }} />
+                            <span style={{ fontWeight: 600, color: '#1e293b', fontSize: 13 }}>Nội Dung Thông Báo Giao Hàng (Gửi Khách / Zalo):</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Select
+                                size="small"
+                                style={{ width: 230 }}
+                                value={selectedNoticeTemplateId}
+                                onChange={val => handleNoticeTemplateSelect(val)}
+                                options={deliveryNoticeTemplates.map(t => ({
+                                    value: t.id,
+                                    label: t.name + (t.isDefault ? ' (Mặc định)' : '')
+                                }))}
+                            />
+                            <Tooltip title="Điền lại thông tin mới nhất từ danh sách xuất kho & đơn hàng">
+                                <Button size="small" icon={<CalculatorOutlined />} onClick={handleRegenerateNotice}>
+                                    Điền lại
+                                </Button>
+                            </Tooltip>
+                            <Tooltip title="Sao chép nội dung vào Clipboard">
+                                <Button size="small" type="primary" ghost icon={<CopyOutlined />} onClick={() => handleCopyNotice(deliveryNotice)}>
+                                    Sao chép
+                                </Button>
+                            </Tooltip>
+                        </div>
+                    </div>
+                    <Input.TextArea
+                        rows={7}
+                        value={deliveryNotice}
+                        onChange={e => setDeliveryNotice(e.target.value)}
+                        placeholder="Nội dung thông báo giao hàng sẽ tự động điền theo mẫu. Bạn có thể tự do chỉnh sửa trước khi lưu phiếu xuất..."
+                        style={{ fontFamily: 'monospace', fontSize: 12 }}
+                    />
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                        💡 Thông báo này sẽ được lưu cùng Phiếu xuất kho. Bạn có thể sao chép nhanh gửi Zalo cho Khách hàng bất kỳ lúc nào từ danh sách phiếu.
+                    </div>
+                </div>
             </Modal>
 
             {/* Quick Upload Modal */}
@@ -2030,6 +2280,88 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                             }
                         />
                     )}
+                </div>
+            </Modal>
+
+            {/* Modal Xem & Chỉnh sửa Thông báo Giao Hàng từ lịch sử phiếu */}
+            <Modal
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <MessageOutlined style={{ color: '#1677ff' }} />
+                        <span>Thông Báo Giao Hàng - Phiếu: <b>{selectedDeliveryForNotice?.code}</b></span>
+                    </div>
+                }
+                open={viewNoticeModalOpen}
+                onCancel={() => setViewNoticeModalOpen(false)}
+                width={650}
+                footer={[
+                    <Button key="close" onClick={() => setViewNoticeModalOpen(false)}>
+                        Đóng
+                    </Button>,
+                    <Button 
+                        key="copy" 
+                        type="dashed" 
+                        icon={<CopyOutlined />} 
+                        onClick={() => handleCopyNotice(editingSavedNotice)}
+                    >
+                        Sao chép nội dung
+                    </Button>,
+                    <Button 
+                        key="save" 
+                        type="primary" 
+                        loading={isSavingNotice} 
+                        onClick={handleSaveDeliveryNoticeOnly}
+                    >
+                        Lưu thay đổi
+                    </Button>
+                ]}
+            >
+                <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                    <span style={{ fontSize: 12, color: '#64748b' }}>
+                        Khách hàng: <b>{order?.customer?.name || order?.customer_name}</b> | Ngày: <b>{dayjs(selectedDeliveryForNotice?.delivery_date).format('DD/MM/YYYY')}</b>
+                    </span>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span style={{ fontSize: 12 }}>Đổi mẫu:</span>
+                        <Select
+                            size="small"
+                            style={{ width: 220 }}
+                            placeholder="Chọn mẫu khác..."
+                            onChange={(tplId) => {
+                                const tpl = deliveryNoticeTemplates.find(t => t.id === tplId);
+                                if (tpl && selectedDeliveryForNotice) {
+                                    const gen = formatDeliveryNotice(tpl.content, {
+                                        order,
+                                        delivery: selectedDeliveryForNotice,
+                                        shipItems: selectedDeliveryForNotice.items || [],
+                                        shipDate: selectedDeliveryForNotice.delivery_date,
+                                        shipAddress: selectedDeliveryForNotice.delivery_address,
+                                        shipContactName: selectedDeliveryForNotice.contact_name,
+                                        shipContactPhone: selectedDeliveryForNotice.contact_phone,
+                                        shippingCarrier: selectedDeliveryForNotice.shipping_carrier,
+                                        isCod: Number(selectedDeliveryForNotice.pick_money) > 0,
+                                        pickMoney: selectedDeliveryForNotice.pick_money,
+                                        companyConfig: companyConfig || {},
+                                        products
+                                    });
+                                    setEditingSavedNotice(gen);
+                                    message.info(`Đã áp dụng mẫu: ${tpl.name}`);
+                                }
+                            }}
+                            options={deliveryNoticeTemplates.map(t => ({
+                                value: t.id,
+                                label: t.name
+                            }))}
+                        />
+                    </div>
+                </div>
+                <Input.TextArea
+                    rows={13}
+                    value={editingSavedNotice}
+                    onChange={e => setEditingSavedNotice(e.target.value)}
+                    style={{ fontFamily: 'monospace', fontSize: 12, lineHeight: '1.5' }}
+                />
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 6, fontStyle: 'italic' }}>
+                    * Bạn có thể chỉnh sửa nội dung thông báo trên đây và bấm "Lưu thay đổi" để cập nhật vào phiếu xuất kho, hoặc bấm "Sao chép nội dung" để gửi Zalo cho khách.
                 </div>
             </Modal>
         </div>

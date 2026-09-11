@@ -10,7 +10,8 @@ import {
     InfoCircleOutlined, KeyOutlined, UploadOutlined, AuditOutlined, PrinterOutlined, 
     QrcodeOutlined, BgColorsOutlined, CheckCircleOutlined, ReloadOutlined, 
     SafetyCertificateOutlined, EyeOutlined, ProjectOutlined, DollarOutlined,
-    GlobalOutlined, BankOutlined, PhoneOutlined, PictureOutlined, CarOutlined, ThunderboltOutlined
+    GlobalOutlined, BankOutlined, PhoneOutlined, PictureOutlined, CarOutlined, ThunderboltOutlined,
+    SendOutlined, MessageOutlined
 } from '@ant-design/icons';
 import axios from '../utils/api';
 import { SketchPicker } from 'react-color';
@@ -19,6 +20,7 @@ import ReactQuill from 'react-quill';
 import { API_URL } from '../config';
 import dayjs from 'dayjs';
 import RichTextEditor from '../components/common/RichTextEditor';
+import { DEFAULT_DELIVERY_NOTICE_TEMPLATES, PLACEHOLDER_GUIDE, DeliveryNoticeTemplate } from '../utils/deliveryNoticeHelper';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -112,6 +114,16 @@ const SystemSettingsPage: React.FC = () => {
                                 </div>
                             ),
                             children: <div style={{ padding: '24px 32px' }}><TermsAndNotesTab /></div>
+                        },
+                        {
+                            key: 'delivery_notice',
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                                    <SendOutlined style={{ fontSize: 16 }} />
+                                    <span>Mẫu Thông Báo Giao Hàng</span>
+                                </div>
+                            ),
+                            children: <div style={{ padding: '24px 32px' }}><DeliveryNoticeTemplatesTab /></div>
                         },
                         {
                             key: 'email',
@@ -1035,6 +1047,11 @@ const TermsAndNotesTab: React.FC = () => {
                         key: 'order_terms',
                         label: '📦 Điều Khoản Đơn Hàng (Orders)',
                         children: <OrderTermsSubTab />
+                    },
+                    {
+                        key: 'delivery_notice_terms',
+                        label: '🚚 Mẫu Thông Báo Giao Hàng',
+                        children: <DeliveryNoticeTemplatesTab />
                     }
                 ]}
             />
@@ -1315,6 +1332,299 @@ const OrderTermsSubTab: React.FC = () => {
                     </Form.Item>
                     <Form.Item name="isDefault" valuePropName="checked">
                         <Checkbox>Đặt làm Mẫu Mặc định</Checkbox>
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </div>
+    );
+};
+
+// =========================================================================
+// TAB 4.5: MẪU THÔNG BÁO GIAO HÀNG (DELIVERY NOTICE)
+// =========================================================================
+const DeliveryNoticeTemplatesTab: React.FC = () => {
+    const [templates, setTemplates] = useState<DeliveryNoticeTemplate[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [editingTemplate, setEditingTemplate] = useState<DeliveryNoticeTemplate | null>(null);
+    const [form] = Form.useForm();
+
+    const fetchTemplates = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get('/system/config/DELIVERY_NOTICE_TEMPLATES');
+            let list: DeliveryNoticeTemplate[] = [];
+            if (res.data?.value) {
+                try { list = JSON.parse(res.data.value); } catch(e) {}
+            }
+            if (!list || list.length === 0) {
+                list = DEFAULT_DELIVERY_NOTICE_TEMPLATES;
+            }
+            setTemplates(list);
+        } catch (e) {
+            setTemplates(DEFAULT_DELIVERY_NOTICE_TEMPLATES);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchTemplates();
+    }, []);
+
+    const handleSaveToSystem = async (listToSave: DeliveryNoticeTemplate[]) => {
+        setSaving(true);
+        try {
+            await axios.post('/system/config', {
+                key: 'DELIVERY_NOTICE_TEMPLATES',
+                value: JSON.stringify(listToSave),
+                description: 'Danh sách mẫu thông báo giao hàng (Zalo/SMS)'
+            });
+            message.success('Đã lưu cấu hình Mẫu Thông Báo Giao Hàng!');
+            setTemplates(listToSave);
+        } catch (e) {
+            message.error('Lỗi khi lưu cấu hình');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleSaveTemplate = (values: any) => {
+        let newList = [...templates];
+        if (values.isDefault) {
+            newList = newList.map(t => ({ ...t, isDefault: false }));
+        }
+        if (editingTemplate) {
+            newList = newList.map(t => t.id === editingTemplate.id ? { ...t, ...values } : t);
+        } else {
+            newList.push({
+                id: 'notice_' + Date.now(),
+                ...values
+            });
+        }
+        if (!newList.some(t => t.isDefault) && newList.length > 0) {
+            newList[0].isDefault = true;
+        }
+        setTemplates(newList);
+        handleSaveToSystem(newList);
+        setModalOpen(false);
+    };
+
+    const handleDeleteTemplate = (id: string) => {
+        const newList = templates.filter(t => t.id !== id);
+        if (!newList.some(t => t.isDefault) && newList.length > 0) {
+            newList[0].isDefault = true;
+        }
+        setTemplates(newList);
+        handleSaveToSystem(newList);
+    };
+
+    const handleResetDefaults = () => {
+        Modal.confirm({
+            title: 'Khôi phục 4 mẫu chuẩn từ ERP4U?',
+            content: 'Thao tác này sẽ đặt lại danh sách mẫu về 4 mẫu chuẩn ban đầu (B2B trường học, Đi tỉnh chành xe, Giao từng phần, Rút gọn).',
+            okText: 'Khôi phục',
+            cancelText: 'Hủy',
+            onOk: () => {
+                handleSaveToSystem(DEFAULT_DELIVERY_NOTICE_TEMPLATES);
+            }
+        });
+    };
+
+    const copyPlaceholder = (placeholder: string) => {
+        navigator.clipboard.writeText(placeholder);
+        message.success(`Đã copy biến: ${placeholder}`);
+    };
+
+    const columns = [
+        {
+            title: 'Tên Mẫu Thông Báo',
+            dataIndex: 'name',
+            key: 'name',
+            width: '28%',
+            render: (t: string, r: DeliveryNoticeTemplate) => (
+                <div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{t}</div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                        {r.isDefault && <Tag color="blue">Mặc định</Tag>}
+                        {r.type && <Tag color="geekblue">{r.type}</Tag>}
+                    </div>
+                </div>
+            )
+        },
+        {
+            title: 'Nội Dung Mẫu',
+            dataIndex: 'content',
+            key: 'content',
+            render: (t: string) => (
+                <div style={{ 
+                    whiteSpace: 'pre-line', 
+                    fontSize: 12, 
+                    maxHeight: 110, 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis', 
+                    background: '#fafafa', 
+                    padding: '8px 12px', 
+                    borderRadius: 6, 
+                    border: '1px solid #f0f0f0',
+                    fontFamily: 'monospace'
+                }}>
+                    {t}
+                </div>
+            )
+        },
+        {
+            title: 'Thao tác',
+            key: 'act',
+            width: 130,
+            align: 'right' as const,
+            render: (_: any, r: DeliveryNoticeTemplate) => (
+                <Space>
+                    <Tooltip title="Sao chép nội dung mẫu">
+                        <Button 
+                            icon={<CopyOutlined />} 
+                            size="small" 
+                            onClick={() => {
+                                navigator.clipboard.writeText(r.content);
+                                message.success('Đã sao chép nội dung mẫu!');
+                            }} 
+                        />
+                    </Tooltip>
+                    <Tooltip title="Chỉnh sửa mẫu">
+                        <Button 
+                            icon={<EditOutlined />} 
+                            size="small" 
+                            onClick={() => {
+                                setEditingTemplate(r);
+                                form.setFieldsValue(r);
+                                setModalOpen(true);
+                            }} 
+                        />
+                    </Tooltip>
+                    <Popconfirm title="Xóa mẫu này?" onConfirm={() => handleDeleteTemplate(r.id)} okText="Xóa" cancelText="Hủy">
+                        <Button icon={<DeleteOutlined />} danger size="small" />
+                    </Popconfirm>
+                </Space>
+            )
+        }
+    ];
+
+    if (loading) return <Spin tip="Đang tải mẫu thông báo giao hàng..." />;
+
+    return (
+        <div style={{ paddingTop: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>🚚 Mẫu Thông Báo Giao Hàng (Delivery Notice)</h3>
+                    <p style={{ color: '#888', margin: 0, fontSize: 13 }}>
+                        Cấu hình các kịch bản thông báo giao nhận cho khách hàng B2B qua Zalo/SMS (áp dụng tự động khi nhân viên lập Phiếu Xuất Kho).
+                    </p>
+                </div>
+                <Space>
+                    <Button icon={<ReloadOutlined />} onClick={handleResetDefaults}>
+                        Khôi phục 4 mẫu chuẩn
+                    </Button>
+                    <Button 
+                        type="primary" 
+                        icon={<PlusOutlined />} 
+                        onClick={() => {
+                            setEditingTemplate(null);
+                            form.resetFields();
+                            form.setFieldsValue({ isDefault: templates.length === 0, type: 'CUSTOM' });
+                            setModalOpen(true);
+                        }}
+                    >
+                        Thêm Mẫu Mới
+                    </Button>
+                </Space>
+            </div>
+
+            {/* Quick Placeholder reference tags */}
+            <Card 
+                size="small" 
+                title={<span style={{ fontSize: 13, fontWeight: 600 }}>💡 Các biến tự động điền (Bấm vào thẻ để sao chép mã biến):</span>}
+                style={{ marginBottom: 16, background: '#f8fafc', borderColor: '#e2e8f0' }}
+            >
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {PLACEHOLDER_GUIDE.map((item) => (
+                        <Tooltip key={item.key} title={`${item.label} (Ví dụ: ${item.example})`}>
+                            <Tag 
+                                color="blue" 
+                                style={{ cursor: 'pointer', padding: '3px 8px', borderRadius: 4 }}
+                                onClick={() => copyPlaceholder(item.key)}
+                            >
+                                <code>{item.key}</code>: {item.label}
+                            </Tag>
+                        </Tooltip>
+                    ))}
+                </div>
+            </Card>
+
+            <Table 
+                dataSource={templates} 
+                columns={columns} 
+                rowKey="id" 
+                pagination={false} 
+                size="small" 
+                style={{ marginBottom: 16 }}
+            />
+
+            <Modal
+                title={editingTemplate ? "Chỉnh sửa Mẫu Thông Báo Giao Hàng" : "Thêm Mẫu Thông Báo Giao Hàng Mới"}
+                open={modalOpen}
+                onCancel={() => setModalOpen(false)}
+                onOk={form.submit}
+                width={780}
+                destroyOnClose
+            >
+                <Form form={form} layout="vertical" onFinish={handleSaveTemplate}>
+                    <Row gutter={16}>
+                        <Col span={16}>
+                            <Form.Item name="name" label="Tên Mẫu Thông Báo" rules={[{ required: true, message: 'Vui lòng nhập tên mẫu' }]}>
+                                <Input placeholder="VD: Mẫu giao hàng Chành Xe (Chuyển khoản trước)" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="type" label="Phân Loại Kịch Bản">
+                                <Input placeholder="VD: B2B_STANDARD, CHANH_XE..." />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+
+                    <div style={{ marginBottom: 8, fontSize: 12, color: '#666' }}>
+                        Gợi ý chèn biến: Bấm vào các biến bên dưới để chèn nhanh vào nội dung:
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                        {PLACEHOLDER_GUIDE.map(item => (
+                            <Tag 
+                                key={item.key} 
+                                color="cyan" 
+                                style={{ cursor: 'pointer', fontSize: 11 }}
+                                onClick={() => {
+                                    const curr = form.getFieldValue('content') || '';
+                                    form.setFieldsValue({ content: curr + (curr ? '\n' : '') + item.key });
+                                }}
+                            >
+                                + {item.key}
+                            </Tag>
+                        ))}
+                    </div>
+
+                    <Form.Item 
+                        name="content" 
+                        label="Nội dung Thông Báo (Hỗ trợ văn bản nhiều dòng và biến placeholders)" 
+                        rules={[{ required: true, message: 'Vui lòng nhập nội dung mẫu' }]}
+                    >
+                        <Input.TextArea 
+                            rows={12} 
+                            placeholder="Nhập nội dung mẫu thông báo..." 
+                            style={{ fontFamily: 'monospace', fontSize: 13 }}
+                        />
+                    </Form.Item>
+
+                    <Form.Item name="isDefault" valuePropName="checked">
+                        <Checkbox>Đặt làm mẫu mặc định (Tự động chọn khi mở form Tạo Phiếu Xuất Kho)</Checkbox>
                     </Form.Item>
                 </Form>
             </Modal>

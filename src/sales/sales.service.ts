@@ -944,7 +944,8 @@ export class SalesService {
                 packing_spec_name: data.packing_spec_name || null,
                 shipping_status_id: data.shipping_status_id || null,
                 shipping_status_text: data.shipping_status_text || null,
-                shipping_metadata: data.shipping_metadata || null
+                shipping_metadata: data.shipping_metadata || null,
+                delivery_notice: data.delivery_notice || null
             });
 
             // Ensure proper instantiation of SalesDeliveryItem to guarantee cascade insert
@@ -996,6 +997,7 @@ export class SalesService {
         if (data.shipping_status_id !== undefined) delivery.shipping_status_id = data.shipping_status_id;
         if (data.shipping_status_text !== undefined) delivery.shipping_status_text = data.shipping_status_text;
         if (data.shipping_metadata !== undefined) delivery.shipping_metadata = data.shipping_metadata;
+        if (data.delivery_notice !== undefined) delivery.delivery_notice = data.delivery_notice;
 
         if (data.items) {
             // Delete old items

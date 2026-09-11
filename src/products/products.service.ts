@@ -77,6 +77,7 @@ export class ProductsService implements OnModuleInit {
                 ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_height NUMERIC(10, 2);
                 ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_count INTEGER DEFAULT 1;
                 ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS packing_spec_name VARCHAR(150);
+                ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS delivery_notice TEXT;
             `);
         } catch (e) {
             console.error('[ProductsService] Error initializing product_packing_specs table or delivery columns:', e);
