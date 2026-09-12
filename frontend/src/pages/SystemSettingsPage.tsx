@@ -151,10 +151,10 @@ const SystemSettingsPage: React.FC = () => {
                             label: (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
                                     <CarOutlined style={{ fontSize: 16 }} />
-                                    <span>Vận Chuyển (GHTK)</span>
+                                    <span>Vận Chuyển (GHTK & Lalamove)</span>
                                 </div>
                             ),
-                            children: <div style={{ padding: '24px 32px' }}><GhtkConfigTab /></div>
+                            children: <div style={{ padding: '24px 32px' }}><ShippingCarriersTab /></div>
                         },
                         {
                             key: 'zns',
@@ -2017,6 +2017,274 @@ const GhtkConfigTab: React.FC = () => {
                 </Form>
             )}
         </Card>
+    );
+};
+
+const LalamoveConfigTab: React.FC = () => {
+    const [form] = Form.useForm();
+    const [loading, setLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [testing, setTesting] = useState(false);
+    const [testResult, setTestResult] = useState<any>(null);
+    const [currentConfig, setCurrentConfig] = useState<any>(null);
+
+    const fetchConfig = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get('/shipping/lalamove/config');
+            setCurrentConfig(res.data);
+            form.setFieldsValue({
+                LALAMOVE_SANDBOX: res.data.isSandbox !== undefined ? res.data.isSandbox : true,
+                LALAMOVE_MARKET: res.data.market || 'VN',
+                LALAMOVE_DEFAULT_SENDER_NAME: res.data.defaultSenderName || 'Kho ERP4U',
+                LALAMOVE_DEFAULT_SENDER_PHONE: res.data.defaultSenderPhone || '+84901234567',
+                LALAMOVE_DEFAULT_PICK_ADDRESS: res.data.defaultPickAddress || 'Kho ERP4U, Tân Thới Nhất, Quận 12, TP. Hồ Chí Minh',
+                LALAMOVE_DEFAULT_PICK_LAT: res.data.defaultPickLat || 10.8230989,
+                LALAMOVE_DEFAULT_PICK_LNG: res.data.defaultPickLng || 106.6296638,
+            });
+        } catch (e) {
+            message.error('Không thể tải cấu hình Lalamove');
+        }
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchConfig();
+    }, []);
+
+    const handleTest = async () => {
+        const values = form.getFieldsValue();
+        setTesting(true);
+        setTestResult(null);
+        try {
+            const res = await axios.post('/shipping/lalamove/test-connection', {
+                apiKey: values.LALAMOVE_API_KEY || undefined,
+                apiSecret: values.LALAMOVE_API_SECRET || undefined,
+                isSandbox: values.LALAMOVE_SANDBOX,
+                market: values.LALAMOVE_MARKET,
+            });
+            setTestResult(res.data);
+            if (res.data.success) {
+                message.success('Kết nối Lalamove thành công!');
+            } else {
+                message.error(res.data.message || 'Kết nối Lalamove thất bại');
+            }
+        } catch (e: any) {
+            setTestResult({ success: false, message: e.response?.data?.message || e.message });
+            message.error('Lỗi khi kiểm tra kết nối Lalamove');
+        } finally {
+            setTesting(false);
+        }
+    };
+
+    const handleSubmit = async (values: any) => {
+        setSubmitting(true);
+        try {
+            const payload: any = {
+                isSandbox: values.LALAMOVE_SANDBOX,
+                market: values.LALAMOVE_MARKET,
+                defaultSenderName: values.LALAMOVE_DEFAULT_SENDER_NAME,
+                defaultSenderPhone: values.LALAMOVE_DEFAULT_SENDER_PHONE,
+                defaultPickAddress: values.LALAMOVE_DEFAULT_PICK_ADDRESS,
+                defaultPickLat: values.LALAMOVE_DEFAULT_PICK_LAT,
+                defaultPickLng: values.LALAMOVE_DEFAULT_PICK_LNG,
+            };
+            if (values.LALAMOVE_API_KEY && values.LALAMOVE_API_KEY.trim()) {
+                payload.apiKey = values.LALAMOVE_API_KEY.trim();
+            }
+            if (values.LALAMOVE_API_SECRET && values.LALAMOVE_API_SECRET.trim()) {
+                payload.apiSecret = values.LALAMOVE_API_SECRET.trim();
+            }
+            await axios.post('/shipping/lalamove/config', payload);
+            message.success('Đã lưu cấu hình Lalamove thành công!');
+            fetchConfig();
+        } catch (e: any) {
+            message.error(e.response?.data?.message || 'Lỗi khi lưu cấu hình Lalamove');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <Card title={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 20 }}>🚚</span>
+                    <span style={{ fontWeight: 700, color: '#eb6100' }}>Cấu hình Đối tác Vận chuyển Lalamove API (v3)</span>
+                </div>
+                {currentConfig && (
+                    currentConfig.isConfigured ? (
+                        <Tag color="green">✅ Đã cấu hình ({currentConfig.isSandbox ? 'Sandbox Test' : 'Production Live'})</Tag>
+                    ) : (
+                        <Tag color="warning">⚠️ Chưa cấu hình Key / Secret (Chế độ Demo)</Tag>
+                    )
+                )}
+            </div>
+        }>
+            <Alert
+                message="Tích hợp Lalamove API v3 cho phép xuất kho tự động đặt xe giao hỏa tốc (Xe máy, Bán tải Van, Xe tải 1 - 2 tấn), xem vị trí GPS tài xế thời gian thực, nghiệm thu giao hàng bằng ảnh chụp (POD) và phục vụ vận chuyển Chặng 1 ra Chành xe."
+                type="info"
+                showIcon
+                style={{ marginBottom: 20 }}
+            />
+
+            {loading ? <Spin /> : (
+                <Form form={form} layout="vertical" onFinish={handleSubmit}>
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item
+                                name="LALAMOVE_API_KEY"
+                                label="Lalamove API Key"
+                                extra={currentConfig?.hasApiKey ? `Đã lưu: ${currentConfig.maskedApiKey}. Để trống nếu không muốn đổi.` : "Lấy tại Lalamove Partner Portal > Developers"}
+                            >
+                                <Input placeholder="Nhập API Key..." />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item
+                                name="LALAMOVE_API_SECRET"
+                                label="Lalamove API Secret"
+                                extra={currentConfig?.hasApiSecret ? `Đã lưu: ${currentConfig.maskedApiSecret}. Để trống nếu không đổi.` : "Dùng để sinh chữ ký HMAC-SHA256"}
+                            >
+                                <Input.Password placeholder="Nhập API Secret..." />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+
+                    <Row gutter={16}>
+                        <Col span={8}>
+                            <Form.Item name="LALAMOVE_SANDBOX" label="Môi trường kết nối">
+                                <Radio.Group
+                                    value={form.getFieldValue('LALAMOVE_SANDBOX')}
+                                    onChange={e => form.setFieldsValue({ LALAMOVE_SANDBOX: e.target.value })}
+                                >
+                                    <Radio.Button value={true}>Thử nghiệm (Sandbox)</Radio.Button>
+                                    <Radio.Button value={false}>Thực tế (Production)</Radio.Button>
+                                </Radio.Group>
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="LALAMOVE_MARKET" label="Thị trường (Market)">
+                                <Input placeholder="Mặc định: VN" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item label="Webhook Callback URL (Cấu hình trên Lalamove Portal)">
+                                <Input 
+                                    readOnly 
+                                    value={`${window.location.origin}/shipping/webhook/lalamove`} 
+                                    addonAfter={
+                                        <Tooltip title="Copy Webhook URL">
+                                            <CopyOutlined onClick={() => {
+                                                navigator.clipboard.writeText(`${window.location.origin}/shipping/webhook/lalamove`);
+                                                message.success('Đã copy Webhook URL!');
+                                            }} style={{ cursor: 'pointer' }} />
+                                        </Tooltip>
+                                    } 
+                                />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+
+                    <Divider orientation="left" style={{ fontSize: 14, color: '#888' }}>
+                        📍 Điểm Bốc Hàng Mặc Định (Kho ERP4U)
+                    </Divider>
+
+                    <Row gutter={16}>
+                        <Col span={8}>
+                            <Form.Item name="LALAMOVE_DEFAULT_SENDER_NAME" label="Tên người gửi / Thủ kho">
+                                <Input placeholder="VD: Kho ERP4U" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="LALAMOVE_DEFAULT_SENDER_PHONE" label="Số điện thoại kho (Định dạng E.164)">
+                                <Input placeholder="VD: +84901234567" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="LALAMOVE_DEFAULT_PICK_ADDRESS" label="Địa chỉ xuất hàng">
+                                <Input placeholder="Địa chỉ kho ERP4U" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item 
+                                name="LALAMOVE_DEFAULT_PICK_LAT" 
+                                label="Vĩ độ kho (Latitude)" 
+                                extra="Bắt buộc để định vị điểm lấy hàng trên bản đồ GPS"
+                            >
+                                <InputNumber style={{ width: '100%' }} step={0.000001} placeholder="VD: 10.8230989" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item 
+                                name="LALAMOVE_DEFAULT_PICK_LNG" 
+                                label="Kinh độ kho (Longitude)"
+                                extra="Bắt buộc để định vị điểm lấy hàng trên bản đồ GPS"
+                            >
+                                <InputNumber style={{ width: '100%' }} step={0.000001} placeholder="VD: 106.6296638" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+
+                    {testResult && (
+                        <Alert
+                            type={testResult.success ? 'success' : 'error'}
+                            showIcon
+                            style={{ marginBottom: 20 }}
+                            message={testResult.message}
+                            description={testResult.cities?.length > 0 && (
+                                <div style={{ marginTop: 6 }}>
+                                    <b>Khu vực hỗ trợ tại Việt Nam:</b>{' '}
+                                    {testResult.cities.map((c: any) => `${c.name} (${c.locode})`).join(' • ')}
+                                </div>
+                            )}
+                        />
+                    )}
+
+                    <Space size="middle">
+                        <Button type="primary" style={{ background: '#eb6100', borderColor: '#eb6100' }} icon={<SaveOutlined />} onClick={form.submit} loading={submitting} size="large">
+                            Lưu Cấu Hình Lalamove
+                        </Button>
+                        <Button icon={<ThunderboltOutlined />} onClick={handleTest} loading={testing} size="large">
+                            Kiểm Tra Kết Nối (HMAC SHA-256)
+                        </Button>
+                    </Space>
+                </Form>
+            )}
+        </Card>
+    );
+};
+
+const ShippingCarriersTab: React.FC = () => {
+    return (
+        <Tabs
+            defaultActiveKey="ghtk"
+            items={[
+                {
+                    key: 'ghtk',
+                    label: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <CarOutlined style={{ color: '#008444' }} />
+                            <span>Giao Hàng Tiết Kiệm (GHTK)</span>
+                        </div>
+                    ),
+                    children: <GhtkConfigTab />
+                },
+                {
+                    key: 'lalamove',
+                    label: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 16 }}>🚚</span>
+                            <span>Lalamove API v3 (Hỏa Tốc & Xe Tải)</span>
+                        </div>
+                    ),
+                    children: <LalamoveConfigTab />
+                }
+            ]}
+        />
     );
 };
 

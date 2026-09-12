@@ -112,6 +112,34 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
     const [ghtkSaveLoading, setGhtkSaveLoading] = useState<boolean>(false);
     const [ghtkTestResult, setGhtkTestResult] = useState<any>(null);
 
+    // Lalamove Booking & Tracking State
+    const [lalamoveConfig, setLalamoveConfig] = useState<any>(null);
+    const [lalamoveBookingModalOpen, setLalamoveBookingModalOpen] = useState<boolean>(false);
+    const [selectedDeliveryForLalamove, setSelectedDeliveryForLalamove] = useState<any>(null);
+    const [lalamoveServiceType, setLalamoveServiceType] = useState<string>('VAN_500KG');
+    const [lalamovePickupAddress, setLalamovePickupAddress] = useState<string>('');
+    const [lalamovePickupLat, setLalamovePickupLat] = useState<number | string>('');
+    const [lalamovePickupLng, setLalamovePickupLng] = useState<number | string>('');
+    const [lalamovePickupName, setLalamovePickupName] = useState<string>('');
+    const [lalamovePickupPhone, setLalamovePickupPhone] = useState<string>('');
+    const [lalamoveDropAddress, setLalamoveDropAddress] = useState<string>('');
+    const [lalamoveDropLat, setLalamoveDropLat] = useState<number | string>('');
+    const [lalamoveDropLng, setLalamoveDropLng] = useState<number | string>('');
+    const [lalamoveDropName, setLalamoveDropName] = useState<string>('');
+    const [lalamoveDropPhone, setLalamoveDropPhone] = useState<string>('');
+    const [lalamoveRemarks, setLalamoveRemarks] = useState<string>('');
+    const [lalamoveQuotation, setLalamoveQuotation] = useState<any>(null);
+    const [lalamoveLoadingQuotation, setLalamoveLoadingQuotation] = useState<boolean>(false);
+    const [lalamovePushingOrder, setLalamovePushingOrder] = useState<boolean>(false);
+    const [lalamoveGeocoding, setLalamoveGeocoding] = useState<boolean>(false);
+
+    // Lalamove POD & Tip Modals
+    const [lalamovePodModalOpen, setLalamovePodModalOpen] = useState<boolean>(false);
+    const [selectedLalamovePodImage, setSelectedLalamovePodImage] = useState<string>('');
+    const [lalamoveTipModalOpen, setLalamoveTipModalOpen] = useState<boolean>(false);
+    const [lalamoveTipAmount, setLalamoveTipAmount] = useState<number>(20000);
+    const [lalamoveTipping, setLalamoveTipping] = useState<boolean>(false);
+
     // Delivery Notice Templates & State
     const [deliveryNoticeTemplates, setDeliveryNoticeTemplates] = useState<DeliveryNoticeTemplate[]>(DEFAULT_DELIVERY_NOTICE_TEMPLATES);
     const [selectedNoticeTemplateId, setSelectedNoticeTemplateId] = useState<string>('standard_b2b');
@@ -218,9 +246,16 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             if (!hasGhtk) {
                 logistics.unshift({ code: 'GHTK', name: 'GHTK - Giao Hàng Tiết Kiệm' });
             }
+            const hasLalamove = logistics.some((c: any) => c.code === 'LALAMOVE' || (c.name || '').toLowerCase().includes('lalamove'));
+            if (!hasLalamove) {
+                logistics.unshift({ code: 'LALAMOVE', name: 'Lalamove - Hỏa Tốc & Xe Tải' });
+            }
             setCarriers(logistics);
         } catch (e) { 
-            setCarriers([{ code: 'GHTK', name: 'GHTK - Giao Hàng Tiết Kiệm' }]);
+            setCarriers([
+                { code: 'LALAMOVE', name: 'Lalamove - Hỏa Tốc & Xe Tải' },
+                { code: 'GHTK', name: 'GHTK - Giao Hàng Tiết Kiệm' }
+            ]);
         }
     };
 
@@ -635,6 +670,218 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 }
             }
         });
+    };
+
+    // ==========================================
+    // LALAMOVE HANDLERS (API v3)
+    // ==========================================
+    const fetchLalamoveConfig = async () => {
+        try {
+            const res = await api.get('/shipping/lalamove/config');
+            setLalamoveConfig(res.data);
+            return res.data;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const fetchLalamoveQuotation = async (
+        sType: string,
+        pLat: any, pLng: any, pAddr: string,
+        dLat: any, dLng: any, dAddr: string,
+        pkgCount?: number, weightGram?: number
+    ) => {
+        if (!pLat || !pLng || !dLat || !dLng) return;
+        setLalamoveLoadingQuotation(true);
+        try {
+            const res = await api.post('/shipping/lalamove/quotation', {
+                serviceType: sType,
+                stops: [
+                    { coordinates: { lat: String(pLat), lng: String(pLng) }, address: pAddr },
+                    { coordinates: { lat: String(dLat), lng: String(dLng) }, address: dAddr }
+                ],
+                item: {
+                    quantity: String(pkgCount || 1),
+                    weight: (weightGram || 500) > 30000 ? 'MORE_THAN_30_KG' : 'LESS_THAN_30_KG',
+                    categories: ['OFFICE_ITEM', 'OTHERS']
+                }
+            });
+            setLalamoveQuotation(res.data?.data);
+        } catch (e: any) {
+            message.error(e.response?.data?.message || 'Không thể lấy báo giá Lalamove');
+        } finally {
+            setLalamoveLoadingQuotation(false);
+        }
+    };
+
+    const handleOpenLalamoveBooking = async (delivery: any) => {
+        setSelectedDeliveryForLalamove(delivery);
+        setLalamoveQuotation(null);
+        setLalamoveBookingModalOpen(true);
+
+        const cfg = await fetchLalamoveConfig();
+
+        // 1. Kho xuất hàng mặc định
+        const defaultPLat = cfg?.defaultPickLat || 10.8230989;
+        const defaultPLng = cfg?.defaultPickLng || 106.6296638;
+        const defaultPAddr = cfg?.defaultPickAddress || 'Kho ERP4U, Tân Thới Nhất, Quận 12, TP. Hồ Chí Minh';
+        setLalamovePickupAddress(defaultPAddr);
+        setLalamovePickupLat(defaultPLat);
+        setLalamovePickupLng(defaultPLng);
+        setLalamovePickupName(cfg?.defaultSenderName || 'Kho ERP4U');
+        setLalamovePickupPhone(cfg?.defaultSenderPhone || '+84901234567');
+
+        // 2. Điểm giao hàng
+        const dropAddr = delivery.delivery_address || order.shipping_address || '';
+        setLalamoveDropAddress(dropAddr);
+        setLalamoveDropName(delivery.contact_name || delivery.sales_order?.contact_person || order.contact_person || 'Người nhận hàng');
+        setLalamoveDropPhone(delivery.contact_phone || delivery.sales_order?.phone || order.phone || '');
+
+        const count = delivery.package_count || packageCount || 1;
+        const spec = delivery.packing_spec_name || packingSpecName || '';
+        const note = `Giao ${count} kiện ${spec ? `(${spec})` : 'hàng nệm mầm non'} - Đơn ${order.code}. ${delivery.note || ''}`.trim();
+        setLalamoveRemarks(note);
+
+        const initialType = 'VAN_500KG';
+        setLalamoveServiceType(initialType);
+
+        // Tự động phân giải tọa độ điểm giao
+        if (dropAddr) {
+            setLalamoveGeocoding(true);
+            try {
+                const geoRes = await api.post('/shipping/lalamove/geocode', { address: dropAddr });
+                if (geoRes.data?.lat && geoRes.data?.lng) {
+                    setLalamoveDropLat(geoRes.data.lat);
+                    setLalamoveDropLng(geoRes.data.lng);
+                    // Lấy luôn báo giá ban đầu
+                    fetchLalamoveQuotation(
+                        initialType,
+                        defaultPLat, defaultPLng, defaultPAddr,
+                        geoRes.data.lat, geoRes.data.lng, dropAddr,
+                        count, delivery.weight_gram || 500
+                    );
+                }
+            } catch (e) { }
+            finally {
+                setLalamoveGeocoding(false);
+            }
+        }
+    };
+
+    const handleReGeocodeAndQuote = async () => {
+        if (!lalamoveDropAddress) {
+            message.warning('Vui lòng nhập địa chỉ giao hàng trước khi định vị');
+            return;
+        }
+        setLalamoveGeocoding(true);
+        try {
+            const geoRes = await api.post('/shipping/lalamove/geocode', { address: lalamoveDropAddress });
+            if (geoRes.data?.lat && geoRes.data?.lng) {
+                setLalamoveDropLat(geoRes.data.lat);
+                setLalamoveDropLng(geoRes.data.lng);
+                message.success(`Đã định vị thành công: ${geoRes.data.lat}, ${geoRes.data.lng}`);
+                fetchLalamoveQuotation(
+                    lalamoveServiceType,
+                    lalamovePickupLat, lalamovePickupLng, lalamovePickupAddress,
+                    geoRes.data.lat, geoRes.data.lng, lalamoveDropAddress,
+                    selectedDeliveryForLalamove?.package_count || 1,
+                    selectedDeliveryForLalamove?.weight_gram || 500
+                );
+            } else {
+                message.warning('Không tìm thấy tọa độ chính xác, vui lòng nhập tọa độ thủ công');
+            }
+        } catch (e: any) {
+            message.error('Lỗi khi định vị địa chỉ: ' + (e.response?.data?.message || e.message));
+        } finally {
+            setLalamoveGeocoding(false);
+        }
+    };
+
+    const handleConfirmPushLalamove = async () => {
+        if (!selectedDeliveryForLalamove) return;
+        setLalamovePushingOrder(true);
+        try {
+            const res = await api.post(`/shipping/delivery/${selectedDeliveryForLalamove.id}/push-lalamove`, {
+                serviceType: lalamoveServiceType,
+                senderName: lalamovePickupName,
+                senderPhone: lalamovePickupPhone,
+                senderAddress: lalamovePickupAddress,
+                senderLat: lalamovePickupLat,
+                senderLng: lalamovePickupLng,
+                recipientName: lalamoveDropName,
+                recipientPhone: lalamoveDropPhone,
+                recipientAddress: lalamoveDropAddress,
+                recipientLat: lalamoveDropLat,
+                recipientLng: lalamoveDropLng,
+                remarks: lalamoveRemarks,
+                isPODEnabled: true
+            });
+
+            message.success({
+                content: res.data?.is_mock
+                    ? `[Mô phỏng] Đã tạo cuốc xe Lalamove Demo: ${res.data?.tracking_code}`
+                    : `Đã đặt xe Lalamove thành công! Mã đơn: ${res.data?.tracking_code}`,
+                duration: 6
+            });
+            setLalamoveBookingModalOpen(false);
+            fetchHistory();
+        } catch (e: any) {
+            message.error(e.response?.data?.message || 'Lỗi khi đặt xe Lalamove');
+        } finally {
+            setLalamovePushingOrder(false);
+        }
+    };
+
+    const handleCancelLalamove = (delivery: any) => {
+        Modal.confirm({
+            title: 'Hủy cuốc xe Lalamove?',
+            content: `Bạn có chắc muốn hủy cuốc xe Lalamove (Mã: ${delivery.tracking_code})? Thao tác này chỉ thực hiện được khi tài xế chưa bốc hàng hoặc trong 5 phút đầu.`,
+            okText: 'Xác nhận Hủy cuốc',
+            okButtonProps: { danger: true },
+            cancelText: 'Đóng',
+            onOk: async () => {
+                try {
+                    await api.post(`/shipping/delivery/${delivery.id}/cancel-lalamove`);
+                    message.success('Đã hủy cuốc xe Lalamove thành công');
+                    fetchHistory();
+                } catch (e: any) {
+                    message.error(e.response?.data?.message || 'Lỗi khi hủy đơn Lalamove');
+                }
+            }
+        });
+    };
+
+    const handleOpenLalamoveTipModal = (delivery: any) => {
+        setSelectedDeliveryForLalamove(delivery);
+        setLalamoveTipAmount(20000);
+        setLalamoveTipModalOpen(true);
+    };
+
+    const handleConfirmTip = async () => {
+        if (!selectedDeliveryForLalamove) return;
+        setLalamoveTipping(true);
+        try {
+            const res = await api.post(`/shipping/delivery/${selectedDeliveryForLalamove.id}/lalamove-priority-fee`, {
+                priorityFee: lalamoveTipAmount
+            });
+            message.success(res.data?.message || 'Đã thêm tiền tip cho tài xế');
+            setLalamoveTipModalOpen(false);
+            fetchHistory();
+        } catch (e: any) {
+            message.error(e.response?.data?.message || 'Lỗi khi thêm phí ưu tiên');
+        } finally {
+            setLalamoveTipping(false);
+        }
+    };
+
+    const handleViewLalamovePod = (delivery: any) => {
+        const podImg = delivery.shipping_metadata?.lalamove?.pod?.image;
+        if (podImg) {
+            setSelectedLalamovePodImage(podImg);
+            setLalamovePodModalOpen(true);
+        } else {
+            message.info('Chưa có ảnh chụp nghiệm thu giao hàng POD từ tài xế');
+        }
     };
 
     // State: Combo components cache (sku -> components[])
@@ -1830,26 +2077,78 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                 </div>
                             ) : (
                                 (r.shipping_carrier || r.tracking_code || Number(r.shipping_cost) > 0) && (
-                                    <div style={{ marginTop: 4, fontSize: 12, color: '#1d39c4', background: '#f0f5ff', padding: '3px 6px', borderRadius: 4 }}>
-                                        <CarOutlined style={{ marginRight: 4 }} />
-                                        {r.shipping_carrier && <span>{r.shipping_carrier}</span>}
-                                        {r.tracking_code && (
-                                            <span>
-                                                {' • '}
-                                                <b>{r.tracking_code}</b>
-                                                {r.tracking_code.startsWith('GHTK-DEMO') && (
-                                                    <Tag color="orange" style={{ marginLeft: 4, fontSize: 10 }}>Mã Demo</Tag>
-                                                )}
-                                            </span>
-                                        )}
-                                        {Number(r.shipping_cost) > 0 && <span> • {Number(r.shipping_cost).toLocaleString()}đ</span>}
-                                        {Number(r.pick_money) > 0 && <span style={{ color: '#d4380d', fontWeight: 500 }}> • COD: {Number(r.pick_money).toLocaleString()}đ</span>}
-                                        {r.shipping_status_text && (
-                                            <Tag color={r.shipping_status_id === 5 || r.shipping_status_id === 6 ? 'green' : r.shipping_status_id === -1 ? 'red' : 'blue'} style={{ marginLeft: 6, fontSize: 10 }}>
-                                                {r.shipping_status_text}
-                                            </Tag>
-                                        )}
-                                    </div>
+                                    r.shipping_carrier === 'LALAMOVE' ? (
+                                        <div style={{ marginTop: 4, fontSize: 12, color: '#d4380d', background: '#fff7e6', border: '1px solid #ffd591', padding: '3px 8px', borderRadius: 4 }}>
+                                            <span style={{ marginRight: 4 }}>🚚</span>
+                                            <span style={{ fontWeight: 600, color: '#eb6100' }}>Lalamove</span>
+                                            {r.tracking_code && (
+                                                <span>
+                                                    {' • '}
+                                                    <b>{r.tracking_code}</b>
+                                                </span>
+                                            )}
+                                            {Number(r.shipping_cost) > 0 && <span> • {Number(r.shipping_cost).toLocaleString()}đ</span>}
+                                            {r.shipping_status_text && (
+                                                <Tag 
+                                                    color={
+                                                        r.shipping_status_text === 'COMPLETED' ? 'green' : 
+                                                        r.shipping_status_text === 'CANCELED' ? 'red' : 
+                                                        r.shipping_status_text === 'PICKED_UP' ? 'purple' : 
+                                                        r.shipping_status_text === 'ON_GOING' ? 'blue' : 'orange'
+                                                    } 
+                                                    style={{ marginLeft: 6, fontSize: 10 }}
+                                                >
+                                                    {r.shipping_status_text === 'ASSIGNING_DRIVER' ? '⏳ Đang tìm tài xế' :
+                                                     r.shipping_status_text === 'ON_GOING' ? '🚚 Tài xế đang đến' :
+                                                     r.shipping_status_text === 'PICKED_UP' ? '📦 Đã bốc hàng' :
+                                                     r.shipping_status_text === 'COMPLETED' ? '✅ Giao thành công' :
+                                                     r.shipping_status_text === 'CANCELED' ? '❌ Đã hủy' : r.shipping_status_text}
+                                                </Tag>
+                                            )}
+                                            {r.shipping_metadata?.lalamove?.shareLink && (
+                                                <a 
+                                                    href={r.shipping_metadata.lalamove.shareLink} 
+                                                    target="_blank" 
+                                                    rel="noreferrer"
+                                                    style={{ marginLeft: 6, fontSize: 11, color: '#1677ff', fontWeight: 600, textDecoration: 'underline' }}
+                                                >
+                                                    🗺️ Xem GPS
+                                                </a>
+                                            )}
+                                            {r.shipping_metadata?.lalamove?.pod?.image && (
+                                                <Button 
+                                                    size="small" 
+                                                    type="link" 
+                                                    icon={<PictureOutlined style={{ color: '#52c41a' }} />} 
+                                                    onClick={() => handleViewLalamovePod(r)}
+                                                    style={{ padding: 0, height: 18, fontSize: 11, marginLeft: 4 }}
+                                                >
+                                                    Ảnh POD
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div style={{ marginTop: 4, fontSize: 12, color: '#1d39c4', background: '#f0f5ff', padding: '3px 6px', borderRadius: 4 }}>
+                                            <CarOutlined style={{ marginRight: 4 }} />
+                                            {r.shipping_carrier && <span>{r.shipping_carrier}</span>}
+                                            {r.tracking_code && (
+                                                <span>
+                                                    {' • '}
+                                                    <b>{r.tracking_code}</b>
+                                                    {r.tracking_code.startsWith('GHTK-DEMO') && (
+                                                        <Tag color="orange" style={{ marginLeft: 4, fontSize: 10 }}>Mã Demo</Tag>
+                                                    )}
+                                                </span>
+                                            )}
+                                            {Number(r.shipping_cost) > 0 && <span> • {Number(r.shipping_cost).toLocaleString()}đ</span>}
+                                            {Number(r.pick_money) > 0 && <span style={{ color: '#d4380d', fontWeight: 500 }}> • COD: {Number(r.pick_money).toLocaleString()}đ</span>}
+                                            {r.shipping_status_text && (
+                                                <Tag color={r.shipping_status_id === 5 || r.shipping_status_id === 6 ? 'green' : r.shipping_status_id === -1 ? 'red' : 'blue'} style={{ marginLeft: 6, fontSize: 10 }}>
+                                                    {r.shipping_status_text}
+                                                </Tag>
+                                            )}
+                                        </div>
+                                    )
                                 )
                             )}
 
@@ -1944,6 +2243,62 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                 icon: <SendOutlined style={{ color: '#fa8c16' }} />,
                                 label: r.tracking_code?.startsWith('GHTK-DEMO') ? 'Đẩy đơn sang GHTK thật' : 'Đẩy đơn sang GHTK',
                                 onClick: () => handlePushSingleDeliveryGhtk(r)
+                            });
+                        }
+
+                        // LALAMOVE ACTIONS
+                        if (r.shipping_carrier === 'LALAMOVE' || r.shipping_provider === 'LALAMOVE') {
+                            const lMeta = r.shipping_metadata?.lalamove;
+                            const shareLink = lMeta?.shareLink;
+                            const podImage = lMeta?.pod?.image;
+
+                            if (r.tracking_code) {
+                                if (shareLink) {
+                                    moreMenuItems.push({
+                                        key: 'llm_track',
+                                        icon: <GlobalOutlined style={{ color: '#eb6100' }} />,
+                                        label: 'Xem vị trí tài xế GPS trực tiếp (Lalamove)',
+                                        onClick: () => window.open(shareLink, '_blank')
+                                    });
+                                }
+                                if (podImage) {
+                                    moreMenuItems.push({
+                                        key: 'llm_pod',
+                                        icon: <PictureOutlined style={{ color: '#52c41a' }} />,
+                                        label: 'Xem ảnh chụp nghiệm thu (POD)',
+                                        onClick: () => handleViewLalamovePod(r)
+                                    });
+                                }
+                                if (r.shipping_status_text !== 'COMPLETED' && r.shipping_status_text !== 'CANCELED') {
+                                    moreMenuItems.push({
+                                        key: 'llm_tip',
+                                        icon: <DollarOutlined style={{ color: '#faad14' }} />,
+                                        label: 'Thêm tiền Tip / Phí ưu tiên',
+                                        onClick: () => handleOpenLalamoveTipModal(r)
+                                    });
+                                    moreMenuItems.push({
+                                        key: 'llm_cancel',
+                                        icon: <CloseCircleOutlined style={{ color: '#ff4d4f' }} />,
+                                        label: 'Hủy cuốc xe Lalamove',
+                                        danger: true,
+                                        onClick: () => handleCancelLalamove(r)
+                                    });
+                                }
+                            } else {
+                                moreMenuItems.push({
+                                    key: 'llm_push',
+                                    icon: <SendOutlined style={{ color: '#eb6100' }} />,
+                                    label: 'Đặt xe Lalamove (Hỏa tốc / Xe tải)',
+                                    onClick: () => handleOpenLalamoveBooking(r)
+                                });
+                            }
+                        } else if (r.shipping_carrier !== 'GHTK') {
+                            // Gợi ý gọi xe Lalamove cho các đơn tự giao / chành xe
+                            moreMenuItems.push({
+                                key: 'llm_book_alt',
+                                icon: <SendOutlined style={{ color: '#eb6100' }} />,
+                                label: 'Đặt xe Lalamove (Hỏa tốc / Xe tải)',
+                                onClick: () => handleOpenLalamoveBooking(r)
                             });
                         }
 
@@ -2279,6 +2634,19 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                                             { value: 'delivered', label: '✅ Đã đến nơi' }
                                                         ]}
                                                     />
+                                                    {idx === 0 && (
+                                                        <Button 
+                                                            size="small" 
+                                                            style={{ color: '#eb6100', borderColor: '#ffbb96', background: '#fff7e6', fontSize: 11 }}
+                                                            onClick={() => {
+                                                                handleUpdateLeg(0, 'carrier_name', 'Lalamove (Xe bán tải 500kg)');
+                                                                handleUpdateLeg(0, 'leg_name', 'Chặng 1: Kho ERP4U ➔ Bến xe / Chành xe');
+                                                                message.info('Đã chọn Lalamove làm đơn vị vận chuyển Chặng 1');
+                                                            }}
+                                                        >
+                                                            🚚 Gợi ý Lalamove
+                                                        </Button>
+                                                    )}
                                                 </div>
                                                 <Button
                                                     size="small"
@@ -3235,6 +3603,301 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                         }
                     />
                 )}
+            </Modal>
+
+            {/* MODAL ĐẶT XE LALAMOVE (API v3) */}
+            <Modal
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 24 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 22 }}>🚚</span>
+                            <div>
+                                <div style={{ fontWeight: 700, color: '#eb6100', fontSize: 16 }}>Đặt Xe Lalamove - Giao Hỏa Tốc & Xe Tải</div>
+                                <div style={{ fontSize: 12, color: '#64748b', fontWeight: 400 }}>
+                                    Phiếu xuất: <b>{selectedDeliveryForLalamove?.code}</b> • Đơn hàng: <b>{order?.code}</b>
+                                </div>
+                            </div>
+                        </div>
+                        {lalamoveConfig && (
+                            <Tag color={lalamoveConfig.isConfigured ? (lalamoveConfig.isSandbox ? 'blue' : 'green') : 'orange'}>
+                                {lalamoveConfig.isConfigured ? (lalamoveConfig.isSandbox ? 'Sandbox Test' : 'Production Live') : 'Chế độ Demo'}
+                            </Tag>
+                        )}
+                    </div>
+                }
+                open={lalamoveBookingModalOpen}
+                onCancel={() => setLalamoveBookingModalOpen(false)}
+                width={760}
+                footer={[
+                    <Button key="cancel" onClick={() => setLalamoveBookingModalOpen(false)}>Đóng</Button>,
+                    <Button 
+                        key="re-quote" 
+                        icon={<ThunderboltOutlined />} 
+                        loading={lalamoveLoadingQuotation} 
+                        onClick={() => fetchLalamoveQuotation(
+                            lalamoveServiceType,
+                            lalamovePickupLat, lalamovePickupLng, lalamovePickupAddress,
+                            lalamoveDropLat, lalamoveDropLng, lalamoveDropAddress,
+                            selectedDeliveryForLalamove?.package_count || 1,
+                            selectedDeliveryForLalamove?.weight_gram || 500
+                        )}
+                    >
+                        Lấy lại báo giá
+                    </Button>,
+                    <Button 
+                        key="confirm-push" 
+                        type="primary" 
+                        style={{ background: '#eb6100', borderColor: '#eb6100' }} 
+                        icon={<SendOutlined />} 
+                        loading={lalamovePushingOrder} 
+                        onClick={handleConfirmPushLalamove}
+                    >
+                        🚀 Xác nhận Đặt Xe Lalamove
+                    </Button>
+                ]}
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {/* CHỌN LOẠI PHƯƠNG TIỆN */}
+                    <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, color: '#1e293b' }}>
+                            1. Chọn loại phương tiện vận chuyển:
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                            {[
+                                { key: 'MOTORCYCLE', name: 'Xe máy', icon: '🛵', desc: 'Nhỏ gọn < 30kg' },
+                                { key: 'VAN_500KG', name: 'Bán tải 500kg (Van)', icon: '🚐', desc: 'Khuyên dùng: 20-40 nệm, che mưa' },
+                                { key: 'VAN_1000KG', name: 'Bán tải 1T (Van)', icon: '🚐', desc: '50-80 nệm hoặc combo bàn ghế' },
+                                { key: 'TRUCK_1000KG', name: 'Xe tải 1 tấn', icon: '🚚', desc: 'Dự án trường, hàng lớn' },
+                                { key: 'TRUCK_1500KG', name: 'Xe tải 1.5 tấn', icon: '🚚', desc: 'Giao sỉ ra Chành xe Bến xe' },
+                                { key: 'TRUCK_2000KG', name: 'Xe tải 2 tấn', icon: '🚛', desc: 'Đơn trường mầm non lớn' },
+                            ].map(veh => {
+                                const isSelected = lalamoveServiceType === veh.key;
+                                return (
+                                    <div 
+                                        key={veh.key}
+                                        onClick={() => {
+                                            setLalamoveServiceType(veh.key);
+                                            fetchLalamoveQuotation(
+                                                veh.key,
+                                                lalamovePickupLat, lalamovePickupLng, lalamovePickupAddress,
+                                                lalamoveDropLat, lalamoveDropLng, lalamoveDropAddress,
+                                                selectedDeliveryForLalamove?.package_count || 1,
+                                                selectedDeliveryForLalamove?.weight_gram || 500
+                                            );
+                                        }}
+                                        style={{
+                                            padding: '8px 10px',
+                                            borderRadius: 8,
+                                            border: isSelected ? '2px solid #eb6100' : '1px solid #e2e8f0',
+                                            background: isSelected ? '#fff7e6' : '#ffffff',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            boxShadow: isSelected ? '0 2px 8px rgba(235,97,0,0.15)' : 'none'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 13, color: isSelected ? '#eb6100' : '#334155' }}>
+                                            <span style={{ fontSize: 18 }}>{veh.icon}</span>
+                                            <span>{veh.name}</span>
+                                        </div>
+                                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{veh.desc}</div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* LỘ TRÌNH VẬN CHUYỂN */}
+                    <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: '#1e293b' }}>
+                            2. Lộ trình giao hàng (Tọa độ GPS):
+                        </div>
+                        
+                        {/* Điểm 1: Kho ERP4U */}
+                        <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px dashed #cbd5e1' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#0958d9', marginBottom: 4 }}>
+                                <span>🟢 Điểm 1 (Bốc hàng): Kho ERP4U</span>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: 8 }}>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#64748b' }}>Địa chỉ kho:</div>
+                                    <Input size="small" value={lalamovePickupAddress} onChange={e => setLalamovePickupAddress(e.target.value)} />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#64748b' }}>Tọa độ Vĩ độ (Lat):</div>
+                                    <Input size="small" value={lalamovePickupLat} onChange={e => setLalamovePickupLat(e.target.value)} />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#64748b' }}>Tọa độ Kinh độ (Lng):</div>
+                                    <Input size="small" value={lalamovePickupLng} onChange={e => setLalamovePickupLng(e.target.value)} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Điểm 2: Giao hàng */}
+                        <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#d4380d' }}>
+                                    <span>🔴 Điểm 2 (Giao hàng): Khách nhận / Bến xe / Chành xe</span>
+                                </div>
+                                <Button 
+                                    size="small" 
+                                    icon={<ThunderboltOutlined />} 
+                                    loading={lalamoveGeocoding}
+                                    onClick={handleReGeocodeAndQuote}
+                                    style={{ fontSize: 11, height: 22 }}
+                                >
+                                    Định vị GPS tự động
+                                </Button>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: 8, marginBottom: 6 }}>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#64748b' }}>Địa chỉ nhận:</div>
+                                    <Input size="small" value={lalamoveDropAddress} onChange={e => setLalamoveDropAddress(e.target.value)} />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#64748b' }}>Vĩ độ nhận (Lat):</div>
+                                    <Input size="small" value={lalamoveDropLat} onChange={e => setLalamoveDropLat(e.target.value)} />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#64748b' }}>Kinh độ nhận (Lng):</div>
+                                    <Input size="small" value={lalamoveDropLng} onChange={e => setLalamoveDropLng(e.target.value)} />
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#64748b' }}>Tên người nhận:</div>
+                                    <Input size="small" value={lalamoveDropName} onChange={e => setLalamoveDropName(e.target.value)} />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#64748b' }}>SĐT người nhận (E.164):</div>
+                                    <Input size="small" value={lalamoveDropPhone} onChange={e => setLalamoveDropPhone(e.target.value)} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* GHI CHÚ BỐC XẾP */}
+                    <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
+                            3. Ghi chú cho tài xế Lalamove (Số lượng kiện, yêu cầu che mưa, hỗ trợ bốc xếp):
+                        </div>
+                        <Input.TextArea 
+                            rows={2} 
+                            value={lalamoveRemarks} 
+                            onChange={e => setLalamoveRemarks(e.target.value)} 
+                            placeholder="VD: Giao 30 nệm mầm non, yêu cầu xe bạt che mưa, bốc vào sảnh tầng trệt..."
+                        />
+                    </div>
+
+                    {/* HIỂN THỊ BÁO GIÁ CƯỚC REALTIME */}
+                    <div style={{ background: '#fff7e6', padding: '12px 16px', borderRadius: 8, border: '1px solid #ffd591', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <div style={{ fontSize: 12, color: '#d4380d', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span>⚡ CƯỚC PHÍ TẠM TÍNH LALAMOVE:</span>
+                                {lalamoveLoadingQuotation && <Spin size="small" />}
+                            </div>
+                            {lalamoveQuotation ? (
+                                <div style={{ marginTop: 4 }}>
+                                    <span style={{ fontSize: 22, fontWeight: 800, color: '#eb6100' }}>
+                                        {Number(lalamoveQuotation.priceBreakdown?.total || 0).toLocaleString()} VNĐ
+                                    </span>
+                                    <span style={{ marginLeft: 10, fontSize: 12, color: '#64748b' }}>
+                                        (Khoảng cách: {lalamoveQuotation.distance?.value ? (Number(lalamoveQuotation.distance.value) / 1000).toFixed(1) : 0} km)
+                                    </span>
+                                </div>
+                            ) : (
+                                <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
+                                    Chưa có báo giá. Hãy nhấn <b>"Lấy lại báo giá"</b> hoặc kiểm tra lại tọa độ 2 đầu.
+                                </div>
+                            )}
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                            <Tag color="orange" style={{ fontSize: 11 }}>Khóa giá 5 phút</Tag>
+                            <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2 }}>Trừ trực tiếp Ví trả trước</div>
+                        </div>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* MODAL XEM ẢNH NGHIỆM THU POD */}
+            <Modal
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <PictureOutlined style={{ color: '#52c41a' }} />
+                        <span>Ảnh Chụp Nghiệm Thu Giao Hàng (Proof of Delivery - POD)</span>
+                    </div>
+                }
+                open={lalamovePodModalOpen}
+                onCancel={() => setLalamovePodModalOpen(false)}
+                footer={[<Button key="close" onClick={() => setLalamovePodModalOpen(false)}>Đóng</Button>]}
+                width={560}
+            >
+                {selectedLalamovePodImage ? (
+                    <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                        <img 
+                            src={selectedLalamovePodImage} 
+                            alt="Proof of Delivery" 
+                            style={{ maxWidth: '100%', maxHeight: 420, borderRadius: 8, border: '1px solid #e2e8f0', objectFit: 'contain' }} 
+                        />
+                        <div style={{ marginTop: 12 }}>
+                            <a href={selectedLalamovePodImage} target="_blank" rel="noreferrer">
+                                <Button icon={<EyeOutlined />}>Mở ảnh gốc trong tab mới</Button>
+                            </a>
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ textAlign: 'center', padding: 20, color: '#888' }}>Chưa có ảnh chụp nghiệm thu</div>
+                )}
+            </Modal>
+
+            {/* MODAL THÊM TIỀN TIP / PHÍ ƯU TIÊN */}
+            <Modal
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <DollarOutlined style={{ color: '#faad14' }} />
+                        <span>Thêm Phí Ưu Tiên / Tiền Tip Cho Tài Xế Lalamove</span>
+                    </div>
+                }
+                open={lalamoveTipModalOpen}
+                onCancel={() => setLalamoveTipModalOpen(false)}
+                onOk={handleConfirmTip}
+                confirmLoading={lalamoveTipping}
+                okText="Xác nhận gửi Tip"
+                okButtonProps={{ style: { background: '#eb6100', borderColor: '#eb6100' } }}
+            >
+                <Alert
+                    message="Thêm phí ưu tiên (tip) giúp tài xế nhận cuốc xe nhanh hơn trong giờ cao điểm hoặc trời mưa ngập."
+                    type="info"
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                />
+                <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Chọn mức phí ưu tiên nhanh:</div>
+                    <Space size="middle" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
+                        {[10000, 20000, 30000, 50000, 100000].map(amt => (
+                            <Button 
+                                key={amt}
+                                type={lalamoveTipAmount === amt ? 'primary' : 'default'}
+                                style={lalamoveTipAmount === amt ? { background: '#eb6100', borderColor: '#eb6100' } : {}}
+                                onClick={() => setLalamoveTipAmount(amt)}
+                            >
+                                +{amt.toLocaleString()}đ
+                            </Button>
+                        ))}
+                    </Space>
+                    <div>
+                        <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>Hoặc nhập số tiền tùy chọn (VNĐ):</div>
+                        <InputNumber
+                            style={{ width: '100%' }}
+                            min={5000}
+                            step={5000}
+                            value={lalamoveTipAmount}
+                            onChange={v => setLalamoveTipAmount(v || 0)}
+                            formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            addonAfter="VNĐ"
+                        />
+                    </div>
+                </div>
             </Modal>
         </div>
     );
