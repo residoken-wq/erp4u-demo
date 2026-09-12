@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, Select, DatePicker, Button, Tabs, Row, Col, InputNumber, Divider, message, Tag, Popconfirm, Tooltip, Checkbox, Table, Switch, Dropdown, MenuProps, Alert, Card, Space, Spin, Image } from 'antd';
 import { Drawer } from 'antd';
-import { PlusOutlined, SaveOutlined, CheckCircleOutlined, InfoCircleOutlined, MoreOutlined, HistoryOutlined, CopyOutlined, DeleteOutlined, LinkOutlined, PrinterOutlined, FileTextOutlined, AppstoreAddOutlined, LockOutlined, MenuOutlined, FileExcelOutlined, MailOutlined, FilePdfOutlined, SyncOutlined, EyeOutlined, MessageOutlined, SendOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, SaveOutlined, CheckCircleOutlined, InfoCircleOutlined, MoreOutlined, HistoryOutlined, CopyOutlined, DeleteOutlined, LinkOutlined, PrinterOutlined, FileTextOutlined, AppstoreAddOutlined, LockOutlined, MenuOutlined, FileExcelOutlined, MailOutlined, FilePdfOutlined, SyncOutlined, EyeOutlined, MessageOutlined, SendOutlined, CloseCircleOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import api from '../utils/api';
@@ -57,6 +57,10 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
     const [copyQuotationModalOpen, setCopyQuotationModalOpen] = useState(false);
     const [quoteDetailsCache, setQuoteDetailsCache] = useState<Record<number, any>>({});
     const [loadingQuoteId, setLoadingQuoteId] = useState<number | null>(null);
+    const [allSalesList, setAllSalesList] = useState<any[]>([]);
+    const [selectedCopyCustomer, setSelectedCopyCustomer] = useState<number | 'ALL'>('ALL');
+    const [copySearchText, setCopySearchText] = useState<string>('');
+    const [loadingQuotesList, setLoadingQuotesList] = useState(false);
 
     // Zalo ZNS State
     const [sendZnsModalOpen, setSendZnsModalOpen] = useState(false);
@@ -644,6 +648,14 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                         .catch(() => setLatestZnsLog(null));
                 }
 
+                const custId = initialData?.customer_id || initialData?.customer?.id;
+                if (custId && custId !== -1) {
+                    api.get('/sales').then(res => {
+                        const quotes = (res.data || []).filter((o: any) => o.customer?.id === custId && o.id !== initialData?.id);
+                        setCustomerQuotations(quotes);
+                    }).catch(() => {});
+                }
+
                 const termPrefix = isQuotation ? 'QUOTE' : 'ORDER';
                 api.get(`/system/config/${termPrefix}_TERMS_LIST`).catch(() => ({ data: null })).then((listRes) => {
                      if (listRes.data?.value) {
@@ -768,7 +780,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             });
         }
         // Fetch customer's old quotations/orders
-        if (isQuotation && customerId && customerId !== -1) {
+        if (customerId && customerId !== -1) {
             try {
                 const res = await api.get('/sales');
                 const quotes = (res.data || []).filter((o: any) =>
@@ -778,6 +790,26 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             } catch (e) { setCustomerQuotations([]); }
         } else {
             setCustomerQuotations([]);
+        }
+    };
+
+    const handleOpenCopyModal = async () => {
+        setCopyQuotationModalOpen(true);
+        setLoadingQuotesList(true);
+        try {
+            const currentCustId = form.getFieldValue('customer_id') || initialData?.customer_id || initialData?.customer?.id;
+            const res = await api.get('/sales');
+            const all = Array.isArray(res.data) ? res.data : [];
+            setAllSalesList(all);
+            if (currentCustId && currentCustId !== -1) {
+                setSelectedCopyCustomer(currentCustId);
+            } else {
+                setSelectedCopyCustomer('ALL');
+            }
+        } catch (e) {
+            message.error('Không thể tải danh sách đơn/báo giá');
+        } finally {
+            setLoadingQuotesList(false);
         }
     };
 
@@ -1068,6 +1100,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                                         ...(!isQuotation && initialData.status !== 'CANCELLED' ? [
                                             { key: 'zns_send', label: 'Gửi ZNS Xác Nhận', icon: <MessageOutlined style={{ color: '#0068ff' }} />, onClick: () => setSendZnsModalOpen(true) }
                                         ] : []),
+                                        { key: 'copy_q', label: 'Copy từ Báo giá / Đơn cũ', icon: <CopyOutlined style={{ color: '#0958d9' }} />, onClick: handleOpenCopyModal },
                                         ...(!isQuotation && initialData.status !== 'CANCELLED' && initialData.status !== 'COMPLETED' ? [
                                             { key: 'cancel', label: <span style={{color: 'red'}}>Hủy Đơn</span>, icon: <DeleteOutlined style={{color: 'red'}}/>, onClick: () => setCancelModalOpen(true) }
                                         ] : []),
@@ -1102,6 +1135,15 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                             {isQuotation && initialData && (
                                 <Button size="middle" icon={<HistoryOutlined />} onClick={() => setRevisionModalOpen(true)}>Lịch sử</Button>
                             )}
+
+                            <Button
+                                size="middle"
+                                icon={<CopyOutlined style={{ color: '#0958d9' }} />}
+                                onClick={handleOpenCopyModal}
+                                style={{ borderColor: '#91caff', color: '#0958d9', background: '#f0f5ff' }}
+                            >
+                                Copy Báo Giá Cũ
+                            </Button>
 
                             {(!isQuotation && initialData && initialData.status !== 'CANCELLED') && (
                                 <Button
@@ -1150,16 +1192,18 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                                             ...customers.map((c: any) => ({ label: `${c.name} - ${c.phone}`, value: c.id }))
                                         ]}
                                         disabled={initialData?.isInternal}
+                                        onChange={handleCustomerChange}
                                     />
                                 </Form.Item>
-                                {isQuotation && customerQuotations.length > 0 && (
+                                {!initialData?.isInternal && (
                                     <Button
                                         size="small"
-                                        icon={<CopyOutlined />}
-                                        onClick={() => setCopyQuotationModalOpen(true)}
-                                        style={{ marginTop: -10, marginBottom: 10 }}
+                                        type="dashed"
+                                        icon={<CopyOutlined style={{ color: '#0958d9' }} />}
+                                        onClick={handleOpenCopyModal}
+                                        style={{ marginTop: -8, marginBottom: 10, borderColor: '#91caff', color: '#0958d9', fontWeight: 500 }}
                                     >
-                                        Copy từ {customerQuotations.length} đơn/BG cũ
+                                        📋 Copy từ Đơn / Báo giá cũ
                                     </Button>
                                 )}
                             </Col>
@@ -1251,7 +1295,25 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                         <Form.Item name="deposit_percent" hidden><InputNumber /></Form.Item>
                         <Form.Item name="deposit_amount" hidden><InputNumber /></Form.Item>
 
-                        <Divider orientation="left">Danh sách sản phẩm</Divider>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, marginBottom: 12, borderBottom: '1px solid #f0f0f0', paddingBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                            <div style={{ fontWeight: 600, fontSize: 15, color: '#1f1f1f', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span>📦 Danh sách sản phẩm</span>
+                                <Tag color="blue">{orderItems.length} mặt hàng</Tag>
+                            </div>
+                            <Space>
+                                <Button
+                                    type="default"
+                                    icon={<CopyOutlined style={{ color: '#0958d9' }} />}
+                                    onClick={handleOpenCopyModal}
+                                    style={{ borderColor: '#91caff', color: '#0958d9', background: '#f0f5ff', fontWeight: 500 }}
+                                >
+                                    Copy từ Báo giá / Đơn cũ
+                                </Button>
+                                <Button type="primary" ghost onClick={handleAddItem} icon={<PlusOutlined />}>
+                                    + Thêm sản phẩm
+                                </Button>
+                            </Space>
+                        </div>
                         <SalesOrderItemsTable
                             items={orderItems}
                             products={products}
@@ -1260,7 +1322,17 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                             onRemoveItem={handleRemoveItem}
                             onReorder={handleReorderItems}
                         />
-                        <Button type="dashed" onClick={handleAddItem} block icon={<PlusOutlined />} style={{ marginTop: 10 }}>Thêm sản phẩm</Button>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                            <Button type="dashed" onClick={handleAddItem} style={{ flex: 1 }} icon={<PlusOutlined />}>Thêm sản phẩm</Button>
+                            <Button 
+                                type="dashed" 
+                                onClick={handleOpenCopyModal} 
+                                icon={<CopyOutlined style={{ color: '#0958d9' }} />}
+                                style={{ borderColor: '#91caff', color: '#0958d9' }}
+                            >
+                                Copy từ Báo giá cũ
+                            </Button>
+                        </div>
 
                         {/* NEW TOTALS SECTION */}
                         <Row justify="end" style={{ marginTop: 24 }}>
@@ -1811,27 +1883,77 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             <Modal
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <CopyOutlined style={{ color: '#1890ff' }} />
-                        <span>Copy từ Báo giá cũ</span>
-                        <Tag color="blue">{customerQuotations.length} đơn/báo giá</Tag>
+                        <CopyOutlined style={{ color: '#1890ff', fontSize: 18 }} />
+                        <span style={{ fontSize: 16 }}>Copy Sản Phẩm Từ Báo Giá / Đơn Hàng Cũ</span>
                     </div>
                 }
                 open={copyQuotationModalOpen}
                 onCancel={() => setCopyQuotationModalOpen(false)}
                 footer={null}
-                width={920}
+                width={960}
             >
                 <Alert
-                    style={{ marginBottom: 12 }}
+                    style={{ marginBottom: 14 }}
                     type="info"
                     showIcon
-                    message="Bấm vào biểu tượng [+] để mở rộng xem chi tiết danh sách sản phẩm, ghi chú trước khi sao chép."
+                    message={
+                        <div>
+                            <b>Hướng dẫn:</b> Bạn có thể chọn lọc theo khách hàng, tìm kiếm theo mã đơn hoặc bấm vào biểu tượng <b>[+]</b> để mở rộng xem chi tiết danh mục sản phẩm, đơn giá, màu sắc và ghi chú trước khi bấm <b>"Sao chép vào đơn hiện tại"</b>.
+                        </div>
+                    }
                 />
+
+                {/* Filter and Search Bar */}
+                <div style={{ display: 'flex', gap: 12, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center', background: '#f8fafc', padding: 10, borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                    <div style={{ flex: 1, minWidth: 260 }}>
+                        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>Lọc theo khách hàng:</div>
+                        <Select
+                            style={{ width: '100%' }}
+                            value={selectedCopyCustomer}
+                            onChange={setSelectedCopyCustomer}
+                            showSearch
+                            optionFilterProp="label"
+                            options={[
+                                { label: '🌐 Tất cả khách hàng', value: 'ALL' },
+                                ...customers.map((c: any) => ({ label: `${c.name} - ${c.phone || 'Chưa có SĐT'}`, value: c.id }))
+                            ]}
+                        />
+                    </div>
+                    <div style={{ width: 280 }}>
+                        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>Tìm mã đơn / tên khách:</div>
+                        <Input
+                            placeholder="Nhập mã SO / báo giá..."
+                            value={copySearchText}
+                            onChange={e => setCopySearchText(e.target.value)}
+                            allowClear
+                            prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+                        />
+                    </div>
+                    <Button 
+                        icon={<ReloadOutlined />} 
+                        loading={loadingQuotesList}
+                        onClick={handleOpenCopyModal} 
+                        style={{ alignSelf: 'flex-end' }}
+                    >
+                        Tải lại
+                    </Button>
+                </div>
+
                 <Table
-                    dataSource={customerQuotations}
+                    loading={loadingQuotesList}
+                    dataSource={allSalesList.filter(q => {
+                        if (initialData?.id && q.id === initialData.id) return false;
+                        if (selectedCopyCustomer !== 'ALL' && q.customer?.id !== selectedCopyCustomer) return false;
+                        if (copySearchText) {
+                            const matchCode = q.order_code?.toLowerCase().includes(copySearchText.toLowerCase());
+                            const matchName = q.customer?.name?.toLowerCase().includes(copySearchText.toLowerCase());
+                            if (!matchCode && !matchName) return false;
+                        }
+                        return true;
+                    })}
                     rowKey="id"
                     size="small"
-                    pagination={false}
+                    pagination={{ pageSize: 8, showSizeChanger: true }}
                     expandable={{
                         expandedRowRender: (record: any) => {
                             const detail = quoteDetailsCache[record.id];
@@ -1852,7 +1974,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                             const items = detail.items || [];
                             return (
                                 <div style={{ background: '#fcfcfc', padding: 12, borderRadius: 6, border: '1px solid #f0f0f0' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
                                         <span style={{ fontWeight: 600, color: '#1d39c4' }}>
                                             📦 Chi tiết sản phẩm trong #{record.order_code} ({items.length} mặt hàng):
                                         </span>
@@ -1903,10 +2025,11 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                         onExpand: handleExpandQuote,
                     }}
                     columns={[
-                        { title: 'Mã BG', dataIndex: 'order_code', render: (v: string) => <Tag color="blue">{v}</Tag> },
-                        { title: 'Ngày', dataIndex: 'order_date', render: (d: string) => dayjs(d).format('DD/MM/YYYY') },
-                        { title: 'Trạng thái', dataIndex: 'status', render: (v: string) => <Tag color={v === 'QUOTATION' ? 'orange' : 'green'}>{v}</Tag> },
-                        { title: 'Tổng tiền', dataIndex: 'total_amount', align: 'right' as const, render: (v: number) => <b style={{ color: 'red' }}>{Number(v || 0).toLocaleString()} ₫</b> },
+                        { title: 'Mã Đơn / BG', dataIndex: 'order_code', width: 130, render: (v: string) => <Tag color="blue" style={{ fontWeight: 600 }}>{v}</Tag> },
+                        { title: 'Khách hàng', render: (r: any) => <span><b>{r.customer?.name || '-'}</b>{r.customer?.phone ? <div style={{ fontSize: 11, color: '#8c8c8c' }}>{r.customer.phone}</div> : null}</span> },
+                        { title: 'Ngày', dataIndex: 'order_date', width: 100, render: (d: string) => dayjs(d).format('DD/MM/YYYY') },
+                        { title: 'Trạng thái', dataIndex: 'status', width: 110, render: (v: string) => <Tag color={v === 'QUOTATION' ? 'orange' : 'green'}>{v === 'QUOTATION' ? 'Báo giá' : v}</Tag> },
+                        { title: 'Tổng tiền', dataIndex: 'total_amount', width: 130, align: 'right' as const, render: (v: number) => <b style={{ color: '#cf1322' }}>{Number(v || 0).toLocaleString()} ₫</b> },
                         {
                             title: 'Thao tác',
                             key: 'act',

@@ -982,7 +982,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         }
     };
 
-    const openCreateModal = () => {
+    const openCreateModal = (preset: 'none' | 'chanh_xe' | 'direct' = 'none') => {
         setEditingDeliveryId(null);
         setIsDraft(false);
         setShipStatus('PENDING_EXPORT');
@@ -1004,7 +1004,62 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         setTrackingCode('');
         setShippingCost(0);
         setEstimatedFeeInfo(null);
-        setShippingLegs([]);
+
+        if (preset === 'chanh_xe') {
+            const defaultLegs: ShippingLeg[] = [
+                {
+                    id: `leg_1_${Date.now()}`,
+                    leg_name: '1. Kho ➔ Chành xe',
+                    carrier_name: 'Xe nội bộ / Giao vận',
+                    carrier_phone: '',
+                    tracking_code: '',
+                    shipping_fee: 0,
+                    payer: 'shop',
+                    status: 'delivered',
+                    notes: 'Vận chuyển hàng ra bến/chành'
+                },
+                {
+                    id: `leg_2_${Date.now()}`,
+                    leg_name: '2. Chành xe ➔ Bến tỉnh',
+                    carrier_name: order?.shipping_carrier || 'Chành xe liên tỉnh (Tô Châu/Phương Trang...)',
+                    carrier_phone: '',
+                    tracking_code: '',
+                    shipping_fee: 0,
+                    payer: 'customer',
+                    status: 'delivering',
+                    notes: 'Chành xe chuyển hàng về địa phương'
+                },
+                {
+                    id: `leg_3_${Date.now()}`,
+                    leg_name: '3. Bến tỉnh ➔ Khách nhận',
+                    carrier_name: 'Khách nhận tại chành / Xe trung chuyển',
+                    carrier_phone: order?.receiver_phone || order?.contact_phone || '',
+                    tracking_code: '',
+                    shipping_fee: 0,
+                    payer: 'customer',
+                    status: 'pending',
+                    notes: 'Giao tận tay khách hàng hoặc nhận tại bến'
+                }
+            ];
+            setShippingLegs(defaultLegs);
+        } else if (preset === 'direct') {
+            const defaultLegs: ShippingLeg[] = [
+                {
+                    id: `leg_1_${Date.now()}`,
+                    leg_name: 'Giao hàng trực tiếp',
+                    carrier_name: order?.shipping_carrier || 'Đội xe / GHTK',
+                    carrier_phone: '',
+                    tracking_code: '',
+                    shipping_fee: 0,
+                    payer: 'shop',
+                    status: 'pending',
+                    notes: 'Giao thẳng tới địa chỉ công trình / khách nhận'
+                }
+            ];
+            setShippingLegs(defaultLegs);
+        } else {
+            setShippingLegs([]);
+        }
 
         // Bóc tách thông tin ghi chú đơn hàng website
         const parsed = parseWebsiteOrderNote(order?.note, order);
@@ -1565,10 +1620,53 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                <b>Lịch sử phiếu giao:</b>
+            {/* MULTI-LEG SHIPPING HIGHLIGHT BANNER */}
+            <div style={{ marginBottom: 16, background: '#f8fafc', padding: '14px 16px', borderRadius: 8, border: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <CarOutlined style={{ fontSize: 20, color: '#0284c7' }} />
+                    </div>
+                    <div>
+                        <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span>Quản Lý Tuyến Vận Chuyển Đa Chặng (Multi-Leg Shipping)</span>
+                            <Tag color="blue">Mới</Tag>
+                        </div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>
+                            Hỗ trợ cấu hình đa chặng (Kho ➔ Chành xe ➔ Bến tỉnh ➔ Khách nhận), tính tổng cước Shop/Khách trả & tự động sinh nội dung thông báo gửi khách.
+                        </div>
+                    </div>
+                </div>
                 {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
-                    <Button type="primary" size="small" icon={<CarOutlined />} onClick={openCreateModal}>Tạo Phiếu Xuất Kho</Button>
+                    <Space wrap>
+                        <Button 
+                            type="primary" 
+                            icon={<CarOutlined />} 
+                            onClick={() => openCreateModal('chanh_xe')}
+                            style={{ background: '#0284c7', borderColor: '#0284c7', fontWeight: 600 }}
+                        >
+                            🚚 Tạo Tuyến 3 Chặng Chành Xe
+                        </Button>
+                        <Button 
+                            icon={<PlusOutlined />} 
+                            onClick={() => openCreateModal('none')}
+                        >
+                            Tạo Phiếu Xuất Kho
+                        </Button>
+                    </Space>
+                )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
+                <b>Lịch sử phiếu giao ({history.length} phiếu):</b>
+                {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
+                    <Space size={6}>
+                        <Button size="small" icon={<CarOutlined style={{ color: '#0284c7' }} />} onClick={() => openCreateModal('chanh_xe')}>
+                            🚚 Mẫu Chành xe
+                        </Button>
+                        <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => openCreateModal('none')}>
+                            Tạo Phiếu Xuất Kho
+                        </Button>
+                    </Space>
                 )}
             </div>
             <Table dataSource={history} rowKey="id" pagination={false} size="small" bordered scroll={{ x: 1080 }} columns={[
@@ -1601,8 +1699,13 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                             {/* Multi-Leg Shipping info if available */}
                             {r.shipping_legs && r.shipping_legs.length > 0 ? (
                                 <div style={{ marginTop: 5, fontSize: 11, color: '#0958d9', background: '#f0f5ff', padding: '4px 8px', borderRadius: 4, border: '1px solid #d6e4ff' }}>
-                                    <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                                        <CarOutlined /> Tuyến vận chuyển đa chặng ({r.shipping_legs.length} chặng):
+                                    <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginBottom: 2 }}>
+                                        <span><CarOutlined /> Tuyến vận chuyển đa chặng ({r.shipping_legs.length} chặng):</span>
+                                        {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
+                                            <Button size="small" type="link" onClick={() => openEditModal(r)} style={{ padding: 0, height: 18, fontSize: 11 }}>
+                                                Sửa chặng
+                                            </Button>
+                                        )}
                                     </div>
                                     {r.shipping_legs.map((leg: any, idx: number) => {
                                         const fee = Number(leg.shipping_fee !== undefined ? leg.shipping_fee : leg.shipping_cost) || 0;
@@ -1646,6 +1749,20 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                         )}
                                     </div>
                                 )
+                            )}
+
+                            {(!r.shipping_legs || r.shipping_legs.length === 0) && order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
+                                <div style={{ marginTop: 4 }}>
+                                    <Button 
+                                        size="small" 
+                                        type="link" 
+                                        icon={<CarOutlined style={{ color: '#1677ff' }} />} 
+                                        onClick={() => openEditModal(r)}
+                                        style={{ padding: 0, fontSize: 11, height: 20 }}
+                                    >
+                                        + Cấu hình chặng vận chuyển (Chành xe / Nội bộ)
+                                    </Button>
+                                </div>
                             )}
 
                             {r.note && (
