@@ -6,7 +6,8 @@ import {
     CompassOutlined, FilePdfOutlined, HistoryOutlined, CloseCircleOutlined, 
     SendOutlined, CalculatorOutlined, InfoCircleOutlined, SettingOutlined,
     InboxOutlined, WarningOutlined, MessageOutlined, CopyOutlined, FileTextOutlined,
-    MoreOutlined, PlusOutlined, ArrowRightOutlined, SyncOutlined
+    MoreOutlined, PlusOutlined, ArrowRightOutlined, SyncOutlined,
+    PictureOutlined, GlobalOutlined, DollarOutlined, EyeOutlined
 } from '@ant-design/icons';
 import api from '../../utils/api';
 import dayjs from 'dayjs';
