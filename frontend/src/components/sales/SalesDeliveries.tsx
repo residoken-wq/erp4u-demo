@@ -480,6 +480,32 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             message.loading({ content: 'Đang gửi thông tin sang GHTK để tạo vận đơn...', key: 'push_ghtk' });
             // Chuẩn hóa địa chỉ trực tiếp từ phiếu xuất kho này để không bị nhầm dữ liệu form
             const parsed = smartParseVietnameseAddress(delivery.delivery_address || '');
+
+            // Chuẩn bị danh sách sản phẩm từ delivery.items hoặc fallback sang order.items
+            const deliveryProducts = (delivery.items && delivery.items.length > 0)
+                ? delivery.items.map((it: any) => {
+                    const soItem = order?.items?.find((si: any) => si.sku === it.sku);
+                    const pInfo = products.find((p: any) => p.value === it.sku);
+                    return {
+                        name: soItem?.product?.name || pInfo?.label || it.sku,
+                        quantity: Number(it.quantity) || 1,
+                        product_code: it.sku,
+                        price: Number(soItem?.unit_price) || 0
+                    };
+                })
+                : (order?.items || []).map((si: any) => {
+                    const pInfo = products.find((p: any) => p.value === si.sku);
+                    return {
+                        name: si.product?.name || pInfo?.label || si.sku,
+                        quantity: Number(si.quantity) || 1,
+                        product_code: si.sku,
+                        price: Number(si.unit_price) || 0
+                    };
+                });
+
+            // Tính tổng tiền hàng của đợt giao này
+            const deliveryTotalValue = deliveryProducts.reduce((sum: number, p: any) => sum + (Number(p.price || 0) * Number(p.quantity || 1)), 0);
+
             const res = await api.post(`/shipping/delivery/${delivery.id}/push-ghtk`, {
                 pick_address_id: selectedPickAddressId || ghtkConfig?.defaultPickAddressId,
                 province: extractAddressString(parsed.province || ghtkProvince),
@@ -488,9 +514,18 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 hamlet: extractAddressString(parsed.hamlet || ghtkHamlet, 'Khác'),
                 address: extractAddressString(parsed.street || delivery.delivery_address),
                 note: delivery.note,
-                weight_gram: delivery.weight_gram || 500,
+                weight_gram: delivery.weight_gram || packageWeight || 500,
                 pick_money: delivery.pick_money || 0,
-                is_freeship: delivery.is_freeship !== undefined ? delivery.is_freeship : 1
+                is_freeship: delivery.is_freeship !== undefined ? delivery.is_freeship : 1,
+                // Kích thước kiện & số kiện
+                package_length: delivery.package_length !== null && delivery.package_length !== undefined ? Number(delivery.package_length) : (packageLength || null),
+                package_width: delivery.package_width !== null && delivery.package_width !== undefined ? Number(delivery.package_width) : (packageWidth || null),
+                package_height: delivery.package_height !== null && delivery.package_height !== undefined ? Number(delivery.package_height) : (packageHeight || null),
+                package_count: delivery.package_count || packageCount || 1,
+                packing_spec_name: delivery.packing_spec_name || packingSpecName || null,
+                // Giá trị & sản phẩm đợt giao
+                value: deliveryTotalValue > 0 ? deliveryTotalValue : (Number(delivery.sales_order?.total_amount) || 0),
+                products: deliveryProducts,
             });
             const isMockPush = res.data?.is_mock;
             message.success({ 
@@ -508,6 +543,39 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
 
     const handlePushSingleDeliveryGhtk = async (delivery: any) => {
         const isDemo = delivery.tracking_code?.startsWith('GHTK-DEMO');
+        const itemCount = (delivery.items && delivery.items.length > 0) ? delivery.items.length : (order?.items?.length || 0);
+        const totalQty = (delivery.items && delivery.items.length > 0)
+            ? delivery.items.reduce((s: number, i: any) => s + (Number(i.quantity) || 0), 0)
+            : (order?.items || []).reduce((s: number, i: any) => s + (Number(i.quantity) || 0), 0);
+        const dimensions = (delivery.package_length && delivery.package_width && delivery.package_height)
+            ? `${delivery.package_length} x ${delivery.package_width} x ${delivery.package_height} cm`
+            : (packageLength && packageWidth && packageHeight ? `${packageLength} x ${packageWidth} x ${packageHeight} cm` : 'Chưa nhập kích thước');
+
+        const deliveryProducts = (delivery.items && delivery.items.length > 0)
+            ? delivery.items
+            : (order?.items || []);
+        const totalVal = deliveryProducts.reduce((sum: number, it: any) => {
+            const soItem = order?.items?.find((si: any) => si.sku === it.sku);
+            return sum + (Number(it.quantity || 1) * Number(soItem?.unit_price || 0));
+        }, 0);
+
+        const summaryContent = (
+            <div style={{ marginTop: 8, fontSize: 13, background: '#f8fafc', padding: 10, borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
+                    <div>📦 <b>Số kiện:</b> {delivery.package_count || packageCount || 1} kiện</div>
+                    <div>📏 <b>Kích thước:</b> {dimensions}</div>
+                    <div>⚖️ <b>Khối lượng:</b> {delivery.weight_gram || packageWeight || 500}g</div>
+                    <div>📋 <b>Sản phẩm:</b> {itemCount} dòng ({totalQty} món)</div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                        💰 <b>Tổng tiền hàng đợt này:</b> <span style={{ color: '#008444', fontWeight: 600 }}>{totalVal ? totalVal.toLocaleString('vi-VN') : (Number(delivery.sales_order?.total_amount) || 0).toLocaleString('vi-VN')} đ</span>
+                    </div>
+                    {(delivery.packing_spec_name || packingSpecName) && (
+                        <div style={{ gridColumn: 'span 2' }}>🏷️ <b>Quy cách:</b> {delivery.packing_spec_name || packingSpecName}</div>
+                    )}
+                </div>
+            </div>
+        );
+
         if (!ghtkConfig?.isConfigured) {
             Modal.confirm({
                 title: 'Chưa cấu hình Token GHTK thật',
@@ -515,7 +583,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                     <div>
                         <p>Hệ thống hiện chưa cấu hình API Token của GHTK thật.</p>
                         <p>Nếu tiếp tục đẩy đơn, hệ thống sẽ chỉ tạo <b>mã vận đơn mô phỏng (Demo)</b>.</p>
-                        <p>Bạn có muốn mở bảng cấu hình Token GHTK để kết nối thật ngay không?</p>
+                        {summaryContent}
                     </div>
                 ),
                 okText: 'Cấu hình Token ngay',
@@ -530,10 +598,18 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
 
         Modal.confirm({
             title: isDemo ? 'Đẩy lại vận đơn sang GHTK thật?' : 'Đẩy vận đơn sang GHTK?',
-            content: isDemo 
-                ? `Phiếu xuất ${delivery.code} hiện đang mang mã Demo (${delivery.tracking_code}). Xác nhận gửi thông tin sang GHTK thật để lấy mã vận đơn chính thức?`
-                : `Xác nhận tạo đơn giao hàng cho phiếu xuất ${delivery.code} sang GHTK?`,
-            okText: 'Đẩy đơn',
+            width: 480,
+            content: (
+                <div>
+                    <div>
+                        {isDemo 
+                            ? `Phiếu xuất ${delivery.code} hiện đang mang mã Demo (${delivery.tracking_code}). Xác nhận gửi thông tin sang GHTK thật để lấy mã vận đơn chính thức?`
+                            : `Xác nhận tạo đơn giao hàng cho phiếu xuất ${delivery.code} sang GHTK?`}
+                    </div>
+                    {summaryContent}
+                </div>
+            ),
+            okText: 'Đẩy đơn GHTK',
             cancelText: 'Hủy',
             onOk: async () => {
                 executePushGhtk(delivery);
@@ -668,6 +744,8 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         return {
             id: item.id,
             sku: item.sku,
+            name: item.product?.name || productInfo?.label || item.sku,
+            unitPrice: price,
             stock,
             ordered,
             delivered,
@@ -987,11 +1065,14 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         setIsDraft(false);
         setShipStatus('PENDING_EXPORT');
         const initialShipItems = summaryData.map((d: any) => {
-            const canShip = d.bookingStatus === 'CONFIRMED' && d.remaining > 0;
+            const canShip = (d.bookingStatus === 'CONFIRMED' || (d.stock || 0) > 0) && d.remaining > 0;
             return {
                 sku: d.sku, 
+                name: d.name || d.sku,
+                unitPrice: d.unitPrice || 0,
                 max: d.remaining, 
-                quantity: canShip ? d.remaining : 0,
+                stock: d.stock || 0,
+                quantity: canShip ? d.remaining : (d.remaining > 0 ? d.remaining : 0),
                 bookingStatus: d.bookingStatus
             };
         });
@@ -1208,7 +1289,10 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
 
             return {
                 sku: d.sku, 
+                name: d.name || d.sku,
+                unitPrice: d.unitPrice || 0,
                 max: max, 
+                stock: d.stock || 0,
                 quantity: currentQtyInDelivery,
                 bookingStatus: d.bookingStatus
             };
@@ -1301,7 +1385,18 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 // Tự động đẩy vận đơn sang GHTK nếu được chọn
                 if (newDeliveryId && isGhtk && pushToGhtkDirectly && !isDraft) {
                     try {
-                        message.loading({ content: 'Đang gửi thông tin sang GHTK để tạo vận đơn...', key: 'ghtk_push' });
+                        const deliveryProducts = shipItems.filter(i => Number(i.quantity) > 0).map(i => {
+                            const soItem = order?.items?.find((si: any) => si.sku === i.sku);
+                            const pInfo = products.find((p: any) => p.value === i.sku);
+                            return {
+                                name: i.name || soItem?.product?.name || pInfo?.label || i.sku,
+                                quantity: Number(i.quantity),
+                                product_code: i.sku,
+                                price: Number(soItem?.unit_price) || 0
+                            };
+                        });
+                        const deliveryTotalValue = deliveryProducts.reduce((sum: number, p: any) => sum + (Number(p.price || 0) * Number(p.quantity || 1)), 0);
+
                         const pushRes = await api.post(`/shipping/delivery/${newDeliveryId}/push-ghtk`, {
                             pick_address_id: selectedPickAddressId || ghtkConfig?.defaultPickAddressId,
                             province: extractAddressString(ghtkProvince),
@@ -1310,9 +1405,16 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                             hamlet: extractAddressString(ghtkHamlet, 'Khác'),
                             address: extractAddressString(ghtkAddress || shipAddress),
                             note: shipNote,
-                            weight_gram: packageWeight,
+                            weight_gram: packageWeight || 500,
                             pick_money: isCod ? pickMoney : 0,
-                            is_freeship: isFreeship
+                            is_freeship: isFreeship,
+                            package_length: packageLength !== null && packageLength !== undefined ? Number(packageLength) : null,
+                            package_width: packageWidth !== null && packageWidth !== undefined ? Number(packageWidth) : null,
+                            package_height: packageHeight !== null && packageHeight !== undefined ? Number(packageHeight) : null,
+                            package_count: packageCount || 1,
+                            packing_spec_name: packingSpecName || null,
+                            value: deliveryTotalValue > 0 ? deliveryTotalValue : (Number(order?.total_amount) || 0),
+                            products: deliveryProducts
                         });
                         const isMockPush = pushRes.data?.is_mock;
                         message.success({ 
@@ -1954,11 +2056,14 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                 setIsDraft(draft);
                                 if (!editingDeliveryId) {
                                     setShipItems(summaryData.map((d: any) => {
-                                        const canShip = draft || (d.bookingStatus === 'CONFIRMED' && d.remaining > 0);
+                                        const canShip = draft || ((d.bookingStatus === 'CONFIRMED' || (d.stock || 0) > 0) && d.remaining > 0);
                                         return {
                                             sku: d.sku, 
+                                            name: d.name || d.sku,
+                                            unitPrice: d.unitPrice || 0,
                                             max: d.remaining, 
-                                            quantity: canShip ? d.remaining : 0,
+                                            stock: d.stock || 0,
+                                            quantity: canShip ? d.remaining : (d.remaining > 0 ? d.remaining : 0),
                                             bookingStatus: d.bookingStatus
                                         };
                                     }));
@@ -2584,27 +2689,131 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                     <AttachmentUpload value={attachments} onChange={setAttachments} />
                 </div>
 
-                <div style={{ fontWeight: 'bold', marginTop: 15, marginBottom: 5 }}>Danh sách xuất:</div>
-                {!isDraft && <div style={{ fontSize: 12, color: 'red', marginBottom: 10, fontStyle: 'italic' }}>* Lưu ý: Chỉ được phép xuất kho các sản phẩm đã được duyệt giữ kho (Trạng thái: Sẵn sàng).</div>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 15, marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                    <div style={{ fontWeight: 'bold' }}>Danh sách sản phẩm xuất kho:</div>
+                    <Space size="small">
+                        <Button 
+                            size="small" 
+                            type="dashed"
+                            onClick={() => {
+                                const filled = shipItems.map(item => ({
+                                    ...item,
+                                    quantity: item.max > 0 ? item.max : 0
+                                }));
+                                setShipItems(filled);
+                                message.success('Đã điền toàn bộ số lượng cần giao');
+                            }}
+                        >
+                            ⚡ Điền nhanh toàn bộ SL cần giao
+                        </Button>
+                        <Button 
+                            size="small" 
+                            onClick={() => {
+                                const cleared = shipItems.map(item => ({
+                                    ...item,
+                                    quantity: 0
+                                }));
+                                setShipItems(cleared);
+                            }}
+                        >
+                            Xóa trắng SL
+                        </Button>
+                    </Space>
+                </div>
+                {!isDraft && (
+                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ color: '#fa8c16' }}>ℹ️</span>
+                        <span>Ưu tiên xuất cho sản phẩm đã duyệt giữ kho. Sản phẩm chưa duyệt vẫn có thể nhập nếu còn tồn kho khả dụng hoặc chọn <b>Bản nháp</b>.</span>
+                    </div>
+                )}
                 {isDraft && <div style={{ fontSize: 12, color: '#1890ff', marginBottom: 10, fontStyle: 'italic' }}>* Đang tạo Phiếu Nháp: Có thể điền số lượng tự do không cần giữ kho. Tồn kho sẽ KHÔNG bị trừ.</div>}
-                <Table dataSource={shipItems} rowKey="sku" pagination={false} size="small" columns={[
-                    { title: 'SKU', dataIndex: 'sku' },
-                    { title: 'Trạng thái', width: 90, align: 'center', render: (r: any) => {
-                        if (r.bookingStatus === 'CONFIRMED') return <Tag color="green" style={{ margin: 0 }}>Sẵn sàng</Tag>;
-                        if (r.bookingStatus === 'TEMPORARY') return <Tag color="orange" style={{ margin: 0 }}>Chưa duyệt</Tag>;
-                        return <Tag style={{ margin: 0 }}>Chưa giữ kho</Tag>;
-                    }},
-                    { title: 'SL Cần giao', dataIndex: 'max' },
-                    { title: 'Giao lần này', render: (_: any, r: any, idx: number) => (
-                        <InputNumber 
-                            max={r.max} 
-                            min={0} 
-                            value={r.quantity} 
-                            disabled={!isDraft && r.bookingStatus !== 'CONFIRMED'} 
-                            onChange={(v: any) => { const newItems = [...shipItems]; newItems[idx].quantity = v || 0; setShipItems(newItems); }} 
-                        />
-                    )}
-                ]} />
+
+                <Table 
+                    dataSource={shipItems} 
+                    rowKey="sku" 
+                    pagination={false} 
+                    size="small" 
+                    columns={[
+                        { 
+                            title: 'Sản phẩm', 
+                            dataIndex: 'sku',
+                            render: (sku: string, r: any) => (
+                                <div>
+                                    <div style={{ fontWeight: 600, color: '#1e293b' }}>{r.name || sku}</div>
+                                    <div style={{ fontSize: 11, color: '#64748b' }}>SKU: <code>{sku}</code></div>
+                                </div>
+                            )
+                        },
+                        { 
+                            title: 'Trạng thái', 
+                            width: 100, 
+                            align: 'center', 
+                            render: (r: any) => {
+                                if (r.bookingStatus === 'CONFIRMED') return <Tag color="green" style={{ margin: 0 }}>Sẵn sàng</Tag>;
+                                if (r.bookingStatus === 'TEMPORARY') return <Tag color="orange" style={{ margin: 0 }}>Chưa duyệt</Tag>;
+                                return <Tag style={{ margin: 0 }}>Chưa giữ kho</Tag>;
+                            }
+                        },
+                        { title: 'SL Cần giao', dataIndex: 'max', width: 90, align: 'right' },
+                        { 
+                            title: 'Giao lần này', 
+                            width: 130,
+                            align: 'center',
+                            render: (_: any, r: any, idx: number) => {
+                                const isRestricted = !isDraft && r.bookingStatus !== 'CONFIRMED' && (r.stock || 0) <= 0;
+                                return (
+                                    <InputNumber 
+                                        max={r.max} 
+                                        min={0} 
+                                        value={r.quantity} 
+                                        disabled={isRestricted}
+                                        style={{ width: '100%' }}
+                                        onChange={(v: any) => { 
+                                            const newItems = [...shipItems]; 
+                                            newItems[idx].quantity = v || 0; 
+                                            setShipItems(newItems); 
+                                        }} 
+                                    />
+                                );
+                            }
+                        },
+                        {
+                            title: 'Thành tiền',
+                            width: 130,
+                            align: 'right',
+                            render: (_: any, r: any) => {
+                                const lineTotal = (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0);
+                                return <span style={{ fontWeight: 500 }}>{lineTotal.toLocaleString('vi-VN')} đ</span>;
+                            }
+                        }
+                    ]} 
+                    summary={(pageData) => {
+                        const totalQty = pageData.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
+                        const totalAmt = pageData.reduce((sum, r) => sum + ((Number(r.quantity) || 0) * (Number(r.unitPrice) || 0)), 0);
+                        return (
+                            <Table.Summary fixed>
+                                <Table.Summary.Row style={{ background: '#f8fafc', fontWeight: 600 }}>
+                                    <Table.Summary.Cell index={0} colSpan={2}>
+                                        Tổng cộng đợt xuất này ({pageData.filter(r => Number(r.quantity) > 0).length} sản phẩm):
+                                    </Table.Summary.Cell>
+                                    <Table.Summary.Cell index={2} />
+                                    <Table.Summary.Cell index={3} align="center">
+                                        <span style={{ color: '#1677ff' }}>{totalQty}</span>
+                                    </Table.Summary.Cell>
+                                    <Table.Summary.Cell index={4} align="right">
+                                        <span style={{ color: '#008444' }}>{totalAmt.toLocaleString('vi-VN')} đ</span>
+                                    </Table.Summary.Cell>
+                                </Table.Summary.Row>
+                            </Table.Summary>
+                        );
+                    }}
+                />
+
+                {shipItems.every(i => Number(i.quantity) <= 0) && (
+                    <div style={{ marginTop: 8, fontSize: 12, color: '#d46b08', background: '#fffbe6', border: '1px solid #ffe58f', padding: '6px 10px', borderRadius: 4 }}>
+                        💡 <b>Lưu ý:</b> Các sản phẩm đều có số lượng xuất là 0. Khi đẩy đơn sang GHTK, hệ thống sẽ tự động dùng danh sách toàn bộ sản phẩm của Đơn Hàng Bán để GHTK không bị "0 Sản phẩm".
+                    </div>
+                )}
 
                 {/* KHU VỰC THÔNG BÁO GIAO HÀNG (GỬI ZALO / KHÁCH HÀNG) */}
                 <Divider style={{ margin: '16px 0 12px 0' }} />

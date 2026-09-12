@@ -26,6 +26,10 @@ export interface GhtkFeeDto {
     weight: number; // gram
     value?: number; // VND
     transport?: 'road' | 'fly';
+    length?: number; // cm
+    width?: number; // cm
+    height?: number; // cm
+    package_count?: number;
 }
 
 const VIETNAM_PROVINCES = [
@@ -491,9 +495,15 @@ export class GhtkService {
             const safeWard = extractAddressString(dto.ward);
             const safeAddress = extractAddressString(dto.address);
 
+            // Tính trọng lượng tính cước: so sánh trọng lượng thực tế và trọng lượng quy đổi thể tích (D x R x C / 6)
+            const volumetricWeight = (dto.length && dto.width && dto.height)
+                ? Math.round((Number(dto.length) * Number(dto.width) * Number(dto.height)) / 6)
+                : 0;
+            const effectiveWeight = Math.max(Number(dto.weight) || 500, volumetricWeight);
+
             // Thử endpoint chuẩn GHTK: GET /services/shipment/fee
             try {
-                const queryParams = {
+                const queryParams: any = {
                     pick_province: safePickProvince,
                     pick_district: safePickDistrict,
                     pick_ward: safePickWard,
@@ -502,11 +512,15 @@ export class GhtkService {
                     district: safeDistrict,
                     ward: safeWard,
                     address: safeAddress,
-                    weight: Number(dto.weight) || 500, // gram
+                    weight: effectiveWeight, // gram (lấy giá trị lớn hơn giữa thực tế và quy đổi thể tích)
                     value: Number(dto.value) || 0,
                     transport: dto.transport || 'road',
                     deliver_option: 'none',
                 };
+                if (dto.length) queryParams.length = Math.round(Number(dto.length));
+                if (dto.width) queryParams.width = Math.round(Number(dto.width));
+                if (dto.height) queryParams.height = Math.round(Number(dto.height));
+
                 const res = await axios.get(`${cfg.apiUrl}/services/shipment/fee`, { headers, params: queryParams, timeout: 10000 });
                 if (res.data?.success && res.data?.fee) {
                     return {
@@ -517,7 +531,7 @@ export class GhtkService {
                 }
             } catch (errGet: any) {
                 // Fallback POST /open/api/v1/order/fee
-                const params = {
+                const params: any = {
                     pick_province: safePickProvince,
                     pick_district: safePickDistrict,
                     pick_ward: safePickWard,
@@ -526,10 +540,13 @@ export class GhtkService {
                     district: safeDistrict,
                     ward: safeWard,
                     address: safeAddress,
-                    weight: Number(dto.weight) || 500,
+                    weight: effectiveWeight,
                     value: Number(dto.value) || 0,
                     transport: dto.transport || 'road',
                 };
+                if (dto.length) params.length = Math.round(Number(dto.length));
+                if (dto.width) params.width = Math.round(Number(dto.width));
+                if (dto.height) params.height = Math.round(Number(dto.height));
                 const res = await axios.post(`${cfg.apiUrl}/open/api/v1/order/fee`, params, { headers, timeout: 10000 });
                 if (res.data?.success && res.data?.fee) {
                     return {
@@ -569,31 +586,156 @@ export class GhtkService {
         pick_money?: number;
         is_freeship?: number;
         transport?: 'road' | 'fly';
+        package_length?: number;
+        package_width?: number;
+        package_height?: number;
+        package_count?: number;
+        packing_spec_name?: string;
+        value?: number;
+        force?: boolean;
+        products?: Array<{
+            name?: string;
+            weight?: number;
+            quantity?: number;
+            product_code?: string;
+            price?: number;
+        }>;
     }) {
         const delivery = await this.deliveryRepo.findOne({
             where: { id: deliveryId },
-            relations: ['sales_order', 'items'],
+            relations: ['sales_order', 'sales_order.items', 'sales_order.items.product', 'items'],
         });
         if (!delivery) throw new NotFoundException('Không tìm thấy phiếu xuất kho');
 
-        // Cho phép đẩy đè nếu mã hiện tại là mã Demo (GHTK-DEMO-...)
-        if (delivery.tracking_code && delivery.shipping_carrier === 'GHTK' && delivery.shipping_status_id && delivery.shipping_status_id > 0 && !delivery.tracking_code.startsWith('GHTK-DEMO')) {
-            throw new BadRequestException(`Phiếu này đã có mã vận đơn GHTK: ${delivery.tracking_code}`);
+        // Cho phép đẩy đè nếu mã hiện tại là mã Demo (GHTK-DEMO-...) hoặc bị hủy hoặc force = true
+        const isDemoTracking = delivery.tracking_code?.startsWith('GHTK-DEMO');
+        const isCancelled = delivery.shipping_status_id === -1;
+        if (delivery.tracking_code && delivery.shipping_carrier === 'GHTK' && !isDemoTracking && !isCancelled && !options.force) {
+            throw new BadRequestException(`Phiếu này đã có mã vận đơn GHTK: ${delivery.tracking_code}. Nếu cần tạo lại, hãy hủy vận đơn cũ trước.`);
         }
 
         const { headers, cfg } = await this.getHeaders();
 
-        // Chuẩn bị danh sách sản phẩm
-        const products = (delivery.items || []).map((item, idx) => ({
-            name: item.sku,
-            weight: (options.weight_gram ? (options.weight_gram / 1000) / delivery.items.length : 0.2), // kg
-            quantity: item.quantity || 1,
-            product_code: item.sku,
-        }));
+        // 1. Đồng bộ kích thước kiện và số lượng kiện
+        const pkgLength = options.package_length !== undefined && options.package_length !== null
+            ? Number(options.package_length)
+            : (delivery.package_length !== null && delivery.package_length !== undefined ? Number(delivery.package_length) : null);
+
+        const pkgWidth = options.package_width !== undefined && options.package_width !== null
+            ? Number(options.package_width)
+            : (delivery.package_width !== null && delivery.package_width !== undefined ? Number(delivery.package_width) : null);
+
+        const pkgHeight = options.package_height !== undefined && options.package_height !== null
+            ? Number(options.package_height)
+            : (delivery.package_height !== null && delivery.package_height !== undefined ? Number(delivery.package_height) : null);
+
+        const pkgCount = options.package_count !== undefined && options.package_count !== null
+            ? Math.max(1, Number(options.package_count))
+            : Math.max(1, Number(delivery.package_count) || 1);
+
+        const packingSpec = options.packing_spec_name || delivery.packing_spec_name || '';
+
+        // Cập nhật lại vào delivery record để đồng bộ dữ liệu
+        if (pkgLength !== null) delivery.package_length = pkgLength;
+        if (pkgWidth !== null) delivery.package_width = pkgWidth;
+        if (pkgHeight !== null) delivery.package_height = pkgHeight;
+        if (pkgCount) delivery.package_count = pkgCount;
+        if (packingSpec) delivery.packing_spec_name = packingSpec;
 
         const isFreeship = options.is_freeship !== undefined ? options.is_freeship : (delivery.is_freeship !== undefined ? delivery.is_freeship : 1);
         const pickMoney = options.pick_money !== undefined ? options.pick_money : Number(delivery.pick_money || 0);
         const totalWeight = (options.weight_gram || delivery.weight_gram || 500) / 1000; // Đổi gram sang kg
+
+        // 2. Chuẩn bị danh sách sản phẩm thông minh (Hierarchical Products Resolution)
+        let products: any[] = [];
+
+        // 2.1. Ưu tiên options.products nếu frontend gửi kèm và có phần tử hợp lệ
+        if (options.products && Array.isArray(options.products) && options.products.length > 0) {
+            const validOpts = options.products.filter(p => Number(p.quantity) > 0);
+            if (validOpts.length > 0) {
+                products = validOpts.map((p, idx) => {
+                    const soItem = delivery.sales_order?.items?.find((si: any) => si.sku === p.product_code);
+                    const name = p.name || soItem?.product?.name || soItem?.product?.customer_description || p.product_code || `Sản phẩm ${idx + 1}`;
+                    const weightPerItemKg = p.weight || (options.weight_gram ? (options.weight_gram / 1000) / validOpts.length : (totalWeight / validOpts.length));
+                    const unitPrice = p.price !== undefined ? Number(p.price) : (soItem?.unit_price ? Number(soItem.unit_price) : 0);
+
+                    return {
+                        name: String(name).slice(0, 250),
+                        weight: Math.max(0.01, Math.round(Number(weightPerItemKg) * 100) / 100),
+                        quantity: Math.max(1, Math.round(Number(p.quantity))),
+                        product_code: p.product_code ? String(p.product_code).slice(0, 100) : undefined,
+                        price: Math.round(unitPrice),
+                    };
+                });
+            }
+        }
+
+        // 2.2. Nếu chưa có, lấy từ delivery.items
+        if (products.length === 0 && delivery.items && delivery.items.length > 0) {
+            const validItems = delivery.items.filter((it: any) => Number(it.quantity) > 0);
+            if (validItems.length > 0) {
+                products = validItems.map((item: any) => {
+                    const soItem = delivery.sales_order?.items?.find((si: any) => si.sku === item.sku);
+                    const name = soItem?.product?.name || soItem?.product?.customer_description || item.sku;
+                    const weightPerItemKg = options.weight_gram 
+                        ? ((options.weight_gram / 1000) / validItems.length) 
+                        : (delivery.weight_gram ? (delivery.weight_gram / 1000) / validItems.length : (totalWeight / validItems.length));
+                    const unitPrice = soItem?.unit_price ? Number(soItem.unit_price) : 0;
+
+                    return {
+                        name: String(name).slice(0, 250),
+                        weight: Math.max(0.01, Math.round(Number(weightPerItemKg) * 100) / 100),
+                        quantity: Math.max(1, Math.round(Number(item.quantity))),
+                        product_code: String(item.sku).slice(0, 100),
+                        price: Math.round(unitPrice),
+                    };
+                });
+            }
+        }
+
+        // 2.3. Nếu delivery.items vẫn rỗng hoặc toàn bộ = 0, fallback sang toàn bộ sản phẩm của đơn hàng bán (delivery.sales_order.items)
+        if (products.length === 0 && delivery.sales_order?.items && delivery.sales_order.items.length > 0) {
+            const validSoItems = delivery.sales_order.items.filter((si: any) => Number(si.quantity) > 0);
+            if (validSoItems.length > 0) {
+                products = validSoItems.map((si: any) => {
+                    const name = si.product?.name || si.product?.customer_description || si.sku;
+                    const weightPerItemKg = options.weight_gram 
+                        ? ((options.weight_gram / 1000) / validSoItems.length) 
+                        : (delivery.weight_gram ? (delivery.weight_gram / 1000) / validSoItems.length : (totalWeight / validSoItems.length));
+                    const unitPrice = si.unit_price ? Number(si.unit_price) : 0;
+
+                    return {
+                        name: String(name).slice(0, 250),
+                        weight: Math.max(0.01, Math.round(Number(weightPerItemKg) * 100) / 100),
+                        quantity: Math.max(1, Math.round(Number(si.quantity))),
+                        product_code: String(si.sku).slice(0, 100),
+                        price: Math.round(unitPrice),
+                    };
+                });
+            }
+        }
+
+        // 2.4. Fallback cuối cùng: tạo 1 sản phẩm đại diện từ mã đơn để GHTK không bao giờ bị 0 sản phẩm
+        if (products.length === 0) {
+            products = [{
+                name: `Hàng hóa theo đơn ${delivery.code}`,
+                weight: Math.max(0.1, Math.round(totalWeight * 100) / 100),
+                quantity: pkgCount || 1,
+                product_code: delivery.code,
+                price: Number(delivery.sales_order?.total_amount) || 0,
+            }];
+        }
+
+        // 3. Tính tổng số tiền sản phẩm của đợt giao hàng này (đẩy vào order.value)
+        let deliveryTotalValue = 0;
+        if (options.value !== undefined && options.value !== null && Number(options.value) > 0) {
+            deliveryTotalValue = Number(options.value);
+        } else if (products.length > 0) {
+            deliveryTotalValue = products.reduce((sum, p) => sum + ((Number(p.price) || 0) * (Number(p.quantity) || 0)), 0);
+        }
+        if (deliveryTotalValue <= 0) {
+            deliveryTotalValue = Number(delivery.sales_order?.total_amount) || 0;
+        }
 
         // Lấy thông tin kho lấy hàng thực tế từ GHTK
         let pickInfo: any = {};
@@ -621,6 +763,30 @@ export class GhtkService {
         const receiverHamlet = extractAddressString(options.hamlet || parsedRecipient.hamlet, 'Khác') || 'Khác';
         const receiverStreet = extractAddressString(options.street || parsedRecipient.street, rawRecipientAddress);
 
+        // 4. Xây dựng ghi chú rõ ràng về kiện hàng và kích thước
+        let packageNoteSnippet = '';
+        if (pkgLength || pkgWidth || pkgHeight || pkgCount > 1 || packingSpec) {
+            const dimText = (pkgLength && pkgWidth && pkgHeight) ? `${pkgLength}x${pkgWidth}x${pkgHeight}cm` : '';
+            const parts: string[] = [];
+            if (pkgCount) parts.push(`${pkgCount} kiện`);
+            if (dimText) parts.push(dimText);
+            if (packingSpec) parts.push(packingSpec);
+            packageNoteSnippet = `[Đóng gói: ${parts.join(' - ')}]`;
+        }
+
+        const baseNote = options.note || delivery.note || 'Cho xem hàng không cho thử';
+        const finalNote = packageNoteSnippet 
+            ? `${baseNote} ${packageNoteSnippet}`.trim()
+            : baseNote;
+
+        // Tags cho GHTK
+        const tags: number[] = [10]; // 10: Cho xem hàng
+        // Tag 81: BBS Eco (hàng cồng kềnh) nếu kích thước > 100cm hoặc khối lượng > 20kg hoặc quy cách BBS
+        const isBbs = totalWeight > 20 || (pkgLength && pkgLength > 100) || (pkgWidth && pkgWidth > 100) || (pkgHeight && pkgHeight > 100) || (packingSpec && packingSpec.toUpperCase().includes('BBS'));
+        if (isBbs) {
+            tags.push(81);
+        }
+
         const payload: any = {
             products,
             order: {
@@ -639,13 +805,33 @@ export class GhtkService {
                 ward: receiverWard,
                 hamlet: receiverHamlet, // BẮT BUỘC cho GHTK API (nếu không có thôn/ấp thì gửi 'Khác')
                 tel: delivery.contact_phone || delivery.sales_order?.receiver_phone || '',
-                note: options.note || delivery.note || 'Cho xem hàng không cho thử',
+                note: finalNote,
                 is_freeship: isFreeship,
                 total_weight: totalWeight,
-                value: Number(delivery.sales_order?.total_amount) || 0,
+                value: Math.round(deliveryTotalValue), // Tổng giá trị sản phẩm của đợt giao hàng này
                 transport: options.transport || 'road',
+                tags,
             }
         };
+
+        // Bổ sung thông tin kích thước kiện và số kiện vào order payload
+        if (pkgLength) {
+            payload.order.length = Math.round(pkgLength);
+            payload.order.package_length = Math.round(pkgLength);
+        }
+        if (pkgWidth) {
+            payload.order.width = Math.round(pkgWidth);
+            payload.order.package_width = Math.round(pkgWidth);
+        }
+        if (pkgHeight) {
+            payload.order.height = Math.round(pkgHeight);
+            payload.order.package_height = Math.round(pkgHeight);
+        }
+        if (pkgCount) {
+            payload.order.package_count = pkgCount;
+            payload.order.parcel_count = pkgCount;
+            payload.order.total_package = pkgCount;
+        }
 
         if (pickInfo.pick_address_id) {
             payload.order.pick_address_id = String(pickInfo.pick_address_id);
