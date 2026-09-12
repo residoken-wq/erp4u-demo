@@ -6,6 +6,7 @@ import { SalesOrder } from '../sales/sales-order.entity';
 import { SalesDelivery } from '../sales/sales-delivery.entity';
 import { ZaloZnsService } from './zns.service';
 import { ZnsController } from './zns.controller';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -15,9 +16,11 @@ import { ZnsController } from './zns.controller';
       SalesOrder,
       SalesDelivery,
     ]),
+    AuthModule,
   ],
   controllers: [ZnsController],
   providers: [ZaloZnsService],
   exports: [ZaloZnsService],
 })
 export class ZnsModule {}
+
