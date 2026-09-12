@@ -2195,14 +2195,17 @@ const LalamoveConfigTab: React.FC = () => {
                             </Form.Item>
                         </Col>
                         <Col span={8}>
-                            <Form.Item label="Webhook Callback URL (Cấu hình trên Lalamove Portal)">
+                            <Form.Item 
+                                label="Webhook Callback URL (Cấu hình trên Lalamove Portal)"
+                                extra="Copy dán chính xác URL này vào trường Webhook URL trên Lalamove Partner Portal"
+                            >
                                 <Input 
                                     readOnly 
-                                    value={`${window.location.origin}/shipping/webhook/lalamove`} 
+                                    value={`${window.location.origin}/api/shipping/webhook/lalamove`} 
                                     addonAfter={
                                         <Tooltip title="Copy Webhook URL">
                                             <CopyOutlined onClick={() => {
-                                                navigator.clipboard.writeText(`${window.location.origin}/shipping/webhook/lalamove`);
+                                                navigator.clipboard.writeText(`${window.location.origin}/api/shipping/webhook/lalamove`);
                                                 message.success('Đã copy Webhook URL!');
                                             }} style={{ cursor: 'pointer' }} />
                                         </Tooltip>

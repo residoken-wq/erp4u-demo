@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Query, Res, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, Res, UseGuards, HttpCode } from '@nestjs/common';
 import { GhtkService, GhtkFeeDto } from './carriers/ghtk.service';
 import { LalamoveService, LalamoveQuotationDto, LalamovePushOrderOptions, LALAMOVE_VIETNAM_VEHICLES } from './carriers/lalamove.service';
 import { Response } from 'express';
@@ -81,6 +81,7 @@ export class ShippingController {
     }
 
     @Post('webhook/ghtk')
+    @HttpCode(200)
     async handleGhtkWebhook(@Body() body: any) {
         return this.ghtkService.handleWebhook(body);
     }
@@ -143,9 +144,12 @@ export class ShippingController {
         return this.lalamoveService.pushDeliveryToLalamove(Number(deliveryId), options);
     }
 
-    @Get('delivery/:deliveryId/lalamove-details')
-    async getLalamoveOrderDetails(@Param('deliveryId') deliveryId: string) {
-        return this.lalamoveService.getOrderDetails(deliveryId);
+    @Get('delivery/:deliveryId/lalamove-order/:orderId')
+    async getLalamoveOrderDetails(
+        @Param('deliveryId') deliveryId: string,
+        @Param('orderId') orderId: string,
+    ) {
+        return this.lalamoveService.getOrderDetails(orderId);
     }
 
     @Get('delivery/:deliveryId/lalamove-driver/:driverId')
@@ -169,7 +173,14 @@ export class ShippingController {
         return this.lalamoveService.cancelOrder(Number(deliveryId));
     }
 
+    @Get('webhook/lalamove')
+    @HttpCode(200)
+    async verifyLalamoveWebhook() {
+        return { success: true, message: 'Lalamove Webhook endpoint is active' };
+    }
+
     @Post('webhook/lalamove')
+    @HttpCode(200)
     async handleLalamoveWebhook(@Body() body: any) {
         return this.lalamoveService.handleWebhook(body);
     }
