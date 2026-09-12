@@ -945,6 +945,7 @@ export class SalesService {
                 shipping_status_id: data.shipping_status_id || null,
                 shipping_status_text: data.shipping_status_text || null,
                 shipping_metadata: data.shipping_metadata || null,
+                shipping_legs: data.shipping_legs || [],
                 delivery_notice: data.delivery_notice || null
             });
 
@@ -997,6 +998,7 @@ export class SalesService {
         if (data.shipping_status_id !== undefined) delivery.shipping_status_id = data.shipping_status_id;
         if (data.shipping_status_text !== undefined) delivery.shipping_status_text = data.shipping_status_text;
         if (data.shipping_metadata !== undefined) delivery.shipping_metadata = data.shipping_metadata;
+        if (data.shipping_legs !== undefined) delivery.shipping_legs = data.shipping_legs;
         if (data.delivery_notice !== undefined) delivery.delivery_notice = data.delivery_notice;
 
         if (data.items) {

@@ -36,6 +36,9 @@ import { QCModule } from './qc/qc.module';
 import { DesignsModule } from './designs/designs.module';
 import { TikTokModule } from './tiktok/tiktok.module';
 import { ShippingModule } from './shipping/shipping.module';
+import { ZnsModule } from './zns/zns.module';
+import { ZaloApiConfig } from './zns/entities/zalo-api-config.entity';
+import { ZnsMessageLog } from './zns/entities/zns-message-log.entity';
 
 import { AnalyticsModule } from './analytics/analytics.module';
 import { SchoolExperienceModule } from './school-experience/school-experience.module';
@@ -240,7 +243,10 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
             // TikTok
             TikTokMessage, TikTokComment, TikTokConversation,
             // School Experience (Instruction 10)
-            SchoolExperienceRevision
+            SchoolExperienceRevision,
+            // Zalo ZNS
+            ZaloApiConfig,
+            ZnsMessageLog
           ],
           synchronize: true, // Always sync demo database schema
           subscribers: [],
@@ -265,6 +271,7 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
     TikTokModule, // TikTok Shop inbox & comments integration
     ShippingModule, // Shipping & GHTK carrier integration
     SchoolExperienceModule, // ERP4U-360 School Experience CMS & revisions
+    ZnsModule, // Zalo ZNS Integration module
     TypeOrmModule.forFeature([User]), // Needed for ActivityInterceptor
   ],
   providers: [

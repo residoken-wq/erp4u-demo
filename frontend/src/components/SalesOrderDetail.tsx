@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Form, Input, Select, DatePicker, Button, Tabs, Row, Col, InputNumber, Divider, message, Tag, Popconfirm, Tooltip, Checkbox, Table, Switch, Dropdown, MenuProps, Alert, Card, Space } from 'antd';
+import { Modal, Form, Input, Select, DatePicker, Button, Tabs, Row, Col, InputNumber, Divider, message, Tag, Popconfirm, Tooltip, Checkbox, Table, Switch, Dropdown, MenuProps, Alert, Card, Space, Spin, Image } from 'antd';
 import { Drawer } from 'antd';
-import { PlusOutlined, SaveOutlined, CheckCircleOutlined, InfoCircleOutlined, MoreOutlined, HistoryOutlined, CopyOutlined, DeleteOutlined, LinkOutlined, PrinterOutlined, FileTextOutlined, AppstoreAddOutlined, LockOutlined, MenuOutlined, FileExcelOutlined, MailOutlined, FilePdfOutlined, SyncOutlined, EyeOutlined } from '@ant-design/icons';
+import { PlusOutlined, SaveOutlined, CheckCircleOutlined, InfoCircleOutlined, MoreOutlined, HistoryOutlined, CopyOutlined, DeleteOutlined, LinkOutlined, PrinterOutlined, FileTextOutlined, AppstoreAddOutlined, LockOutlined, MenuOutlined, FileExcelOutlined, MailOutlined, FilePdfOutlined, SyncOutlined, EyeOutlined, MessageOutlined, SendOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import api from '../utils/api';
@@ -17,6 +17,7 @@ import QuotationHistoryTab from './sales/QuotationHistoryTab';
 import SampleImagesTab from './sales/SampleImagesTab';
 import ContractBuilderModal from './sales/ContractBuilderModal';
 import SalesActivityLogsTab from './sales/SalesActivityLogsTab';
+import { SendZnsModal } from './sales/SendZnsModal';
 import useMobile from '../hooks/useMobile';
 import { cleanComboDescription } from '../utils/productDescription';
 
@@ -54,6 +55,12 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
     // Copy Quotation State
     const [customerQuotations, setCustomerQuotations] = useState<any[]>([]);
     const [copyQuotationModalOpen, setCopyQuotationModalOpen] = useState(false);
+    const [quoteDetailsCache, setQuoteDetailsCache] = useState<Record<number, any>>({});
+    const [loadingQuoteId, setLoadingQuoteId] = useState<number | null>(null);
+
+    // Zalo ZNS State
+    const [sendZnsModalOpen, setSendZnsModalOpen] = useState(false);
+    const [latestZnsLog, setLatestZnsLog] = useState<any>(null);
 
     // Contract State
     const [contractTemplates, setContractTemplates] = useState<any[]>([]);
@@ -632,6 +639,9 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                 // Fetch Revisions only if not clone
                 if (!initialData?.isClone && initialData?.id) {
                     fetchRevisions(initialData.id);
+                    api.get(`/zns/orders/${initialData.id}/latest-log`)
+                        .then(res => setLatestZnsLog(res.data))
+                        .catch(() => setLatestZnsLog(null));
                 }
 
                 const termPrefix = isQuotation ? 'QUOTE' : 'ORDER';
@@ -771,10 +781,28 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
         }
     };
 
+    const handleExpandQuote = async (expanded: boolean, record: any) => {
+        if (expanded && !quoteDetailsCache[record.id]) {
+            setLoadingQuoteId(record.id);
+            try {
+                const res = await api.get(`/sales/${record.id}`);
+                setQuoteDetailsCache(prev => ({ ...prev, [record.id]: res.data }));
+            } catch (e) {
+                message.error('Không thể tải chi tiết sản phẩm của báo giá');
+            } finally {
+                setLoadingQuoteId(null);
+            }
+        }
+    };
+
     const handleCopyQuotation = async (quotation: any) => {
         try {
-            const res = await api.get(`/sales/${quotation.id}`);
-            const fullQuotation = res.data;
+            let fullQuotation = quoteDetailsCache[quotation.id];
+            if (!fullQuotation) {
+                const res = await api.get(`/sales/${quotation.id}`);
+                fullQuotation = res.data;
+                setQuoteDetailsCache(prev => ({ ...prev, [quotation.id]: fullQuotation }));
+            }
             const items = (fullQuotation.items || []).map((i: any, idx: number) => ({
                 key: Date.now() + idx,
                 sku: i.product?.sku || i.sku,
@@ -782,6 +810,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                 unit_price: Number(i.unit_price) || 0,
                 total_price: (Number(i.quantity) || 1) * (Number(i.unit_price) || 0),
                 note: i.note || '',
+                variant_color: i.variant_color || '',
                 vat_content: i.vat_content || '',
                 sample_image: i.sample_image,
                 image_url: i.image_url,
@@ -793,12 +822,13 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             calculateTotal(items);
             form.setFieldsValue({
                 delivery_date: fullQuotation.delivery_date ? dayjs(fullQuotation.delivery_date) : null,
-                note: fullQuotation.note || ''
+                note: fullQuotation.note || '',
+                terms_content: fullQuotation.terms_content || form.getFieldValue('terms_content')
             });
             setCopyQuotationModalOpen(false);
-            message.success(`Đã copy ${items.length} sản phẩm từ ${fullQuotation.order_code}`);
-        } catch (e) {
-            message.error('Lỗi khi tải chi tiết báo giá để copy');
+            message.success(`Đã copy ${items.length} sản phẩm từ báo giá ${fullQuotation.order_code}`);
+        } catch (e: any) {
+            message.error('Lỗi khi tải chi tiết báo giá để copy: ' + (e.message || ''));
         }
     };
 
@@ -987,11 +1017,28 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
     return (
         <Drawer
             title={
-                <span style={{ fontSize: isMobile ? 14 : 16 }}>
-                    {isQuotation ? 'Báo Giá' : 'Đơn Hàng'} #{initialData?.order_code}
-                    {initialData?.version > 1 && <Tag color="orange" style={{ marginLeft: 5 }}>v{initialData?.version}</Tag>}
-                    {initialData?.status === 'COMPLETED' && <Tag color="green" style={{ marginLeft: 5 }}>Hoàn tất</Tag>}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: isMobile ? 14 : 16 }}>
+                        {isQuotation ? 'Báo Giá' : 'Đơn Hàng'} #{initialData?.order_code}
+                        {initialData?.version > 1 && <Tag color="orange" style={{ marginLeft: 5 }}>v{initialData?.version}</Tag>}
+                        {initialData?.status === 'COMPLETED' && <Tag color="green" style={{ marginLeft: 5 }}>Hoàn tất</Tag>}
+                    </span>
+                    {latestZnsLog && (
+                        latestZnsLog.status === 'SUCCESS' ? (
+                            <Tooltip title={`ZNS Xác nhận đã gửi lúc ${dayjs(latestZnsLog.created_at).format('HH:mm DD/MM/YYYY')} đến ${latestZnsLog.phone} (Mã tin: ${latestZnsLog.msg_id || 'OK'})`}>
+                                <Tag color="blue" icon={<CheckCircleOutlined />} style={{ cursor: 'pointer' }}>
+                                    ZNS: Đã xác nhận
+                                </Tag>
+                            </Tooltip>
+                        ) : (
+                            <Tooltip title={`Lỗi gửi ZNS: ${latestZnsLog.error_message} (${dayjs(latestZnsLog.created_at).format('HH:mm DD/MM')})`}>
+                                <Tag color="red" icon={<CloseCircleOutlined />} style={{ cursor: 'pointer' }}>
+                                    ZNS: Thất bại
+                                </Tag>
+                            </Tooltip>
+                        )
+                    )}
+                </div>
             }
             open={open}
             onClose={onClose}
@@ -1017,6 +1064,9 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                                             { key: 'rev', label: 'Tạo Version Mới', icon: <CopyOutlined />, onClick: handleCreateRevision },
                                             { key: 'hist', label: 'Lịch sử', icon: <HistoryOutlined />, onClick: () => setRevisionModalOpen(true) },
                                             { key: 'del_q', label: <span style={{color: 'red'}}>Xóa Báo Giá</span>, icon: <DeleteOutlined style={{color: 'red'}}/>, onClick: () => confirmDelete('quote', initialData.id) }
+                                        ] : []),
+                                        ...(!isQuotation && initialData.status !== 'CANCELLED' ? [
+                                            { key: 'zns_send', label: 'Gửi ZNS Xác Nhận', icon: <MessageOutlined style={{ color: '#0068ff' }} />, onClick: () => setSendZnsModalOpen(true) }
                                         ] : []),
                                         ...(!isQuotation && initialData.status !== 'CANCELLED' && initialData.status !== 'COMPLETED' ? [
                                             { key: 'cancel', label: <span style={{color: 'red'}}>Hủy Đơn</span>, icon: <DeleteOutlined style={{color: 'red'}}/>, onClick: () => setCancelModalOpen(true) }
@@ -1051,6 +1101,17 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                             )}
                             {isQuotation && initialData && (
                                 <Button size="middle" icon={<HistoryOutlined />} onClick={() => setRevisionModalOpen(true)}>Lịch sử</Button>
+                            )}
+
+                            {(!isQuotation && initialData && initialData.status !== 'CANCELLED') && (
+                                <Button
+                                    size="middle"
+                                    icon={<MessageOutlined style={{ color: '#0068ff' }} />}
+                                    onClick={() => setSendZnsModalOpen(true)}
+                                    style={{ borderColor: '#91d5ff', color: '#0068ff', background: '#f0f5ff' }}
+                                >
+                                    Gửi ZNS Xác Nhận
+                                </Button>
                             )}
 
                             {(!isQuotation && initialData && initialData.status !== 'CANCELLED' && initialData.status !== 'COMPLETED') && (
@@ -1748,30 +1809,138 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
 
             {/* COPY QUOTATION MODAL */}
             <Modal
-                title="Copy từ Báo giá cũ"
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <CopyOutlined style={{ color: '#1890ff' }} />
+                        <span>Copy từ Báo giá cũ</span>
+                        <Tag color="blue">{customerQuotations.length} đơn/báo giá</Tag>
+                    </div>
+                }
                 open={copyQuotationModalOpen}
                 onCancel={() => setCopyQuotationModalOpen(false)}
                 footer={null}
-                width={700}
+                width={920}
             >
-                <div style={{ marginBottom: 10, color: '#666' }}>Chọn báo giá để copy sản phẩm:</div>
+                <Alert
+                    style={{ marginBottom: 12 }}
+                    type="info"
+                    showIcon
+                    message="Bấm vào biểu tượng [+] để mở rộng xem chi tiết danh sách sản phẩm, ghi chú trước khi sao chép."
+                />
                 <Table
                     dataSource={customerQuotations}
                     rowKey="id"
                     size="small"
                     pagination={false}
-                    onRow={(record: any) => ({
-                        onClick: () => handleCopyQuotation(record),
-                        style: { cursor: 'pointer' }
-                    })}
+                    expandable={{
+                        expandedRowRender: (record: any) => {
+                            const detail = quoteDetailsCache[record.id];
+                            if (loadingQuoteId === record.id) {
+                                return (
+                                    <div style={{ textAlign: 'center', padding: '20px 0', background: '#fafafa', borderRadius: 6 }}>
+                                        <Spin size="small" /> Đang tải chi tiết sản phẩm...
+                                    </div>
+                                );
+                            }
+                            if (!detail) {
+                                return (
+                                    <div style={{ color: '#999', padding: 12, background: '#fafafa', borderRadius: 6 }}>
+                                        Chưa có dữ liệu chi tiết
+                                    </div>
+                                );
+                            }
+                            const items = detail.items || [];
+                            return (
+                                <div style={{ background: '#fcfcfc', padding: 12, borderRadius: 6, border: '1px solid #f0f0f0' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                        <span style={{ fontWeight: 600, color: '#1d39c4' }}>
+                                            📦 Chi tiết sản phẩm trong #{record.order_code} ({items.length} mặt hàng):
+                                        </span>
+                                        <Button
+                                            size="small"
+                                            type="primary"
+                                            icon={<CopyOutlined />}
+                                            onClick={() => handleCopyQuotation(record)}
+                                        >
+                                            Sao chép vào đơn hiện tại
+                                        </Button>
+                                    </div>
+                                    <Table
+                                        dataSource={items}
+                                        rowKey={(i: any) => i.id || i.sku}
+                                        size="small"
+                                        pagination={false}
+                                        columns={[
+                                            {
+                                                title: 'Hình ảnh',
+                                                width: 55,
+                                                render: (it: any) => (it.image_url || it.sample_image) ? (
+                                                    <Image src={it.image_url || it.sample_image} width={34} height={34} style={{ objectFit: 'cover', borderRadius: 4 }} />
+                                                ) : '-'
+                                            },
+                                            { title: 'SKU', dataIndex: 'sku', width: 120, render: (s: string) => <b>{s}</b> },
+                                            { title: 'Tên SP / Mô tả', dataIndex: 'vat_content', render: (t: string, it: any) => t || it.product?.name || '-' },
+                                            { title: 'Màu/Quy cách', dataIndex: 'variant_color', width: 130, render: (v: string) => v ? <Tag color="blue">{v}</Tag> : '-' },
+                                            { title: 'SL', dataIndex: 'quantity', width: 60, align: 'center' as const, render: (q: any) => <b>{q}</b> },
+                                            { title: 'Đơn giá', dataIndex: 'unit_price', width: 110, align: 'right' as const, render: (p: any) => `${Number(p || 0).toLocaleString()} ₫` },
+                                            { title: 'Thành tiền', width: 120, align: 'right' as const, render: (it: any) => <b style={{ color: '#d4380d' }}>{((Number(it.quantity) || 1) * (Number(it.unit_price) || 0)).toLocaleString()} ₫</b> },
+                                            { title: 'Ghi chú', dataIndex: 'customer_note', ellipsis: true, render: (n: string, it: any) => n || it.note || '-' }
+                                        ]}
+                                    />
+                                    {detail.note && (
+                                        <div style={{ marginTop: 8, fontSize: 12, color: '#666', background: '#fff', padding: '6px 10px', borderRadius: 4, border: '1px dashed #d9d9d9' }}>
+                                            📝 <b>Ghi chú đơn hàng:</b> {detail.note}
+                                        </div>
+                                    )}
+                                    {detail.terms_content && (
+                                        <div style={{ marginTop: 4, fontSize: 12, color: '#888', background: '#fff', padding: '6px 10px', borderRadius: 4, border: '1px dashed #d9d9d9' }}>
+                                            📜 <b>Điều khoản:</b> {detail.terms_content.slice(0, 160)}...
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        },
+                        onExpand: handleExpandQuote,
+                    }}
                     columns={[
                         { title: 'Mã BG', dataIndex: 'order_code', render: (v: string) => <Tag color="blue">{v}</Tag> },
                         { title: 'Ngày', dataIndex: 'order_date', render: (d: string) => dayjs(d).format('DD/MM/YYYY') },
                         { title: 'Trạng thái', dataIndex: 'status', render: (v: string) => <Tag color={v === 'QUOTATION' ? 'orange' : 'green'}>{v}</Tag> },
-                        { title: 'Tổng tiền', dataIndex: 'total_amount', align: 'right' as const, render: (v: number) => <b style={{ color: 'red' }}>{Number(v || 0).toLocaleString()} ₫</b> }
+                        { title: 'Tổng tiền', dataIndex: 'total_amount', align: 'right' as const, render: (v: number) => <b style={{ color: 'red' }}>{Number(v || 0).toLocaleString()} ₫</b> },
+                        {
+                            title: 'Thao tác',
+                            key: 'act',
+                            align: 'center' as const,
+                            width: 120,
+                            render: (record: any) => (
+                                <Button
+                                    size="small"
+                                    type="primary"
+                                    ghost
+                                    icon={<CopyOutlined />}
+                                    onClick={() => handleCopyQuotation(record)}
+                                >
+                                    Sao chép
+                                </Button>
+                            )
+                        }
                     ]}
                 />
             </Modal>
+
+            {/* SEND ZNS MODAL */}
+            <SendZnsModal
+                open={sendZnsModalOpen}
+                onCancel={() => setSendZnsModalOpen(false)}
+                onSuccess={() => {
+                    if (initialData?.id) {
+                        api.get(`/zns/orders/${initialData.id}/latest-log`)
+                            .then(res => setLatestZnsLog(res.data))
+                            .catch(() => {});
+                    }
+                }}
+                order={initialData}
+            />
             {/* MODAL TẠO HÓA ĐƠN NHÁP EASYINVOICE */}
             <Modal
                 title="Xác nhận thông tin & Chọn sản phẩm xuất hóa đơn"

@@ -21,6 +21,7 @@ import { API_URL } from '../config';
 import dayjs from 'dayjs';
 import RichTextEditor from '../components/common/RichTextEditor';
 import { DEFAULT_DELIVERY_NOTICE_TEMPLATES, PLACEHOLDER_GUIDE, DeliveryNoticeTemplate } from '../utils/deliveryNoticeHelper';
+import { ZnsConfigTab } from '../components/settings/ZnsConfigTab';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -154,6 +155,16 @@ const SystemSettingsPage: React.FC = () => {
                                 </div>
                             ),
                             children: <div style={{ padding: '24px 32px' }}><GhtkConfigTab /></div>
+                        },
+                        {
+                            key: 'zns',
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                                    <MessageOutlined style={{ fontSize: 16, color: '#0068ff' }} />
+                                    <span>Zalo ZNS (OA)</span>
+                                </div>
+                            ),
+                            children: <div style={{ padding: '24px 32px' }}><ZnsConfigTab /></div>
                         },
                         {
                             key: 'operations',

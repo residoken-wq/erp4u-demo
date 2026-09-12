@@ -87,6 +87,9 @@ export class SalesDelivery {
   @Column('jsonb', { nullable: true })
   shipping_metadata: any; // Response GHTK, log tracking, pick address info
 
+  @Column('jsonb', { nullable: true, default: [] })
+  shipping_legs: any[]; // Danh sách các chặng vận chuyển (Multi-leg shipping)
+
   @Column('text', { nullable: true })
   delivery_notice: string; // Nội dung thông báo giao hàng (gửi Zalo / Khách hàng)
 

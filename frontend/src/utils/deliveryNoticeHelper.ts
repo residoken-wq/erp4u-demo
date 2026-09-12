@@ -8,6 +8,21 @@ export interface DeliveryNoticeTemplate {
     content: string;
 }
 
+export interface ShippingLeg {
+    id: string;
+    leg_name: string;
+    carrier_name: string;
+    contact_phone?: string;
+    carrier_phone?: string;
+    tracking_code?: string;
+    shipping_cost?: number;
+    shipping_fee?: number;
+    payer: 'SHOP' | 'CUSTOMER' | 'shop' | 'customer';
+    status?: 'PENDING' | 'IN_TRANSIT' | 'COMPLETED' | 'pending' | 'delivering' | 'delivered';
+    note?: string;
+    notes?: string;
+}
+
 export const PLACEHOLDER_GUIDE = [
     { key: '{CUSTOMER_NAME}', label: 'Tên trường / Khách hàng', example: 'Trường MN Song Ngữ Paris' },
     { key: '{CONTACT_NAME}', label: 'Người liên hệ nhận hàng', example: 'Mr Thái' },
@@ -167,6 +182,7 @@ export interface FormatNoticeParams {
     shipContactName?: string;
     shipContactPhone?: string;
     shippingCarrier?: string;
+    shippingLegs?: ShippingLeg[];
     isCod?: boolean;
     pickMoney?: number;
     companyConfig?: any;
@@ -183,6 +199,7 @@ export function formatDeliveryNotice(templateContent: string, params: FormatNoti
         shipContactName = '',
         shipContactPhone = '',
         shippingCarrier = '',
+        shippingLegs,
         isCod = false,
         pickMoney = 0,
         companyConfig = {},
@@ -241,8 +258,28 @@ export function formatDeliveryNotice(templateContent: string, params: FormatNoti
     const remainingAmount = Math.max(0, orderTotal - paidAmount);
     const shippingFee = Number(order.shipping_fee || 0);
 
-    const carrier = shippingCarrier || delivery.shipping_carrier || order.shipping_carrier;
-    const carrierInfo = carrier ? `Đơn vị vận chuyển: ${carrier}` : 'Vận chuyển: Giao trực tiếp';
+    const legs = shippingLegs || delivery.shipping_legs || [];
+    let carrierInfo = '';
+    if (legs && legs.length > 0) {
+        const legLines = legs.map((leg: ShippingLeg, idx: number) => {
+            const parts = [`+ Chặng ${idx + 1} (${leg.leg_name || 'Vận chuyển'}): ${leg.carrier_name || 'Nhà xe'}`];
+            const phone = leg.contact_phone || leg.carrier_phone;
+            if (phone) parts.push(`SĐT: ${phone}`);
+            if (leg.tracking_code) parts.push(`Mã VĐ: ${leg.tracking_code}`);
+            const fee = Number(leg.shipping_cost !== undefined ? leg.shipping_cost : leg.shipping_fee) || 0;
+            if (fee > 0) {
+                const isCustomer = String(leg.payer || '').toUpperCase() === 'CUSTOMER';
+                parts.push(`Cước: ${fee.toLocaleString('vi-VN')}đ (${isCustomer ? 'Khách trả khi nhận' : 'Shop trả'})`);
+            }
+            const noteText = leg.note || leg.notes;
+            if (noteText) parts.push(`(${noteText})`);
+            return parts.join(' - ');
+        });
+        carrierInfo = `Đơn vị vận chuyển (${legs.length} chặng):\n` + legLines.join('\n');
+    } else {
+        const carrier = shippingCarrier || delivery.shipping_carrier || order.shipping_carrier;
+        carrierInfo = carrier ? `Đơn vị vận chuyển: ${carrier}` : 'Vận chuyển: Giao trực tiếp';
+    }
 
     const paymentMethod = isCod || Number(pickMoney) > 0 
         ? `Thanh toán COD khi nhận hàng` 

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Input, Modal, message, InputNumber, Tooltip, Select, DatePicker, Tag, Alert, Checkbox, Radio, Divider, Spin } from 'antd';
+import { Table, Button, Input, Modal, message, InputNumber, Tooltip, Select, DatePicker, Tag, Alert, Checkbox, Radio, Divider, Spin, Dropdown, Space, Badge } from 'antd';
 import { 
     CarOutlined, CheckCircleOutlined, PrinterOutlined, MailOutlined, EditOutlined, 
     UploadOutlined, DeleteOutlined, AppstoreOutlined, ThunderboltOutlined, 
     CompassOutlined, FilePdfOutlined, HistoryOutlined, CloseCircleOutlined, 
     SendOutlined, CalculatorOutlined, InfoCircleOutlined, SettingOutlined,
-    InboxOutlined, WarningOutlined, MessageOutlined, CopyOutlined, FileTextOutlined
+    InboxOutlined, WarningOutlined, MessageOutlined, CopyOutlined, FileTextOutlined,
+    MoreOutlined, PlusOutlined, ArrowRightOutlined, SyncOutlined
 } from '@ant-design/icons';
 import api from '../../utils/api';
 import dayjs from 'dayjs';
@@ -14,7 +15,8 @@ import { parseWebsiteOrderNote, ParsedShippingInfo, smartParseVietnameseAddress 
 import { 
     DEFAULT_DELIVERY_NOTICE_TEMPLATES, 
     DeliveryNoticeTemplate, 
-    formatDeliveryNotice 
+    formatDeliveryNotice,
+    ShippingLeg
 } from '../../utils/deliveryNoticeHelper';
 
 const extractAddressString = (val: any, fallback = ''): string => {
@@ -118,6 +120,17 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
     const [selectedDeliveryForNotice, setSelectedDeliveryForNotice] = useState<any>(null);
     const [editingSavedNotice, setEditingSavedNotice] = useState<string>('');
     const [isSavingNotice, setIsSavingNotice] = useState<boolean>(false);
+
+    // Multi-Leg Shipping State
+    const [shippingLegs, setShippingLegs] = useState<ShippingLeg[]>([]);
+
+    // Zalo ZNS Delivery Modal State
+    const [znsDeliveryModalOpen, setZnsDeliveryModalOpen] = useState<boolean>(false);
+    const [selectedDeliveryForZns, setSelectedDeliveryForZns] = useState<any>(null);
+    const [znsDeliveryPhone, setZnsDeliveryPhone] = useState<string>('');
+    const [znsDeliveryRecipientName, setZnsDeliveryRecipientName] = useState<string>('');
+    const [isSendingDeliveryZns, setIsSendingDeliveryZns] = useState<boolean>(false);
+    const [deliveryZnsResult, setDeliveryZnsResult] = useState<any>(null);
 
     const fetchGhtkConfig = async () => {
         try {
@@ -694,7 +707,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
     };
 
     // Helper methods for Delivery Notice
-    const handleNoticeTemplateSelect = (tplId: string, currentShipItems = shipItems, customShipDate = shipDate, customAddress = shipAddress, customContactName = shipContactName, customContactPhone = shipContactPhone, customCarrier = shippingCarrier, customIsCod = isCod, customPickMoney = pickMoney) => {
+    const handleNoticeTemplateSelect = (tplId: string, currentShipItems = shipItems, customShipDate = shipDate, customAddress = shipAddress, customContactName = shipContactName, customContactPhone = shipContactPhone, customCarrier = shippingCarrier, customIsCod = isCod, customPickMoney = pickMoney, customLegs = shippingLegs) => {
         setSelectedNoticeTemplateId(tplId);
         const tpl = deliveryNoticeTemplates.find(t => t.id === tplId) || deliveryNoticeTemplates[0] || DEFAULT_DELIVERY_NOTICE_TEMPLATES[0];
         if (!tpl) return;
@@ -715,6 +728,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             shipContactName: customContactName !== undefined ? customContactName : shipContactName,
             shipContactPhone: customContactPhone !== undefined ? customContactPhone : shipContactPhone,
             shippingCarrier: customCarrier !== undefined ? customCarrier : shippingCarrier,
+            shippingLegs: customLegs !== undefined ? customLegs : shippingLegs,
             isCod: customIsCod !== undefined ? customIsCod : isCod,
             pickMoney: customPickMoney !== undefined ? customPickMoney : pickMoney,
             companyConfig: companyConfig || {},
@@ -742,6 +756,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             shipContactName: shipContactName,
             shipContactPhone: shipContactPhone,
             shippingCarrier: shippingCarrier,
+            shippingLegs: shippingLegs,
             isCod: isCod,
             pickMoney: pickMoney,
             companyConfig: companyConfig || {},
@@ -775,6 +790,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 shipContactName: delivery.contact_name,
                 shipContactPhone: delivery.contact_phone,
                 shippingCarrier: delivery.shipping_carrier,
+                shippingLegs: delivery.shipping_legs || [],
                 isCod: Number(delivery.pick_money) > 0,
                 pickMoney: delivery.pick_money,
                 companyConfig: companyConfig || {},
@@ -783,6 +799,170 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             setEditingSavedNotice(generated);
         }
         setViewNoticeModalOpen(true);
+    };
+
+    // Multi-Leg Shipping Handlers
+    const handleAddLeg = () => {
+        const newIndex = shippingLegs.length + 1;
+        const newLeg: ShippingLeg = {
+            id: `leg_${Date.now()}`,
+            leg_name: `Chặng ${newIndex}: `,
+            carrier_name: '',
+            carrier_phone: '',
+            tracking_code: '',
+            shipping_fee: 0,
+            payer: 'shop',
+            status: 'pending',
+            notes: ''
+        };
+        setShippingLegs(prev => [...prev, newLeg]);
+    };
+
+    const handleRemoveLeg = (index: number) => {
+        setShippingLegs(prev => prev.filter((_, idx) => idx !== index));
+    };
+
+    const handleUpdateLeg = (index: number, field: keyof ShippingLeg, val: any) => {
+        setShippingLegs(prev => {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], [field]: val };
+            return updated;
+        });
+    };
+
+    const handleApplyChanhXePreset = () => {
+        const legs: ShippingLeg[] = [
+            {
+                id: `leg_1_${Date.now()}`,
+                leg_name: '1. Kho ➔ Chành xe',
+                carrier_name: 'Xe nội bộ / Giao vận',
+                carrier_phone: '',
+                tracking_code: '',
+                shipping_fee: 0,
+                payer: 'shop',
+                status: 'delivered',
+                notes: 'Vận chuyển hàng ra bến/chành'
+            },
+            {
+                id: `leg_2_${Date.now()}`,
+                leg_name: '2. Chành xe ➔ Bến tỉnh',
+                carrier_name: shippingCarrier || 'Chành xe liên tỉnh',
+                carrier_phone: '',
+                tracking_code: trackingCode || '',
+                shipping_fee: shippingCost || 0,
+                payer: isFreeship === 1 ? 'shop' : 'customer',
+                status: 'delivering',
+                notes: 'Chành xe chuyển hàng về địa phương'
+            },
+            {
+                id: `leg_3_${Date.now()}`,
+                leg_name: '3. Bến tỉnh ➔ Khách nhận',
+                carrier_name: 'Khách nhận tại chành / Xe trung chuyển',
+                carrier_phone: shipContactPhone || '',
+                tracking_code: '',
+                shipping_fee: 0,
+                payer: 'customer',
+                status: 'pending',
+                notes: 'Giao tận tay khách hàng hoặc nhận tại bến'
+            }
+        ];
+        setShippingLegs(legs);
+        message.success('Đã áp dụng mẫu 3 chặng Chành xe (Kho ➔ Chành ➔ Tỉnh ➔ Khách)!');
+    };
+
+    const handleApplyDirectPreset = () => {
+        const legs: ShippingLeg[] = [
+            {
+                id: `leg_1_${Date.now()}`,
+                leg_name: 'Giao hàng trực tiếp',
+                carrier_name: shippingCarrier || 'Đội xe / GHTK',
+                carrier_phone: '',
+                tracking_code: trackingCode || '',
+                shipping_fee: shippingCost || 0,
+                payer: isFreeship === 1 ? 'shop' : 'customer',
+                status: 'pending',
+                notes: 'Giao thẳng tới địa chỉ công trình / khách nhận'
+            }
+        ];
+        setShippingLegs(legs);
+        message.success('Đã áp dụng mẫu 1 chặng trực tiếp!');
+    };
+
+    const handleSyncLegsToShippingCost = () => {
+        const shopTotal = shippingLegs
+            .filter(l => String(l.payer || '').toLowerCase() === 'shop')
+            .reduce((sum, l) => sum + (Number(l.shipping_fee !== undefined ? l.shipping_fee : l.shipping_cost) || 0), 0);
+        setShippingCost(shopTotal);
+        message.success(`Đã cập nhật Chi phí VC (Shop trả): ${shopTotal.toLocaleString()}đ`);
+    };
+
+    const handleSyncLegsToNotice = () => {
+        const tpl = deliveryNoticeTemplates.find(t => t.id === selectedNoticeTemplateId) || deliveryNoticeTemplates[0] || DEFAULT_DELIVERY_NOTICE_TEMPLATES[0];
+        const generated = formatDeliveryNotice(tpl.content, {
+            order,
+            delivery: {
+                id: editingDeliveryId,
+                code: editingDeliveryId ? (history.find(h => h.id === editingDeliveryId)?.code) : `PXK-${dayjs(shipDate).format('DDMMYY')}-XXXX`,
+                delivery_date: shipDate,
+                delivery_address: shipAddress,
+                contact_name: shipContactName,
+                contact_phone: shipContactPhone,
+                shipping_carrier: shippingCarrier
+            },
+            shipItems: shipItems,
+            shipDate: shipDate,
+            shipAddress: shipAddress,
+            shipContactName: shipContactName,
+            shipContactPhone: shipContactPhone,
+            shippingCarrier: shippingCarrier,
+            shippingLegs: shippingLegs,
+            isCod: isCod,
+            pickMoney: pickMoney,
+            companyConfig: companyConfig || {},
+            products: products
+        });
+        setDeliveryNotice(generated);
+        message.success('Đã đồng bộ thông tin đa chặng vào nội dung thông báo giao hàng!');
+    };
+
+    // ZNS Delivery Handlers
+    const openSendDeliveryZnsModal = (delivery: any) => {
+        setSelectedDeliveryForZns(delivery);
+        const candidatePhone = delivery.contact_phone || order.contact_phone || order.receiver_phone || order.customer?.phone || '';
+        setZnsDeliveryPhone(candidatePhone);
+        const candidateName = delivery.contact_name || order.receiver_name || order.contact_name || order.customer?.name || 'Quý khách';
+        setZnsDeliveryRecipientName(candidateName);
+        setDeliveryZnsResult(null);
+        setZnsDeliveryModalOpen(true);
+    };
+
+    const handleConfirmSendDeliveryZns = async () => {
+        if (!selectedDeliveryForZns?.id) return;
+        if (!znsDeliveryPhone) {
+            message.error('Vui lòng nhập số điện thoại người nhận');
+            return;
+        }
+        setIsSendingDeliveryZns(true);
+        setDeliveryZnsResult(null);
+        try {
+            const res = await api.post(`/zns/deliveries/${selectedDeliveryForZns.id}/send-notice`, {
+                phone: znsDeliveryPhone,
+                recipient_name: znsDeliveryRecipientName
+            });
+            setDeliveryZnsResult(res.data);
+            if (res.data?.success) {
+                message.success('Đã gửi thông báo giao hàng ZNS qua Zalo OA thành công!');
+            } else {
+                message.warning(`Gửi ZNS: ${res.data?.message || 'Có lỗi xảy ra'}`);
+            }
+            fetchHistory();
+        } catch (e: any) {
+            const errMsg = e.response?.data?.message || 'Lỗi kết nối khi gửi tin nhắn ZNS';
+            message.error(errMsg);
+            setDeliveryZnsResult({ success: false, message: errMsg });
+        } finally {
+            setIsSendingDeliveryZns(false);
+        }
     };
 
     const handleSaveDeliveryNoticeOnly = async () => {
@@ -824,6 +1004,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         setTrackingCode('');
         setShippingCost(0);
         setEstimatedFeeInfo(null);
+        setShippingLegs([]);
 
         // Bóc tách thông tin ghi chú đơn hàng website
         const parsed = parseWebsiteOrderNote(order?.note, order);
@@ -940,6 +1121,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         setIsFreeship(delivery.is_freeship !== undefined ? Number(delivery.is_freeship) : 1);
         setPackageWeight(Number(delivery.weight_gram) || 500);
         setPushToGhtkDirectly(false);
+        setShippingLegs(delivery.shipping_legs && Array.isArray(delivery.shipping_legs) ? delivery.shipping_legs : []);
 
         // Load packing specs & dimensions
         setPackageLength(delivery.package_length !== null && delivery.package_length !== undefined ? Number(delivery.package_length) : null);
@@ -1049,6 +1231,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 package_height: packageHeight !== null && packageHeight !== undefined ? Number(packageHeight) : null,
                 package_count: packageCount || 1,
                 packing_spec_name: packingSpecName || null,
+                shipping_legs: shippingLegs,
                 delivery_notice: deliveryNotice,
                 status: isDraft ? 'DRAFT' : (editingDeliveryId ? shipStatus : 'PENDING_EXPORT')
             };
@@ -1268,7 +1451,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         <div>
             <div style={{ marginBottom: 20, background: '#f0f5ff', padding: 10, borderRadius: 6, border: '1px solid #adc6ff' }}>
                 <div style={{ fontWeight: 'bold', marginBottom: 5, color: '#1d39c4' }}>Tiến độ giao hàng:</div>
-                <Table dataSource={summaryData} rowKey="sku" pagination={false} size="small" bordered
+                <Table dataSource={summaryData} rowKey="sku" pagination={false} size="small" bordered scroll={{ x: 900 }}
                     expandable={{
                         expandedRowRender: (record: any) => {
                             if (!record.isCombo || !record.comboChildren?.length) return null;
@@ -1388,7 +1571,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                     <Button type="primary" size="small" icon={<CarOutlined />} onClick={openCreateModal}>Tạo Phiếu Xuất Kho</Button>
                 )}
             </div>
-            <Table dataSource={history} rowKey="id" pagination={false} size="small" bordered columns={[
+            <Table dataSource={history} rowKey="id" pagination={false} size="small" bordered scroll={{ x: 1080 }} columns={[
                 { title: 'Mã phiếu', dataIndex: 'code', render: (t: any) => <b>{t}</b> },
                 { title: 'Ngày giao', render: (r: any) => dayjs(r.delivery_date).format('DD/MM/YYYY') },
                 {
@@ -1414,28 +1597,57 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                     {r.weight_gram && <span style={{ color: '#8c8c8c' }}>• {r.weight_gram}g</span>}
                                 </div>
                             )}
-                            {(r.shipping_carrier || r.tracking_code || Number(r.shipping_cost) > 0) && (
-                                <div style={{ marginTop: 4, fontSize: 12, color: '#1d39c4', background: '#f0f5ff', padding: '3px 6px', borderRadius: 4 }}>
-                                    <CarOutlined style={{ marginRight: 4 }} />
-                                    {r.shipping_carrier && <span>{r.shipping_carrier}</span>}
-                                    {r.tracking_code && (
-                                        <span>
-                                            {' • '}
-                                            <b>{r.tracking_code}</b>
-                                            {r.tracking_code.startsWith('GHTK-DEMO') && (
-                                                <Tag color="orange" style={{ marginLeft: 4, fontSize: 10 }}>Mã Demo</Tag>
-                                            )}
-                                        </span>
-                                    )}
-                                    {Number(r.shipping_cost) > 0 && <span> • {Number(r.shipping_cost).toLocaleString()}đ</span>}
-                                    {Number(r.pick_money) > 0 && <span style={{ color: '#d4380d', fontWeight: 500 }}> • COD: {Number(r.pick_money).toLocaleString()}đ</span>}
-                                    {r.shipping_status_text && (
-                                        <Tag color={r.shipping_status_id === 5 || r.shipping_status_id === 6 ? 'green' : r.shipping_status_id === -1 ? 'red' : 'blue'} style={{ marginLeft: 6, fontSize: 10 }}>
-                                            {r.shipping_status_text}
-                                        </Tag>
-                                    )}
+
+                            {/* Multi-Leg Shipping info if available */}
+                            {r.shipping_legs && r.shipping_legs.length > 0 ? (
+                                <div style={{ marginTop: 5, fontSize: 11, color: '#0958d9', background: '#f0f5ff', padding: '4px 8px', borderRadius: 4, border: '1px solid #d6e4ff' }}>
+                                    <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                                        <CarOutlined /> Tuyến vận chuyển đa chặng ({r.shipping_legs.length} chặng):
+                                    </div>
+                                    {r.shipping_legs.map((leg: any, idx: number) => {
+                                        const fee = Number(leg.shipping_fee !== undefined ? leg.shipping_fee : leg.shipping_cost) || 0;
+                                        const isShop = String(leg.payer || '').toLowerCase() === 'shop';
+                                        return (
+                                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', marginTop: 2 }}>
+                                                <Tag color="blue" style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}>C{idx + 1}</Tag>
+                                                <span style={{ fontWeight: 500 }}>{leg.leg_name}:</span>
+                                                <span>{leg.carrier_name || 'Chưa gán'}</span>
+                                                {(leg.contact_phone || leg.carrier_phone) && <span style={{ color: '#64748b' }}>({leg.contact_phone || leg.carrier_phone})</span>}
+                                                {leg.tracking_code && <Tag color="cyan" style={{ margin: 0, fontSize: 10 }}>Mã: {leg.tracking_code}</Tag>}
+                                                {fee > 0 && (
+                                                    <span style={{ color: isShop ? '#1677ff' : '#d4380d', fontWeight: 500 }}>
+                                                        • {fee.toLocaleString()}đ ({isShop ? 'Shop trả' : 'Khách trả'})
+                                                    </span>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
+                            ) : (
+                                (r.shipping_carrier || r.tracking_code || Number(r.shipping_cost) > 0) && (
+                                    <div style={{ marginTop: 4, fontSize: 12, color: '#1d39c4', background: '#f0f5ff', padding: '3px 6px', borderRadius: 4 }}>
+                                        <CarOutlined style={{ marginRight: 4 }} />
+                                        {r.shipping_carrier && <span>{r.shipping_carrier}</span>}
+                                        {r.tracking_code && (
+                                            <span>
+                                                {' • '}
+                                                <b>{r.tracking_code}</b>
+                                                {r.tracking_code.startsWith('GHTK-DEMO') && (
+                                                    <Tag color="orange" style={{ marginLeft: 4, fontSize: 10 }}>Mã Demo</Tag>
+                                                )}
+                                            </span>
+                                        )}
+                                        {Number(r.shipping_cost) > 0 && <span> • {Number(r.shipping_cost).toLocaleString()}đ</span>}
+                                        {Number(r.pick_money) > 0 && <span style={{ color: '#d4380d', fontWeight: 500 }}> • COD: {Number(r.pick_money).toLocaleString()}đ</span>}
+                                        {r.shipping_status_text && (
+                                            <Tag color={r.shipping_status_id === 5 || r.shipping_status_id === 6 ? 'green' : r.shipping_status_id === -1 ? 'red' : 'blue'} style={{ marginLeft: 6, fontSize: 10 }}>
+                                                {r.shipping_status_text}
+                                            </Tag>
+                                        )}
+                                    </div>
+                                )
                             )}
+
                             {r.note && (
                                 <div style={{ marginTop: 3, fontSize: 12, color: '#595959', fontStyle: 'italic' }}>
                                     📝 {r.note}
@@ -1446,7 +1658,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 },
                 {
                     title: 'Chứng từ',
-                    width: 200,
+                    width: 170,
                     render: (r) => (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ flex: 1 }}>
@@ -1459,96 +1671,140 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                     )
                 },
                 {
-                    title: '', width: 140, align: 'center', render: (_: any, r: any) => (
-                        <div style={{ display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
-                            {r.status === 'DRAFT' && (
-                                <Tooltip title="Chuyển thành phiếu chính thức (Chờ xuất kho)">
-                                    <Button size="small" type="primary" style={{ background: '#52c41a', borderColor: '#52c41a' }} onClick={async () => {
+                    title: 'Thao tác',
+                    width: 175,
+                    align: 'center',
+                    fixed: 'right',
+                    render: (_: any, r: any) => {
+                        const moreMenuItems: any[] = [];
+
+                        if (r.status === 'DRAFT') {
+                            moreMenuItems.push({
+                                key: 'approve',
+                                icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+                                label: 'Duyệt phiếu chính thức',
+                                onClick: async () => {
+                                    try {
+                                        await api.put(`/sales/delivery/${r.id}`, { status: 'PENDING_EXPORT' });
+                                        message.success('Đã chuyển thành phiếu chính thức');
+                                        fetchHistory();
+                                    } catch (e: any) {
+                                        message.error(e.response?.data?.message || 'Không thể cập nhật trạng thái');
+                                    }
+                                }
+                            });
+                        }
+
+                        if (r.shipping_carrier === 'GHTK' && r.tracking_code && !r.tracking_code.startsWith('GHTK-DEMO')) {
+                            moreMenuItems.push({
+                                key: 'ghtk_print',
+                                icon: <FilePdfOutlined style={{ color: '#008444' }} />,
+                                label: 'In nhãn vận đơn A6 (GHTK)',
+                                onClick: () => handlePrintGhtkLabel(r)
+                            });
+                            moreMenuItems.push({
+                                key: 'ghtk_track',
+                                icon: <HistoryOutlined style={{ color: '#1890ff' }} />,
+                                label: 'Xem hành trình GHTK',
+                                onClick: () => handleViewTracking(r)
+                            });
+                            if (r.shipping_status_id !== 5 && r.shipping_status_id !== 6 && r.shipping_status_id !== -1) {
+                                moreMenuItems.push({
+                                    key: 'ghtk_cancel',
+                                    icon: <CloseCircleOutlined style={{ color: '#ff4d4f' }} />,
+                                    label: 'Hủy vận đơn GHTK',
+                                    danger: true,
+                                    onClick: () => handleCancelGhtk(r.id)
+                                });
+                            }
+                        }
+
+                        if (r.shipping_carrier === 'GHTK' && (!r.tracking_code || r.tracking_code.startsWith('GHTK-DEMO'))) {
+                            moreMenuItems.push({
+                                key: 'ghtk_push',
+                                icon: <SendOutlined style={{ color: '#fa8c16' }} />,
+                                label: r.tracking_code?.startsWith('GHTK-DEMO') ? 'Đẩy đơn sang GHTK thật' : 'Đẩy đơn sang GHTK',
+                                onClick: () => handlePushSingleDeliveryGhtk(r)
+                            });
+                        }
+
+                        moreMenuItems.push({
+                            key: 'upload_doc',
+                            icon: <UploadOutlined style={{ color: '#1890ff' }} />,
+                            label: 'Tải lên chứng từ giao hàng',
+                            onClick: () => openUploadModal(r)
+                        });
+
+                        moreMenuItems.push({
+                            key: 'send_email',
+                            icon: <MailOutlined style={{ color: '#722ed1' }} />,
+                            label: 'Gửi Email thông báo khách',
+                            onClick: async () => {
+                                Modal.confirm({
+                                    title: 'Gửi Email thông báo?',
+                                    content: 'Hệ thống sẽ gửi email thông báo giao hàng cho khách hàng theo mẫu.',
+                                    onOk: async () => {
                                         try {
-                                            await api.put(`/sales/delivery/${r.id}`, { status: 'PENDING_EXPORT' });
-                                            message.success('Đã chuyển thành phiếu chính thức');
+                                            await api.post(`/sales/delivery/${r.id}/email`);
+                                            message.success('Đã gửi email thành công');
                                             fetchHistory();
-                                        } catch (e: any) {
-                                            message.error(e.response?.data?.message || 'Không thể cập nhật trạng thái');
+                                        } catch (e) {
+                                            message.error('Lỗi gửi email: Cần cấu hình SMTP');
                                         }
-                                    }}>Duyệt phiếu</Button>
+                                    }
+                                });
+                            }
+                        });
+
+                        if (order.status !== 'COMPLETED' && order.status !== 'CANCELLED') {
+                            moreMenuItems.push({ type: 'divider' });
+                            moreMenuItems.push({
+                                key: 'delete',
+                                icon: <DeleteOutlined />,
+                                label: 'Xóa phiếu xuất',
+                                danger: true,
+                                onClick: () => handleDeleteDelivery(r.id)
+                            });
+                        }
+
+                        return (
+                            <div style={{ display: 'flex', gap: 4, justifyContent: 'center', alignItems: 'center' }}>
+                                <Tooltip title="In Phiếu Xuất Kho">
+                                    <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(r)} />
                                 </Tooltip>
-                            )}
-                            <Tooltip title="In Phiếu Xuất Kho">
-                                <Button size="small" icon={<PrinterOutlined />} onClick={() => handlePrint(r)} />
-                            </Tooltip>
-                            {/* GHTK Action Buttons */}
-                            {r.shipping_carrier === 'GHTK' && r.tracking_code && !r.tracking_code.startsWith('GHTK-DEMO') && (
-                                <>
-                                    <Tooltip title="In Vận Đơn GHTK (A6 PDF)">
-                                        <Button size="small" style={{ color: '#008444', borderColor: '#008444' }} icon={<FilePdfOutlined />} onClick={() => handlePrintGhtkLabel(r)} />
-                                    </Tooltip>
-                                    <Tooltip title="Xem hành trình GHTK">
-                                        <Button size="small" icon={<HistoryOutlined style={{ color: '#1890ff' }} />} onClick={() => handleViewTracking(r)} />
-                                    </Tooltip>
-                                    {r.shipping_status_id !== 5 && r.shipping_status_id !== 6 && r.shipping_status_id !== -1 && (
-                                        <Tooltip title="Hủy Vận Đơn GHTK">
-                                            <Button size="small" danger icon={<CloseCircleOutlined />} onClick={() => handleCancelGhtk(r.id)} />
-                                        </Tooltip>
-                                    )}
-                                </>
-                            )}
-                            {/* Nút đẩy đơn GHTK: hiển thị nếu chưa có mã VĐ hoặc mã hiện tại là mã Demo */}
-                            {r.shipping_carrier === 'GHTK' && (!r.tracking_code || r.tracking_code.startsWith('GHTK-DEMO')) && (
-                                <Tooltip title={r.tracking_code?.startsWith('GHTK-DEMO') ? "Phiếu này đang mang mã Demo mô phỏng. Bấm để đẩy sang GHTK thật lấy mã chính thức!" : "Đẩy đơn sang GHTK để lấy mã vận đơn"}>
-                                    <Button 
-                                        size="small" 
-                                        type="primary" 
-                                        style={{ 
-                                            background: r.tracking_code?.startsWith('GHTK-DEMO') ? '#fa8c16' : '#008444', 
-                                            borderColor: r.tracking_code?.startsWith('GHTK-DEMO') ? '#fa8c16' : '#008444' 
-                                        }} 
-                                        icon={<SendOutlined />} 
-                                        onClick={() => handlePushSingleDeliveryGhtk(r)}
-                                    >
-                                        {r.tracking_code?.startsWith('GHTK-DEMO') ? 'Đẩy GHTK thật' : 'GHTK'}
-                                    </Button>
-                                </Tooltip>
-                            )}
-                            {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
-                                <>
+                                {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
                                     <Tooltip title="Sửa phiếu">
                                         <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(r)} />
                                     </Tooltip>
-                                    <Tooltip title="Xóa phiếu">
-                                        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteDelivery(r.id)} />
-                                    </Tooltip>
-                                </>
-                            )}
-                            <Tooltip title="Thông báo giao hàng (Xem / Sao chép / Sửa)">
-                                <Button 
-                                    size="small" 
-                                    style={{ color: '#108ee9', borderColor: '#91d5ff' }} 
-                                    icon={<MessageOutlined />} 
-                                    onClick={() => openViewNoticeModal(r)} 
-                                />
-                            </Tooltip>
-                            <Tooltip title="Gửi Email thông báo khách hàng">
-                                <Button size="small" icon={<MailOutlined />} onClick={async () => {
-                                    try {
-                                        Modal.confirm({
-                                            title: 'Gửi Email thông báo?',
-                                            content: 'Hệ thống sẽ gửi email thông báo giao hàng cho khách hàng theo mẫu.',
-                                            onOk: async () => {
-                                                await api.post(`/sales/delivery/${r.id}/email`);
-                                                message.success('Đã gửi email thành công');
-                                                fetchHistory();
-                                            }
-                                        });
-                                    } catch (e) { message.error('Lỗi gửi email: Cần cấu hình SMTP'); }
-                                }} />
-                            </Tooltip>
-                        </div>
-                    )
+                                )}
+                                <Tooltip title="Thông báo giao hàng (Xem / Sửa / Copy)">
+                                    <Button 
+                                        size="small" 
+                                        style={{ color: '#108ee9', borderColor: '#91d5ff' }} 
+                                        icon={<MessageOutlined />} 
+                                        onClick={() => openViewNoticeModal(r)} 
+                                    />
+                                </Tooltip>
+                                <Tooltip title="Gửi Zalo ZNS Thông báo giao hàng">
+                                    <Button 
+                                        size="small" 
+                                        style={{ color: '#0068ff', borderColor: '#b5d5ff', background: '#eef5ff' }} 
+                                        icon={<SendOutlined />} 
+                                        onClick={() => openSendDeliveryZnsModal(r)} 
+                                    />
+                                </Tooltip>
+                                {moreMenuItems.length > 0 && (
+                                    <Dropdown menu={{ items: moreMenuItems }} trigger={['click']} placement="bottomRight">
+                                        <Button size="small" icon={<MoreOutlined />} />
+                                    </Dropdown>
+                                )}
+                            </div>
+                        );
+                    }
                 }
             ]} />
 
-            <Modal title={editingDeliveryId ? "Cập nhật Phiếu Xuất Kho" : "Tạo Phiếu Xuất Kho"} open={isModalOpen} onCancel={() => setIsModalOpen(false)} onOk={handleShip} width={700}>
+            <Modal title={editingDeliveryId ? "Cập nhật Phiếu Xuất Kho" : "Tạo Phiếu Xuất Kho"} open={isModalOpen} onCancel={() => setIsModalOpen(false)} onOk={handleShip} width={960}>
                 {/* WEBSITE ORDER BANNER */}
                 {websiteOrderParsed?.isWebsiteOrder && (
                     <Alert
@@ -1746,6 +2002,170 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                         </div>
                     </div>
 
+                    {/* TUYẾN VẬN CHUYỂN ĐA CHẶNG (MULTI-LEG SHIPPING) */}
+                    <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 8, border: '1px solid #cbd5e1', marginTop: 12, marginBottom: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <CarOutlined style={{ color: '#1677ff', fontSize: 16 }} />
+                                <span style={{ fontWeight: 700, color: '#1e293b', fontSize: 13 }}>
+                                    Tuyến Vận Chuyển Đa Chặng (Kho ➔ Chành xe ➔ Địa phương ➔ Khách):
+                                </span>
+                                <Tag color={shippingLegs.length > 0 ? "blue" : "default"}>{shippingLegs.length} chặng</Tag>
+                            </div>
+                            <Space size={6} wrap>
+                                <Button size="small" type="primary" ghost icon={<PlusOutlined />} onClick={handleAddLeg}>
+                                    + Thêm chặng
+                                </Button>
+                                <Button size="small" onClick={handleApplyChanhXePreset} style={{ color: '#0958d9', borderColor: '#91caff' }}>
+                                    🚚 Mẫu 3 Chặng Chành Xe
+                                </Button>
+                                <Button size="small" onClick={handleApplyDirectPreset}>
+                                    📦 Mẫu 1 Chặng Giao Thẳng
+                                </Button>
+                            </Space>
+                        </div>
+
+                        {shippingLegs.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '12px', background: '#ffffff', borderRadius: 6, border: '1px dashed #d9d9d9', color: '#64748b', fontSize: 12 }}>
+                                Chưa cấu hình đa chặng. Bạn có thể sử dụng thông tin ĐVVC đơn giản ở trên, hoặc bấm <b>"Mẫu 3 Chặng Chành Xe"</b> để tự động tạo tuyến: Kho ➔ Chành xe ➔ Tỉnh ➔ Khách nhận.
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {shippingLegs.map((leg, idx) => {
+                                    const legFee = Number(leg.shipping_fee !== undefined ? leg.shipping_fee : leg.shipping_cost) || 0;
+                                    const isShopPayer = String(leg.payer || '').toLowerCase() === 'shop';
+                                    return (
+                                        <div key={leg.id || idx} style={{ background: '#ffffff', padding: '10px 12px', borderRadius: 6, border: '1px solid #e2e8f0', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 260 }}>
+                                                    <Tag color="blue" style={{ fontWeight: 600, margin: 0 }}>Chặng {idx + 1}</Tag>
+                                                    <Input
+                                                        size="small"
+                                                        style={{ fontWeight: 600, maxWidth: 280 }}
+                                                        placeholder="Tên chặng (VD: Kho ra Chành xe)"
+                                                        value={leg.leg_name}
+                                                        onChange={e => handleUpdateLeg(idx, 'leg_name', e.target.value)}
+                                                    />
+                                                    <Select
+                                                        size="small"
+                                                        style={{ width: 140 }}
+                                                        value={leg.status || 'pending'}
+                                                        onChange={val => handleUpdateLeg(idx, 'status', val)}
+                                                        options={[
+                                                            { value: 'pending', label: '⏳ Chờ gửi' },
+                                                            { value: 'delivering', label: '🚚 Đang chuyển' },
+                                                            { value: 'delivered', label: '✅ Đã đến nơi' }
+                                                        ]}
+                                                    />
+                                                </div>
+                                                <Button
+                                                    size="small"
+                                                    type="text"
+                                                    danger
+                                                    icon={<DeleteOutlined />}
+                                                    onClick={() => handleRemoveLeg(idx)}
+                                                >
+                                                    Xóa chặng
+                                                </Button>
+                                            </div>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1fr 1.2fr', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                                                <div>
+                                                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>Đơn vị / Tài xế / Chành xe:</div>
+                                                    <Input
+                                                        size="small"
+                                                        placeholder="VD: Chành xe Tô Châu"
+                                                        value={leg.carrier_name}
+                                                        onChange={e => handleUpdateLeg(idx, 'carrier_name', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>SĐT liên hệ:</div>
+                                                    <Input
+                                                        size="small"
+                                                        placeholder="090..."
+                                                        value={leg.contact_phone || leg.carrier_phone || ''}
+                                                        onChange={e => {
+                                                            handleUpdateLeg(idx, 'carrier_phone', e.target.value);
+                                                            handleUpdateLeg(idx, 'contact_phone', e.target.value);
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>Mã VĐ / Biên nhận:</div>
+                                                    <Input
+                                                        size="small"
+                                                        placeholder="VD: TC-88912"
+                                                        value={leg.tracking_code || ''}
+                                                        onChange={e => handleUpdateLeg(idx, 'tracking_code', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>Cước chặng này:</div>
+                                                    <InputNumber
+                                                        size="small"
+                                                        style={{ width: '100%' }}
+                                                        placeholder="0"
+                                                        value={legFee}
+                                                        onChange={v => {
+                                                            handleUpdateLeg(idx, 'shipping_fee', v || 0);
+                                                            handleUpdateLeg(idx, 'shipping_cost', v || 0);
+                                                        }}
+                                                        formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                                        addonAfter="đ"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>Người trả cước:</div>
+                                                    <Radio.Group
+                                                        size="small"
+                                                        value={isShopPayer ? 'shop' : 'customer'}
+                                                        onChange={e => handleUpdateLeg(idx, 'payer', e.target.value)}
+                                                    >
+                                                        <Radio.Button value="shop">Shop trả</Radio.Button>
+                                                        <Radio.Button value="customer">Khách trả</Radio.Button>
+                                                    </Radio.Group>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <Input
+                                                    size="small"
+                                                    placeholder="Ghi chú chặng (VD: Bến xe Miền Đông cổng 3, giao trước 14h, người nhận trả cước...)"
+                                                    value={leg.notes || leg.note || ''}
+                                                    onChange={e => {
+                                                        handleUpdateLeg(idx, 'notes', e.target.value);
+                                                        handleUpdateLeg(idx, 'note', e.target.value);
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {/* Total legs bar */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f1f5f9', borderRadius: 6, flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                                    <div style={{ fontSize: 12 }}>
+                                        <b>Tổng cước các chặng:</b>{' '}
+                                        <span style={{ fontWeight: 600, color: '#1e293b' }}>
+                                            {shippingLegs.reduce((sum, l) => sum + (Number(l.shipping_fee !== undefined ? l.shipping_fee : l.shipping_cost) || 0), 0).toLocaleString()}đ
+                                        </span>
+                                        {' '}(<span style={{ color: '#1677ff' }}>Shop trả: {shippingLegs.filter(l => String(l.payer || '').toLowerCase() === 'shop').reduce((sum, l) => sum + (Number(l.shipping_fee !== undefined ? l.shipping_fee : l.shipping_cost) || 0), 0).toLocaleString()}đ</span>
+                                        {' • '}<span style={{ color: '#d4380d' }}>Khách trả: {shippingLegs.filter(l => String(l.payer || '').toLowerCase() === 'customer').reduce((sum, l) => sum + (Number(l.shipping_fee !== undefined ? l.shipping_fee : l.shipping_cost) || 0), 0).toLocaleString()}đ</span>)
+                                    </div>
+                                    <Space size={6}>
+                                        <Button size="small" icon={<SyncOutlined />} onClick={handleSyncLegsToShippingCost}>
+                                            Đồng bộ cước Shop trả vào chi phí phiếu
+                                        </Button>
+                                        <Button size="small" type="dashed" icon={<MessageOutlined />} onClick={handleSyncLegsToNotice}>
+                                            Đồng bộ vào mẫu Thông báo
+                                        </Button>
+                                    </Space>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     {/* PACKING SPEC & PACKAGE DIMENSIONS */}
                     <div style={{ background: '#f9f0ff', padding: '10px 12px', borderRadius: 6, border: '1px solid #d3adf7', marginTop: 10, marginBottom: 8 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -1757,45 +2177,48 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                             </span>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
-                            <div>
-                                <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Mẫu quy cách có sẵn:</div>
-                                <Select
-                                    style={{ width: '100%' }}
-                                    size="small"
-                                    allowClear
-                                    placeholder="-- Chọn mẫu quy cách --"
-                                    value={selectedPackingSpecId || undefined}
-                                    onChange={(val) => handleSelectPackingSpec(val || null)}
-                                    options={packingSpecs.map((spec: any) => {
-                                        const relevantCategoryIds = (order.items || []).map((it: any) => {
-                                            const p = products.find((prod: any) => prod.value === it.sku);
-                                            return p?.category_id;
-                                        }).filter(Boolean);
-                                        const relevantProductIds = (order.items || []).map((it: any) => {
-                                            const p = products.find((prod: any) => prod.value === it.sku);
-                                            return p?.id;
-                                        }).filter(Boolean);
+                        {/* Row 1: Mẫu quy cách có sẵn - Full width to prevent crushing */}
+                        <div style={{ marginBottom: 8 }}>
+                            <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Mẫu quy cách có sẵn:</div>
+                            <Select
+                                style={{ width: '100%' }}
+                                size="small"
+                                allowClear
+                                placeholder="-- Chọn mẫu quy cách đóng gói --"
+                                value={selectedPackingSpecId || undefined}
+                                onChange={(val) => handleSelectPackingSpec(val || null)}
+                                options={packingSpecs.map((spec: any) => {
+                                    const relevantCategoryIds = (order.items || []).map((it: any) => {
+                                        const p = products.find((prod: any) => prod.value === it.sku);
+                                        return p?.category_id;
+                                    }).filter(Boolean);
+                                    const relevantProductIds = (order.items || []).map((it: any) => {
+                                        const p = products.find((prod: any) => prod.value === it.sku);
+                                        return p?.id;
+                                    }).filter(Boolean);
 
-                                        const specCatIds = Array.isArray(spec.category_ids) && spec.category_ids.length > 0
-                                            ? spec.category_ids
-                                            : (spec.category_id ? [spec.category_id] : []);
-                                        const specProdIds = Array.isArray(spec.product_ids) && spec.product_ids.length > 0
-                                            ? spec.product_ids
-                                            : (spec.product_id ? [spec.product_id] : []);
+                                    const specCatIds = Array.isArray(spec.category_ids) && spec.category_ids.length > 0
+                                        ? spec.category_ids
+                                        : (spec.category_id ? [spec.category_id] : []);
+                                    const specProdIds = Array.isArray(spec.product_ids) && spec.product_ids.length > 0
+                                        ? spec.product_ids
+                                        : (spec.product_id ? [spec.product_id] : []);
 
-                                        const isMatched = specCatIds.some((id: number) => relevantCategoryIds.includes(id)) ||
-                                                          specProdIds.some((id: number) => relevantProductIds.includes(id));
-                                        const isGlobal = specCatIds.length === 0 && specProdIds.length === 0;
-                                        const prefix = isMatched ? '★ ' : (isGlobal ? '🌐 ' : '');
-                                        const catNames = (spec.categories || []).map((c: any) => c.name).join(', ') || spec.category?.name || '';
-                                        return {
-                                            value: spec.id,
-                                            label: `${prefix}${spec.name}${catNames ? ` [${catNames}]` : ''} (${spec.quantity_per_package} SP/k - ${spec.length_cm}x${spec.width_cm}x${spec.height_cm}cm)`
-                                        };
-                                    })}
-                                />
-                            </div>
+                                    const isMatched = specCatIds.some((id: number) => relevantCategoryIds.includes(id)) ||
+                                                      specProdIds.some((id: number) => relevantProductIds.includes(id));
+                                    const isGlobal = specCatIds.length === 0 && specProdIds.length === 0;
+                                    const prefix = isMatched ? '★ ' : (isGlobal ? '🌐 ' : '');
+                                    const catNames = (spec.categories || []).map((c: any) => c.name).join(', ') || spec.category?.name || '';
+                                    return {
+                                        value: spec.id,
+                                        label: `${prefix}${spec.name}${catNames ? ` [${catNames}]` : ''} (${spec.quantity_per_package} SP/k - ${spec.length_cm}x${spec.width_cm}x${spec.height_cm}cm)`
+                                    };
+                                })}
+                            />
+                        </div>
+
+                        {/* Row 2: Tên quy cách hiển thị & Số kiện hàng */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10, marginBottom: 8 }}>
                             <div>
                                 <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Tên quy cách hiển thị:</div>
                                 <Input
@@ -2363,6 +2786,129 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 <div style={{ fontSize: 11, color: '#64748b', marginTop: 6, fontStyle: 'italic' }}>
                     * Bạn có thể chỉnh sửa nội dung thông báo trên đây và bấm "Lưu thay đổi" để cập nhật vào phiếu xuất kho, hoặc bấm "Sao chép nội dung" để gửi Zalo cho khách.
                 </div>
+            </Modal>
+
+            {/* Modal Gửi ZNS Thông Báo Giao Hàng */}
+            <Modal
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <SendOutlined style={{ color: '#0068ff' }} />
+                        <span>Gửi Thông Báo Giao Hàng ZNS qua Zalo OA: <b>{selectedDeliveryForZns?.code}</b></span>
+                    </div>
+                }
+                open={znsDeliveryModalOpen}
+                onCancel={() => setZnsDeliveryModalOpen(false)}
+                footer={[
+                    <Button key="close" onClick={() => setZnsDeliveryModalOpen(false)}>
+                        Đóng
+                    </Button>,
+                    <Button
+                        key="send"
+                        type="primary"
+                        style={{ background: '#0068ff', borderColor: '#0068ff' }}
+                        loading={isSendingDeliveryZns}
+                        onClick={handleConfirmSendDeliveryZns}
+                        icon={<SendOutlined />}
+                    >
+                        Xác nhận gửi ZNS
+                    </Button>
+                ]}
+                width={620}
+            >
+                <Alert
+                    type="info"
+                    showIcon
+                    style={{ marginBottom: 14 }}
+                    message={
+                        <div style={{ fontSize: 12 }}>
+                            Hệ thống sẽ gửi mẫu ZNS Thông Báo Giao Hàng qua Zalo OA chính thức đến số điện thoại người nhận.
+                        </div>
+                    }
+                />
+
+                <div style={{ background: '#f8fafc', padding: 14, borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 14 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13, color: '#1e293b' }}>
+                        Thông tin người nhận Zalo:
+                    </div>
+
+                    <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Chọn số điện thoại:</div>
+                        <Radio.Group
+                            value={znsDeliveryPhone}
+                            onChange={e => setZnsDeliveryPhone(e.target.value)}
+                            style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
+                        >
+                            {selectedDeliveryForZns?.contact_phone && (
+                                <Radio value={selectedDeliveryForZns.contact_phone}>
+                                    <span>SĐT Người nhận tại công trình / PXK: <b>{selectedDeliveryForZns.contact_phone}</b> ({selectedDeliveryForZns.contact_name})</span>
+                                </Radio>
+                            )}
+                            {order?.receiver_phone && order.receiver_phone !== selectedDeliveryForZns?.contact_phone && (
+                                <Radio value={order.receiver_phone}>
+                                    <span>SĐT Người nhận đơn hàng: <b>{order.receiver_phone}</b> ({order.receiver_name})</span>
+                                </Radio>
+                            )}
+                            {order?.customer?.phone && order.customer.phone !== selectedDeliveryForZns?.contact_phone && order.customer.phone !== order?.receiver_phone && (
+                                <Radio value={order.customer.phone}>
+                                    <span>SĐT Khách hàng: <b>{order.customer.phone}</b> ({order.customer.name})</span>
+                                </Radio>
+                            )}
+                        </Radio.Group>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 10, marginTop: 8 }}>
+                        <div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>Số điện thoại gửi ZNS: <span style={{ color: 'red' }}>*</span></div>
+                            <Input
+                                placeholder="VD: 0938429210"
+                                value={znsDeliveryPhone}
+                                onChange={e => setZnsDeliveryPhone(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>Tên người nhận xưng hô:</div>
+                            <Input
+                                placeholder="VD: Anh Nam"
+                                value={znsDeliveryRecipientName}
+                                onChange={e => setZnsDeliveryRecipientName(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ background: '#ffffff', padding: 12, borderRadius: 8, border: '1px solid #d9d9d9', marginBottom: 12 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 12, color: '#334155' }}>
+                        Dữ liệu tin nhắn sẽ gửi:
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', fontSize: 12 }}>
+                        <div>Mã phiếu XK: <b>{selectedDeliveryForZns?.code}</b></div>
+                        <div>Mã đơn hàng: <b>{order?.order_code || 'Chưa có'}</b></div>
+                        <div>ĐV Vận chuyển: <b>{selectedDeliveryForZns?.shipping_legs?.length ? `${selectedDeliveryForZns.shipping_legs.length} chặng` : (selectedDeliveryForZns?.shipping_carrier || 'Chành xe / Nội bộ')}</b></div>
+                        <div>Mã vận đơn: <b>{selectedDeliveryForZns?.tracking_code || 'Chưa có'}</b></div>
+                        <div>Thu COD: <b>{Number(selectedDeliveryForZns?.pick_money || 0).toLocaleString()}đ</b></div>
+                        <div>Ngày giao: <b>{dayjs(selectedDeliveryForZns?.delivery_date).format('DD/MM/YYYY')}</b></div>
+                        <div style={{ gridColumn: 'span 2' }}>Địa chỉ nhận: <b>{selectedDeliveryForZns?.delivery_address || 'Theo thỏa thuận'}</b></div>
+                    </div>
+                </div>
+
+                {deliveryZnsResult && (
+                    <Alert
+                        type={deliveryZnsResult.success ? 'success' : 'warning'}
+                        showIcon
+                        style={{ marginTop: 10 }}
+                        message={deliveryZnsResult.success ? 'Gửi ZNS thành công!' : 'Kết quả gửi tin ZNS'}
+                        description={
+                            <div>
+                                <div>{deliveryZnsResult.message}</div>
+                                {deliveryZnsResult.data?.msg_id && (
+                                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 3 }}>
+                                        Mã tin nhắn Zalo (msg_id): <code>{deliveryZnsResult.data.msg_id}</code>
+                                    </div>
+                                )}
+                            </div>
+                        }
+                    />
+                )}
             </Modal>
         </div>
     );
