@@ -136,12 +136,22 @@ export class ShippingController {
         return this.lalamoveService.getQuotation(body);
     }
 
+    @Post('lalamove/estimate-fee')
+    async estimateLalamoveFee(@Body() body: any) {
+        return this.lalamoveService.estimateFee(body);
+    }
+
     @Post('delivery/:deliveryId/push-lalamove')
     async pushDeliveryToLalamove(
         @Param('deliveryId') deliveryId: string,
         @Body() options: LalamovePushOrderOptions,
     ) {
         return this.lalamoveService.pushDeliveryToLalamove(Number(deliveryId), options);
+    }
+
+    @Post('delivery/:deliveryId/sync-lalamove')
+    async syncLalamoveStatus(@Param('deliveryId') deliveryId: string) {
+        return this.lalamoveService.syncDeliveryStatus(Number(deliveryId));
     }
 
     @Get('delivery/:deliveryId/lalamove-order/:orderId')

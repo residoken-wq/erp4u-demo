@@ -822,6 +822,196 @@ export class LalamoveService {
     }
 
     /**
+     * Tra cứu cước phí vận chuyển Lalamove nhanh chóng từ địa chỉ giao hàng
+     */
+    async estimateFee(options: {
+        dropoffAddress: string;
+        dropoffLat?: number | string;
+        dropoffLng?: number | string;
+        pickupAddress?: string;
+        pickupLat?: number | string;
+        pickupLng?: number | string;
+        serviceType?: string;
+        weight?: number; // gram
+        packageCount?: number;
+        length?: number;
+        width?: number;
+        height?: number;
+        specialRequests?: string[];
+    }) {
+        if (!options.dropoffAddress || !options.dropoffAddress.trim()) {
+            throw new BadRequestException('Vui lòng cung cấp địa chỉ giao hàng để tra cước Lalamove');
+        }
+
+        const config = await this.getConfig();
+
+        // 1. Tọa độ điểm lấy hàng (Kho mặc định ERP4U)
+        let pickLat = options.pickupLat ? String(options.pickupLat) : String(config.defaultPickLat || '10.8230989');
+        let pickLng = options.pickupLng ? String(options.pickupLng) : String(config.defaultPickLng || '106.6296638');
+        let pickAddress = options.pickupAddress || config.defaultPickAddress || 'Kho ERP4U, Tân Thới Nhất, Quận 12, TP. Hồ Chí Minh';
+
+        // 2. Tọa độ điểm giao hàng
+        let dropLat = options.dropoffLat ? String(options.dropoffLat) : '';
+        let dropLng = options.dropoffLng ? String(options.dropoffLng) : '';
+
+        if (!dropLat || !dropLng) {
+            const resolved = await this.geocodeAddress(options.dropoffAddress);
+            dropLat = resolved.lat;
+            dropLng = resolved.lng;
+        }
+
+        const serviceType = options.serviceType || 'VAN_500KG';
+        const vehicle = LALAMOVE_VIETNAM_VEHICLES.find(v => v.key === serviceType) || LALAMOVE_VIETNAM_VEHICLES[1];
+
+        const quoDto: LalamoveQuotationDto = {
+            serviceType,
+            language: 'vi_VN',
+            stops: [
+                { coordinates: { lat: pickLat, lng: pickLng }, address: pickAddress },
+                { coordinates: { lat: dropLat, lng: dropLng }, address: options.dropoffAddress.trim() },
+            ],
+            specialRequests: options.specialRequests,
+            item: {
+                quantity: String(options.packageCount || 1),
+                weight: (Number(options.weight) || 500) > 30000 ? 'MORE_THAN_30_KG' : 'LESS_THAN_30_KG',
+                categories: ['OFFICE_ITEM', 'OTHERS'],
+            },
+        };
+
+        const quoRes = await this.getQuotation(quoDto);
+        const quotationData = quoRes.data;
+
+        const totalCost = Number(quotationData?.priceBreakdown?.total) || 0;
+        const distanceMeters = Number(quotationData?.distance?.value) || 0;
+        const distanceKm = (distanceMeters / 1000).toFixed(1);
+
+        return {
+            success: true,
+            is_mock: (quoRes as any).is_mock || false,
+            serviceType,
+            vehicleName: vehicle.name,
+            vehicleIcon: vehicle.icon,
+            estimatedFee: totalCost,
+            distanceKm,
+            priceBreakdown: quotationData?.priceBreakdown,
+            quotationId: quotationData?.quotationId,
+            expiresAt: quotationData?.expiresAt,
+            stops: quotationData?.stops,
+            dropCoordinates: { lat: dropLat, lng: dropLng },
+        };
+    }
+
+    /**
+     * Đồng bộ trạng thái và cập nhật cước phí chính xác từ Lalamove vào phiếu xuất kho
+     */
+    async syncDeliveryStatus(deliveryId: number) {
+        const delivery = await this.deliveryRepo.findOne({
+            where: { id: deliveryId },
+            relations: ['sales_order'],
+        });
+
+        if (!delivery) {
+            throw new NotFoundException(`Không tìm thấy phiếu xuất kho #${deliveryId}`);
+        }
+
+        if (!delivery.tracking_code) {
+            throw new BadRequestException('Phiếu xuất kho này chưa có mã vận đơn Lalamove để đồng bộ');
+        }
+
+        const orderId = delivery.tracking_code;
+        const config = await this.getConfig();
+
+        // 1. Đơn demo mô phỏng
+        if (!config.apiKey || !config.apiSecret || orderId.startsWith('LLM_')) {
+            if (delivery.shipping_status_text === 'ASSIGNING_DRIVER') {
+                delivery.shipping_status_text = 'COMPLETED';
+                delivery.status = 'COMPLETED';
+            }
+            if (!delivery.shipping_cost || Number(delivery.shipping_cost) === 0) {
+                delivery.shipping_cost = 180000;
+            }
+            await this.deliveryRepo.save(delivery);
+            return {
+                success: true,
+                is_mock: true,
+                message: `[Mô phỏng] Đã đồng bộ đơn Lalamove #${orderId}. Cước phí: ${Number(delivery.shipping_cost).toLocaleString()}đ, Trạng thái: ${delivery.shipping_status_text}`,
+                status: delivery.shipping_status_text,
+                cost: delivery.shipping_cost,
+                delivery,
+            };
+        }
+
+        // 2. Đơn Lalamove thật
+        try {
+            const orderData = await this.getOrderDetails(orderId);
+            if (!orderData) {
+                throw new BadRequestException(`Không tìm thấy thông tin đơn hàng ${orderId} từ Lalamove`);
+            }
+
+            const metadata = delivery.shipping_metadata?.lalamove || {};
+
+            if (orderData.status) {
+                delivery.shipping_status_text = orderData.status;
+                metadata.status = orderData.status;
+            }
+
+            if (orderData.driverId) {
+                metadata.driverId = orderData.driverId;
+            }
+
+            if (orderData.shareLink) {
+                metadata.shareLink = orderData.shareLink;
+            }
+
+            // Trích xuất bằng chứng nghiệm thu POD nếu có
+            const podInfo = orderData.stops?.find((s: any) => s.POD?.image);
+            if (podInfo && podInfo.POD) {
+                metadata.pod = {
+                    status: podInfo.POD.status,
+                    image: podInfo.POD.image,
+                    deliveredAt: podInfo.POD.deliveredAt,
+                };
+            }
+
+            // CẬP NHẬT CƯỚC PHÍ CHÍNH XÁC TỪ LALAMOVE
+            if (orderData.priceBreakdown?.total) {
+                const finalCost = Number(orderData.priceBreakdown.total);
+                if (!isNaN(finalCost) && finalCost > 0) {
+                    delivery.shipping_cost = finalCost;
+                    metadata.priceBreakdown = orderData.priceBreakdown;
+                }
+            }
+
+            // Tự động cập nhật trạng thái phiếu xuất kho
+            if (orderData.status === 'COMPLETED') {
+                delivery.status = 'COMPLETED';
+            } else if (orderData.status === 'PICKED_UP' || orderData.status === 'ON_GOING') {
+                delivery.status = 'SHIPPED';
+            }
+
+            metadata.syncedAt = new Date().toISOString();
+            delivery.shipping_metadata = {
+                ...(delivery.shipping_metadata || {}),
+                lalamove: metadata,
+            };
+
+            await this.deliveryRepo.save(delivery);
+
+            return {
+                success: true,
+                message: `Đã đồng bộ đơn Lalamove #${orderId}: Trạng thái [${orderData.status}], Cước phí chính xác: ${Number(delivery.shipping_cost).toLocaleString()}đ`,
+                status: orderData.status,
+                cost: delivery.shipping_cost,
+                delivery,
+            };
+        } catch (e: any) {
+            this.logger.error(`Sync Lalamove delivery #${deliveryId} failed: ${e.message}`);
+            const errorMsg = e.response?.data?.message || e.message;
+            throw new BadRequestException(`Lỗi khi đồng bộ Lalamove: ${errorMsg}`);
+        }
+    }
+
+    /**
      * Xử lý Webhook nhận callback sự kiện từ Lalamove
      */
     async handleWebhook(body: any) {
@@ -856,6 +1046,13 @@ export class LalamoveService {
             metadata.driverId = orderData.driverId;
         }
 
+        // Cập nhật chi phí vận chuyển chính xác từ Lalamove nếu có trong orderData
+        let finalFee = Number(orderData.priceBreakdown?.total);
+        if (!isNaN(finalFee) && finalFee > 0) {
+            delivery.shipping_cost = finalFee;
+            metadata.priceBreakdown = orderData.priceBreakdown;
+        }
+
         // Nếu có bằng chứng giao hàng POD
         const podInfo = orderData.stops?.find((s: any) => s.POD?.image);
         if (podInfo && podInfo.POD) {
@@ -869,10 +1066,34 @@ export class LalamoveService {
         // Tự động chuyển trạng thái phiếu xuất kho
         if (orderData.status === 'COMPLETED') {
             delivery.status = 'COMPLETED';
+            // Nếu chưa có cước phí đầy đủ từ webhook, chủ động truy vấn getOrderDetails để chốt cước chính xác
+            if (!finalFee || finalFee <= 0) {
+                try {
+                    const fullOrder = await this.getOrderDetails(orderId);
+                    const fetchedFee = Number(fullOrder?.priceBreakdown?.total);
+                    if (!isNaN(fetchedFee) && fetchedFee > 0) {
+                        delivery.shipping_cost = fetchedFee;
+                        metadata.priceBreakdown = fullOrder.priceBreakdown;
+                    }
+                    if (fullOrder?.stops) {
+                        const pod = fullOrder.stops.find((s: any) => s.POD?.image);
+                        if (pod && pod.POD) {
+                            metadata.pod = {
+                                status: pod.POD.status,
+                                image: pod.POD.image,
+                                deliveredAt: pod.POD.deliveredAt,
+                            };
+                        }
+                    }
+                } catch (e: any) {
+                    this.logger.warn(`Could not fetch full order details in webhook for ${orderId}: ${e.message}`);
+                }
+            }
         } else if (orderData.status === 'PICKED_UP' || orderData.status === 'ON_GOING') {
             delivery.status = 'SHIPPED';
         }
 
+        metadata.lastWebhookAt = new Date().toISOString();
         delivery.shipping_metadata = {
             ...(delivery.shipping_metadata || {}),
             lalamove: metadata,
@@ -886,6 +1107,7 @@ export class LalamoveService {
             orderId,
             deliveryId: delivery.id,
             status: delivery.shipping_status_text,
+            cost: delivery.shipping_cost,
         };
     }
 }
