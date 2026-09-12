@@ -2028,13 +2028,21 @@ const LalamoveConfigTab: React.FC = () => {
     const [testResult, setTestResult] = useState<any>(null);
     const [currentConfig, setCurrentConfig] = useState<any>(null);
 
+    const watchedApiKey = Form.useWatch('LALAMOVE_API_KEY', form);
+    const watchedSandbox = Form.useWatch('LALAMOVE_SANDBOX', form);
+
+    const effectiveKey = (watchedApiKey || '').trim() || currentConfig?.maskedApiKey || '';
+    const isProdKey = effectiveKey.startsWith('pk_prod_') || effectiveKey.startsWith('pk_pro');
+    const isTestKey = effectiveKey.startsWith('pk_test_') || effectiveKey.startsWith('pk_tes');
+    const hasMismatch = (isProdKey && watchedSandbox === true) || (isTestKey && watchedSandbox === false);
+
     const fetchConfig = async () => {
         setLoading(true);
         try {
             const res = await axios.get('/shipping/lalamove/config');
             setCurrentConfig(res.data);
             form.setFieldsValue({
-                LALAMOVE_SANDBOX: res.data.isSandbox !== undefined ? res.data.isSandbox : true,
+                LALAMOVE_SANDBOX: res.data.isSandbox !== undefined ? res.data.isSandbox : false,
                 LALAMOVE_MARKET: res.data.market || 'VN',
                 LALAMOVE_DEFAULT_SENDER_NAME: res.data.defaultSenderName || 'Kho ERP4U',
                 LALAMOVE_DEFAULT_SENDER_PHONE: res.data.defaultSenderPhone || '+84901234567',
@@ -2042,10 +2050,11 @@ const LalamoveConfigTab: React.FC = () => {
                 LALAMOVE_DEFAULT_PICK_LAT: res.data.defaultPickLat || 10.8230989,
                 LALAMOVE_DEFAULT_PICK_LNG: res.data.defaultPickLng || 106.6296638,
             });
-        } catch (e) {
+        } catch (e: any) {
             message.error('Không thể tải cấu hình Lalamove');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     useEffect(() => {
@@ -2057,11 +2066,13 @@ const LalamoveConfigTab: React.FC = () => {
         setTesting(true);
         setTestResult(null);
         try {
+            const isSandbox = values.LALAMOVE_SANDBOX;
             const res = await axios.post('/shipping/lalamove/test-connection', {
-                apiKey: values.LALAMOVE_API_KEY || undefined,
-                apiSecret: values.LALAMOVE_API_SECRET || undefined,
-                isSandbox: values.LALAMOVE_SANDBOX,
-                market: values.LALAMOVE_MARKET,
+                apiKey: values.LALAMOVE_API_KEY?.trim() || undefined,
+                apiSecret: values.LALAMOVE_API_SECRET?.trim() || undefined,
+                isSandbox,
+                apiUrl: isSandbox ? 'https://rest.sandbox.lalamove.com/v3' : 'https://rest.lalamove.com/v3',
+                market: values.LALAMOVE_MARKET || 'VN',
             });
             setTestResult(res.data);
             if (res.data.success) {
@@ -2080,9 +2091,11 @@ const LalamoveConfigTab: React.FC = () => {
     const handleSubmit = async (values: any) => {
         setSubmitting(true);
         try {
+            const isSandbox = values.LALAMOVE_SANDBOX;
             const payload: any = {
-                isSandbox: values.LALAMOVE_SANDBOX,
-                market: values.LALAMOVE_MARKET,
+                isSandbox,
+                apiUrl: isSandbox ? 'https://rest.sandbox.lalamove.com/v3' : 'https://rest.lalamove.com/v3',
+                market: values.LALAMOVE_MARKET || 'VN',
                 defaultSenderName: values.LALAMOVE_DEFAULT_SENDER_NAME,
                 defaultSenderPhone: values.LALAMOVE_DEFAULT_SENDER_PHONE,
                 defaultPickAddress: values.LALAMOVE_DEFAULT_PICK_ADDRESS,
@@ -2129,7 +2142,23 @@ const LalamoveConfigTab: React.FC = () => {
             />
 
             {loading ? <Spin /> : (
-                <Form form={form} layout="vertical" onFinish={handleSubmit}>
+                <Form 
+                    form={form} 
+                    layout="vertical" 
+                    onFinish={handleSubmit}
+                    onValuesChange={(changedValues) => {
+                        if (changedValues.LALAMOVE_API_KEY) {
+                            const val = (changedValues.LALAMOVE_API_KEY || '').trim();
+                            if (val.startsWith('pk_prod_')) {
+                                form.setFieldsValue({ LALAMOVE_SANDBOX: false });
+                                message.info('Đã tự động chuyển sang môi trường "Thực tế (Production)" theo tiền tố API Key (pk_prod_...)');
+                            } else if (val.startsWith('pk_test_')) {
+                                form.setFieldsValue({ LALAMOVE_SANDBOX: true });
+                                message.info('Đã tự động chuyển sang môi trường "Thử nghiệm (Sandbox)" theo tiền tố API Key (pk_test_...)');
+                            }
+                        }
+                    }}
+                >
                     <Row gutter={16}>
                         <Col span={12}>
                             <Form.Item
@@ -2154,10 +2183,7 @@ const LalamoveConfigTab: React.FC = () => {
                     <Row gutter={16}>
                         <Col span={8}>
                             <Form.Item name="LALAMOVE_SANDBOX" label="Môi trường kết nối">
-                                <Radio.Group
-                                    value={form.getFieldValue('LALAMOVE_SANDBOX')}
-                                    onChange={e => form.setFieldsValue({ LALAMOVE_SANDBOX: e.target.value })}
-                                >
+                                <Radio.Group buttonStyle="solid">
                                     <Radio.Button value={true}>Thử nghiệm (Sandbox)</Radio.Button>
                                     <Radio.Button value={false}>Thực tế (Production)</Radio.Button>
                                 </Radio.Group>
@@ -2186,8 +2212,8 @@ const LalamoveConfigTab: React.FC = () => {
                         </Col>
                     </Row>
 
-                    <Divider orientation="left" style={{ fontSize: 14, color: '#888' }}>
-                        📍 Điểm Bốc Hàng Mặc Định (Kho ERP4U)
+                    <Divider orientation="left" style={{ margin: '12px 0 20px 0' }}>
+                        <span style={{ fontSize: 13, color: '#666' }}>📍 Điểm Bốc Hàng Mặc Định (Kho ERP4U)</span>
                     </Divider>
 
                     <Row gutter={16}>
@@ -2198,7 +2224,7 @@ const LalamoveConfigTab: React.FC = () => {
                         </Col>
                         <Col span={8}>
                             <Form.Item name="LALAMOVE_DEFAULT_SENDER_PHONE" label="Số điện thoại kho (Định dạng E.164)">
-                                <Input placeholder="VD: +84901234567" />
+                                <Input placeholder="VD: +84983882210" />
                             </Form.Item>
                         </Col>
                         <Col span={8}>
@@ -2228,6 +2254,29 @@ const LalamoveConfigTab: React.FC = () => {
                             </Form.Item>
                         </Col>
                     </Row>
+
+                    {hasMismatch && (
+                        <Alert
+                            type="warning"
+                            showIcon
+                            style={{ marginBottom: 16 }}
+                            message="Cảnh báo: Không khớp Môi trường với API Key!"
+                            description={
+                                watchedSandbox ? (
+                                    <div>
+                                        Khóa API của bạn bắt đầu bằng <b>pk_prod_</b> thuộc môi trường <b>Thực tế (Production)</b>, nhưng bạn đang chọn <b>Thử nghiệm (Sandbox)</b>.<br />
+                                        Hệ thống Lalamove Sandbox sẽ trả về <b>lỗi 401 Unauthorized</b> do không tìm thấy khóa Production trên Sandbox.<br />
+                                        👉 <b>Cách xử lý:</b> Vui lòng bấm chọn ô <b>"Thực tế (Production)"</b> bên trên, sau đó bấm <b>"Lưu Cấu Hình Lalamove"</b> và bấm lại <b>"Kiểm Tra Kết Nối"</b>.
+                                    </div>
+                                ) : (
+                                    <div>
+                                        Khóa API của bạn bắt đầu bằng <b>pk_test_</b> thuộc môi trường <b>Thử nghiệm (Sandbox)</b>, nhưng bạn đang chọn <b>Thực tế (Production)</b>.<br />
+                                        👉 <b>Cách xử lý:</b> Vui lòng bấm chọn ô <b>"Thử nghiệm (Sandbox)"</b> bên trên.
+                                    </div>
+                                )
+                            }
+                        />
+                    )}
 
                     {testResult && (
                         <Alert

@@ -138,19 +138,23 @@ export class LalamoveService {
         const configs = await this.configRepo.find();
         const configMap = new Map(configs.map(c => [c.key, c.value]));
 
+        const apiKey = (configMap.get('LALAMOVE_API_KEY') || process.env.LALAMOVE_API_KEY || '').trim();
+        const apiSecret = (configMap.get('LALAMOVE_API_SECRET') || process.env.LALAMOVE_API_SECRET || '').trim();
+
         const envSandbox = (process.env.LALAMOVE_SANDBOX || '').toLowerCase() === 'true' || 
                            (process.env.LALAMOVE_ENVIRONMENT || '').toUpperCase() === 'SANDBOX';
+        
+        // Tự động suy đoán môi trường dựa trên tiền tố API Key nếu chưa từng được lưu trong DB
+        const defaultSandbox = apiKey.startsWith('pk_prod_') ? false : (envSandbox || true);
         const isSandbox = configMap.has('LALAMOVE_SANDBOX')
             ? (configMap.get('LALAMOVE_SANDBOX') || '').toLowerCase() === 'true'
-            : (envSandbox || true); // Mặc định Sandbox nếu chưa cấu hình
+            : defaultSandbox;
 
         const defaultUrl = isSandbox 
             ? 'https://rest.sandbox.lalamove.com/v3' 
             : 'https://rest.lalamove.com/v3';
 
         const apiUrl = (configMap.get('LALAMOVE_API_URL') || process.env.LALAMOVE_API_URL || defaultUrl).replace(/\/+$/, '');
-        const apiKey = configMap.get('LALAMOVE_API_KEY') || process.env.LALAMOVE_API_KEY || '';
-        const apiSecret = configMap.get('LALAMOVE_API_SECRET') || process.env.LALAMOVE_API_SECRET || '';
         const market = configMap.get('LALAMOVE_MARKET') || process.env.LALAMOVE_MARKET || 'VN';
 
         // Thông tin điểm lấy hàng mặc định (Kho ERP4U)
@@ -210,6 +214,8 @@ export class LalamoveService {
         }
         if (data.isSandbox !== undefined) {
             await setConfigValue('LALAMOVE_SANDBOX', data.isSandbox ? 'true' : 'false', 'Lalamove Môi trường Sandbox');
+            const targetUrl = data.apiUrl?.trim() || (data.isSandbox ? 'https://rest.sandbox.lalamove.com/v3' : 'https://rest.lalamove.com/v3');
+            await setConfigValue('LALAMOVE_API_URL', targetUrl, 'Lalamove API Base URL');
         }
         if (data.apiUrl !== undefined) {
             await setConfigValue('LALAMOVE_API_URL', data.apiUrl.trim(), 'Lalamove API Base URL');
@@ -245,16 +251,18 @@ export class LalamoveService {
         bodyStr: string,
         config: LalamoveConfig,
     ): Record<string, string> {
+        const apiKey = (config.apiKey || '').trim();
+        const apiSecret = (config.apiSecret || '').trim();
         const time = Date.now().toString();
         // Cấu trúc ký tự: time\r\nmethod\r\npath\r\n\r\nbody
         const rawSignature = `${time}\r\n${method}\r\n${path}\r\n\r\n${bodyStr}`;
 
         const signature = crypto
-            .createHmac('sha256', config.apiSecret)
+            .createHmac('sha256', apiSecret)
             .update(rawSignature)
             .digest('hex');
 
-        const token = `${config.apiKey}:${time}:${signature}`;
+        const token = `${apiKey}:${time}:${signature}`;
         const requestId = crypto.randomUUID();
 
         return {
@@ -270,10 +278,26 @@ export class LalamoveService {
      */
     async testConnection(customConfig?: Partial<LalamoveConfig>) {
         const baseConfig = await this.getConfig();
+
+        const apiKey = (customConfig?.apiKey ?? baseConfig.apiKey ?? '').trim();
+        const apiSecret = (customConfig?.apiSecret ?? baseConfig.apiSecret ?? '').trim();
+
+        // Môi trường: ưu tiên customConfig nếu truyền vào, ngược lại lấy baseConfig
+        const isSandbox = customConfig?.isSandbox !== undefined 
+            ? Boolean(customConfig.isSandbox) 
+            : baseConfig.isSandbox;
+
+        const defaultUrl = isSandbox 
+            ? 'https://rest.sandbox.lalamove.com/v3' 
+            : 'https://rest.lalamove.com/v3';
+
         const config: LalamoveConfig = {
             ...baseConfig,
             ...customConfig,
-            apiUrl: (customConfig?.apiUrl || baseConfig.apiUrl).replace(/\/+$/, ''),
+            apiKey,
+            apiSecret,
+            isSandbox,
+            apiUrl: (customConfig?.apiUrl || defaultUrl).replace(/\/+$/, ''),
         };
 
         if (!config.apiKey || !config.apiSecret) {
@@ -292,7 +316,7 @@ export class LalamoveService {
                 const vnCities = res.data.data.filter((c: any) => c.locode?.startsWith('VN'));
                 return {
                     success: true,
-                    message: `Kết nối thành công! Đã tải ${vnCities.length || res.data.data.length} khu vực hoạt động.`,
+                    message: `Kết nối thành công! Môi trường: ${isSandbox ? 'Thử nghiệm (Sandbox)' : 'Thực tế (Production)'}. Đã tải ${vnCities.length || res.data.data.length} khu vực hoạt động.`,
                     cities: vnCities.length ? vnCities : res.data.data,
                 };
             }
@@ -303,7 +327,19 @@ export class LalamoveService {
             };
         } catch (e: any) {
             this.logger.error(`Lalamove test connection failed: ${e.message}`);
-            const errorMsg = e.response?.data?.message || e.response?.data?.errors?.[0]?.detail || e.message;
+            let errorMsg = e.response?.data?.message || e.response?.data?.errors?.[0]?.detail || e.message;
+
+            // Chẩn đoán chi tiết khi gặp mã 401 Unauthorized
+            if (e.response?.status === 401) {
+                if (config.apiKey.startsWith('pk_prod_') && isSandbox) {
+                    errorMsg = `Lỗi 401 Unauthorized: Bạn đang dùng API Key Production (bắt đầu bằng 'pk_prod_') nhưng đang chọn Môi trường 'Thử nghiệm (Sandbox)'. Vui lòng chuyển Môi trường kết nối sang 'Thực tế (Production)' rồi bấm Lưu & Thử lại.`;
+                } else if (config.apiKey.startsWith('pk_test_') && !isSandbox) {
+                    errorMsg = `Lỗi 401 Unauthorized: Bạn đang dùng API Key Sandbox (bắt đầu bằng 'pk_test_') nhưng đang chọn Môi trường 'Thực tế (Production)'. Vui lòng chuyển Môi trường kết nối sang 'Thử nghiệm (Sandbox)' rồi bấm Lưu & Thử lại.`;
+                } else {
+                    errorMsg = `Lỗi 401 Unauthorized: Lalamove từ chối xác thực. Vui lòng kiểm tra lại API Key và API Secret xem có bị sai hoặc thừa khoảng trắng không.`;
+                }
+            }
+
             return {
                 success: false,
                 message: `Kiểm tra kết nối thất bại: ${errorMsg}`,
