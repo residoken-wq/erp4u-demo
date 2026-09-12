@@ -12,6 +12,7 @@ export interface GhtkConfig {
     partnerCode: string;
     isSandbox: boolean;
     defaultPickAddressId?: string;
+    defaultPickOption?: 'cod' | 'post';
 }
 
 export interface GhtkFeeDto {
@@ -19,6 +20,8 @@ export interface GhtkFeeDto {
     pick_district?: string;
     pick_ward?: string;
     pick_address?: string;
+    pick_address_id?: string;
+    pick_option?: 'cod' | 'post';
     province?: string;
     district?: string;
     ward?: string;
@@ -260,6 +263,7 @@ export class GhtkService {
         const token = configMap.get('GHTK_TOKEN') || configMap.get('GHTK_API_TOKEN') || process.env.GHTK_TOKEN || process.env.GHTK_API_TOKEN || '';
         const partnerCode = configMap.get('GHTK_PARTNER_CODE') || configMap.get('GHTK_CLIENT_SOURCE') || process.env.GHTK_PARTNER_CODE || process.env.GHTK_CLIENT_SOURCE || '';
         const defaultPickAddressId = configMap.get('GHTK_DEFAULT_PICK_ADDRESS_ID') || process.env.GHTK_DEFAULT_PICK_ADDRESS_ID || '';
+        const defaultPickOption = (configMap.get('GHTK_DEFAULT_PICK_OPTION') || process.env.GHTK_DEFAULT_PICK_OPTION || 'cod') as 'cod' | 'post';
 
         return {
             apiUrl: apiUrl.replace(/\/+$/, ''),
@@ -267,6 +271,7 @@ export class GhtkService {
             partnerCode,
             isSandbox,
             defaultPickAddressId,
+            defaultPickOption,
         };
     }
 
@@ -279,6 +284,7 @@ export class GhtkService {
         isSandbox?: boolean;
         partnerCode?: string;
         defaultPickAddressId?: string;
+        defaultPickOption?: 'cod' | 'post';
     }) {
         const setConfigValue = async (key: string, value: string, description: string) => {
             let item = await this.configRepo.findOne({ where: { key } });
@@ -305,6 +311,9 @@ export class GhtkService {
         }
         if (data.defaultPickAddressId !== undefined) {
             await setConfigValue('GHTK_DEFAULT_PICK_ADDRESS_ID', data.defaultPickAddressId.trim(), 'Mã điểm lấy hàng mặc định GHTK');
+        }
+        if (data.defaultPickOption !== undefined) {
+            await setConfigValue('GHTK_DEFAULT_PICK_OPTION', data.defaultPickOption.trim(), 'Hình thức gửi hàng mặc định GHTK (cod: Shipper lấy tại kho, post: Giao tại bưu cục/cửa hàng)');
         }
 
         return { success: true, message: 'Đã lưu cấu hình GHTK thành công' };
@@ -547,7 +556,9 @@ export class GhtkService {
                     value: Number(dto.value) || 0,
                     transport: dto.transport || 'road',
                     deliver_option: 'none',
+                    pick_option: dto.pick_option || 'cod',
                 };
+                if (dto.pick_address_id) queryParams.pick_address_id = dto.pick_address_id;
                 if (dto.length) queryParams.length = Math.round(Number(dto.length));
                 if (dto.width) queryParams.width = Math.round(Number(dto.width));
                 if (dto.height) queryParams.height = Math.round(Number(dto.height));
@@ -574,7 +585,9 @@ export class GhtkService {
                     weight: effectiveWeight,
                     value: Number(dto.value) || 0,
                     transport: dto.transport || 'road',
+                    pick_option: dto.pick_option || 'cod',
                 };
+                if (dto.pick_address_id) params.pick_address_id = dto.pick_address_id;
                 if (dto.length) params.length = Math.round(Number(dto.length));
                 if (dto.width) params.width = Math.round(Number(dto.width));
                 if (dto.height) params.height = Math.round(Number(dto.height));
@@ -600,6 +613,8 @@ export class GhtkService {
      */
     async pushDeliveryToGhtk(deliveryId: number, options: {
         pick_address_id?: string;
+        pick_option?: 'cod' | 'post';
+        pick_station_name?: string;
         pick_name?: string;
         pick_tel?: string;
         pick_address?: string;
@@ -833,9 +848,14 @@ export class GhtkService {
             packageNoteSnippet = `[Đóng gói: ${parts.join(' - ')}]`;
         }
 
+        const pickOption: 'cod' | 'post' = options.pick_option || 'cod';
+        const isPost = pickOption === 'post';
+
         const baseNote = options.note || delivery.note || 'Cho xem hàng không cho thử';
-        const finalNote = packageNoteSnippet 
-            ? `${baseNote} ${packageNoteSnippet}`.trim()
+        let postSnippet = isPost ? '[Gửi tại bưu cục GHTK]' : '';
+        const combinedSnippets = [packageNoteSnippet, postSnippet].filter(Boolean).join(' ');
+        const finalNote = combinedSnippets 
+            ? `${baseNote} ${combinedSnippets}`.trim()
             : baseNote;
 
         // Tags cho GHTK
@@ -870,6 +890,7 @@ export class GhtkService {
                 value: Math.round(deliveryTotalValue), // Tổng giá trị sản phẩm của đợt giao hàng này
                 transport: options.transport || 'road',
                 tags,
+                pick_option: pickOption,
             }
         };
 
@@ -910,10 +931,12 @@ export class GhtkService {
             delivery.pick_money = pickMoney;
             delivery.is_freeship = isFreeship;
             delivery.weight_gram = options.weight_gram || delivery.weight_gram || 500;
-            delivery.shipping_status_id = 2; // Chờ lấy hàng
-            delivery.shipping_status_text = 'Tiếp nhận đơn hàng (Mô phỏng)';
+            delivery.shipping_status_id = 2; // Chờ lấy hàng / chờ gửi hàng
+            delivery.shipping_status_text = isPost ? 'Chờ gửi hàng tại bưu cục GHTK (Mô phỏng)' : 'Tiếp nhận đơn hàng (Mô phỏng)';
             delivery.shipping_metadata = {
                 is_mock: true,
+                pick_option: pickOption,
+                pick_station_name: options.pick_station_name,
                 created_at: new Date().toISOString(),
                 payload,
             };
@@ -922,9 +945,9 @@ export class GhtkService {
                 success: true,
                 tracking_code: mockTrackingCode,
                 fee: 25000,
-                status: 'Chờ lấy hàng',
+                status: isPost ? 'Chờ gửi tại bưu cục' : 'Chờ lấy hàng',
                 is_mock: true,
-                message: 'Đã tạo vận đơn GHTK mô phỏng (do chưa cấu hình Token API GHTK)',
+                message: `Đã tạo vận đơn GHTK mô phỏng [${isPost ? 'Gửi tại bưu cục' : 'Shipper lấy tại kho'}] (do chưa cấu hình Token API GHTK)`,
             };
         }
 
@@ -956,11 +979,13 @@ export class GhtkService {
                 delivery.pick_money = pickMoney;
                 delivery.is_freeship = isFreeship;
                 delivery.weight_gram = options.weight_gram || delivery.weight_gram || 500;
-                delivery.shipping_status_id = 2; // Chờ lấy hàng
-                delivery.shipping_status_text = 'Chờ lấy hàng';
+                delivery.shipping_status_id = 2; // Chờ lấy hàng / chờ gửi hàng
+                delivery.shipping_status_text = isPost ? 'Chờ gửi hàng tại bưu cục GHTK' : 'Chờ lấy hàng';
                 delivery.shipping_metadata = {
                     ...res.data,
                     is_mock: false,
+                    pick_option: pickOption,
+                    pick_station_name: options.pick_station_name,
                     pushed_at: new Date().toISOString(),
                 };
 

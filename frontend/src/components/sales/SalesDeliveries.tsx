@@ -106,6 +106,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
     const [pushToGhtkDirectly, setPushToGhtkDirectly] = useState<boolean>(true);
     const [ghtkPickAddresses, setGhtkPickAddresses] = useState<any[]>([]);
     const [selectedPickAddressId, setSelectedPickAddressId] = useState<string>('');
+    const [ghtkPickOption, setGhtkPickOption] = useState<'cod' | 'post'>('cod');
     const [ghtkProvince, setGhtkProvince] = useState<string>('');
     const [ghtkDistrict, setGhtkDistrict] = useState<string>('');
     const [ghtkWard, setGhtkWard] = useState<string>('');
@@ -128,6 +129,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
     const [ghtkIsSandboxInput, setGhtkIsSandboxInput] = useState<boolean>(false);
     const [ghtkPartnerCodeInput, setGhtkPartnerCodeInput] = useState<string>('');
     const [ghtkDefaultPickAddressInput, setGhtkDefaultPickAddressInput] = useState<string>('');
+    const [ghtkDefaultPickOptionInput, setGhtkDefaultPickOptionInput] = useState<'cod' | 'post'>('cod');
     const [ghtkTestLoading, setGhtkTestLoading] = useState<boolean>(false);
     const [ghtkSaveLoading, setGhtkSaveLoading] = useState<boolean>(false);
     const [ghtkTestResult, setGhtkTestResult] = useState<any>(null);
@@ -195,6 +197,9 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 if (res.data.isConfigured && res.data.defaultPickAddressId && !selectedPickAddressId) {
                     setSelectedPickAddressId(res.data.defaultPickAddressId);
                 }
+                if (res.data.defaultPickOption) {
+                    setGhtkPickOption(res.data.defaultPickOption);
+                }
             }
         } catch (e) { }
     };
@@ -203,6 +208,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         setGhtkIsSandboxInput(ghtkConfig?.isSandbox || false);
         setGhtkPartnerCodeInput(ghtkConfig?.partnerCode || '');
         setGhtkDefaultPickAddressInput(ghtkConfig?.defaultPickAddressId || '');
+        setGhtkDefaultPickOptionInput(ghtkConfig?.defaultPickOption || 'cod');
         setGhtkTokenInput('');
         setGhtkTestResult(null);
         setGhtkConfigModalOpen(true);
@@ -238,15 +244,17 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 isSandbox: ghtkIsSandboxInput,
                 partnerCode: ghtkPartnerCodeInput,
                 defaultPickAddressId: ghtkDefaultPickAddressInput,
+                defaultPickOption: ghtkDefaultPickOptionInput,
             };
-            if (ghtkTokenInput.trim()) {
+            if (ghtkTokenInput && ghtkTokenInput.trim()) {
                 payload.token = ghtkTokenInput.trim();
             }
             await api.post('/shipping/config', payload);
             message.success('Đã lưu cấu hình GHTK thành công!');
             setGhtkConfigModalOpen(false);
-            await fetchGhtkConfig();
-            await fetchGhtkPickAddresses();
+            setGhtkPickOption(ghtkDefaultPickOptionInput);
+            fetchGhtkConfig();
+            fetchGhtkPickAddresses();
         } catch (e: any) {
             message.error(e.response?.data?.message || 'Không thể lưu cấu hình GHTK');
         } finally {
@@ -468,6 +476,8 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 address: extractAddressString(ghtkAddress || shipAddress),
                 weight: Number(packageWeight) || 500,
                 value: Number(order?.total_amount) || 0,
+                pick_address_id: selectedPickAddressId || ghtkConfig?.defaultPickAddressId,
+                pick_option: ghtkPickOption,
             });
 
             if (res.data?.success && res.data?.fee) {
@@ -592,6 +602,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
 
             const res = await api.post(`/shipping/delivery/${delivery.id}/push-ghtk`, {
                 pick_address_id: selectedPickAddressId || ghtkConfig?.defaultPickAddressId,
+                pick_option: ghtkPickOption,
                 province: sendProv,
                 district: sendDist,
                 ward: sendWard,
@@ -643,6 +654,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             return sum + (Number(it.quantity || 1) * Number(soItem?.unit_price || 0));
         }, 0);
 
+        const isPostDelivery = (delivery.shipping_metadata?.pick_option === 'post') || ghtkPickOption === 'post';
         const summaryContent = (
             <div style={{ marginTop: 8, fontSize: 13, background: '#f8fafc', padding: 10, borderRadius: 6, border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px' }}>
@@ -650,6 +662,9 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                     <div>📏 <b>Kích thước:</b> {dimensions}</div>
                     <div>⚖️ <b>Khối lượng:</b> {delivery.weight_gram || packageWeight || 500}g</div>
                     <div>📋 <b>Sản phẩm:</b> {itemCount} dòng ({totalQty} món)</div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                        🏪 <b>Hình thức gửi:</b> {isPostDelivery ? 'Giao tại bưu cục / cửa hàng GHTK (Shop tự mang gửi)' : 'Shipper GHTK đến lấy tại kho'}
+                    </div>
                     <div style={{ gridColumn: 'span 2' }}>
                         💰 <b>Tổng tiền hàng đợt này:</b> <span style={{ color: '#008444', fontWeight: 600 }}>{totalVal ? totalVal.toLocaleString('vi-VN') : (Number(delivery.sales_order?.total_amount) || 0).toLocaleString('vi-VN')} đ</span>
                     </div>
@@ -1786,6 +1801,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
 
                         const pushRes = await api.post(`/shipping/delivery/${newDeliveryId}/push-ghtk`, {
                             pick_address_id: selectedPickAddressId || ghtkConfig?.defaultPickAddressId,
+                            pick_option: ghtkPickOption,
                             province: modalProv,
                             district: modalDist,
                             ward: modalWard,
@@ -2313,6 +2329,13 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                         <div style={{ marginTop: 4, fontSize: 12, color: '#1d39c4', background: '#f0f5ff', padding: '3px 6px', borderRadius: 4 }}>
                                             <CarOutlined style={{ marginRight: 4 }} />
                                             {r.shipping_carrier && <span>{r.shipping_carrier}</span>}
+                                            {r.shipping_carrier === 'GHTK' && (
+                                                (r.shipping_metadata?.pick_option === 'post' || r.note?.includes('[Gửi tại bưu cục')) ? (
+                                                    <Tag color="green" style={{ marginLeft: 4, fontSize: 10 }}>🏪 Gửi bưu cục</Tag>
+                                                ) : (
+                                                    <Tag color="blue" style={{ marginLeft: 4, fontSize: 10 }}>🚚 Shipper lấy</Tag>
+                                                )
+                                            )}
                                             {r.tracking_code && (
                                                 <span>
                                                     {' • '}
@@ -3228,19 +3251,67 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                 </div>
                             </div>
 
-                            <div style={{ marginBottom: 8 }}>
-                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>Kho lấy hàng (Pick Address):</div>
-                                <Select
-                                    style={{ width: '100%' }}
-                                    size="small"
-                                    value={selectedPickAddressId || undefined}
-                                    onChange={setSelectedPickAddressId}
-                                    placeholder="Chọn kho lấy hàng"
-                                    options={ghtkPickAddresses.map((p: any) => ({
-                                        value: p.pick_address_id || p.address,
-                                        label: `${p.pick_name || 'Kho'} - ${p.address}`
-                                    }))}
-                                />
+                            <div style={{ marginBottom: 12, background: ghtkPickOption === 'post' ? '#f6ffed' : '#fafafa', border: ghtkPickOption === 'post' ? '1px solid #b7eb8f' : '1px solid #e8e8e8', borderRadius: 8, padding: '10px 12px', transition: 'all 0.25s ease' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: ghtkPickOption === 'post' ? '#237804' : '#262626', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                        <span>🏪 Hình thức gửi hàng GHTK:</span>
+                                    </div>
+                                    <Radio.Group 
+                                        size="small" 
+                                        value={ghtkPickOption} 
+                                        onChange={e => setGhtkPickOption(e.target.value)}
+                                        buttonStyle="solid"
+                                    >
+                                        <Radio.Button value="cod">
+                                            🚚 Shipper đến lấy tại kho
+                                        </Radio.Button>
+                                        <Radio.Button value="post" style={{ background: ghtkPickOption === 'post' ? '#52c41a' : undefined, borderColor: ghtkPickOption === 'post' ? '#52c41a' : undefined }}>
+                                            🏪 Giao tại cửa hàng / Bưu cục GHTK
+                                        </Radio.Button>
+                                    </Radio.Group>
+                                </div>
+
+                                {ghtkPickOption === 'post' ? (
+                                    <div style={{ background: '#ffffff', border: '1px dashed #73d13d', borderRadius: 6, padding: '6px 10px', marginBottom: 8, fontSize: 11, color: '#237804' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+                                            <span>
+                                                ✅ <b>Shop tự mang hàng ra cửa hàng / bưu cục GHTK:</b> GHTK sẽ quét mã vận đơn tiếp nhận ngay, không cần chờ bưu tá đến lấy.
+                                            </span>
+                                            <a 
+                                                href="https://giaohangtietkiem.vn/dia-chi-buu-cuc/" 
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                style={{ color: '#0958d9', fontWeight: 600, textDecoration: 'underline', whiteSpace: 'nowrap' }}
+                                            >
+                                                Tra cứu bưu cục gần nhất ↗
+                                            </a>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div style={{ fontSize: 11, color: '#8c8c8c', marginBottom: 8 }}>
+                                        Shipper GHTK sẽ đến địa chỉ kho được chọn bên dưới để nhận kiện hàng.
+                                    </div>
+                                )}
+
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#555', marginBottom: 3, fontWeight: 500, display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>{ghtkPickOption === 'post' ? 'Địa chỉ kho gửi & nhận trả hàng (Return Address):' : 'Kho lấy hàng (Pick Address):'}</span>
+                                        {ghtkPickOption === 'post' && (
+                                            <span style={{ fontSize: 10, color: '#8c8c8c' }}>(Dùng làm thông tin người gửi & địa chỉ hoàn hàng nếu giao thất bại)</span>
+                                        )}
+                                    </div>
+                                    <Select
+                                        style={{ width: '100%' }}
+                                        size="small"
+                                        value={selectedPickAddressId || undefined}
+                                        onChange={setSelectedPickAddressId}
+                                        placeholder={ghtkPickOption === 'post' ? "Chọn kho gửi & hoàn trả hàng" : "Chọn kho lấy hàng"}
+                                        options={ghtkPickAddresses.map((p: any) => ({
+                                            value: p.pick_address_id || p.address,
+                                            label: `${p.pick_name || 'Kho'} - ${p.address}`
+                                        }))}
+                                    />
+                                </div>
                             </div>
 
                             <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
@@ -3740,13 +3811,27 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                         </div>
                     </div>
 
-                    <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Mã kho lấy hàng mặc định (pick_address_id):</div>
-                        <Input 
-                            placeholder="Mã kho từ GHTK (VD: 88256, để trống hệ thống sẽ lấy kho đầu tiên)" 
-                            value={ghtkDefaultPickAddressInput}
-                            onChange={e => setGhtkDefaultPickAddressInput(e.target.value)}
-                        />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Mã kho lấy hàng mặc định (pick_address_id):</div>
+                            <Input 
+                                placeholder="Mã kho từ GHTK (VD: 88256)" 
+                                value={ghtkDefaultPickAddressInput}
+                                onChange={e => setGhtkDefaultPickAddressInput(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Hình thức gửi hàng mặc định:</div>
+                            <Radio.Group 
+                                buttonStyle="solid" 
+                                value={ghtkDefaultPickOptionInput} 
+                                onChange={e => setGhtkDefaultPickOptionInput(e.target.value)}
+                                style={{ width: '100%' }}
+                            >
+                                <Radio.Button value="cod" style={{ width: '50%', textAlign: 'center' }}>🚚 Shipper lấy</Radio.Button>
+                                <Radio.Button value="post" style={{ width: '50%', textAlign: 'center' }}>🏪 Gửi bưu cục</Radio.Button>
+                            </Radio.Group>
+                        </div>
                     </div>
 
                     {ghtkTestResult && (

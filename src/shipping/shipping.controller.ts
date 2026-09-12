@@ -25,6 +25,7 @@ export class ShippingController {
             maskedToken: cfg.token ? `${cfg.token.slice(0, 6)}...${cfg.token.slice(-4)}` : '',
             hasToken: !!cfg.token,
             defaultPickAddressId: cfg.defaultPickAddressId || '',
+            defaultPickOption: cfg.defaultPickOption || 'cod',
         };
     }
 

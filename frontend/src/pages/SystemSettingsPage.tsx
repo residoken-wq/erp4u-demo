@@ -1867,6 +1867,7 @@ const GhtkConfigTab: React.FC = () => {
                 GHTK_API_URL: res.data.apiUrl || '',
                 GHTK_PARTNER_CODE: res.data.partnerCode || '',
                 GHTK_DEFAULT_PICK_ADDRESS_ID: res.data.defaultPickAddressId || '',
+                GHTK_DEFAULT_PICK_OPTION: res.data.defaultPickOption || 'cod',
             });
         } catch (e) {
             message.error('Không thể tải cấu hình GHTK');
@@ -1911,6 +1912,7 @@ const GhtkConfigTab: React.FC = () => {
                 apiUrl: values.GHTK_API_URL,
                 partnerCode: values.GHTK_PARTNER_CODE,
                 defaultPickAddressId: values.GHTK_DEFAULT_PICK_ADDRESS_ID,
+                defaultPickOption: values.GHTK_DEFAULT_PICK_OPTION,
             };
             if (values.GHTK_TOKEN && values.GHTK_TOKEN.trim()) {
                 payload.token = values.GHTK_TOKEN.trim();
@@ -1974,19 +1976,27 @@ const GhtkConfigTab: React.FC = () => {
                     </Row>
 
                     <Row gutter={16}>
-                        <Col span={8}>
+                        <Col span={6}>
                             <Form.Item name="GHTK_PARTNER_CODE" label="Partner Code / Client Source">
                                 <Input placeholder="VD: S308157 hoặc ERP4U_ERP" />
                             </Form.Item>
                         </Col>
-                        <Col span={8}>
-                            <Form.Item name="GHTK_DEFAULT_PICK_ADDRESS_ID" label="Mã kho lấy hàng mặc định (pick_address_id)">
+                        <Col span={6}>
+                            <Form.Item name="GHTK_DEFAULT_PICK_ADDRESS_ID" label="Mã kho lấy hàng (pick_address_id)">
                                 <Input placeholder="Mã kho (VD: 88256)" />
                             </Form.Item>
                         </Col>
-                        <Col span={8}>
+                        <Col span={6}>
+                            <Form.Item name="GHTK_DEFAULT_PICK_OPTION" label="Hình thức gửi mặc định" initialValue="cod">
+                                <Radio.Group buttonStyle="solid" size="middle" style={{ width: '100%' }}>
+                                    <Radio.Button value="cod">🚚 Shipper lấy</Radio.Button>
+                                    <Radio.Button value="post">🏪 Gửi bưu cục</Radio.Button>
+                                </Radio.Group>
+                            </Form.Item>
+                        </Col>
+                        <Col span={6}>
                             <Form.Item name="GHTK_API_URL" label="Tùy chỉnh API URL (Tùy chọn)">
-                                <Input placeholder="Mặc định tự động theo môi trường" />
+                                <Input placeholder="Tự động theo môi trường" />
                             </Form.Item>
                         </Col>
                     </Row>
