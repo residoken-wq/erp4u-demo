@@ -39,63 +39,63 @@ const VIETNAM_PROVINCES = [
     { names: ['đà nẵng', 'da nang'], standard: 'Đà Nẵng' },
     { names: ['hải phòng', 'hai phong'], standard: 'Hải Phòng' },
     { names: ['cần thơ', 'can tho'], standard: 'Cần Thơ' },
-    { names: ['bình dương', 'binh duong', 'thủ dầu một', 'thu dau mot', 'dĩ an', 'di an', 'thuận an', 'thuan an'], standard: 'Bình Dương' },
-    { names: ['đồng nai', 'dong nai', 'biên hòa', 'bien hoa', 'long khánh'], standard: 'Đồng Nai' },
-    { names: ['long an', 'tân an', 'tan an'], standard: 'Long An' },
-    { names: ['tiền giang', 'mỹ tho', 'my tho'], standard: 'Tiền Giang' },
-    { names: ['bến tre', 'ben tre'], standard: 'Bến Tre' },
-    { names: ['vĩnh long', 'vinh long'], standard: 'Vĩnh Long' },
-    { names: ['trà vinh', 'tra vinh'], standard: 'Trà Vinh' },
-    { names: ['hậu giang', 'hau giang', 'vị thanh'], standard: 'Hậu Giang' },
-    { names: ['sóc trăng', 'soc trang'], standard: 'Sóc Trăng' },
-    { names: ['bạc liêu', 'bac lieu'], standard: 'Bạc Liêu' },
-    { names: ['cà mau', 'ca mau'], standard: 'Cà Mau' },
-    { names: ['kiên giang', 'kien giang', 'rạch giá', 'phú quốc'], standard: 'Kiên Giang' },
-    { names: ['an giang', 'long xuyên', 'châu đốc'], standard: 'An Giang' },
-    { names: ['đồng tháp', 'dong thap', 'cao lãnh', 'sa đéc'], standard: 'Đồng Tháp' },
-    { names: ['tây ninh', 'tay ninh'], standard: 'Tây Ninh' },
-    { names: ['bình phước', 'binh phuoc', 'đồng xoài'], standard: 'Bình Phước' },
-    { names: ['lâm đồng', 'lam dong', 'đà lạt', 'da lat', 'bảo lộc'], standard: 'Lâm Đồng' },
-    { names: ['khánh hòa', 'khanh hoa', 'nha trang', 'cam ranh'], standard: 'Khánh Hòa' },
-    { names: ['ninh thuận', 'ninh thuan', 'phan rang'], standard: 'Ninh Thuận' },
-    { names: ['bình thuận', 'binh thuan', 'phan thiết'], standard: 'Bình Thuận' },
-    { names: ['đắk lắk', 'dak lak', 'daklak', 'buôn ma thuột'], standard: 'Đắk Lắk' },
-    { names: ['đắk nông', 'dak nong'], standard: 'Đắk Nông' },
-    { names: ['gia lai', 'pleiku'], standard: 'Gia Lai' },
-    { names: ['kon tum'], standard: 'Kon Tum' },
-    { names: ['phú yên', 'tuy hòa'], standard: 'Phú Yên' },
-    { names: ['bình định', 'binh dinh', 'quy nhơn'], standard: 'Bình Định' },
-    { names: ['quảng ngãi', 'quang ngai'], standard: 'Quảng Ngãi' },
-    { names: ['quảng nam', 'tam kỳ', 'hội an'], standard: 'Quảng Nam' },
-    { names: ['thừa thiên huế', 'huế', 'hue'], standard: 'Thừa Thiên Huế' },
-    { names: ['quảng trị', 'đông hà'], standard: 'Quảng Trị' },
-    { names: ['quảng bình', 'đồng hới'], standard: 'Quảng Bình' },
-    { names: ['hà tĩnh', 'ha tinh'], standard: 'Hà Tĩnh' },
-    { names: ['nghệ an', 'vinh'], standard: 'Nghệ An' },
-    { names: ['thanh hóa', 'thanh hoa'], standard: 'Thanh Hóa' },
-    { names: ['ninh bình', 'ninh binh'], standard: 'Ninh Bình' },
-    { names: ['nam định', 'nam dinh'], standard: 'Nam Định' },
-    { names: ['thái bình', 'thai binh'], standard: 'Thái Bình' },
-    { names: ['hà nam', 'phủ lý'], standard: 'Hà Nam' },
-    { names: ['hưng yên', 'hung yen'], standard: 'Hưng Yên' },
-    { names: ['hải dương', 'hai duong'], standard: 'Hải Dương' },
-    { names: ['bắc ninh', 'bac ninh'], standard: 'Bắc Ninh' },
-    { names: ['bắc giang', 'bac giang'], standard: 'Bắc Giang' },
-    { names: ['vĩnh phúc', 'vinh phuc', 'vĩnh yên'], standard: 'Vĩnh Phúc' },
-    { names: ['phú thọ', 'việt trì'], standard: 'Phú Thọ' },
-    { names: ['thái nguyên', 'thai nguyen'], standard: 'Thái Nguyên' },
-    { names: ['tuyên quang'], standard: 'Tuyên Quang' },
-    { names: ['hà giang'], standard: 'Hà Giang' },
-    { names: ['cao bằng'], standard: 'Cao Bằng' },
-    { names: ['bắc kạn', 'bac kan'], standard: 'Bắc Kạn' },
-    { names: ['lạng sơn', 'lang son'], standard: 'Lạng Sơn' },
-    { names: ['quảng ninh', 'hạ long', 'cẩm phả', 'uông bí'], standard: 'Quảng Ninh' },
-    { names: ['lào cai'], standard: 'Lào Cai' },
-    { names: ['yên bái'], standard: 'Yên Bái' },
-    { names: ['điện biên'], standard: 'Điện Biên' },
-    { names: ['lai châu'], standard: 'Lai Châu' },
-    { names: ['sơn la'], standard: 'Sơn La' },
-    { names: ['hòa bình', 'hoa binh'], standard: 'Hòa Bình' },
+    { names: ['bình dương', 'binh duong', 'thủ dầu một', 'thu dau mot', 'dĩ an', 'di an', 'thuận an', 'thuan an'], standard: 'Bình Dương', defaultCity: 'Thành phố Thủ Dầu Một' },
+    { names: ['đồng nai', 'dong nai', 'biên hòa', 'bien hoa', 'long khánh'], standard: 'Đồng Nai', defaultCity: 'Thành phố Biên Hòa' },
+    { names: ['long an', 'tân an', 'tan an'], standard: 'Long An', defaultCity: 'Thành phố Tân An' },
+    { names: ['tiền giang', 'mỹ tho', 'my tho'], standard: 'Tiền Giang', defaultCity: 'Thành phố Mỹ Tho' },
+    { names: ['bến tre', 'ben tre'], standard: 'Bến Tre', defaultCity: 'Thành phố Bến Tre' },
+    { names: ['vĩnh long', 'vinh long'], standard: 'Vĩnh Long', defaultCity: 'Thành phố Vĩnh Long' },
+    { names: ['trà vinh', 'tra vinh'], standard: 'Trà Vinh', defaultCity: 'Thành phố Trà Vinh' },
+    { names: ['hậu giang', 'hau giang', 'vị thanh'], standard: 'Hậu Giang', defaultCity: 'Thành phố Vị Thanh' },
+    { names: ['sóc trăng', 'soc trang'], standard: 'Sóc Trăng', defaultCity: 'Thành phố Sóc Trăng' },
+    { names: ['bạc liêu', 'bac lieu'], standard: 'Bạc Liêu', defaultCity: 'Thành phố Bạc Liêu' },
+    { names: ['cà mau', 'ca mau'], standard: 'Cà Mau', defaultCity: 'Thành phố Cà Mau' },
+    { names: ['kiên giang', 'kien giang', 'rạch giá', 'phú quốc'], standard: 'Kiên Giang', defaultCity: 'Thành phố Rạch Giá' },
+    { names: ['an giang', 'long xuyên', 'châu đốc'], standard: 'An Giang', defaultCity: 'Thành phố Long Xuyên' },
+    { names: ['đồng tháp', 'dong thap', 'cao lãnh', 'sa đéc'], standard: 'Đồng Tháp', defaultCity: 'Thành phố Cao Lãnh' },
+    { names: ['tây ninh', 'tay ninh'], standard: 'Tây Ninh', defaultCity: 'Thành phố Tây Ninh' },
+    { names: ['bình phước', 'binh phuoc', 'đồng xoài'], standard: 'Bình Phước', defaultCity: 'Thành phố Đồng Xoài' },
+    { names: ['lâm đồng', 'lam dong', 'đà lạt', 'da lat', 'bảo lộc'], standard: 'Lâm Đồng', defaultCity: 'Thành phố Đà Lạt' },
+    { names: ['khánh hòa', 'khanh hoa', 'nha trang', 'cam ranh'], standard: 'Khánh Hòa', defaultCity: 'Thành phố Nha Trang' },
+    { names: ['ninh thuận', 'ninh thuan', 'phan rang'], standard: 'Ninh Thuận', defaultCity: 'Thành phố Phan Rang - Tháp Chàm' },
+    { names: ['bình thuận', 'binh thuan', 'phan thiết'], standard: 'Bình Thuận', defaultCity: 'Thành phố Phan Thiết' },
+    { names: ['đắk lắk', 'dak lak', 'daklak', 'buôn ma thuột'], standard: 'Đắk Lắk', defaultCity: 'Thành phố Buôn Ma Thuột' },
+    { names: ['đắk nông', 'dak nong'], standard: 'Đắk Nông', defaultCity: 'Thành phố Gia Nghĩa' },
+    { names: ['gia lai', 'pleiku'], standard: 'Gia Lai', defaultCity: 'Thành phố Pleiku' },
+    { names: ['kon tum'], standard: 'Kon Tum', defaultCity: 'Thành phố Kon Tum' },
+    { names: ['phú yên', 'tuy hòa'], standard: 'Phú Yên', defaultCity: 'Thành phố Tuy Hòa' },
+    { names: ['bình định', 'binh dinh', 'quy nhơn'], standard: 'Bình Định', defaultCity: 'Thành phố Quy Nhơn' },
+    { names: ['quảng ngãi', 'quang ngai'], standard: 'Quảng Ngãi', defaultCity: 'Thành phố Quảng Ngãi' },
+    { names: ['quảng nam', 'tam kỳ', 'hội an'], standard: 'Quảng Nam', defaultCity: 'Thành phố Tam Kỳ' },
+    { names: ['thừa thiên huế', 'huế', 'hue'], standard: 'Thừa Thiên Huế', defaultCity: 'Thành phố Huế' },
+    { names: ['quảng trị', 'đông hà'], standard: 'Quảng Trị', defaultCity: 'Thành phố Đông Hà' },
+    { names: ['quảng bình', 'đồng hới'], standard: 'Quảng Bình', defaultCity: 'Thành phố Đồng Hới' },
+    { names: ['hà tĩnh', 'ha tinh'], standard: 'Hà Tĩnh', defaultCity: 'Thành phố Hà Tĩnh' },
+    { names: ['nghệ an', 'vinh'], standard: 'Nghệ An', defaultCity: 'Thành phố Vinh' },
+    { names: ['thanh hóa', 'thanh hoa'], standard: 'Thanh Hóa', defaultCity: 'Thành phố Thanh Hóa' },
+    { names: ['ninh bình', 'ninh binh'], standard: 'Ninh Bình', defaultCity: 'Thành phố Ninh Bình' },
+    { names: ['nam định', 'nam dinh'], standard: 'Nam Định', defaultCity: 'Thành phố Nam Định' },
+    { names: ['thái bình', 'thai binh'], standard: 'Thái Bình', defaultCity: 'Thành phố Thái Bình' },
+    { names: ['hà nam', 'phủ lý'], standard: 'Hà Nam', defaultCity: 'Thành phố Phủ Lý' },
+    { names: ['hưng yên', 'hung yen'], standard: 'Hưng Yên', defaultCity: 'Thành phố Hưng Yên' },
+    { names: ['hải dương', 'hai duong'], standard: 'Hải Dương', defaultCity: 'Thành phố Hải Dương' },
+    { names: ['bắc ninh', 'bac ninh'], standard: 'Bắc Ninh', defaultCity: 'Thành phố Bắc Ninh' },
+    { names: ['bắc giang', 'bac giang'], standard: 'Bắc Giang', defaultCity: 'Thành phố Bắc Giang' },
+    { names: ['vĩnh phúc', 'vinh phuc', 'vĩnh yên'], standard: 'Vĩnh Phúc', defaultCity: 'Thành phố Vĩnh Yên' },
+    { names: ['phú thọ', 'việt trì'], standard: 'Phú Thọ', defaultCity: 'Thành phố Việt Trì' },
+    { names: ['thái nguyên', 'thai nguyen'], standard: 'Thái Nguyên', defaultCity: 'Thành phố Thái Nguyên' },
+    { names: ['tuyên quang'], standard: 'Tuyên Quang', defaultCity: 'Thành phố Tuyên Quang' },
+    { names: ['hà giang'], standard: 'Hà Giang', defaultCity: 'Thành phố Hà Giang' },
+    { names: ['cao bằng'], standard: 'Cao Bằng', defaultCity: 'Thành phố Cao Bằng' },
+    { names: ['bắc kạn', 'bac kan'], standard: 'Bắc Kạn', defaultCity: 'Thành phố Bắc Kạn' },
+    { names: ['lạng sơn', 'lang son'], standard: 'Lạng Sơn', defaultCity: 'Thành phố Lạng Sơn' },
+    { names: ['quảng ninh', 'hạ long', 'cẩm phả', 'uông bí'], standard: 'Quảng Ninh', defaultCity: 'Thành phố Hạ Long' },
+    { names: ['lào cai'], standard: 'Lào Cai', defaultCity: 'Thành phố Lào Cai' },
+    { names: ['yên bái'], standard: 'Yên Bái', defaultCity: 'Thành phố Yên Bái' },
+    { names: ['điện biên'], standard: 'Điện Biên', defaultCity: 'Thành phố Điện Biên Phủ' },
+    { names: ['lai châu'], standard: 'Lai Châu', defaultCity: 'Thành phố Lai Châu' },
+    { names: ['sơn la'], standard: 'Sơn La', defaultCity: 'Thành phố Sơn La' },
+    { names: ['hòa bình', 'hoa binh'], standard: 'Hòa Bình', defaultCity: 'Thành phố Hòa Bình' },
 ];
 
 function smartParseVietnameseAddress(rawAddress: string) {
@@ -110,6 +110,7 @@ function smartParseVietnameseAddress(rawAddress: string) {
     let hamlet = '';
     let street = clean;
     let workText = clean;
+    let matchedProvItem: any = null;
 
     const lower = clean.toLowerCase();
     for (const item of VIETNAM_PROVINCES) {
@@ -117,9 +118,7 @@ function smartParseVietnameseAddress(rawAddress: string) {
             const pattern = new RegExp(`(?:tp\\.?|thành phố|tỉnh)?\\s*${alias}(?:\\s*$|[\\,\\.])`, 'i');
             if (pattern.test(lower)) {
                 province = item.standard;
-                if (item.defaultCity) {
-                    district = item.defaultCity;
-                }
+                matchedProvItem = item;
                 workText = workText.replace(new RegExp(`(?:tp\\.?|thành phố|tỉnh)?\\s*${alias}(?:\\s*$|[\\,\\.])`, 'gi'), '').trim();
                 break;
             }
@@ -148,7 +147,8 @@ function smartParseVietnameseAddress(rawAddress: string) {
         workText = workText.replace(hamletMatch[0], '').trim();
     }
 
-    if ((!province || !district) && clean.includes(',')) {
+    // Xử lý dấu phẩy thông minh
+    if ((!province || !district || !ward) && clean.includes(',')) {
         const segments = clean.split(',').map(s => s.trim()).filter(Boolean);
         if (segments.length >= 4) {
             if (!province) province = segments[segments.length - 1];
@@ -156,9 +156,25 @@ function smartParseVietnameseAddress(rawAddress: string) {
             if (!ward) ward = segments[segments.length - 3];
         } else if (segments.length === 3) {
             if (!province) province = segments[2];
-            if (!district) district = segments[1];
+            const middle = segments[1].trim();
+            // Nếu đoạn giữa bắt đầu bằng 'phường'/'xã'/'thị trấn', đây là WARD, TUYỆT ĐỐI KHÔNG GÁN VÀO DISTRICT!
+            if (/^(?:phường|p\\.|xã|x\\.|thị trấn|tt\\.)/i.test(middle)) {
+                if (!ward) ward = middle;
+            } else if (/^(?:quận|huyện|thị xã|tx\\.|tp\\.|thành phố)/i.test(middle)) {
+                if (!district) district = middle;
+            } else {
+                if (!district && !ward) district = middle;
+            }
         } else if (segments.length === 2) {
             if (!province) province = segments[1];
+        }
+    }
+
+    // SUY ĐOÁN QUẬN/HUYỆN THÔNG MINH CHO TỈNH:
+    // Tại Việt Nam, tất cả các Phường của các Tỉnh đều trực thuộc Thành phố (hoặc Thị xã) của Tỉnh đó!
+    if (!district && matchedProvItem?.defaultCity && ward) {
+        if (/^(?:phường|p\\.)/i.test(ward.trim())) {
+            district = matchedProvItem.defaultCity;
         }
     }
 
@@ -167,6 +183,21 @@ function smartParseVietnameseAddress(rawAddress: string) {
         street = clean.substring(0, splitIndex).trim().replace(/[\\,\\-\\s]+$/, '').replace(/^[\\,\\-\\s]+/, '').trim();
     } else {
         street = workText.replace(/[\\,\\-\\s]+$/, '').replace(/^[\\,\\-\\s]+/, '').trim();
+    }
+
+    // Làm sạch street nếu street còn chứa Phường hoặc Tỉnh:
+    if (street && (province || ward)) {
+        let cleanStreet = street;
+        if (ward) {
+            cleanStreet = cleanStreet.replace(new RegExp(`[,\\s]*${ward.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}`, 'gi'), '');
+        }
+        if (province) {
+            cleanStreet = cleanStreet.replace(new RegExp(`[,\\s]*(?:tỉnh|tp\\.?|thành phố)?\\s*${province.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}`, 'gi'), '');
+        }
+        cleanStreet = cleanStreet.trim().replace(/^[,\\-\\s]+/, '').replace(/[,\\-\\s]+$/, '');
+        if (cleanStreet) {
+            street = cleanStreet;
+        }
     }
 
     const capitalize = (str: string) => str ? str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : '';
@@ -757,11 +788,39 @@ export class GhtkService {
         const rawRecipientAddress = options.address || delivery.delivery_address || '';
         const parsedRecipient = smartParseVietnameseAddress(rawRecipientAddress);
 
-        const receiverProvince = extractAddressString(options.province || parsedRecipient.province);
-        const receiverDistrict = extractAddressString(options.district || parsedRecipient.district);
-        const receiverWard = extractAddressString(options.ward || parsedRecipient.ward);
-        const receiverHamlet = extractAddressString(options.hamlet || parsedRecipient.hamlet, 'Khác') || 'Khác';
-        const receiverStreet = extractAddressString(options.street || parsedRecipient.street, rawRecipientAddress);
+        let receiverProvince = extractAddressString(options.province || parsedRecipient.province);
+        let receiverDistrict = extractAddressString(options.district || parsedRecipient.district);
+        let receiverWard = extractAddressString(options.ward || parsedRecipient.ward);
+        let receiverHamlet = extractAddressString(options.hamlet || parsedRecipient.hamlet, 'Khác') || 'Khác';
+        let receiverStreet = extractAddressString(options.street || parsedRecipient.street, rawRecipientAddress);
+
+        // TỰ ĐỘNG KHẮC PHỤC LỖI NHẬP NHẦM PHƯỜNG VÀO Ô QUẬN/HUYỆN (VD: Nhập 'Phường 8' vào Huyện):
+        const distLower = receiverDistrict.toLowerCase().trim();
+        const wardLower = receiverWard.toLowerCase().trim();
+        if (distLower.startsWith('phường') || distLower.startsWith('p.') || (distLower === wardLower && distLower.length > 0)) {
+            const provLower = receiverProvince.toLowerCase();
+            const matchedProv = VIETNAM_PROVINCES.find(p => provLower.includes(p.standard.toLowerCase()) || p.names.some(n => provLower.includes(n)));
+            if (matchedProv?.defaultCity) {
+                this.logger.warn(`Tự động sửa lỗi Quận/Huyện "${receiverDistrict}" thành "${matchedProv.defaultCity}" cho tỉnh ${receiverProvince}`);
+                receiverDistrict = matchedProv.defaultCity;
+            }
+        }
+
+        // TỰ ĐỘNG LÀM SẠCH TÊN ĐƯỜNG: Loại bỏ phần lặp lại của Tỉnh và Phường nếu người dùng dán cả chuỗi dài
+        if (receiverStreet) {
+            let cleanStr = receiverStreet;
+            if (receiverWard) {
+                cleanStr = cleanStr.replace(new RegExp(`[,\\s]*${receiverWard.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}`, 'gi'), '');
+            }
+            if (receiverProvince) {
+                cleanStr = cleanStr.replace(new RegExp(`[,\\s]*(?:tỉnh|tp\\.?|thành phố)?\\s*${receiverProvince.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}`, 'gi'), '');
+            }
+            cleanStr = cleanStr.replace(/[,\\s]*(?:tỉnh|tp\\.?|thành phố)?\\s*(?:vĩnh long|bến tre|hồ chí minh|hà nội|đà nẵng|bình dương|đồng nai|long an|tiền giang|cần thơ)/gi, '');
+            cleanStr = cleanStr.trim().replace(/^[,\\-\\s]+/, '').replace(/[,\\-\\s]+$/, '');
+            if (cleanStr && cleanStr.length >= 2) {
+                receiverStreet = cleanStr;
+            }
+        }
 
         // 4. Xây dựng ghi chú rõ ràng về kiện hàng và kích thước
         let packageNoteSnippet = '';

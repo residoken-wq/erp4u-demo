@@ -12,7 +12,7 @@ import {
 import api from '../../utils/api';
 import dayjs from 'dayjs';
 import AttachmentUpload from '../common/AttachmentUpload';
-import { parseWebsiteOrderNote, ParsedShippingInfo, smartParseVietnameseAddress } from '../../utils/orderNoteParser';
+import { parseWebsiteOrderNote, ParsedShippingInfo, smartParseVietnameseAddress, VIETNAM_PROVINCES } from '../../utils/orderNoteParser';
 import { 
     DEFAULT_DELIVERY_NOTICE_TEMPLATES, 
     DeliveryNoticeTemplate, 
@@ -444,6 +444,16 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             }
         }
 
+        // Tự động chuẩn hóa nếu Quận/Huyện bị nhập nhầm thành Phường
+        if (dist && (dist.toLowerCase().startsWith('phường') || dist.toLowerCase().startsWith('p.') || (ward && dist.toLowerCase() === ward.toLowerCase()))) {
+            const provStr = prov.toLowerCase();
+            const matchedP = VIETNAM_PROVINCES.find(pr => pr.standard.toLowerCase() === provStr || pr.names.some(n => provStr.includes(n)));
+            if (matchedP?.defaultCity) {
+                dist = matchedP.defaultCity;
+                setGhtkDistrict(dist);
+            }
+        }
+
         if (!prov) {
             message.warning('Vui lòng nhập Tỉnh/Thành giao hàng để tính cước');
             return;
@@ -568,11 +578,23 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             // Tính tổng tiền hàng của đợt giao này
             const deliveryTotalValue = deliveryProducts.reduce((sum: number, p: any) => sum + (Number(p.price || 0) * Number(p.quantity || 1)), 0);
 
+            // Tự động kiểm tra và sửa nếu Quận/Huyện bị gán nhầm thành Phường
+            let sendDist = extractAddressString(parsed.district || ghtkDistrict);
+            const sendProv = extractAddressString(parsed.province || ghtkProvince);
+            const sendWard = extractAddressString(parsed.ward || ghtkWard);
+            if (sendDist && (sendDist.toLowerCase().startsWith('phường') || sendDist.toLowerCase().startsWith('p.') || (sendWard && sendDist.toLowerCase() === sendWard.toLowerCase()))) {
+                const provStr = sendProv.toLowerCase();
+                const matchedP = VIETNAM_PROVINCES.find(pr => pr.standard.toLowerCase() === provStr || pr.names.some(n => provStr.includes(n)));
+                if (matchedP?.defaultCity) {
+                    sendDist = matchedP.defaultCity;
+                }
+            }
+
             const res = await api.post(`/shipping/delivery/${delivery.id}/push-ghtk`, {
                 pick_address_id: selectedPickAddressId || ghtkConfig?.defaultPickAddressId,
-                province: extractAddressString(parsed.province || ghtkProvince),
-                district: extractAddressString(parsed.district || ghtkDistrict),
-                ward: extractAddressString(parsed.ward || ghtkWard),
+                province: sendProv,
+                district: sendDist,
+                ward: sendWard,
                 hamlet: extractAddressString(parsed.hamlet || ghtkHamlet, 'Khác'),
                 address: extractAddressString(parsed.street || delivery.delivery_address),
                 note: delivery.note,
@@ -1749,11 +1771,24 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                         });
                         const deliveryTotalValue = deliveryProducts.reduce((sum: number, p: any) => sum + (Number(p.price || 0) * Number(p.quantity || 1)), 0);
 
+                        // Tự động kiểm tra và sửa nếu Quận/Huyện bị gán nhầm thành Phường
+                        let modalDist = extractAddressString(ghtkDistrict);
+                        const modalProv = extractAddressString(ghtkProvince);
+                        const modalWard = extractAddressString(ghtkWard);
+                        if (modalDist && (modalDist.toLowerCase().startsWith('phường') || modalDist.toLowerCase().startsWith('p.') || (modalWard && modalDist.toLowerCase() === modalWard.toLowerCase()))) {
+                            const provStr = modalProv.toLowerCase();
+                            const matchedP = VIETNAM_PROVINCES.find(pr => pr.standard.toLowerCase() === provStr || pr.names.some(n => provStr.includes(n)));
+                            if (matchedP?.defaultCity) {
+                                modalDist = matchedP.defaultCity;
+                                setGhtkDistrict(modalDist);
+                            }
+                        }
+
                         const pushRes = await api.post(`/shipping/delivery/${newDeliveryId}/push-ghtk`, {
                             pick_address_id: selectedPickAddressId || ghtkConfig?.defaultPickAddressId,
-                            province: extractAddressString(ghtkProvince),
-                            district: extractAddressString(ghtkDistrict),
-                            ward: extractAddressString(ghtkWard),
+                            province: modalProv,
+                            district: modalDist,
+                            ward: modalWard,
                             hamlet: extractAddressString(ghtkHamlet, 'Khác'),
                             address: extractAddressString(ghtkAddress || shipAddress),
                             note: shipNote,
@@ -3127,7 +3162,38 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                             placeholder="VD: TP. Vũng Tàu" 
                                             value={extractAddressString(ghtkDistrict)} 
                                             onChange={e => setGhtkDistrict(e.target.value)} 
+                                            status={
+                                                extractAddressString(ghtkDistrict) && (
+                                                    extractAddressString(ghtkDistrict).toLowerCase().startsWith('phường') ||
+                                                    extractAddressString(ghtkDistrict).toLowerCase().startsWith('p.') ||
+                                                    (extractAddressString(ghtkWard) && extractAddressString(ghtkDistrict).toLowerCase() === extractAddressString(ghtkWard).toLowerCase())
+                                                ) ? 'warning' : undefined
+                                            }
                                         />
+                                        {extractAddressString(ghtkDistrict) && (
+                                            extractAddressString(ghtkDistrict).toLowerCase().startsWith('phường') ||
+                                            extractAddressString(ghtkDistrict).toLowerCase().startsWith('p.') ||
+                                            (extractAddressString(ghtkWard) && extractAddressString(ghtkDistrict).toLowerCase() === extractAddressString(ghtkWard).toLowerCase())
+                                        ) && (
+                                            <div style={{ color: '#d4380d', fontSize: 10, marginTop: 2 }}>
+                                                ⚠️ Nhập nhầm Phường vào Huyện!
+                                                {(() => {
+                                                    const provStr = extractAddressString(ghtkProvince).toLowerCase();
+                                                    const p = VIETNAM_PROVINCES.find(pr => pr.standard.toLowerCase() === provStr || pr.names.some(n => provStr.includes(n)));
+                                                    if (p?.defaultCity) {
+                                                        return (
+                                                            <a 
+                                                                onClick={() => setGhtkDistrict(p.defaultCity)} 
+                                                                style={{ marginLeft: 4, color: '#1890ff', textDecoration: 'underline', fontWeight: 500 }}
+                                                            >
+                                                                Đổi thành "{p.defaultCity}"
+                                                            </a>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <div style={{ fontSize: 11, color: '#555', marginBottom: 2 }}>Phường / Xã <span style={{ color: 'red' }}>*</span></div>
@@ -3307,6 +3373,11 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                                 <div style={{ fontSize: 11, color: '#595959', marginTop: 2 }}>
                                                     Cước gốc: {Number(lalamoveEstimatedFeeInfo.priceBreakdown.base || 0).toLocaleString()}đ
                                                     {Number(lalamoveEstimatedFeeInfo.priceBreakdown.vat || 0) > 0 && ` • VAT: ${Number(lalamoveEstimatedFeeInfo.priceBreakdown.vat).toLocaleString()}đ`}
+                                                </div>
+                                            )}
+                                            {lalamoveEstimatedFeeInfo.dropCoordinates?.lat && (
+                                                <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 3 }}>
+                                                    📍 GPS điểm giao: <code>{lalamoveEstimatedFeeInfo.dropCoordinates.lat}, {lalamoveEstimatedFeeInfo.dropCoordinates.lng}</code>
                                                 </div>
                                             )}
                                         </div>

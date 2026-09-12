@@ -111,12 +111,141 @@ export const LALAMOVE_VIETNAM_VEHICLES = [
     {
         key: 'TRUCK_2000KG',
         name: 'Xe tải 2 tấn',
-        description: 'Đơn hàng lớn các trường liên cấp, số lượng nệm và nội thất lớn',
+        description: 'Đơn hàng dự án trường học mầm non lớn',
         maxWeightKg: 2000,
         dimensions: '420 x 180 x 180 cm',
         icon: '🚛'
-    }
+    },
 ];
+
+// Danh mục tọa độ trung tâm 63 Tỉnh/Thành phố Việt Nam để fallback Geocoding chính xác tuyệt đối
+export const VIETNAM_PROVINCE_COORDINATES: Record<string, LalamoveCoordinate> = {
+    'bà rịa - vũng tàu': { lat: '10.4114000', lng: '107.1362000' },
+    'bà rịa': { lat: '10.4967000', lng: '107.1683000' },
+    'vũng tàu': { lat: '10.4114000', lng: '107.1362000' },
+    'an giang': { lat: '10.5215800', lng: '105.1258900' },
+    'long xuyên': { lat: '10.3833000', lng: '105.4333000' },
+    'châu đốc': { lat: '10.7000000', lng: '105.1167000' },
+    'bắc giang': { lat: '21.2731000', lng: '106.1946000' },
+    'bắc kạn': { lat: '22.1470000', lng: '105.8348000' },
+    'bạc liêu': { lat: '9.2941000', lng: '105.7244000' },
+    'bắc ninh': { lat: '21.1861000', lng: '106.0763000' },
+    'bến tre': { lat: '10.2433000', lng: '106.3756000' },
+    'bình định': { lat: '13.7830000', lng: '109.2197000' },
+    'quy nhơn': { lat: '13.7830000', lng: '109.2197000' },
+    'bình dương': { lat: '10.9805000', lng: '106.6519000' },
+    'thủ dầu một': { lat: '10.9805000', lng: '106.6519000' },
+    'dĩ an': { lat: '10.9067000', lng: '106.7719000' },
+    'thuận an': { lat: '10.9167000', lng: '106.7000000' },
+    'bến cát': { lat: '11.1550000', lng: '106.6050000' },
+    'tân uyên': { lat: '11.0800000', lng: '106.8000000' },
+    'bình phước': { lat: '11.7511000', lng: '106.9048000' },
+    'đồng xoài': { lat: '11.5333000', lng: '106.8833000' },
+    'bình thuận': { lat: '10.9333000', lng: '108.1000000' },
+    'phan thiết': { lat: '10.9333000', lng: '108.1000000' },
+    'cà mau': { lat: '9.1769000', lng: '105.1524000' },
+    'cần thơ': { lat: '10.0452000', lng: '105.7469000' },
+    'ninh kiều': { lat: '10.0333000', lng: '105.7833000' },
+    'cao bằng': { lat: '22.6667000', lng: '106.2500000' },
+    'đà nẵng': { lat: '16.0544000', lng: '108.2022000' },
+    'đắk lắk': { lat: '12.6667000', lng: '108.0500000' },
+    'buôn ma thuột': { lat: '12.6667000', lng: '108.0500000' },
+    'đắk nông': { lat: '12.0000000', lng: '107.6833000' },
+    'gia nghĩa': { lat: '12.0000000', lng: '107.6833000' },
+    'điện biên': { lat: '21.3833000', lng: '103.0167000' },
+    'đồng nai': { lat: '10.9574000', lng: '106.8427000' },
+    'biên hòa': { lat: '10.9574000', lng: '106.8427000' },
+    'long thành': { lat: '10.7900000', lng: '106.9600000' },
+    'nhơn trạch': { lat: '10.6600000', lng: '106.9100000' },
+    'đồng tháp': { lat: '10.4667000', lng: '105.6333000' },
+    'cao lãnh': { lat: '10.4578000', lng: '105.6322000' },
+    'sa đéc': { lat: '10.2978000', lng: '105.7578000' },
+    'gia lai': { lat: '13.9833000', lng: '108.0000000' },
+    'pleiku': { lat: '13.9833000', lng: '108.0000000' },
+    'hà giang': { lat: '22.8233000', lng: '104.9833000' },
+    'hà nam': { lat: '20.5833000', lng: '105.9167000' },
+    'phủ lý': { lat: '20.5400000', lng: '105.9100000' },
+    'hà nội': { lat: '21.0285110', lng: '105.8541670' },
+    'hà tĩnh': { lat: '18.3333000', lng: '105.9000000' },
+    'hải dương': { lat: '20.9333000', lng: '106.3167000' },
+    'hải phòng': { lat: '20.8449000', lng: '106.6881000' },
+    'hậu giang': { lat: '9.7833000', lng: '105.4667000' },
+    'vị thanh': { lat: '9.7833000', lng: '105.4667000' },
+    'hòa bình': { lat: '20.8167000', lng: '105.3333000' },
+    'hưng yên': { lat: '20.6500000', lng: '106.0500000' },
+    'khánh hòa': { lat: '12.2500000', lng: '109.1833000' },
+    'nha trang': { lat: '12.2388000', lng: '109.1967000' },
+    'cam ranh': { lat: '11.9214000', lng: '109.1591000' },
+    'kiên giang': { lat: '10.0167000', lng: '105.0833000' },
+    'rạch giá': { lat: '10.0125000', lng: '105.0809000' },
+    'hà tiên': { lat: '10.3833000', lng: '104.4833000' },
+    'phú quốc': { lat: '10.2289000', lng: '103.9572000' },
+    'kon tum': { lat: '14.3500000', lng: '108.0000000' },
+    'lai châu': { lat: '22.4000000', lng: '103.4667000' },
+    'lâm đồng': { lat: '11.9404000', lng: '108.4583000' },
+    'đà lạt': { lat: '11.9404000', lng: '108.4583000' },
+    'bảo lộc': { lat: '11.5478000', lng: '107.8089000' },
+    'lạng sơn': { lat: '21.8500000', lng: '106.7667000' },
+    'lào cai': { lat: '22.4833000', lng: '103.9667000' },
+    'sa pa': { lat: '22.3364000', lng: '103.8438000' },
+    'long an': { lat: '10.5364000', lng: '106.4116000' },
+    'tân an': { lat: '10.5364000', lng: '106.4116000' },
+    'bến lức': { lat: '10.6450000', lng: '106.4900000' },
+    'đức hòa': { lat: '10.8750000', lng: '106.4500000' },
+    'cần giuộc': { lat: '10.6050000', lng: '106.6750000' },
+    'nam định': { lat: '20.4333000', lng: '106.1667000' },
+    'nghệ an': { lat: '18.6667000', lng: '105.6667000' },
+    'vinh': { lat: '18.6733000', lng: '105.6811000' },
+    'ninh bình': { lat: '20.2500000', lng: '105.9667000' },
+    'ninh thuận': { lat: '11.5667000', lng: '108.9833000' },
+    'phan rang': { lat: '11.5667000', lng: '108.9833000' },
+    'phú thọ': { lat: '21.3167000', lng: '105.4000000' },
+    'việt trì': { lat: '21.3228000', lng: '105.4019000' },
+    'phú yên': { lat: '13.0833000', lng: '109.3000000' },
+    'tuy hòa': { lat: '13.0883000', lng: '109.3039000' },
+    'quảng bình': { lat: '17.4833000', lng: '106.6000000' },
+    'đồng hới': { lat: '17.4833000', lng: '106.6000000' },
+    'quảng nam': { lat: '15.5667000', lng: '108.4833000' },
+    'tam kỳ': { lat: '15.5667000', lng: '108.4833000' },
+    'hội an': { lat: '15.8801000', lng: '108.3380000' },
+    'quảng ngãi': { lat: '15.1167000', lng: '108.8000000' },
+    'quảng ninh': { lat: '20.9500000', lng: '107.0833000' },
+    'hạ long': { lat: '20.9500000', lng: '107.0833000' },
+    'quảng trị': { lat: '16.7500000', lng: '107.1833000' },
+    'đông hà': { lat: '16.8167000', lng: '107.1000000' },
+    'sóc trăng': { lat: '9.6000000', lng: '105.9667000' },
+    'sơn la': { lat: '21.3167000', lng: '103.9167000' },
+    'tây ninh': { lat: '11.3167000', lng: '106.1000000' },
+    'thái bình': { lat: '20.4500000', lng: '106.3333000' },
+    'thái nguyên': { lat: '21.5833000', lng: '105.8333000' },
+    'thanh hóa': { lat: '19.8000000', lng: '105.7667000' },
+    'thừa thiên huế': { lat: '16.4667000', lng: '107.6000000' },
+    'huế': { lat: '16.4667000', lng: '107.6000000' },
+    'tiền giang': { lat: '10.3600000', lng: '106.3600000' },
+    'mỹ tho': { lat: '10.3600000', lng: '106.3600000' },
+    'gò công': { lat: '10.3550000', lng: '106.6667000' },
+    'hồ chí minh': { lat: '10.7768890', lng: '106.7008060' },
+    'hcm': { lat: '10.7768890', lng: '106.7008060' },
+    'sài gòn': { lat: '10.7768890', lng: '106.7008060' },
+    'trà vinh': { lat: '9.9333000', lng: '106.3333000' },
+    'tuyên quang': { lat: '21.8167000', lng: '105.2167000' },
+    'vĩnh long': { lat: '10.2537000', lng: '105.9722000' },
+    'vĩnh phúc': { lat: '21.3000000', lng: '105.6000000' },
+    'yên bái': { lat: '21.7167000', lng: '104.8667000' },
+};
+
+/**
+ * Chuẩn hóa mã loại xe phù hợp với API Lalamove tại Việt Nam (thị trường VN/SGN)
+ */
+export const normalizeLalamoveServiceType = (serviceType?: string): string => {
+    const s = (serviceType || '').toUpperCase().trim();
+    if (s === 'VAN_500KG' || s === 'VAN500') return 'VAN';
+    if (s === 'VAN_1000KG' || s === 'VAN1000KG') return 'VAN1000';
+    if (s === 'TRUCK_1000KG' || s === 'TRUCK1000') return 'TRUCK175';
+    if (s === 'TRUCK_1500KG' || s === 'TRUCK1500') return 'TRUCK_1500';
+    if (s === 'TRUCK_2000KG' || s === 'TRUCK2000') return 'TRUCK175';
+    return s || 'VAN';
+};
 
 @Injectable()
 export class LalamoveService {
@@ -357,38 +486,75 @@ export class LalamoveService {
 
     /**
      * Dịch vụ Geocoding phân giải địa chỉ thành tọa độ Lat / Lng
-     * Sử dụng OpenStreetMap Nominatim miễn phí hoặc fallback về tọa độ trung tâm thành phố
+     * 1. Phân giải phân cấp qua OpenStreetMap Nominatim:
+     *    - Thử toàn bộ địa chỉ
+     *    - Thử bỏ số nhà/số ngõ/ấp (ví dụ: "384D khu phố 3" -> "phường 8, Vĩnh Long")
+     *    - Thử cấp Phường/Xã + Quận/Huyện/Tỉnh
+     *    - Thử cấp Tỉnh/Thành phố
+     * 2. Nếu Nominatim không tìm thấy hoặc lỗi/timeout, tra cứu từ điển 63 Tỉnh/Thành phố Việt Nam (VIETNAM_PROVINCE_COORDINATES)
+     * Đảm bảo các đơn hàng liên tỉnh (như Vĩnh Long, Cần Thơ, Bình Dương...) không bao giờ bị rơi vào tọa độ mặc định TP.HCM!
      */
     async geocodeAddress(address: string): Promise<LalamoveCoordinate> {
         if (!address || !address.trim()) {
-            return { lat: '10.8230989', lng: '106.6296638' }; // Default TP.HCM
+            return { lat: '10.8230989', lng: '106.6296638' }; // Default Kho TP.HCM
         }
 
-        try {
-            const clean = address.trim();
-            // Thử gọi Nominatim OpenStreetMap
-            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(clean + ', Việt Nam')}&format=json&limit=1`;
-            const res = await axios.get(url, {
-                headers: { 'User-Agent': 'ERP4UERP-Shipping/1.0' },
-                timeout: 5000,
-            });
+        const clean = address.trim();
+        const lower = clean.toLowerCase();
 
-            if (res.data && res.data.length > 0) {
-                const item = res.data[0];
-                return {
-                    lat: String(Number(item.lat).toFixed(7)),
-                    lng: String(Number(item.lon).toFixed(7)),
-                };
+        // Chuẩn bị danh sách query phân cấp từ chi tiết đến bao quát
+        // VD: "384D khu phố 3, phường 8, Vĩnh Long"
+        // 1: "384D khu phố 3, phường 8, Vĩnh Long, Việt Nam"
+        // 2: "phường 8, Vĩnh Long, Việt Nam" (bỏ số nhà/ấp chi tiết)
+        // 3: "phường 8, Vĩnh Long, Việt Nam"
+        // 4: "Vĩnh Long, Việt Nam"
+        const parts = clean.split(',').map(p => p.trim()).filter(Boolean);
+        const candidateQueries: string[] = [];
+
+        candidateQueries.push(clean + ', Việt Nam');
+        if (parts.length > 1) {
+            candidateQueries.push(parts.slice(1).join(', ') + ', Việt Nam');
+        }
+        if (parts.length > 2) {
+            candidateQueries.push(parts.slice(parts.length - 2).join(', ') + ', Việt Nam');
+        }
+        if (parts.length > 0) {
+            candidateQueries.push(parts[parts.length - 1] + ', Việt Nam');
+        }
+
+        for (const queryStr of candidateQueries) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(queryStr)}&format=json&limit=1`;
+                const res = await axios.get(url, {
+                    headers: { 'User-Agent': 'ERP4UERP-Shipping/1.0' },
+                    timeout: 4000,
+                });
+
+                if (res.data && res.data.length > 0) {
+                    const item = res.data[0];
+                    this.logger.log(`Geocoding successful for query "${queryStr}": lat=${item.lat}, lng=${item.lon}`);
+                    return {
+                        lat: String(Number(item.lat).toFixed(7)),
+                        lng: String(Number(item.lon).toFixed(7)),
+                    };
+                }
+            } catch (e: any) {
+                this.logger.warn(`Nominatim query failed for "${queryStr}": ${e.message}`);
             }
-        } catch (e: any) {
-            this.logger.warn(`Geocoding failed for address "${address}": ${e.message}`);
         }
 
-        // Fallback: nếu chứa Hà Nội thì trả tọa độ HN, ngược lại trả HCM
-        const lower = address.toLowerCase();
-        if (lower.includes('hà nội') || lower.includes('ha noi')) {
-            return { lat: '21.028511', lng: '105.854167' };
+        // Fallback: Tra cứu từ điển tọa độ 63 Tỉnh/Thành phố Việt Nam
+        // Sắp xếp các từ khóa theo độ dài giảm dần để ưu tiên cụm từ chính xác nhất
+        const provinceKeys = Object.keys(VIETNAM_PROVINCE_COORDINATES).sort((a, b) => b.length - a.length);
+        for (const provKey of provinceKeys) {
+            if (lower.includes(provKey)) {
+                const coord = VIETNAM_PROVINCE_COORDINATES[provKey];
+                this.logger.log(`Geocoding matched province fallback "${provKey}" for address "${clean}": lat=${coord.lat}, lng=${coord.lng}`);
+                return coord;
+            }
         }
+
+        // Fallback cuối cùng nếu địa chỉ không chứa tên tỉnh thành nào trong 63 tỉnh
         return { lat: '10.776889', lng: '106.700806' };
     }
 
@@ -405,9 +571,10 @@ export class LalamoveService {
 
         try {
             const path = '/v3/quotations';
+            const normalizedServiceType = normalizeLalamoveServiceType(dto.serviceType);
             const payload = {
                 data: {
-                    serviceType: dto.serviceType || 'VAN_500KG',
+                    serviceType: normalizedServiceType,
                     language: dto.language || 'vi_VN',
                     stops: dto.stops.map(s => ({
                         coordinates: {
