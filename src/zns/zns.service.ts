@@ -208,14 +208,24 @@ export class ZaloZnsService {
         return 'Mẫu tin nhắn ZNS không tồn tại hoặc chưa được phê duyệt trên Zalo OA';
       case -119:
         return 'Dữ liệu tham số (template_data) không khớp với mẫu đã đăng ký trên Zalo';
+      case -120:
+        return 'OA chưa được cấp quyền sử dụng tính năng ZNS (Yêu cầu: OA Doanh nghiệp Đã Xác Thực tích vàng & đã liên kết App trên Zalo Developers/ZCA)';
       case -124:
         return 'Access Token Zalo không hợp lệ hoặc đã bị vô hiệu hóa';
+      case -125:
+        return 'Ứng dụng chưa được cấp quyền gọi API này trên Zalo Developers';
       case -211:
         return 'Tài khoản Zalo Cloud Account (ZCA) không đủ số dư để gửi tin (400đ/tin)';
+      case -212:
+        return 'Tài khoản ZCA đang bị khóa hoặc chưa kích hoạt dịch vụ';
       case -216:
         return 'Access Token đã hết hạn';
       case -232:
         return 'Zalo OA chưa được cấp quyền gửi mẫu thông báo ZNS này';
+      case -233:
+        return 'Mẫu ZNS đang bị tạm dừng hoặc đã hết hiệu lực';
+      case -235:
+        return 'Đã vượt quá hạn mức gửi tin ZNS trong ngày của OA';
       default:
         return rawMsg || `Lỗi Zalo ZNS (Mã lỗi: ${code})`;
     }
