@@ -2071,7 +2071,7 @@ const LalamoveConfigTab: React.FC = () => {
                 apiKey: values.LALAMOVE_API_KEY?.trim() || undefined,
                 apiSecret: values.LALAMOVE_API_SECRET?.trim() || undefined,
                 isSandbox,
-                apiUrl: isSandbox ? 'https://rest.sandbox.lalamove.com/v3' : 'https://rest.lalamove.com/v3',
+                apiUrl: isSandbox ? 'https://rest.sandbox.lalamove.com' : 'https://rest.lalamove.com',
                 market: values.LALAMOVE_MARKET || 'VN',
             });
             setTestResult(res.data);
@@ -2094,7 +2094,7 @@ const LalamoveConfigTab: React.FC = () => {
             const isSandbox = values.LALAMOVE_SANDBOX;
             const payload: any = {
                 isSandbox,
-                apiUrl: isSandbox ? 'https://rest.sandbox.lalamove.com/v3' : 'https://rest.lalamove.com/v3',
+                apiUrl: isSandbox ? 'https://rest.sandbox.lalamove.com' : 'https://rest.lalamove.com',
                 market: values.LALAMOVE_MARKET || 'VN',
                 defaultSenderName: values.LALAMOVE_DEFAULT_SENDER_NAME,
                 defaultSenderPhone: values.LALAMOVE_DEFAULT_SENDER_PHONE,

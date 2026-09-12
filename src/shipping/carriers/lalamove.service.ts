@@ -151,10 +151,11 @@ export class LalamoveService {
             : defaultSandbox;
 
         const defaultUrl = isSandbox 
-            ? 'https://rest.sandbox.lalamove.com/v3' 
-            : 'https://rest.lalamove.com/v3';
+            ? 'https://rest.sandbox.lalamove.com' 
+            : 'https://rest.lalamove.com';
 
-        const apiUrl = (configMap.get('LALAMOVE_API_URL') || process.env.LALAMOVE_API_URL || defaultUrl).replace(/\/+$/, '');
+        const rawApiUrl = configMap.get('LALAMOVE_API_URL') || process.env.LALAMOVE_API_URL || defaultUrl;
+        const apiUrl = rawApiUrl.replace(/\/v3\/?$/, '').replace(/\/+$/, '');
         const market = configMap.get('LALAMOVE_MARKET') || process.env.LALAMOVE_MARKET || 'VN';
 
         // Thông tin điểm lấy hàng mặc định (Kho ERP4U)
@@ -214,11 +215,13 @@ export class LalamoveService {
         }
         if (data.isSandbox !== undefined) {
             await setConfigValue('LALAMOVE_SANDBOX', data.isSandbox ? 'true' : 'false', 'Lalamove Môi trường Sandbox');
-            const targetUrl = data.apiUrl?.trim() || (data.isSandbox ? 'https://rest.sandbox.lalamove.com/v3' : 'https://rest.lalamove.com/v3');
+            const targetUrl = (data.apiUrl?.trim() || (data.isSandbox ? 'https://rest.sandbox.lalamove.com' : 'https://rest.lalamove.com'))
+                .replace(/\/v3\/?$/, '').replace(/\/+$/, '');
             await setConfigValue('LALAMOVE_API_URL', targetUrl, 'Lalamove API Base URL');
         }
         if (data.apiUrl !== undefined) {
-            await setConfigValue('LALAMOVE_API_URL', data.apiUrl.trim(), 'Lalamove API Base URL');
+            const cleanUrl = data.apiUrl.trim().replace(/\/v3\/?$/, '').replace(/\/+$/, '');
+            await setConfigValue('LALAMOVE_API_URL', cleanUrl, 'Lalamove API Base URL');
         }
         if (data.market !== undefined) {
             await setConfigValue('LALAMOVE_MARKET', data.market.trim(), 'Lalamove Thị trường (Mặc định: VN)');
@@ -288,8 +291,11 @@ export class LalamoveService {
             : baseConfig.isSandbox;
 
         const defaultUrl = isSandbox 
-            ? 'https://rest.sandbox.lalamove.com/v3' 
-            : 'https://rest.lalamove.com/v3';
+            ? 'https://rest.sandbox.lalamove.com' 
+            : 'https://rest.lalamove.com';
+
+        const rawUrl = customConfig?.apiUrl || defaultUrl;
+        const apiUrl = rawUrl.replace(/\/v3\/?$/, '').replace(/\/+$/, '');
 
         const config: LalamoveConfig = {
             ...baseConfig,
@@ -297,7 +303,7 @@ export class LalamoveService {
             apiKey,
             apiSecret,
             isSandbox,
-            apiUrl: (customConfig?.apiUrl || defaultUrl).replace(/\/+$/, ''),
+            apiUrl,
         };
 
         if (!config.apiKey || !config.apiSecret) {
