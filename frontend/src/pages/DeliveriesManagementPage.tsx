@@ -244,17 +244,11 @@ const DeliveriesManagementPage: React.FC = () => {
     const handleSyncStatus = async (record: DeliveryRecord) => {
         try {
             setSyncingId(record.id);
-            const isLalamove = (record.shipping_carrier || '').toUpperCase().includes('LALAMOVE') || record.shipping_provider === 'LALAMOVE';
-            const isGhtk = (record.shipping_carrier || '').toUpperCase().includes('GHTK') || record.shipping_provider === 'GHTK';
-
-            if (isLalamove) {
-                const res = await api.post(`/shipping/delivery/${record.id}/sync-lalamove`);
-                message.success(res.data?.message || 'Đã đồng bộ trạng thái Lalamove');
-            } else if (isGhtk) {
-                const res = await api.get(`/shipping/delivery/${record.id}/tracking`);
-                message.success('Đã cập nhật trạng thái mới nhất từ GHTK');
+            const res = await api.post(`/shipping/delivery/${record.id}/sync-carrier`);
+            if (res.data?.success !== false) {
+                message.success(res.data?.message || 'Đã đồng bộ trạng thái từ hãng vận chuyển');
             } else {
-                message.info('Vận đơn này không hỗ trợ API đồng bộ trực tuyến');
+                message.warning(res.data?.message || 'Chưa thể đồng bộ trạng thái');
             }
             fetchDeliveries();
         } catch (e: any) {

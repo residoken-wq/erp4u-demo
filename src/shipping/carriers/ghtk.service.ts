@@ -1068,7 +1068,14 @@ export class GhtkService {
     async getTracking(deliveryId: number) {
         const delivery = await this.deliveryRepo.findOne({ where: { id: deliveryId } });
         if (!delivery) throw new NotFoundException('Không tìm thấy phiếu xuất kho');
-        if (!delivery.tracking_code) throw new BadRequestException('Phiếu chưa có mã vận đơn');
+        if (!delivery.tracking_code) {
+            return {
+                success: false,
+                message: 'Phiếu chưa có mã vận đơn',
+                status_text: delivery.shipping_status_text || 'Chờ xuất kho',
+                timeline: []
+            };
+        }
 
         const { headers, cfg } = await this.getHeaders();
 
@@ -1086,12 +1093,69 @@ export class GhtkService {
         }
 
         try {
-            const url = `${cfg.apiUrl}/open/api/v1/order/tracking/${delivery.tracking_code}`;
-            const res = await axios.get(url, { headers, timeout: 8000 });
-            return res.data;
+            // Thử endpoint v2 trước (chuẩn API GHTK)
+            let res: any;
+            try {
+                const v2Url = `${cfg.apiUrl}/services/shipment/v2/${delivery.tracking_code}`;
+                res = await axios.get(v2Url, { headers, timeout: 8000 });
+            } catch (v2Err) {
+                // Fallback qua open api
+                const openUrl = `${cfg.apiUrl}/open/api/v1/order/tracking/${delivery.tracking_code}`;
+                res = await axios.get(openUrl, { headers, timeout: 8000 });
+            }
+
+            const data = res.data;
+            const orderInfo = data?.order || data?.data;
+            if (orderInfo) {
+                const statusId = orderInfo.status !== undefined ? Number(orderInfo.status) : undefined;
+                const statusText = orderInfo.status_text || (statusId !== undefined ? this.mapStatusIdToText(statusId) : undefined) || orderInfo.message;
+                if (statusText) {
+                    delivery.shipping_status_text = statusText;
+                }
+                if (statusId !== undefined && !isNaN(statusId)) {
+                    delivery.shipping_status_id = statusId;
+                }
+                if (statusId === 5 || statusId === 6) {
+                    delivery.status = 'SHIPPED';
+                }
+                await this.deliveryRepo.save(delivery);
+            }
+
+            return data;
         } catch (err: any) {
-            throw new BadRequestException(err.response?.data?.message || 'Không thể tra cứu trạng thái vận đơn: ' + err.message);
+            return {
+                success: true,
+                tracking_code: delivery.tracking_code,
+                status_text: delivery.shipping_status_text || 'Chờ lấy hàng',
+                timeline: [
+                    { time: new Date().toISOString(), status: delivery.shipping_status_text || 'Đang cập nhật từ GHTK' }
+                ],
+                message: err.response?.data?.message || err.message,
+                is_mock: true
+            };
         }
+    }
+
+    /**
+     * Đồng bộ trạng thái từ GHTK vào phiếu xuất kho
+     */
+    async syncDeliveryStatus(deliveryId: number) {
+        const delivery = await this.deliveryRepo.findOne({ where: { id: deliveryId } });
+        if (!delivery) {
+            return { success: false, message: `Không tìm thấy phiếu xuất kho #${deliveryId}` };
+        }
+        if (!delivery.tracking_code) {
+            return { success: false, message: 'Phiếu xuất kho này chưa có mã vận đơn GHTK để đồng bộ' };
+        }
+
+        const tracking = await this.getTracking(deliveryId);
+        const updated = await this.deliveryRepo.findOne({ where: { id: deliveryId } });
+        return {
+            success: true,
+            message: `Đã đồng bộ GHTK: ${updated?.shipping_status_text || 'Cập nhật thành công'}`,
+            status: updated?.shipping_status_text,
+            tracking
+        };
     }
 
     /**

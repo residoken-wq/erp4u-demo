@@ -333,6 +333,30 @@ export class ShippingController {
         return this.lalamoveService.syncDeliveryStatus(Number(deliveryId));
     }
 
+    @Post('delivery/:deliveryId/sync-carrier')
+    async syncCarrierStatus(@Param('deliveryId') deliveryId: string) {
+        const id = Number(deliveryId);
+        const delivery = await this.deliveryRepo.findOne({ where: { id } });
+        if (!delivery) {
+            return { success: false, message: `Không tìm thấy phiếu xuất kho #${deliveryId}` };
+        }
+
+        const isGhtk = (delivery.shipping_carrier || '').toUpperCase().includes('GHTK') || delivery.shipping_provider === 'GHTK';
+        const isLalamove = (delivery.shipping_carrier || '').toUpperCase().includes('LALAMOVE') || delivery.shipping_provider === 'LALAMOVE';
+
+        if (isLalamove) {
+            return this.lalamoveService.syncDeliveryStatus(id);
+        } else if (isGhtk) {
+            return this.ghtkService.syncDeliveryStatus(id);
+        } else {
+            return {
+                success: true,
+                message: `Đơn vị vận chuyển "${delivery.shipping_carrier || 'Nội bộ'}": Trạng thái phiếu hiện tại là ${delivery.status}`,
+                status: delivery.shipping_status_text || delivery.status
+            };
+        }
+    }
+
     @Get('delivery/:deliveryId/lalamove-order/:orderId')
     async getLalamoveOrderDetails(
         @Param('deliveryId') deliveryId: string,

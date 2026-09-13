@@ -1082,7 +1082,10 @@ export class LalamoveService {
         }
 
         if (!delivery.tracking_code) {
-            throw new BadRequestException('Phiếu xuất kho này chưa có mã vận đơn Lalamove để đồng bộ');
+            return {
+                success: false,
+                message: 'Phiếu xuất kho này chưa có mã vận đơn Lalamove để đồng bộ',
+            };
         }
 
         const orderId = delivery.tracking_code;
@@ -1112,7 +1115,11 @@ export class LalamoveService {
         try {
             const orderData = await this.getOrderDetails(orderId);
             if (!orderData) {
-                throw new BadRequestException(`Không tìm thấy thông tin đơn hàng ${orderId} từ Lalamove`);
+                return {
+                    success: false,
+                    message: `Không tìm thấy thông tin đơn hàng ${orderId} từ Lalamove`,
+                    status: delivery.shipping_status_text,
+                };
             }
 
             const metadata = delivery.shipping_metadata?.lalamove || {};
@@ -1138,6 +1145,13 @@ export class LalamoveService {
                     image: podInfo.POD.image,
                     deliveredAt: podInfo.POD.deliveredAt,
                 };
+            }
+
+            // Đồng bộ cước phí thực tế từ Lalamove
+            const actualCost = Number(orderData.priceBreakdown?.total) || Number(orderData.totalFee);
+            if (actualCost && actualCost > 0) {
+                delivery.shipping_cost = actualCost;
+                metadata.actual_cost = actualCost;
             }
 
             // CẬP NHẬT CƯỚC PHÍ CHÍNH XÁC TỪ LALAMOVE
@@ -1174,7 +1188,11 @@ export class LalamoveService {
         } catch (e: any) {
             this.logger.error(`Sync Lalamove delivery #${deliveryId} failed: ${e.message}`);
             const errorMsg = e.response?.data?.message || e.message;
-            throw new BadRequestException(`Lỗi khi đồng bộ Lalamove: ${errorMsg}`);
+            return {
+                success: false,
+                message: `Chưa thể đồng bộ Lalamove: ${errorMsg}`,
+                status: delivery.shipping_status_text,
+            };
         }
     }
 
