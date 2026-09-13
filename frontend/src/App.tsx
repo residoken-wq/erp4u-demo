@@ -1,3 +1,4 @@
+// ERP4U Frontend Application
 import React, { useState, useEffect, useMemo } from 'react';
 import { Layout, Menu, theme, Button, Avatar, Dropdown, Modal, Form, Input, message } from 'antd';
 import type { MenuProps } from 'antd';
@@ -48,6 +49,7 @@ const UserGroupsPage = React.lazy(() => import('./pages/UserGroupsPage'));
 const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const InventoryPage = React.lazy(() => import('./pages/InventoryPage'));
 const SampleInventoryPage = React.lazy(() => import('./pages/inventory/SampleInventoryPage'));
+const DeliveriesManagementPage = React.lazy(() => import('./pages/DeliveriesManagementPage'));
 const FinancePage = React.lazy(() => import('./pages/FinancePage'));
 const TasksPage = React.lazy(() => import('./pages/TasksPage'));
 const PurchasingPage = React.lazy(() => import('./pages/PurchasingPage'));
@@ -181,6 +183,7 @@ const App: React.FC = () => {
                 getItem(<Link to="/manufacturers">Nhà gia công</Link>, 'manu'),
                 getItem(<Link to="/inventory">Nhập xuất kho</Link>, '4'),
                 getItem(<Link to="/inventory/samples">Kho hàng mẫu</Link>, 'inv_samples'),
+                getItem(<Link to="/inventory/deliveries">Giao nhận</Link>, 'inv_deliveries'),
             ]));
         }
 
@@ -354,6 +357,7 @@ const App: React.FC = () => {
                                                         <Route path="/manufacturers" element={<ManufacturersPage />} />
                                                         <Route path="/inventory" element={<InventoryPage />} />
                                                         <Route path="/inventory/samples" element={<SampleInventoryPage />} />
+                                                        <Route path="/inventory/deliveries" element={<DeliveriesManagementPage />} />
                                                     </>
                                                 )}
 
