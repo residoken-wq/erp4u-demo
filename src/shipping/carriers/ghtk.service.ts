@@ -1050,16 +1050,293 @@ export class GhtkService {
     }
 
     /**
-     * Lấy link in nhãn vận đơn GHTK (PDF khổ A6 hoặc 80x103)
+     * Lấy link in nhãn vận đơn GHTK (trả về URL endpoint nội bộ proxy PDF có đính kèm token xác thực)
      */
     async getLabelUrl(deliveryId: number, pageSize: string = 'A6') {
         const delivery = await this.deliveryRepo.findOne({ where: { id: deliveryId } });
         if (!delivery) throw new NotFoundException('Không tìm thấy phiếu xuất kho');
         if (!delivery.tracking_code) throw new BadRequestException('Phiếu xuất kho chưa có mã vận đơn');
 
-        const cfg = await this.getConfig();
-        // Link in nhãn chính thức từ GHTK
-        return `${cfg.apiUrl}/services/label/${delivery.tracking_code}?pageSize=${pageSize}`;
+        // Trả về URL proxy nội bộ của ERP (đã tự động đính kèm Token GHTK bí mật)
+        return `/api/shipping/delivery/${deliveryId}/print-label?pageSize=${pageSize}`;
+    }
+
+    /**
+     * Lấy dữ liệu buffer PDF nhãn in vận đơn GHTK với Token bí mật
+     */
+    async getLabelBuffer(deliveryId: number, pageSize: string = 'A6'): Promise<{
+        buffer: Buffer;
+        contentType: string;
+        filename: string;
+        isHtml?: boolean;
+    }> {
+        const delivery = await this.deliveryRepo.findOne({
+            where: { id: deliveryId },
+            relations: ['sales_order', 'sales_order.customer', 'items'],
+        });
+        if (!delivery) throw new NotFoundException('Không tìm thấy phiếu xuất kho');
+        if (!delivery.tracking_code) throw new BadRequestException('Phiếu xuất kho chưa có mã vận đơn');
+
+        const { headers, cfg } = await this.getHeaders();
+        const trackingCode = delivery.tracking_code;
+
+        // Nếu là đơn hàng chạy mô phỏng (demo) hoặc chưa cấu hình Token GHTK
+        if (!cfg.token || trackingCode.startsWith('GHTK-DEMO')) {
+            const html = this.renderDemoLabelHtml(delivery, pageSize);
+            return {
+                buffer: Buffer.from(html, 'utf8'),
+                contentType: 'text/html; charset=utf-8',
+                filename: `GHTK_${trackingCode}_${pageSize}.html`,
+                isHtml: true,
+            };
+        }
+
+        // Gọi GHTK API tải PDF nhãn in với HTTP Header Token bí mật
+        const url = `${cfg.apiUrl}/services/label/${trackingCode}?pageSize=${pageSize}`;
+        try {
+            const res = await axios.get(url, {
+                headers,
+                responseType: 'arraybuffer',
+                timeout: 20000,
+            });
+
+            const buffer = Buffer.from(res.data);
+            // Kiểm tra xem dữ liệu có phải là file PDF thật (%PDF ở đầu file)
+            if (buffer.length >= 4 && buffer.slice(0, 4).toString() === '%PDF') {
+                return {
+                    buffer,
+                    contentType: 'application/pdf',
+                    filename: `GHTK_${trackingCode}_${pageSize}.pdf`,
+                    isHtml: false,
+                };
+            }
+
+            // Nếu GHTK trả về chuỗi JSON lỗi (ví dụ mã lỗi token hoặc không tìm thấy đơn)
+            const text = buffer.toString('utf8');
+            let errMsg = 'GHTK không trả về file PDF hợp lệ';
+            try {
+                const json = JSON.parse(text);
+                if (json.message) errMsg = json.message;
+            } catch {
+                if (text && text.length < 200) errMsg = text;
+            }
+            throw new BadRequestException(errMsg);
+        } catch (err: any) {
+            if (err instanceof BadRequestException || err instanceof NotFoundException) {
+                throw err;
+            }
+            let errMsg = err.message;
+            if (err.response?.data) {
+                try {
+                    const str = Buffer.isBuffer(err.response.data)
+                        ? err.response.data.toString('utf8')
+                        : JSON.stringify(err.response.data);
+                    const json = JSON.parse(str);
+                    if (json.message) errMsg = json.message;
+                } catch {
+                    if (typeof err.response.data === 'string') errMsg = err.response.data;
+                }
+            }
+            throw new BadRequestException(`Không thể tải nhãn từ GHTK: ${errMsg}`);
+        }
+    }
+
+    /**
+     * Tạo nhãn in HTML mô phỏng A6 khi chạy demo hoặc chưa có token GHTK
+     */
+    renderDemoLabelHtml(delivery: SalesDelivery, pageSize: string = 'A6'): string {
+        const so = delivery.sales_order;
+        const customer = so?.customer;
+        const items = delivery.items || [];
+        const trackingCode = delivery.tracking_code || 'GHTK-DEMO';
+        const receiverName = delivery.contact_name || so?.receiver_name || customer?.name || 'Khách hàng';
+        const receiverPhone = delivery.contact_phone || so?.receiver_phone || customer?.phone || '';
+        const receiverAddress = delivery.delivery_address || customer?.address || so?.shipping_address || '';
+        const codAmount = Number(delivery.pick_money) || 0;
+        const weightGram = delivery.weight_gram || 500;
+
+        return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Nhãn vận đơn GHTK - ${trackingCode}</title>
+    <style>
+        @page { size: ${pageSize === '80x103' ? '80mm 103mm' : 'A6'}; margin: 4mm; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 0; padding: 10px; font-size: 13px; color: #000; background: #fff; }
+        .label-container { border: 2px solid #000; padding: 8px; width: 100%; max-width: ${pageSize === '80x103' ? '80mm' : '105mm'}; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px; }
+        .logo { font-size: 18px; font-weight: 900; color: #008444; }
+        .sub-logo { font-size: 10px; color: #555; }
+        .barcode-box { text-align: center; border-bottom: 2px dashed #000; padding: 8px 0; margin-bottom: 8px; }
+        .barcode-bars { font-family: 'Courier New', monospace; font-size: 24px; letter-spacing: 4px; font-weight: bold; }
+        .barcode-text { font-family: monospace; font-size: 16px; font-weight: 700; margin-top: 4px; }
+        .section { border-bottom: 1px solid #000; padding: 6px 0; }
+        .bold { font-weight: bold; }
+        .cod-box { background: #f0f0f0; border: 2px solid #000; padding: 6px; text-align: center; margin: 6px 0; font-size: 14px; }
+        .cod-amount { font-size: 18px; font-weight: 900; color: #d90429; }
+        .items-list { font-size: 11px; margin-top: 4px; }
+        .footer { font-size: 10px; text-align: center; margin-top: 6px; color: #555; }
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom: 12px; text-align: center;">
+        <button onclick="window.print()" style="background:#008444;color:#fff;border:none;padding:8px 18px;font-size:14px;border-radius:4px;cursor:pointer;font-weight:bold;">🖨️ In nhãn ngay</button>
+        <span style="margin-left: 10px; color: #666; font-size: 12px;">(Nhãn mô phỏng dành cho đơn chạy thử nghiệm)</span>
+    </div>
+    <div class="label-container">
+        <div class="header">
+            <div>
+                <div class="logo">GHTK</div>
+                <div class="sub-logo">GIAO HÀNG TIẾT KIỆM</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="bold" style="font-size: 14px;">BƯU KIỆN ${pageSize}</div>
+                <div style="font-size: 11px;">KL: ${weightGram}g</div>
+            </div>
+        </div>
+        <div class="barcode-box">
+            <div class="barcode-bars">||||| | |||| ||| |||| | ||</div>
+            <div class="barcode-text">${trackingCode}</div>
+        </div>
+        <div class="section">
+            <div class="bold">NGƯỜI GỬI:</div>
+            <div>ERP4U - KHO VẬN HÀNG HÓA</div>
+            <div>PXK: <span class="bold">${delivery.code}</span> | ĐH: <span class="bold">${so?.order_code || ''}</span></div>
+        </div>
+        <div class="section">
+            <div class="bold">NGƯỜI NHẬN:</div>
+            <div class="bold" style="font-size: 14px;">${receiverName} - ${receiverPhone}</div>
+            <div style="margin-top: 2px;">${receiverAddress}</div>
+        </div>
+        <div class="cod-box">
+            <div>TIỀN THU NGƯỜI NHẬN (COD):</div>
+            <div class="cod-amount">${codAmount > 0 ? codAmount.toLocaleString('vi-VN') + ' đ' : 'KHÔNG THU TIỀN (0 đ)'}</div>
+            <div style="font-size: 11px; margin-top: 2px;">Cước phí: ${delivery.is_freeship ? 'Shop trả cước' : 'Khách trả cước'}</div>
+        </div>
+        <div class="section">
+            <div class="bold">NỘI DUNG HÀNG HÓA (${items.length} mặt hàng):</div>
+            <div class="items-list">
+                ${items.map(it => `• ${it.sku} (x${it.quantity})`).join('<br>')}
+            </div>
+        </div>
+        <div class="section" style="border-bottom: none;">
+            <div class="bold">GHI CHÚ:</div>
+            <div>${delivery.note || 'Cho xem hàng, không cho thử.'}</div>
+        </div>
+        <div class="footer">
+            ERP4U System • Ngày in: ${new Date().toLocaleDateString('vi-VN')}
+        </div>
+    </div>
+    <script>
+        window.addEventListener('load', () => {
+            setTimeout(() => { window.print(); }, 500);
+        });
+    </script>
+</body>
+</html>`;
+    }
+
+    /**
+     * Trang HTML thông báo lỗi thân thiện khi không tải được nhãn GHTK
+     */
+    renderErrorHtml(trackingCode: string, message: string): string {
+        return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lỗi in nhãn GHTK - ${trackingCode}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .error-card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            max-width: 480px;
+            width: 100%;
+            padding: 32px;
+            text-align: center;
+        }
+        .icon-box {
+            width: 64px;
+            height: 64px;
+            background: #fee2e2;
+            color: #ef4444;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 20px;
+        }
+        h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 12px;
+            color: #0f172a;
+        }
+        .tracking-badge {
+            display: inline-block;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: 600;
+            color: #008444;
+            margin-bottom: 16px;
+        }
+        .msg {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #64748b;
+            margin-bottom: 24px;
+        }
+        .btn {
+            display: inline-block;
+            background: #008444;
+            color: #ffffff;
+            padding: 10px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background: #006835;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-card">
+        <div class="icon-box">⚠️</div>
+        <h2>Không thể tải nhãn in GHTK</h2>
+        <div class="tracking-badge">${trackingCode || 'Chưa có mã vận đơn'}</div>
+        <div class="msg">${message || 'Đã có lỗi xảy ra khi yêu cầu nhãn in từ hãng GHTK'}</div>
+        <button class="btn" onclick="window.close()">Đóng tab này</button>
+    </div>
+</body>
+</html>`;
     }
 
     /**

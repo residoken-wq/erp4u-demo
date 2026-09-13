@@ -13,6 +13,7 @@ import {
     GlobalOutlined, PictureOutlined, CompassOutlined, DollarOutlined
 } from '@ant-design/icons';
 import api from '../utils/api';
+import { API_URL } from '../config';
 import dayjs from 'dayjs';
 
 const { Text, Title } = Typography;
@@ -206,17 +207,14 @@ const DeliveriesManagementPage: React.FC = () => {
     };
 
     // GHTK Print Label
-    const handlePrintGhtkLabel = async (record: DeliveryRecord) => {
-        try {
-            const res = await api.get(`/shipping/delivery/${record.id}/label?pageSize=A6`);
-            if (res.data?.url) {
-                window.open(res.data.url, '_blank');
-            } else {
-                message.warning('Không tìm thấy link nhãn in GHTK');
-            }
-        } catch (e: any) {
-            message.error(e.response?.data?.message || 'Lỗi khi lấy nhãn in GHTK');
+    const handlePrintGhtkLabel = (record: DeliveryRecord) => {
+        if (!record.tracking_code) {
+            message.warning('Phiếu xuất kho này chưa có mã vận đơn GHTK để in nhãn');
+            return;
         }
+        // Mở trực tiếp link proxy in nhãn PDF từ backend (đã tự động đính kèm Token GHTK bí mật)
+        const printUrl = `${API_URL}/shipping/delivery/${record.id}/print-label?pageSize=A6`;
+        window.open(printUrl, '_blank');
     };
 
     // Lalamove Details & POD View

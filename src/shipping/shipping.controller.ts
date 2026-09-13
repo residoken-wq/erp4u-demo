@@ -253,10 +253,56 @@ export class ShippingController {
     @Get('delivery/:deliveryId/label')
     async getLabelUrl(
         @Param('deliveryId') deliveryId: string,
-        @Query('pageSize') pageSize?: string,
+        @Query('pageSize') pageSize: string = 'A6',
+        @Query('format') format: string,
+        @Res() res: Response,
     ) {
-        const url = await this.ghtkService.getLabelUrl(Number(deliveryId), pageSize || 'A6');
-        return { url };
+        const id = Number(deliveryId);
+        const reqAccept = (res.req?.headers?.accept || '').toLowerCase();
+        const wantsJson = (format === 'json') || (reqAccept.includes('application/json') && format !== 'pdf' && format !== 'stream');
+
+        // Nếu client gọi API dạng JSON (tương thích ngược với frontend cũ gọi api.get() đợi { url: ... })
+        if (wantsJson) {
+            const url = await this.ghtkService.getLabelUrl(id, pageSize);
+            return res.json({ url });
+        }
+
+        // Nếu mở trực tiếp trong tab trình duyệt, stream file PDF ra tab
+        return this.streamLabelPdf(id, pageSize, res);
+    }
+
+    @Get('delivery/:deliveryId/print-label')
+    async printLabel(
+        @Param('deliveryId') deliveryId: string,
+        @Query('pageSize') pageSize: string = 'A6',
+        @Res() res: Response,
+    ) {
+        return this.streamLabelPdf(Number(deliveryId), pageSize, res);
+    }
+
+    @Get('delivery/:deliveryId/label-pdf')
+    async printLabelPdf(
+        @Param('deliveryId') deliveryId: string,
+        @Query('pageSize') pageSize: string = 'A6',
+        @Res() res: Response,
+    ) {
+        return this.streamLabelPdf(Number(deliveryId), pageSize, res);
+    }
+
+    private async streamLabelPdf(deliveryId: number, pageSize: string, res: Response) {
+        try {
+            const file = await this.ghtkService.getLabelBuffer(deliveryId, pageSize || 'A6');
+            res.setHeader('Content-Type', file.contentType);
+            if (!file.isHtml) {
+                res.setHeader('Content-Disposition', `inline; filename="${file.filename}"`);
+            }
+            res.setHeader('Content-Length', file.buffer.length);
+            return res.send(file.buffer);
+        } catch (err: any) {
+            const msg = err.message || 'Không thể tải nhãn in từ hãng GHTK';
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            return res.status(200).send(this.ghtkService.renderErrorHtml(String(deliveryId), msg));
+        }
     }
 
     @Post('webhook/ghtk')

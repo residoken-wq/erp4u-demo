@@ -10,6 +10,7 @@ import {
     PictureOutlined, GlobalOutlined, DollarOutlined, EyeOutlined
 } from '@ant-design/icons';
 import api from '../../utils/api';
+import { API_URL } from '../../config';
 import dayjs from 'dayjs';
 import AttachmentUpload from '../common/AttachmentUpload';
 import { parseWebsiteOrderNote, ParsedShippingInfo, smartParseVietnameseAddress, VIETNAM_PROVINCES } from '../../utils/orderNoteParser';
@@ -513,15 +514,13 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
         message.info('Đã bóc tách lại thông tin từ ghi chú đơn hàng');
     };
 
-    const handlePrintGhtkLabel = async (delivery: any) => {
-        try {
-            const res = await api.get(`/shipping/delivery/${delivery.id}/label?pageSize=A6`);
-            if (res.data?.url) {
-                window.open(res.data.url, '_blank');
-            }
-        } catch (e: any) {
-            message.error(e.response?.data?.message || 'Không thể lấy link in nhãn GHTK');
+    const handlePrintGhtkLabel = (delivery: any) => {
+        if (!delivery?.tracking_code) {
+            message.warning('Phiếu xuất kho này chưa có mã vận đơn GHTK để in nhãn');
+            return;
         }
+        const printUrl = `${API_URL}/shipping/delivery/${delivery.id}/print-label?pageSize=A6`;
+        window.open(printUrl, '_blank');
     };
 
     const handleViewTracking = async (delivery: any) => {
