@@ -15,10 +15,44 @@ export class FinanceController {
   @Put('categories/:id') @RequirePermission('FINANCE', 'can_update') updateCategory(@Param('id') id: number, @Body() b: any) { return this.s.updateCategory(id, b); }
   @Delete('categories/:id') @RequirePermission('FINANCE', 'can_delete') deleteCategory(@Param('id') id: number) { return this.s.deleteCategory(id); }
 
-  @Get('transactions') @RequirePermission('FINANCE', 'can_view') getTransactions(@Query('month') month: string) { return this.s.getAllTransactions(month); }
+  @Get('transactions')
+  @RequirePermission('FINANCE', 'can_view')
+  getTransactions(
+    @Query('month') month?: string,
+    @Query('type') type?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.s.getAllTransactions(month, type, status);
+  }
   @Post('transactions') @RequirePermission('FINANCE', 'can_create') createTransaction(@Body() b: any) { return this.s.createTransaction(b); }
   @Put('transactions/:id') @RequirePermission('FINANCE', 'can_update') updateTransaction(@Param('id') id: number, @Body() b: any) { return this.s.updateTransaction(id, b); }
   @Delete('transactions/:id') @RequirePermission('FINANCE', 'can_delete') deleteTransaction(@Param('id') id: number) { return this.s.deleteTransaction(id); }
+
+  @Put('transactions/:id/approve')
+  @RequirePermission('FINANCE', 'can_update')
+  approveTransaction(
+    @Param('id') id: string,
+    @Body() body: { paymentMethod?: string; date?: string; note?: string; accountingInvoiceCode?: string },
+  ) {
+    return this.s.approveTransaction(Number(id), body);
+  }
+
+  @Post('delivery-expense/:deliveryId')
+  @RequirePermission('FINANCE', 'can_create')
+  createDeliveryExpense(
+    @Param('deliveryId') deliveryId: string,
+    @Body() body?: any,
+  ) {
+    return this.s.createOrUpdateDeliveryShippingExpense(Number(deliveryId), body);
+  }
+
+  @Post('delivery-expense/batch')
+  @RequirePermission('FINANCE', 'can_create')
+  createBatchDeliveryExpense(
+    @Body() body: { deliveryIds: number[]; note?: string; partnerName?: string; date?: string },
+  ) {
+    return this.s.createBatchDeliveryExpense(body?.deliveryIds || [], body);
+  }
 
   // --- MỚI: BÁO CÁO TÀI CHÍNH ---
   @Get('report')

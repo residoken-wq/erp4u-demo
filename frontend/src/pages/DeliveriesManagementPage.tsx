@@ -80,6 +80,8 @@ interface DeliveryRecord {
     order_status?: string;
     order_total_amount?: number;
     order_paid_amount?: number;
+    expense_id?: number | null;
+    expense_status?: 'DRAFT' | 'COMPLETED' | 'UNCREATED' | 'NONE';
     items: DeliveryItem[];
     sibling_deliveries: SiblingDelivery[];
     all_order_deliveries: SiblingDelivery[];
@@ -130,6 +132,24 @@ const DeliveriesManagementPage: React.FC = () => {
 
     // Syncing carrier status
     const [syncingId, setSyncingId] = useState<number | null>(null);
+    const [creatingExpenseId, setCreatingExpenseId] = useState<number | null>(null);
+
+    const handleCreateExpense = async (record: DeliveryRecord) => {
+        try {
+            setCreatingExpenseId(record.id);
+            const res = await api.post(`/shipping/delivery/${record.id}/create-expense`);
+            if (res.data?.success !== false) {
+                message.success(res.data?.message || 'Đã tạo phiếu chi nháp cho chi phí vận chuyển');
+                fetchDeliveries();
+            } else {
+                message.warning(res.data?.message || 'Không thể tạo phiếu chi');
+            }
+        } catch (e: any) {
+            message.error(e.response?.data?.message || 'Lỗi khi tạo phiếu chi vận chuyển');
+        } finally {
+            setCreatingExpenseId(null);
+        }
+    };
 
     const fetchDeliveries = async () => {
         try {
@@ -435,20 +455,49 @@ const DeliveriesManagementPage: React.FC = () => {
         {
             title: 'Cước Phí & COD',
             key: 'cost',
-            width: 160,
+            width: 175,
             align: 'right' as const,
             render: (_: any, r: DeliveryRecord) => (
                 <div style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 600, color: r.shipping_cost > 0 ? '#1e293b' : '#64748b', fontSize: 13 }}>
                         {r.shipping_cost > 0 ? `${r.shipping_cost.toLocaleString()} đ` : '0 đ'}
                     </div>
-                    <div style={{ fontSize: 11, marginTop: 2 }}>
+                    <div style={{ fontSize: 11, marginTop: 2, display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
                         {r.is_freeship === 1 ? (
                             <Tag color="cyan" style={{ margin: 0, fontSize: 10, lineHeight: '16px' }}>Shop trả</Tag>
                         ) : (
                             <Tag color="magenta" style={{ margin: 0, fontSize: 10, lineHeight: '16px' }}>Khách trả</Tag>
                         )}
                     </div>
+                    {/* Trạng thái phiếu chi trong Tài chính */}
+                    {r.is_freeship === 1 && r.shipping_cost > 0 && (
+                        <div style={{ marginTop: 4 }}>
+                            {r.expense_status === 'COMPLETED' ? (
+                                <Tooltip title="Đã chi cước vận chuyển thực tế trong Tài chính">
+                                    <Tag color="success" icon={<CheckCircleOutlined />} style={{ margin: 0, fontSize: 10 }}>
+                                        Chi: Đã chi
+                                    </Tag>
+                                </Tooltip>
+                            ) : r.expense_status === 'DRAFT' ? (
+                                <Tooltip title="Đã tạo phiếu chi nháp (chờ kế toán duyệt trong Tài chính)">
+                                    <Tag color="warning" icon={<ClockCircleOutlined />} style={{ margin: 0, fontSize: 10 }}>
+                                        Chi: Nháp
+                                    </Tag>
+                                </Tooltip>
+                            ) : r.expense_status === 'UNCREATED' ? (
+                                <Button 
+                                    size="small" 
+                                    type="dashed" 
+                                    icon={<DollarOutlined />}
+                                    loading={creatingExpenseId === r.id}
+                                    onClick={() => handleCreateExpense(r)}
+                                    style={{ fontSize: 11, height: 22, padding: '0 6px', color: '#fa8c16', borderColor: '#ffd591' }}
+                                >
+                                    Lập phiếu chi
+                                </Button>
+                            ) : null}
+                        </div>
+                    )}
                     {r.pick_money > 0 && (
                         <div style={{ fontSize: 11, color: '#d97706', fontWeight: 600, marginTop: 3 }}>
                             COD: {r.pick_money.toLocaleString()} đ

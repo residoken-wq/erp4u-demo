@@ -8,6 +8,7 @@ import { CashFlowService } from './cash-flow.service';
 import { CashFlowController } from './cash-flow.controller';
 import { SalesModule } from '../sales/sales.module';
 import { SalesOrder } from '../sales/sales-order.entity';
+import { SalesDelivery } from '../sales/sales-delivery.entity';
 import { PurchasingModule } from '../purchasing/purchasing.module';
 import { PurchaseOrder } from '../purchasing/entities/purchase-order.entity';
 import { SuppliersModule } from '../suppliers/suppliers.module';
@@ -17,7 +18,7 @@ import { ProductsModule } from '../products/products.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Transaction, TransactionCategory, SalesOrder, PurchaseOrder]),
+    TypeOrmModule.forFeature([Transaction, TransactionCategory, SalesOrder, PurchaseOrder, SalesDelivery]),
     forwardRef(() => SalesModule),
     forwardRef(() => PurchasingModule),
     forwardRef(() => SuppliersModule),

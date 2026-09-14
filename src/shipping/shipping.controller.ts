@@ -5,6 +5,8 @@ import { Repository, In } from 'typeorm';
 import { GhtkService, GhtkFeeDto } from './carriers/ghtk.service';
 import { LalamoveService, LalamoveQuotationDto, LalamovePushOrderOptions, LALAMOVE_VIETNAM_VEHICLES } from './carriers/lalamove.service';
 import { SalesDelivery } from '../sales/sales-delivery.entity';
+import { Transaction } from '../finance/transaction.entity';
+import { FinanceService } from '../finance/finance.service';
 import { Response } from 'express';
 
 @Controller('shipping')
@@ -12,8 +14,11 @@ export class ShippingController {
     constructor(
         private readonly ghtkService: GhtkService,
         private readonly lalamoveService: LalamoveService,
+        private readonly financeService: FinanceService,
         @InjectRepository(SalesDelivery)
         private readonly deliveryRepo: Repository<SalesDelivery>,
+        @InjectRepository(Transaction)
+        private readonly transRepo: Repository<Transaction>,
     ) {}
 
     // ==========================================
@@ -107,6 +112,25 @@ export class ShippingController {
             }
         }
 
+        // Lookup payment vouchers (Phiếu chi) for these deliveries
+        const deliveryCodes = deliveries.map(d => d.code).filter(Boolean);
+        const expenseMap: Record<string, { id: number; status: string; amount: number }> = {};
+        if (deliveryCodes.length > 0) {
+            const expenses = await this.transRepo.find({
+                where: {
+                    reference_code: In(deliveryCodes),
+                    type: 'EXPENSE'
+                }
+            });
+            for (const exp of expenses) {
+                expenseMap[exp.reference_code] = {
+                    id: exp.id,
+                    status: exp.status,
+                    amount: Number(exp.amount) || 0
+                };
+            }
+        }
+
         // Format and enrich each delivery
         const enriched = deliveries.map(d => {
             const so = d.sales_order;
@@ -128,6 +152,10 @@ export class ShippingController {
 
             const allOrderDeliveries = siblingMap[d.order_id] || [];
             const otherDeliveries = allOrderDeliveries.filter(x => x.id !== d.id);
+
+            const expInfo = expenseMap[d.code];
+            const hasShippingCost = Number(d.shipping_cost) > 0;
+            const expenseStatus = expInfo ? expInfo.status : (hasShippingCost && d.is_freeship ? 'UNCREATED' : 'NONE');
 
             return {
                 id: d.id,
@@ -163,6 +191,8 @@ export class ShippingController {
                 shipping_metadata: d.shipping_metadata,
                 shipping_legs: d.shipping_legs,
                 delivery_notice: d.delivery_notice,
+                expense_id: expInfo?.id || null,
+                expense_status: expenseStatus,
                 order_status: so?.status,
                 order_total_amount: Number(so?.total_amount) || 0,
                 order_paid_amount: Number(so?.paid_amount) || 0,
@@ -401,6 +431,14 @@ export class ShippingController {
                 status: delivery.shipping_status_text || delivery.status
             };
         }
+    }
+
+    @Post('delivery/:deliveryId/create-expense')
+    async createDeliveryExpense(
+        @Param('deliveryId') deliveryId: string,
+        @Body() body?: any,
+    ) {
+        return this.financeService.createOrUpdateDeliveryShippingExpense(Number(deliveryId), body);
     }
 
     @Get('delivery/:deliveryId/lalamove-order/:orderId')

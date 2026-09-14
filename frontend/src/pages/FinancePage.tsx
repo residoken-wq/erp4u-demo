@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import useMobile from '../hooks/useMobile';
 import usePermission from '../hooks/usePermission';
 import {
@@ -12,11 +12,12 @@ import {
     PlusOutlined, DeleteOutlined, BankOutlined,
     FileTextOutlined, PieChartOutlined, ReloadOutlined, EditOutlined, CloseOutlined, SearchOutlined,
     LineChartOutlined, EyeOutlined, DollarOutlined, SwapOutlined,
-    CheckCircleOutlined, InfoCircleOutlined
+    CheckCircleOutlined, InfoCircleOutlined, TruckOutlined, ClockCircleOutlined, PrinterOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../utils/api';
 import CashFlowDashboard from '../components/finance/CashFlowDashboard';
+import PaymentVoucherPrintModal from '../components/finance/PaymentVoucherPrintModal';
 
 const { Option } = Select;
 
@@ -69,6 +70,14 @@ const FinancePage: React.FC = () => {
     const [formAccounting] = Form.useForm();
     const [soProfitData, setSoProfitData] = useState<any[]>([]);
     const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+
+    // --- EXPENSE APPROVE & PRINT STATE ---
+    const [expenseStatusFilter, setExpenseStatusFilter] = useState<'ALL' | 'DRAFT' | 'COMPLETED' | 'ACCOUNTING' | 'LOGISTICS'>('ALL');
+    const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+    const [approvingTrans, setApprovingTrans] = useState<any>(null);
+    const [formApprove] = Form.useForm();
+    const [printingTransaction, setPrintingTransaction] = useState<any>(null);
+    const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -237,6 +246,45 @@ const FinancePage: React.FC = () => {
     };
     // -------------------------------------------------------
 
+    const handleOpenApprove = (record: any) => {
+        setApprovingTrans(record);
+        formApprove.setFieldsValue({
+            date: dayjs(),
+            paymentMethod: 'TIỀN MẶT',
+            note: '',
+            accountingInvoiceCode: record.accounting_invoice_code || '',
+        });
+        setIsApproveModalOpen(true);
+    };
+
+    const handleConfirmApprove = async (values: any) => {
+        if (!approvingTrans) return;
+        try {
+            const res = await api.put(`/finance/transactions/${approvingTrans.id}/approve`, {
+                date: values.date?.format('YYYY-MM-DD'),
+                paymentMethod: values.paymentMethod,
+                note: values.note,
+                accountingInvoiceCode: values.accountingInvoiceCode,
+            });
+            if (res.data?.success !== false) {
+                message.success(res.data?.message || 'Đã duyệt phiếu chi thành công');
+                setIsApproveModalOpen(false);
+                setApprovingTrans(null);
+                formApprove.resetFields();
+                fetchData();
+            } else {
+                message.error(res.data?.message || 'Không thể duyệt phiếu chi');
+            }
+        } catch (e: any) {
+            message.error(e.response?.data?.message || 'Lỗi khi duyệt phiếu chi');
+        }
+    };
+
+    const handlePrintVoucher = (record: any) => {
+        setPrintingTransaction(record);
+        setIsPrintModalOpen(true);
+    };
+
     const handleDelete = async (endpoint: string, id: number) => {
         try { await api.delete(`/finance/${endpoint}/${id}`); message.success('Đã xóa'); fetchData(); }
         catch (e) { message.error('Không thể xóa (có thể đang có dữ liệu liên quan)'); }
@@ -244,31 +292,93 @@ const FinancePage: React.FC = () => {
 
     // --- COMPONENTS ---
     const columnsTrans = (type: 'INCOME' | 'EXPENSE') => [
-        { title: 'Ngày', dataIndex: 'date', render: (t: any) => dayjs(t).format('DD/MM/YYYY') },
-        {
-            title: 'Danh mục', dataIndex: 'category',
-            render: (c: any) => c ? <Tag color={c.color || 'default'}>{c.name}</Tag> : <span style={{ color: '#999' }}>Khác</span>
+        { 
+            title: 'Mã phiếu', width: 105,
+            render: (_: any, r: any) => (
+                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: r.type === 'INCOME' ? '#389e0d' : '#cf1322' }}>
+                    #{r.type === 'INCOME' ? 'PT' : 'PC'}-{String(r.id).padStart(4, '0')}
+                </span>
+            )
         },
-        { title: 'Diễn giải', dataIndex: 'description' },
-        { title: 'Khách hàng / NCC', dataIndex: 'partner_name', render: (t: any) => t ? <b>{t}</b> : '-' },
-        { title: 'Mã tham chiếu', dataIndex: 'reference_code', render: (t: any) => t ? <Tag color="blue">{t}</Tag> : '-' },
+        { title: 'Ngày', dataIndex: 'date', width: 100, render: (t: any) => dayjs(t).format('DD/MM/YYYY') },
         {
-            title: 'Số tiền', dataIndex: 'amount', align: 'right' as const,
-            render: (v: any, r: any) => <b style={{ color: r.type === 'INCOME' ? 'green' : 'red' }}>{r.type === 'INCOME' ? '+' : '-'}{Number(v).toLocaleString()}</b>
+            title: 'Trạng thái', width: 105, align: 'center' as const,
+            render: (_: any, r: any) => {
+                if (r.status === 'DRAFT') return <Tag color="warning" icon={<ClockCircleOutlined />}>Nháp</Tag>;
+                if (r.status === 'CANCELLED') return <Tag color="error" icon={<CloseOutlined />}>Đã hủy</Tag>;
+                return <Tag color="success" icon={<CheckCircleOutlined />}>Đã chi</Tag>;
+            }
         },
         {
-            title: 'Hạch Toán', align: 'center' as const,
+            title: 'Danh mục', dataIndex: 'category', width: 160,
+            render: (c: any, r: any) => {
+                const isLogistic = r.reference_type === 'SHIPPING' || (c?.name || '').toLowerCase().includes('vận chuyển');
+                return (
+                    <Tag color={c?.color || (isLogistic ? '#eb6100' : 'default')}>
+                        {isLogistic && <TruckOutlined style={{ marginRight: 4 }} />}
+                        {c ? c.name : (isLogistic ? 'Chi phí Vận chuyển' : 'Khác')}
+                    </Tag>
+                );
+            }
+        },
+        { 
+            title: 'Diễn giải', dataIndex: 'description', ellipsis: true,
+            render: (t: any) => <Tooltip title={t}><span>{t || '-'}</span></Tooltip>
+        },
+        { 
+            title: type === 'INCOME' ? 'Khách hàng' : 'Đối tác / ĐVVC', 
+            dataIndex: 'partner_name', width: 170, ellipsis: true,
+            render: (t: any) => t ? <b>{t}</b> : '-' 
+        },
+        { 
+            title: 'Mã tham chiếu', dataIndex: 'reference_code', width: 140,
+            render: (t: any) => {
+                if (!t) return '-';
+                if (t.startsWith('PXK-')) {
+                    return <a href="/inventory/deliveries" title="Xem phiếu xuất kho"><Tag color="cyan">{t}</Tag></a>;
+                }
+                if (t.startsWith('SO-') || t.startsWith('PO-')) {
+                    return <Tag color="blue">{t}</Tag>;
+                }
+                return <Tag>{t}</Tag>;
+            }
+        },
+        {
+            title: 'Số tiền', dataIndex: 'amount', align: 'right' as const, width: 130,
+            render: (v: any, r: any) => <b style={{ color: r.type === 'INCOME' ? '#389e0d' : '#cf1322', fontSize: 14 }}>{r.type === 'INCOME' ? '+' : '-'}{Number(v).toLocaleString()} đ</b>
+        },
+        {
+            title: 'Hạch Toán', align: 'center' as const, width: 95,
             render: (_: any, r: any) => r.is_accounting
-                ? <Tag color="blue" icon={<FileTextOutlined />}>Đã HT</Tag>
+                ? <Tag color="purple" icon={<FileTextOutlined />}>Đã HT</Tag>
                 : <Button size="small" icon={<FileTextOutlined />} onClick={() => handleOpenAccounting(r)}>Hạch toán</Button>
         },
         {
-            title: '', key: 'act', width: 50,
+            title: 'Thao tác', key: 'act', width: 125, align: 'center' as const,
             render: (_: any, r: any) => (
-                <Space>
-                    {canUpdate && <Button size="small" icon={<EditOutlined style={{ color: 'orange' }} />} onClick={() => handleEditTransaction(r)} />}
-                    {canUpdate && <Button size="small" icon={<FileTextOutlined />} onClick={() => handleOpenAccounting(r)} />}
-                    {canDelete && <Popconfirm title="Xóa?" onConfirm={() => handleDelete('transactions', r.id)}><Button size="small" danger icon={<DeleteOutlined />} type="text" /></Popconfirm>}
+                <Space size={4}>
+                    {/* Nút Duyệt chi nhanh nếu là DRAFT */}
+                    {r.status === 'DRAFT' && canUpdate && (
+                        <Tooltip title="Duyệt phiếu chi">
+                            <Button 
+                                size="small" 
+                                type="primary" 
+                                style={{ background: '#52c41a', borderColor: '#52c41a' }} 
+                                icon={<CheckCircleOutlined />} 
+                                onClick={() => handleOpenApprove(r)} 
+                            />
+                        </Tooltip>
+                    )}
+                    {/* Nút In phiếu thu / chi */}
+                    <Tooltip title="In phiếu chứng từ A5">
+                        <Button 
+                            size="small" 
+                            icon={<PrinterOutlined style={{ color: '#eb6100' }} />} 
+                            onClick={() => handlePrintVoucher(r)} 
+                        />
+                    </Tooltip>
+                    {canUpdate && <Button size="small" icon={<EditOutlined style={{ color: '#fa8c16' }} />} onClick={() => handleEditTransaction(r)} />}
+                    {canDelete && <Popconfirm title="Xác nhận xóa giao dịch này?" onConfirm={() => handleDelete('transactions', r.id)}><Button size="small" danger icon={<DeleteOutlined />} type="text" /></Popconfirm>}
                 </Space>
             )
         }
@@ -389,6 +499,18 @@ const FinancePage: React.FC = () => {
         }
     ];
 
+    // --- EXPENSE & LOGISTICS COMPUTATIONS ---
+    const draftExpenses = useMemo(() => transactions.filter(t => t.type === 'EXPENSE' && t.status === 'DRAFT'), [transactions]);
+    const draftExpenseTotal = useMemo(() => draftExpenses.reduce((sum, t) => sum + Number(t.amount || 0), 0), [draftExpenses]);
+
+    const logisticsExpenses = useMemo(() => transactions.filter(t => 
+        t.type === 'EXPENSE' && 
+        (t.reference_type === 'SHIPPING' || (t.category?.name || '').toLowerCase().includes('vận chuyển') || (t.category?.name || '').toLowerCase().includes('logistic'))
+    ), [transactions]);
+    const logisticsExpenseTotal = useMemo(() => logisticsExpenses.reduce((sum, t) => sum + Number(t.amount || 0), 0), [logisticsExpenses]);
+
+    const completedExpenses = useMemo(() => transactions.filter(t => t.type === 'EXPENSE' && t.status !== 'DRAFT' && t.status !== 'CANCELLED'), [transactions]);
+
     // --- FILTER ---
     const [searchText, setSearchText] = useState('');
 
@@ -403,6 +525,32 @@ const FinancePage: React.FC = () => {
         );
     });
 
+    const filteredExpenseTransactions = useMemo(() => {
+        return transactions.filter(t => {
+            if (t.type !== 'EXPENSE') return false;
+            
+            if (searchText) {
+                const s = searchText.toLowerCase();
+                const matches = (
+                    t.description?.toLowerCase().includes(s) ||
+                    t.partner_name?.toLowerCase().includes(s) ||
+                    t.reference_code?.toLowerCase().includes(s) ||
+                    t.category?.name?.toLowerCase().includes(s)
+                );
+                if (!matches) return false;
+            }
+
+            if (expenseStatusFilter === 'DRAFT') return t.status === 'DRAFT';
+            if (expenseStatusFilter === 'COMPLETED') return t.status === 'COMPLETED' || (!t.status && t.status !== 'DRAFT');
+            if (expenseStatusFilter === 'LOGISTICS') {
+                return t.reference_type === 'SHIPPING' || (t.category?.name || '').toLowerCase().includes('vận chuyển') || (t.category?.name || '').toLowerCase().includes('logistic');
+            }
+            if (expenseStatusFilter === 'ACCOUNTING') return !!t.is_accounting;
+
+            return true;
+        });
+    }, [transactions, searchText, expenseStatusFilter]);
+
     const filteredSOProfitData = soProfitData.filter(so => {
         if (!searchText) return true;
         const s = searchText.toLowerCase();
@@ -414,22 +562,94 @@ const FinancePage: React.FC = () => {
 
     return (
         <div style={{ paddingBottom: 20 }}>
-            {/* TOP CARDS - HORIZONTAL SCROLL ON MOBILE */}
+            {/* INLINE STYLE FOR DRAFT ROWS */}
+            <style>{`
+                .draft-expense-row { background-color: #fffdf5 !important; }
+                .draft-expense-row:hover > td { background-color: #fff7e6 !important; }
+            `}</style>
+
+            {/* TOP CARDS - 5 SLEEK METRICS */}
             <div style={{ overflowX: isMobile ? 'auto' : 'visible', marginBottom: 16 }}>
-                <Row gutter={[isMobile ? 8 : 16, 8]} wrap={!isMobile} style={{ flexWrap: isMobile ? 'nowrap' : 'wrap', minWidth: isMobile ? 500 : 'auto' }}>
+                <Row gutter={[isMobile ? 8 : 12, 8]} wrap={!isMobile} style={{ flexWrap: isMobile ? 'nowrap' : 'wrap', minWidth: isMobile ? 760 : 'auto' }}>
                     <Col flex={isMobile ? '160px' : 1}>
-                        <Card bordered={false} bodyStyle={{ padding: isMobile ? 10 : 20 }} style={{ background: 'linear-gradient(135deg, #3f8600 0%, #52c41a 100%)' }}>
-                            <Statistic title={<span style={{ color: 'rgba(255,255,255,0.8)', fontSize: isMobile ? 12 : 14 }}>Tổng Thu</span>} value={summary.income} precision={0} valueStyle={{ color: '#fff', fontWeight: 'bold', fontSize: isMobile ? 16 : 24 }} prefix={<ArrowUpOutlined />} />
+                        <Card bordered={false} bodyStyle={{ padding: isMobile ? '10px 12px' : '14px 18px' }} style={{ background: 'linear-gradient(135deg, #237804 0%, #52c41a 100%)', borderRadius: 8, boxShadow: '0 2px 8px rgba(35,120,4,0.15)' }}>
+                            <Statistic 
+                                title={<span style={{ color: 'rgba(255,255,255,0.85)', fontSize: isMobile ? 12 : 13 }}>Tổng Thu</span>} 
+                                value={summary.income} 
+                                precision={0} 
+                                valueStyle={{ color: '#fff', fontWeight: 'bold', fontSize: isMobile ? 16 : 22 }} 
+                                prefix={<ArrowUpOutlined />} 
+                            />
                         </Card>
                     </Col>
                     <Col flex={isMobile ? '160px' : 1}>
-                        <Card bordered={false} bodyStyle={{ padding: isMobile ? 10 : 20 }} style={{ background: 'linear-gradient(135deg, #cf1322 0%, #ff4d4f 100%)' }}>
-                            <Statistic title={<span style={{ color: 'rgba(255,255,255,0.8)', fontSize: isMobile ? 12 : 14 }}>Tổng Chi</span>} value={summary.expense} precision={0} valueStyle={{ color: '#fff', fontWeight: 'bold', fontSize: isMobile ? 16 : 24 }} prefix={<ArrowDownOutlined />} />
+                        <Card bordered={false} bodyStyle={{ padding: isMobile ? '10px 12px' : '14px 18px' }} style={{ background: 'linear-gradient(135deg, #a8071a 0%, #f5222d 100%)', borderRadius: 8, boxShadow: '0 2px 8px rgba(168,7,26,0.15)' }}>
+                            <Statistic 
+                                title={<span style={{ color: 'rgba(255,255,255,0.85)', fontSize: isMobile ? 12 : 13 }}>Tổng Chi Thực Tế</span>} 
+                                value={summary.expense} 
+                                precision={0} 
+                                valueStyle={{ color: '#fff', fontWeight: 'bold', fontSize: isMobile ? 16 : 22 }} 
+                                prefix={<ArrowDownOutlined />} 
+                            />
+                        </Card>
+                    </Col>
+                    <Col flex={isMobile ? '180px' : 1}>
+                        <Card 
+                            bordered={false} 
+                            bodyStyle={{ padding: isMobile ? '10px 12px' : '14px 18px', cursor: 'pointer' }} 
+                            style={{ 
+                                background: 'linear-gradient(135deg, #d46b08 0%, #fa8c16 100%)', 
+                                borderRadius: 8, 
+                                boxShadow: '0 2px 8px rgba(212,107,8,0.2)',
+                                border: expenseStatusFilter === 'DRAFT' && activeTab === 'EXPENSE' ? '2px solid #fff' : undefined
+                            }}
+                            onClick={() => {
+                                setActiveTab('EXPENSE');
+                                setExpenseStatusFilter('DRAFT');
+                            }}
+                        >
+                            <Statistic 
+                                title={<span style={{ color: 'rgba(255,255,255,0.95)', fontSize: isMobile ? 12 : 13, fontWeight: 500 }}>Chờ Duyệt Chi ({draftExpenses.length} nháp)</span>} 
+                                value={draftExpenseTotal} 
+                                precision={0} 
+                                valueStyle={{ color: '#fff', fontWeight: 'bold', fontSize: isMobile ? 16 : 22 }} 
+                                prefix={<ClockCircleOutlined />} 
+                            />
+                        </Card>
+                    </Col>
+                    <Col flex={isMobile ? '180px' : 1}>
+                        <Card 
+                            bordered={false} 
+                            bodyStyle={{ padding: isMobile ? '10px 12px' : '14px 18px', cursor: 'pointer' }} 
+                            style={{ 
+                                background: 'linear-gradient(135deg, #0958d9 0%, #1677ff 100%)', 
+                                borderRadius: 8, 
+                                boxShadow: '0 2px 8px rgba(9,88,217,0.2)',
+                                border: expenseStatusFilter === 'LOGISTICS' && activeTab === 'EXPENSE' ? '2px solid #fff' : undefined
+                            }}
+                            onClick={() => {
+                                setActiveTab('EXPENSE');
+                                setExpenseStatusFilter('LOGISTICS');
+                            }}
+                        >
+                            <Statistic 
+                                title={<span style={{ color: 'rgba(255,255,255,0.95)', fontSize: isMobile ? 12 : 13, fontWeight: 500 }}>Cước Vận Chuyển ({logisticsExpenses.length})</span>} 
+                                value={logisticsExpenseTotal} 
+                                precision={0} 
+                                valueStyle={{ color: '#fff', fontWeight: 'bold', fontSize: isMobile ? 16 : 22 }} 
+                                prefix={<TruckOutlined />} 
+                            />
                         </Card>
                     </Col>
                     <Col flex={isMobile ? '160px' : 1}>
-                        <Card bordered={false} bodyStyle={{ padding: isMobile ? 10 : 20 }} style={{ background: 'linear-gradient(135deg, #096dd9 0%, #1890ff 100%)' }}>
-                            <Statistic title={<span style={{ color: 'rgba(255,255,255,0.8)', fontSize: isMobile ? 12 : 14 }}>Quỹ TM</span>} value={summary.balance} precision={0} valueStyle={{ color: '#fff', fontWeight: 'bold', fontSize: isMobile ? 16 : 24 }} prefix={<BankOutlined />} />
+                        <Card bordered={false} bodyStyle={{ padding: isMobile ? '10px 12px' : '14px 18px' }} style={{ background: 'linear-gradient(135deg, #08979c 0%, #13c2c2 100%)', borderRadius: 8, boxShadow: '0 2px 8px rgba(8,151,156,0.15)' }}>
+                            <Statistic 
+                                title={<span style={{ color: 'rgba(255,255,255,0.85)', fontSize: isMobile ? 12 : 13 }}>Số Dư Quỹ TM</span>} 
+                                value={summary.balance} 
+                                precision={0} 
+                                valueStyle={{ color: '#fff', fontWeight: 'bold', fontSize: isMobile ? 16 : 22 }} 
+                                prefix={<BankOutlined />} 
+                            />
                         </Card>
                     </Col>
                 </Row>
@@ -489,17 +709,97 @@ const FinancePage: React.FC = () => {
                     },
                     {
                         key: 'EXPENSE',
-                        label: <span><ArrowDownOutlined /> Chi</span>,
+                        label: (
+                            <span>
+                                <ArrowDownOutlined /> Chi
+                                {draftExpenses.length > 0 && (
+                                    <Badge 
+                                        count={draftExpenses.length} 
+                                        style={{ marginLeft: 6, backgroundColor: '#fa8c16' }} 
+                                        title={`${draftExpenses.length} phiếu chi nháp chờ duyệt`}
+                                    />
+                                )}
+                            </span>
+                        ),
                         children: (
                             <>
-                                <div style={{ marginBottom: 16, textAlign: 'right' }}>
-                                    {canCreate && <Button type="primary" danger icon={<PlusOutlined />} onClick={() => { formTrans.resetFields(); formTrans.setFieldsValue({ type: 'EXPENSE' }); setIsTransModalOpen(true) }}>Tạo Phiếu Chi</Button>}
+                                <div style={{ 
+                                    marginBottom: 16, 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    alignItems: 'center', 
+                                    flexWrap: 'wrap', 
+                                    gap: 12,
+                                    background: '#fafafa',
+                                    padding: '10px 14px',
+                                    borderRadius: 8,
+                                    border: '1px solid #f0f0f0'
+                                }}>
+                                    <Space wrap size="middle">
+                                        <span style={{ fontWeight: 600, color: '#595959', fontSize: 13 }}>Lọc trạng thái:</span>
+                                        <Segmented
+                                            value={expenseStatusFilter}
+                                            onChange={(val: any) => setExpenseStatusFilter(val)}
+                                            options={[
+                                                { label: `Tất cả (${transactions.filter(t => t.type === 'EXPENSE').length})`, value: 'ALL' },
+                                                { 
+                                                    label: (
+                                                        <Space size={4}>
+                                                            <ClockCircleOutlined style={{ color: '#fa8c16' }} />
+                                                            <span>Chờ duyệt (Nháp)</span>
+                                                            {draftExpenses.length > 0 && <Badge count={draftExpenses.length} style={{ backgroundColor: '#fa8c16' }} />}
+                                                        </Space>
+                                                    ), 
+                                                    value: 'DRAFT' 
+                                                },
+                                                { 
+                                                    label: (
+                                                        <Space size={4}>
+                                                            <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                                                            <span>Đã chi ({completedExpenses.length})</span>
+                                                        </Space>
+                                                    ), 
+                                                    value: 'COMPLETED' 
+                                                },
+                                                { 
+                                                    label: (
+                                                        <Space size={4}>
+                                                            <TruckOutlined style={{ color: '#1677ff' }} />
+                                                            <span>Vận chuyển ({logisticsExpenses.length})</span>
+                                                        </Space>
+                                                    ), 
+                                                    value: 'LOGISTICS' 
+                                                },
+                                                { 
+                                                    label: (
+                                                        <Space size={4}>
+                                                            <FileTextOutlined style={{ color: '#722ed1' }} />
+                                                            <span>Đã hạch toán</span>
+                                                        </Space>
+                                                    ), 
+                                                    value: 'ACCOUNTING' 
+                                                },
+                                            ]}
+                                        />
+                                    </Space>
+                                    {canCreate && (
+                                        <Button 
+                                            type="primary" 
+                                            danger 
+                                            icon={<PlusOutlined />} 
+                                            onClick={() => { formTrans.resetFields(); formTrans.setFieldsValue({ type: 'EXPENSE' }); setIsTransModalOpen(true) }}
+                                        >
+                                            Tạo Phiếu Chi
+                                        </Button>
+                                    )}
                                 </div>
                                 <Table
-                                    dataSource={filteredTransactions.filter(t => t.type === 'EXPENSE')}
+                                    dataSource={filteredExpenseTransactions}
                                     columns={columnsTrans('EXPENSE')}
-                                    rowKey="id" loading={loading}
+                                    rowKey="id" 
+                                    loading={loading}
                                     pagination={pageSize >= 999999 ? false : { pageSize: pageSize, showSizeChanger: false }}
+                                    rowClassName={(record) => record.status === 'DRAFT' ? 'draft-expense-row' : ''}
                                 />
                             </>
                         )
@@ -1186,6 +1486,76 @@ const FinancePage: React.FC = () => {
                     </div>
                 )}
             </Modal>
+
+            {/* MODAL DUYỆT PHIẾU CHI NHANH (1-CLICK DRAFT -> COMPLETED) */}
+            <Modal
+                title={<span><CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} />Duyệt Phiếu Chi #{approvingTrans?.id}</span>}
+                open={isApproveModalOpen}
+                onCancel={() => { setIsApproveModalOpen(false); setApprovingTrans(null); }}
+                onOk={() => formApprove.submit()}
+                okText="Xác nhận chi & Hoàn tất"
+                okButtonProps={{ style: { background: '#52c41a', borderColor: '#52c41a' } }}
+                width={560}
+            >
+                {approvingTrans && (
+                    <Form form={formApprove} layout="vertical" onFinish={handleConfirmApprove}>
+                        <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 8, padding: 12, marginBottom: 16 }}>
+                            <Row gutter={12}>
+                                <Col span={12}>
+                                    <div style={{ color: '#8c8c8c', fontSize: 12 }}>Số tiền chi:</div>
+                                    <div style={{ fontSize: 18, fontWeight: 700, color: '#cf1322' }}>
+                                        {Number(approvingTrans.amount || 0).toLocaleString()} đ
+                                    </div>
+                                </Col>
+                                <Col span={12}>
+                                    <div style={{ color: '#8c8c8c', fontSize: 12 }}>Đơn vị nhận / ĐVVC:</div>
+                                    <div style={{ fontWeight: 600 }}>{approvingTrans.partner_name || '-'}</div>
+                                </Col>
+                            </Row>
+                            <div style={{ marginTop: 8, fontSize: 12, color: '#595959' }}>
+                                <b>Mục đích / Diễn giải:</b> {approvingTrans.description}
+                            </div>
+                            {approvingTrans.reference_code && (
+                                <div style={{ marginTop: 4, fontSize: 12, color: '#595959' }}>
+                                    <b>Mã tham chiếu:</b> <Tag color="blue">{approvingTrans.reference_code}</Tag>
+                                </div>
+                            )}
+                        </div>
+
+                        <Row gutter={12}>
+                            <Col span={12}>
+                                <Form.Item name="date" label="Ngày chi thực tế" rules={[{ required: true, message: 'Chọn ngày chi' }]}>
+                                    <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+                                </Form.Item>
+                            </Col>
+                            <Col span={12}>
+                                <Form.Item name="paymentMethod" label="Phương thức thanh toán" rules={[{ required: true }]}>
+                                    <Select>
+                                        <Option value="TIỀN MẶT">Tiền mặt</Option>
+                                        <Option value="CHUYỂN KHOẢN">Chuyển khoản</Option>
+                                        <Option value="VÍ ĐIỆN TỬ">Ví điện tử</Option>
+                                    </Select>
+                                </Form.Item>
+                            </Col>
+                        </Row>
+
+                        <Form.Item name="accountingInvoiceCode" label="Số hóa đơn / Phiếu đối soát liên quan">
+                            <Input placeholder="VD: HĐ-00129 / DSK-GHTK-T09" />
+                        </Form.Item>
+
+                        <Form.Item name="note" label="Ghi chú kế toán khi duyệt">
+                            <Input.TextArea rows={2} placeholder="Nhập ghi chú hoặc chứng từ thanh toán..." />
+                        </Form.Item>
+                    </Form>
+                )}
+            </Modal>
+
+            {/* MODAL IN PHIẾU THU / CHI A5 CHUẨN KẾ TOÁN */}
+            <PaymentVoucherPrintModal
+                open={isPrintModalOpen}
+                onClose={() => { setIsPrintModalOpen(false); setPrintingTransaction(null); }}
+                transaction={printingTransaction}
+            />
         </div>
     );
 };

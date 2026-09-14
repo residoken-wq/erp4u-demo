@@ -6,6 +6,7 @@ import { TransactionCategory } from './transaction-category.entity';
 import { PurchasingService } from '../purchasing/purchasing.service';
 import { SuppliersService } from '../suppliers/suppliers.service';
 import { SalesOrder, SalesOrderStatus, PaymentStatus } from '../sales/sales-order.entity';
+import { SalesDelivery } from '../sales/sales-delivery.entity';
 import { ProductsService } from '../products/products.service';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class FinanceService {
         @InjectRepository(Transaction) private transRepo: Repository<Transaction>,
         @InjectRepository(TransactionCategory) private catRepo: Repository<TransactionCategory>,
         @InjectRepository(SalesOrder) private orderRepo: Repository<SalesOrder>,
+        @InjectRepository(SalesDelivery) private deliveryRepo: Repository<SalesDelivery>,
         @Inject(forwardRef(() => PurchasingService)) private purchasingService: PurchasingService,
         @Inject(forwardRef(() => SuppliersService)) private suppliersService: SuppliersService,
         @Inject(forwardRef(() => ProductsService)) private productsService: ProductsService,
@@ -25,13 +27,19 @@ export class FinanceService {
     async updateCategory(id: number, data: any) { await this.catRepo.update(id, data); return this.catRepo.findOne({ where: { id } }); }
     async deleteCategory(id: number) { return this.catRepo.delete(id); }
 
-    async getAllTransactions(month?: string) {
-        let where = {};
+    async getAllTransactions(month?: string, type?: string, status?: string) {
+        let where: any = {};
         if (month) {
             const [y, m] = month.split('-');
             const start = new Date(Number(y), Number(m) - 1, 1);
             const end = new Date(Number(y), Number(m), 0);
-            where = { date: Between(start.toISOString().split('T')[0], end.toISOString().split('T')[0]) };
+            where.date = Between(start.toISOString().split('T')[0], end.toISOString().split('T')[0]);
+        }
+        if (type && type !== 'ALL') {
+            where.type = type;
+        }
+        if (status && status !== 'ALL') {
+            where.status = status;
         }
         return this.transRepo.find({ where, relations: ['category'], order: { date: 'DESC', id: 'DESC' } });
     }
@@ -434,5 +442,220 @@ export class FinanceService {
 
         await Promise.all(updates);
         return { total: transactions.length, mapped: updates.length };
+    }
+
+    /**
+     * Tự động khởi tạo hoặc lấy danh mục "Chi phí Vận chuyển & Logistics"
+     */
+    async ensureShippingCategory(): Promise<TransactionCategory> {
+        let cat = await this.catRepo.findOne({
+            where: [
+                { type: 'EXPENSE', name: 'Chi phí Vận chuyển & Logistics' },
+                { type: 'EXPENSE', name: 'Chi phí vận chuyển' },
+                { type: 'EXPENSE', name: 'Vận chuyển' }
+            ]
+        });
+        if (!cat) {
+            cat = this.catRepo.create({
+                name: 'Chi phí Vận chuyển & Logistics',
+                type: 'EXPENSE',
+                color: '#eb6100',
+                description: 'Chi phí giao nhận, cước vận chuyển bưu tá GHTK, xe tải Lalamove, chành xe'
+            });
+            cat = await this.catRepo.save(cat);
+        }
+        return cat;
+    }
+
+    /**
+     * Tự động tạo hoặc cập nhật Phiếu chi Nháp (DRAFT) cho chi phí vận chuyển của Phiếu xuất kho
+     */
+    async createOrUpdateDeliveryShippingExpense(deliveryId: number, options?: { note?: string; isManual?: boolean }) {
+        const delivery = await this.deliveryRepo.findOne({
+            where: { id: deliveryId },
+            relations: ['sales_order', 'sales_order.customer']
+        });
+        if (!delivery) {
+            return { success: false, message: `Không tìm thấy phiếu xuất kho #${deliveryId}` };
+        }
+
+        const shippingCost = Number(delivery.shipping_cost) || 0;
+        if (shippingCost <= 0) {
+            return { success: false, message: `Phiếu xuất kho ${delivery.code} chưa có chi phí vận chuyển (cước = 0đ)` };
+        }
+
+        const so = delivery.sales_order;
+        const carrierName = delivery.shipping_carrier || delivery.shipping_provider || 'Đơn vị vận chuyển';
+        const trackingCode = delivery.tracking_code || '';
+        const shippingCat = await this.ensureShippingCategory();
+
+        // Kiểm tra xem đã tồn tại Transaction cho PXK này chưa
+        let trans = await this.transRepo.findOne({
+            where: [
+                { reference_code: delivery.code, type: 'EXPENSE' },
+                { reference_code: `SHIPPING-${delivery.code}`, type: 'EXPENSE' }
+            ]
+        });
+
+        const deliveryDateStr = delivery.delivery_date 
+            ? new Date(delivery.delivery_date).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0];
+
+        const description = options?.note || `Cước vận chuyển ${carrierName} - PXK: ${delivery.code} (ĐH: ${so?.order_code || ''})${trackingCode ? ` - Mã VĐ: ${trackingCode}` : ''}`;
+
+        const allocations = [
+            {
+                deliveryId: delivery.id,
+                deliveryCode: delivery.code,
+                refCode: so?.order_code || '',
+                trackingCode: trackingCode,
+                carrier: carrierName,
+                amount: shippingCost
+            }
+        ];
+
+        if (trans) {
+            // Nếu đã tồn tại và đang ở trạng thái DRAFT: Cho phép cập nhật lại số tiền cước mới nhất
+            if (trans.status === 'DRAFT') {
+                trans.amount = shippingCost;
+                trans.partner_name = carrierName;
+                trans.description = description;
+                trans.allocations = allocations;
+                if (!trans.category_id) trans.category_id = shippingCat.id;
+                await this.transRepo.save(trans);
+                return {
+                    success: true,
+                    message: `Đã cập nhật Phiếu chi nháp #${trans.id} theo cước mới (${shippingCost.toLocaleString()}đ)`,
+                    transaction: trans
+                };
+            } else {
+                return {
+                    success: true,
+                    message: `Phiếu chi #${trans.id} cho PXK này đã được xử lý (${trans.status})`,
+                    transaction: trans
+                };
+            }
+        }
+
+        // Tạo mới Phiếu chi với trạng thái mặc định: DRAFT (Nháp)
+        const newTrans = this.transRepo.create({
+            date: deliveryDateStr,
+            type: 'EXPENSE',
+            status: 'DRAFT',
+            amount: shippingCost,
+            category_id: shippingCat.id,
+            partner_name: carrierName,
+            reference_code: delivery.code,
+            reference_type: 'SHIPPING',
+            description,
+            allocations,
+            is_accounting: false
+        });
+
+        const saved = await this.transRepo.save(newTrans);
+        return {
+            success: true,
+            message: `Đã lập Phiếu chi nháp #${saved.id} cho cước vận chuyển PXK ${delivery.code} (${shippingCost.toLocaleString()}đ)`,
+            transaction: saved
+        };
+    }
+
+    /**
+     * Duyệt phiếu chi (Chuyển trạng thái từ DRAFT sang COMPLETED)
+     */
+    async approveTransaction(id: number, data: { paymentMethod?: string; date?: string; note?: string; accountingInvoiceCode?: string }) {
+        const trans = await this.transRepo.findOne({ where: { id }, relations: ['category'] });
+        if (!trans) {
+            return { success: false, message: `Không tìm thấy phiếu giao dịch #${id}` };
+        }
+
+        trans.status = 'COMPLETED';
+        if (data.date) {
+            trans.date = new Date(data.date).toISOString().split('T')[0];
+        }
+        if (data.paymentMethod) {
+            const methodNote = `[Hình thức: ${data.paymentMethod}]`;
+            trans.description = trans.description ? `${trans.description} ${methodNote}` : methodNote;
+        }
+        if (data.note) {
+            trans.description = trans.description ? `${trans.description} | ${data.note}` : data.note;
+        }
+        if (data.accountingInvoiceCode) {
+            trans.accounting_invoice_code = data.accountingInvoiceCode;
+            trans.is_accounting = true;
+        }
+
+        const saved = await this.transRepo.save(trans);
+        return {
+            success: true,
+            message: `Đã duyệt thành công Phiếu chi #${saved.id} (Trạng thái: Hoàn tất)`,
+            transaction: saved
+        };
+    }
+
+    /**
+     * Gom nhiều vận đơn để lập 1 Phiếu chi đối soát cước theo lô
+     */
+    async createBatchDeliveryExpense(deliveryIds: number[], options?: { partnerName?: string; note?: string; date?: string }) {
+        if (!deliveryIds || deliveryIds.length === 0) {
+            return { success: false, message: 'Vui lòng chọn ít nhất 1 vận đơn' };
+        }
+
+        const deliveries = await this.deliveryRepo.find({
+            where: { id: In(deliveryIds) },
+            relations: ['sales_order']
+        });
+
+        if (deliveries.length === 0) {
+            return { success: false, message: 'Không tìm thấy thông tin các vận đơn đã chọn' };
+        }
+
+        let totalAmount = 0;
+        const allocations: any[] = [];
+        const carriers = new Set<string>();
+
+        for (const d of deliveries) {
+            const cost = Number(d.shipping_cost) || 0;
+            totalAmount += cost;
+            if (d.shipping_carrier) carriers.add(d.shipping_carrier);
+            allocations.push({
+                deliveryId: d.id,
+                deliveryCode: d.code,
+                refCode: d.sales_order?.order_code || '',
+                trackingCode: d.tracking_code || '',
+                carrier: d.shipping_carrier || '',
+                amount: cost
+            });
+        }
+
+        if (totalAmount <= 0) {
+            return { success: false, message: 'Tổng cước phí các vận đơn được chọn bằng 0đ' };
+        }
+
+        const shippingCat = await this.ensureShippingCategory();
+        const carrierList = Array.from(carriers).join(', ') || 'Đơn vị vận chuyển';
+        const batchCode = `BATCH-SHIP-${Date.now().toString().slice(-6)}`;
+        const transDate = options?.date ? new Date(options.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+
+        const newTrans = this.transRepo.create({
+            date: transDate,
+            type: 'EXPENSE',
+            status: 'DRAFT',
+            amount: totalAmount,
+            category_id: shippingCat.id,
+            partner_name: options?.partnerName || carrierList,
+            reference_code: batchCode,
+            reference_type: 'SHIPPING',
+            description: options?.note || `Đối soát cước vận chuyển theo lô (${deliveries.length} vận đơn) - ĐVVC: ${carrierList}`,
+            allocations,
+            is_accounting: false
+        });
+
+        const saved = await this.transRepo.save(newTrans);
+        return {
+            success: true,
+            message: `Đã tạo Phiếu chi nháp đối soát #${saved.id} cho ${deliveries.length} vận đơn (Tổng cước: ${totalAmount.toLocaleString()}đ)`,
+            transaction: saved
+        };
     }
 }
