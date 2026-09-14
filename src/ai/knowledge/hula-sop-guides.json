@@ -1,0 +1,42 @@
+[
+    {
+        "topic": "easyinvoice_vat_guide",
+        "content": "Quy trình xuất hóa đơn điện tử VAT EasyInvoice trên ERP4U: Bước 1: Tại SO Detail (tab Hợp đồng & Hóa đơn), kiểm tra Tên đơn vị pháp nhân, Mã số thuế và Địa chỉ. Bước 2: Nhấn 'Tạo Hóa Đơn Nháp', hệ thống tự động truyền dữ liệu dòng hàng, đơn giá, thuế VAT 8% hoặc 10% sang EasyInvoice. Bước 3: Tải/xem bản xem trước PDF nháp gửi khách duyệt. Bước 4: Kế toán cắm USB Token ký số và phát hành trên cổng EasyInvoice. Bước 5: ERP tự động cập nhật trạng thái 'Đã phát hành', cho phép gửi email trực tiếp cho khách. Lưu ý: Mẫu số (Pattern) phải cấu hình là 1, Ký hiệu (Serial) phải trùng khớp cấu hình thuế."
+    },
+    {
+        "topic": "nesting_2d_guide",
+        "content": "Quy trình Xếp Sơ Đồ Cắt 2D (MRP Nesting): Bước 1: Trong màn hình Kế hoạch sản xuất (Planning), mở công cụ 'Xếp Sơ Đồ 2D'. Bước 2: Nhập khổ vải hữu dụng (ví dụ 1m60). Bước 3: Tải danh sách chi tiết rập từ Lệnh sản xuất. Bước 4: Kéo thả các chi tiết trên Canvas hoặc dùng xoay góc 90/180 độ để xếp tối ưu độ khít, tránh lãng phí vải. Bước 5: Nhấn 'Xuất Ảnh Sơ Đồ' để lưu file hình ảnh PNG độ phân giải cao đính kèm vào PO gia công cắt cho nhà xưởng."
+    },
+    {
+        "topic": "design_management_guide",
+        "content": "Quy trình Quản lý Thiết kế In ấn & Thêu (/designs): 1. Tạo hồ sơ thiết kế mới, liên kết với Khách hàng hoặc Đơn hàng SO. 2. Tải lên file gốc Vector (AI, CDR, PDF) và ảnh Mockup xem trước. 3. Gắn thẻ công nghệ: In lụa, In nhiệt decal, In kỹ thuật số DTG, hoặc Thêu vi tính. 4. Sinh link Portal chia sẻ cho khách hàng duyệt mẫu online. 5. Sau khi khách ký duyệt, chuyển trạng thái thiết kế sang 'Sẵn sàng sản xuất' để bộ phận Planning đưa vào Lệnh sản xuất."
+    },
+    {
+        "topic": "sales_create_and_variants",
+        "content": "Tạo đơn hàng mới và tùy biến sản phẩm: Vào Bán hàng -> Sales Orders -> Thêm mới. Tìm khách theo tên hoặc SĐT. Khi thêm sản phẩm: có thể sửa trực tiếp Đơn giá, sửa ô 'Mô tả VAT' để thay đổi tên hiển thị trên hóa đơn, và nhấn icon máy ảnh để tải ảnh mẫu tùy biến riêng cho khách mà không cần tạo SKU mới trong kho. Chọn thuế GTGT (8% hoặc 10%) và phương thức thanh toán rồi bấm Lưu."
+    },
+    {
+        "topic": "so_profit_cost_allocation",
+        "content": "Cơ chế tính Lợi Nhuận Đơn Hàng (SO Profit): Hệ thống tự động ghi nhận chi phí thực tế ngay khi có thao tác kho: 1. Khi xuất NPL cho Kế hoạch sản xuất (KHSX), hệ thống tính tổng giá trị NPL theo cost_price và tự động phân bổ vào các SO nằm trong KHSX (nhãn GOODS_ISSUE_NPL). 2. Khi xuất kho giao thành phẩm cho khách, hệ thống tính Giá vốn hàng bán COGS theo cost_price thành phẩm và phân bổ 100% vào SO (nhãn GOODS_ISSUE_PRODUCT). Nhờ vậy, báo cáo SO Profit luôn phản ánh chính xác lợi nhuận kể cả khi dùng NPL hoặc hàng có sẵn trong kho."
+    },
+    {
+        "topic": "internal_sales_order",
+        "content": "Quy trình Bán hàng Nội bộ (Internal SO): Sử dụng khi xuất hàng mẫu marketing, xuất chuyển kho hoặc bán cho nhân viên. Bước 1: Tạo khách hàng có tên nội bộ (Ví dụ CÔNG TY - PHÒNG MARKETING). Bước 2: Tạo SO như thông thường. Bước 3: Nếu xuất dùng/biếu tặng thì đặt đơn giá = 0 (hoặc discount 100%), nếu bán nhân viên thì chọn bảng giá nội bộ. Bước 4: Duyệt và xuất kho như bình thường. Lưu ý: Kế toán hạch toán vào Chi phí thay vì Doanh thu thuần."
+    },
+    {
+        "topic": "mrp_planning_workflow",
+        "content": "Quy trình Lập kế hoạch sản xuất MRP: 1. Gom các Đơn hàng (SO) đã chốt cần sản xuất. 2. Chạy tính toán MRP: Hệ thống tự động bóc tách Định mức (BOM), đối chiếu với Tồn kho thực tế tại nhà máy và Tồn kho gửi tại xưởng gia công. 3. Hệ thống đưa ra bảng khuyến nghị: Số lượng NPL Cần Mua và Số lượng Cần Thuê Gia Công. 4. Người dùng tinh chỉnh số liệu và bấm 'Tạo PO' để tự động sinh PO Nguyên phụ liệu và PO Gia công."
+    },
+    {
+        "topic": "pos_retail_selling",
+        "content": "Bán lẻ POS (/pos): Giao diện bán lẻ cảm ứng hỗ trợ chọn nhanh sản phẩm hoặc quét mã Barcode/SKU. Áp dụng tự động các chương trình khuyến mãi đang kích hoạt. Hỗ trợ nhiều hình thức thanh toán (Tiền mặt, Chuyển khoản VietQR, Thẻ) và tự động in hóa đơn nhiệt 80mm."
+    },
+    {
+        "topic": "inventory_unit_conversion",
+        "content": "Quy đổi đơn vị tính trong kho (Unit Conversion): Đơn vị cơ sở (Base Unit) là đơn vị nhỏ nhất dùng cho tính tồn kho và BOM (Mét, Gram, Cái). Đơn vị mua (Purchase Unit) là đơn vị khi đặt hàng (Cây, Cuộn, Bao). Hệ số quy đổi (Factor) = Tỷ lệ chuyển đổi giữa đơn vị mua và đơn vị cơ sở (Ví dụ: 1 Cây = 50 Mét -> Factor = 50). Khi nhập kho, hệ thống lấy Số lượng Mua x Hệ số để ghi nhận số lượng tồn kho theo Đơn vị cơ sở."
+    },
+    {
+        "topic": "qc_quality_control_guide",
+        "content": "Kiểm tra chất lượng (QC - /qc): Phân hệ QC giúp theo dõi tỉ lệ đạt chuẩn tại các khâu: Kiểm NPL nhập kho (vải, phụ liệu), Kiểm bán thành phẩm (sau in, thêu, may) và Kiểm đóng gói hoàn thiện. Nhân viên QC tạo phiếu kiểm tra, nhập số lượng mẫu kiểm, số lượng đạt, số lượng lỗi kèm phân loại lỗi (rách, bẩn, lem màu, lệch rập). Hệ thống tự tính Pass Rate % và chỉ cho phép xuất kho thành phẩm khi đạt chuẩn."
+    }
+]
