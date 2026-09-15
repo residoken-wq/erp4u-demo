@@ -2507,11 +2507,27 @@ export class SalesService {
     }
 
     // --- EASYINVOICE INTEGRATION ---
+    formatVatDate(d?: any): string {
+        if (!d) return '';
+        const trimmed = String(d).trim();
+        const ddmmyyyy = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (ddmmyyyy) {
+            return `${ddmmyyyy[1].padStart(2, '0')}/${ddmmyyyy[2].padStart(2, '0')}/${ddmmyyyy[3]}`;
+        }
+        const yyyymmdd = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if (yyyymmdd) {
+            return `${yyyymmdd[3].padStart(2, '0')}/${yyyymmdd[2].padStart(2, '0')}/${yyyymmdd[1]}`;
+        }
+        return trimmed;
+    }
+
     normalizeVatInvoices(data: any): VatInvoiceRecord[] {
         if (!data) return [];
-        if (Array.isArray(data)) return data;
-        if (typeof data === 'object' && data.ikey) return [data];
-        return [];
+        const rawList = Array.isArray(data) ? data : (typeof data === 'object' && data.ikey ? [data] : []);
+        return rawList.map(item => ({
+            ...item,
+            issueDate: this.formatVatDate(item.issueDate || item.issuedAt),
+        }));
     }
 
     async issueVatInvoice(orderId: number, dto?: { items?: any[] }) {
@@ -2575,7 +2591,7 @@ export class SalesService {
                 invoiceNo: '', // Chưa có số (Nháp)
                 lookupCode: '',
                 linkView: '',
-                issueDate: '',
+                issueDate: this.formatVatDate(issuedAt),
                 invoiceStatus: 0, // 0: Nháp
                 pattern: draftResult.apiResult?.Pattern || '',
                 serial: draftResult.apiResult?.Serial || '',
@@ -2630,7 +2646,8 @@ export class SalesService {
                 invoice.invoiceNo = invoiceInfo.No || invoice.invoiceNo;
                 invoice.lookupCode = invoiceInfo.LookupCode || invoice.lookupCode;
                 invoice.linkView = invoiceInfo.LinkView || invoice.linkView;
-                invoice.issueDate = invoiceInfo.IssueDate || invoice.issueDate;
+                const rawDate = invoiceInfo.IssueDate || invoiceInfo.ArisingDate;
+                invoice.issueDate = this.formatVatDate(rawDate) || invoice.issueDate;
                 invoice.invoiceStatus = invoiceInfo.InvoiceStatus !== undefined ? parseInt(invoiceInfo.InvoiceStatus) : invoice.invoiceStatus;
                 invoice.pattern = invoiceInfo.Pattern || invoice.pattern;
                 invoice.serial = invoiceInfo.Serial || invoice.serial;
@@ -2648,7 +2665,8 @@ export class SalesService {
                             target.invoiceNo = info.No || target.invoiceNo;
                             target.lookupCode = info.LookupCode || target.lookupCode;
                             target.linkView = info.LinkView || target.linkView;
-                            target.issueDate = info.IssueDate || target.issueDate;
+                            const rawDate = info.IssueDate || info.ArisingDate;
+                            target.issueDate = this.formatVatDate(rawDate) || target.issueDate;
                             target.invoiceStatus = info.InvoiceStatus !== undefined ? parseInt(info.InvoiceStatus) : target.invoiceStatus;
                             target.pattern = info.Pattern || target.pattern;
                             target.serial = info.Serial || target.serial;
@@ -2729,7 +2747,7 @@ export class SalesService {
                     <li><strong>Mã tra cứu hóa đơn:</strong> ${targetInvoice.lookupCode || 'Chưa có (Bản nháp)'}</li>
                     <li><strong>Ký hiệu hóa đơn:</strong> ${targetInvoice.pattern || config.EASYINVOICE_PATTERN || ''} / ${targetInvoice.serial || config.EASYINVOICE_SERIAL || ''}</li>
                     <li><strong>Số hóa đơn:</strong> ${targetInvoice.invoiceNo || 'Chưa cấp số'}</li>
-                    <li><strong>Ngày lập:</strong> ${targetInvoice.issueDate || targetInvoice.issuedAt || ''}</li>
+                    <li><strong>Ngày lập:</strong> ${this.formatVatDate(targetInvoice.issueDate || targetInvoice.issuedAt)}</li>
                 </ul>
                 <p>Quý khách vui lòng kiểm tra file PDF đính kèm để xem chi tiết hóa đơn.</p>
                 ${targetInvoice.linkView ? `<p>Hoặc tra cứu trực tuyến tại: <a href="${targetInvoice.linkView}" target="_blank">${targetInvoice.linkView}</a></p>` : ''}

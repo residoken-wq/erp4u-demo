@@ -20,6 +20,7 @@ import SalesActivityLogsTab from './sales/SalesActivityLogsTab';
 import { SendZnsModal } from './sales/SendZnsModal';
 import useMobile from '../hooks/useMobile';
 import { cleanComboDescription } from '../utils/productDescription';
+import { formatInvoiceDate } from '../utils/dateUtils';
 
 const { Option } = Select;
 
@@ -1676,10 +1677,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                                                     title: 'Ngày lập',
                                                     key: 'date',
                                                     width: 100,
-                                                    render: (_: any, r: any) => {
-                                                        const d = r.issueDate || r.issuedAt;
-                                                        return d ? dayjs(d).format('DD/MM/YYYY') : '-';
-                                                    }
+                                                    render: (_: any, r: any) => formatInvoiceDate(r.issueDate || r.issuedAt)
                                                 },
                                                 {
                                                     title: 'Trạng thái',
@@ -2308,6 +2306,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                         <div style={{ marginBottom: 12 }}>
                             <span>Số hóa đơn: <b>{viewingInvoice.invoiceNo || 'Bản nháp'}</b></span>
                             <span style={{ marginLeft: 20 }}>Mã tra cứu: <b>{viewingInvoice.lookupCode || '-'}</b></span>
+                            <span style={{ marginLeft: 20 }}>Ngày lập: <b>{formatInvoiceDate(viewingInvoice.issueDate || viewingInvoice.issuedAt)}</b></span>
                             <span style={{ marginLeft: 20 }}>Tổng tiền: <b style={{ color: '#d4380d' }}>{Number(viewingInvoice.grandTotal || 0).toLocaleString()} ₫</b></span>
                         </div>
                         <Table

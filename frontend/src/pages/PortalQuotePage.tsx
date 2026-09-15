@@ -7,6 +7,7 @@ import { API_URL } from '../config';
 import dayjs from 'dayjs';
 import useMobile from '../hooks/useMobile'; // <--- Import Hook
 import { getVietQRBankCode } from '../utils/vietqr';
+import { formatInvoiceDate } from '../utils/dateUtils';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -1130,7 +1131,7 @@ const PortalQuotePage: React.FC = () => {
                                                                 {inv.lookupCode && <span style={{ marginLeft: 10 }}>Mã tra cứu: <b>{inv.lookupCode}</b></span>}
                                                             </div>
                                                             <div>
-                                                                <span>Ngày: {inv.issueDate || (inv.issuedAt ? dayjs(inv.issuedAt).format('DD/MM/YYYY') : '-')}</span>
+                                                                <span>Ngày: {formatInvoiceDate(inv.issueDate || inv.issuedAt)}</span>
                                                                 <span style={{ marginLeft: 10 }}>
                                                                     {inv.invoiceStatus === 0 && <Tag color="orange">Bản nháp</Tag>}
                                                                     {inv.invoiceStatus === 1 && <Tag color="blue">Đã ký</Tag>}
