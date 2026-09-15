@@ -2548,7 +2548,19 @@ export class SalesService {
                 newIkey = `${baseCode}-${maxSuffix + 1}`;
             }
 
-            const itemsToInvoice = (dto?.items && dto.items.length > 0) ? dto.items : order.items;
+            const rawItems = (dto?.items && dto.items.length > 0) ? dto.items : order.items;
+            const itemsToInvoice = (rawItems || []).map((item: any) => {
+                const matchedOrderItem = order.items?.find(oi =>
+                    (item.id && oi.id === item.id) ||
+                    (item.sku && (oi.sku === item.sku || oi.product?.sku === item.sku))
+                );
+                const unit = (item.unit && String(item.unit).trim()) || matchedOrderItem?.product?.unit || item.product?.unit || 'Cái';
+                return {
+                    ...item,
+                    unit,
+                    product: item.product || matchedOrderItem?.product,
+                };
+            });
             this.logger.log(`[EasyInvoice] Issuing draft for SO #${order.order_code}, ikey: ${newIkey}, items: ${itemsToInvoice?.length || 0}`);
 
             // Tạo hóa đơn nháp (Draft) trên EasyInvoice

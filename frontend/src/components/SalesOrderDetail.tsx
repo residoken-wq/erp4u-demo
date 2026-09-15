@@ -148,12 +148,14 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             const unitPrice = Number(item.unit_price) || 0;
             // Default to remaining quantity if > 0, else 0 (or orderQty if 1st invoice)
             const defaultQty = (vatDataList.length === 0) ? orderQty : remainingQty;
+            const prodInfo = products.find(p => p.value === (item.product?.sku || item.sku));
+            const itemUnit = (item.unit && String(item.unit).trim()) || item.product?.unit || prodInfo?.unit || 'Cái';
             return {
                 id: item.id || `draft-${idx}`,
                 key: item.key || `draft-${idx}`,
                 sku: item.sku || '',
                 productName: item.vat_content || item.product?.name || item.sku || 'Sản phẩm',
-                unit: 'Cái',
+                unit: itemUnit,
                 unit_price: unitPrice,
                 order_quantity: orderQty,
                 already_invoiced_quantity: invoicedQty,
@@ -164,6 +166,15 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
         });
         setInvoiceDraftItems(draftItems);
         setIssueInvoiceModalOpen(true);
+    };
+
+    const handleDraftItemUnitChange = (index: number, val: string) => {
+        const newItems = [...invoiceDraftItems];
+        newItems[index] = {
+            ...newItems[index],
+            unit: val,
+        };
+        setInvoiceDraftItems(newItems);
     };
 
     const handleDraftItemQtyChange = (index: number, val: number | null) => {
@@ -622,6 +633,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                 const items = initialData.items?.map((i: any) => {
                     const qty = Number(i.quantity) || 0;
                     const price = Number(i.unit_price) || 0;
+                    const prodInfo = products.find(p => p.value === (i.product?.sku || i.sku));
 
                     // Ưu tiên tính toán lại: SL * Đơn giá. Nếu không thì lấy subtotal từ DB.
                     const calculatedTotal = qty * price;
@@ -630,6 +642,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                         ...i,
                         key: i.id || `temp-${Date.now()}-${Math.random()}`, // Ensure KEY exists for DragDrop
                         sku: i.product?.sku || i.sku,
+                        unit: (i.unit && String(i.unit).trim()) || i.product?.unit || prodInfo?.unit || 'Cái',
                         unit_price: price,
                         quantity: qty,
                         total_price: calculatedTotal > 0 ? calculatedTotal : (Number(i.subtotal) || 0),
@@ -835,21 +848,25 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                 fullQuotation = res.data;
                 setQuoteDetailsCache(prev => ({ ...prev, [quotation.id]: fullQuotation }));
             }
-            const items = (fullQuotation.items || []).map((i: any, idx: number) => ({
-                key: Date.now() + idx,
-                sku: i.product?.sku || i.sku,
-                quantity: Number(i.quantity) || 1,
-                unit_price: Number(i.unit_price) || 0,
-                total_price: (Number(i.quantity) || 1) * (Number(i.unit_price) || 0),
-                note: i.note || '',
-                variant_color: i.variant_color || '',
-                vat_content: i.vat_content || '',
-                sample_image: i.sample_image,
-                image_url: i.image_url,
-                price_ranges: i.price_ranges,
-                customer_note: i.customer_note,
-                internal_note: i.internal_note
-            }));
+            const items = (fullQuotation.items || []).map((i: any, idx: number) => {
+                const prodInfo = products.find(p => p.value === (i.product?.sku || i.sku));
+                return {
+                    key: Date.now() + idx,
+                    sku: i.product?.sku || i.sku,
+                    unit: (i.unit && String(i.unit).trim()) || i.product?.unit || prodInfo?.unit || 'Cái',
+                    quantity: Number(i.quantity) || 1,
+                    unit_price: Number(i.unit_price) || 0,
+                    total_price: (Number(i.quantity) || 1) * (Number(i.unit_price) || 0),
+                    note: i.note || '',
+                    variant_color: i.variant_color || '',
+                    vat_content: i.vat_content || '',
+                    sample_image: i.sample_image,
+                    image_url: i.image_url,
+                    price_ranges: i.price_ranges,
+                    customer_note: i.customer_note,
+                    internal_note: i.internal_note
+                };
+            });
             setOrderItems(items);
             calculateTotal(items);
             form.setFieldsValue({
@@ -2151,9 +2168,16 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                             {
                                 title: 'ĐVT',
                                 dataIndex: 'unit',
-                                width: 60,
+                                width: 80,
                                 align: 'center',
-                                render: (v: string) => v || 'Cái'
+                                render: (v: string, _: any, index: number) => (
+                                    <Input
+                                        size="small"
+                                        value={v || 'Cái'}
+                                        onChange={(e) => handleDraftItemUnitChange(index, e.target.value)}
+                                        style={{ textAlign: 'center' }}
+                                    />
+                                )
                             },
                             {
                                 title: 'Đơn giá',

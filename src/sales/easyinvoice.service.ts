@@ -158,7 +158,7 @@ export class EasyInvoiceService {
             itemsToProcess.forEach((item, index) => {
                 const sku = item.sku || item.code || '';
                 const productName = item.vat_content || item.productName || item.product?.name || sku || 'Sản phẩm';
-                const unit = item.unit || 'Cái';
+                const unit = (item.unit && String(item.unit).trim()) || item.product?.unit || 'Cái';
                 const qty = Number(item.quantity) || 0;
                 const price = Number(item.unit_price !== undefined ? item.unit_price : item.price) || 0;
                 const total = Number((qty * price).toFixed(6)); // Total trước thuế
