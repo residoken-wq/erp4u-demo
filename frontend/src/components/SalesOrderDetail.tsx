@@ -96,6 +96,10 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
     const [emailInvoiceTarget, setEmailInvoiceTarget] = useState<any>(null);
     const [emailRecipient, setEmailRecipient] = useState('');
 
+    // Legal Info Sync State
+    const [syncingLegalInfo, setSyncingLegalInfo] = useState(false);
+    const [latestCustomerMap, setLatestCustomerMap] = useState<Record<number, any>>({});
+
     const normalizeInvoices = (data: any): any[] => {
         if (!data) return [];
         if (Array.isArray(data)) return data;
@@ -780,11 +784,11 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
     const currentContactName = Form.useWatch('contact_name', form);
     const currentContactPhone = Form.useWatch('contact_phone', form);
     const currentShippingAddress = Form.useWatch('shipping_address', form);
-    const selectedCustomer = customers.find(c => c.id === currentCustomerId);
+    const selectedCustomer = (currentCustomerId && latestCustomerMap[currentCustomerId]) || customers.find(c => c.id === currentCustomerId);
     const customerContacts = selectedCustomer?.contacts || [];
 
     const handleCustomerChange = async (customerId: number) => {
-        const customer = customers.find((c: any) => c.id === customerId);
+        const customer = (customerId && latestCustomerMap[customerId]) || customers.find((c: any) => c.id === customerId);
         if (customer) {
             form.setFieldsValue({
                 vat_company_name: customer.legal_name || customer.name || '',
@@ -804,6 +808,57 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             } catch (e) { setCustomerQuotations([]); }
         } else {
             setCustomerQuotations([]);
+        }
+    };
+
+    const handleSyncCustomerLegalInfo = async () => {
+        const customerId = form.getFieldValue('customer_id') || initialData?.customer_id || initialData?.customer?.id;
+        if (!customerId || customerId === -1) {
+            message.warning('Vui lòng chọn khách hàng trước khi đồng bộ thông tin pháp nhân!');
+            return;
+        }
+
+        setSyncingLegalInfo(true);
+        try {
+            let customer = customers.find((c: any) => c.id === customerId);
+            try {
+                const res = await api.get(`/customers/${customerId}`);
+                if (res.data) {
+                    customer = res.data;
+                    setLatestCustomerMap(prev => ({ ...prev, [customerId]: res.data }));
+                }
+            } catch (fetchErr) {
+                console.warn('Could not fetch latest customer from API, using fallback:', fetchErr);
+            }
+
+            if (!customer) {
+                message.error('Không tìm thấy thông tin khách hàng!');
+                return;
+            }
+
+            const legalName = customer.legal_name || customer.name || '';
+            const taxCode = customer.tax_code || '';
+            const legalAddress = customer.legal_address || customer.address || '';
+            const einvoiceEmail = customer.einvoice_email || customer.email || '';
+
+            form.setFieldsValue({
+                vat_company_name: legalName,
+                vat_tax_code: taxCode,
+                vat_address: legalAddress,
+                vat_email: einvoiceEmail,
+            });
+
+            // Nếu chưa có người liên hệ và khách hàng có thông tin người đại diện pháp luật
+            if (customer.legal_representative && !form.getFieldValue('contact_name')) {
+                form.setFieldsValue({ contact_name: customer.legal_representative });
+            }
+
+            message.success(`Đã đồng bộ thông tin pháp nhân từ khách hàng (${customer.name || customer.code})!`);
+        } catch (error: any) {
+            console.error('Error syncing customer legal info:', error);
+            message.error(error.message || 'Lỗi khi đồng bộ thông tin pháp nhân');
+        } finally {
+            setSyncingLegalInfo(false);
         }
     };
 
@@ -1529,11 +1584,19 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                         </div>
 
                         <div style={{ padding: isMobile ? 6 : 10, background: '#f5f5f5', borderRadius: 4, marginBottom: 15 }}>
-                            {!isMobile && (
-                                <div style={{ fontStyle: 'italic', color: '#666', marginBottom: 10, fontSize: 12 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
+                                <div style={{ fontStyle: 'italic', color: '#666', fontSize: 12 }}>
                                     <InfoCircleOutlined /> Lấy từ "Pháp Nhân" của KH
                                 </div>
-                            )}
+                                <Button
+                                    size="small"
+                                    icon={<SyncOutlined />}
+                                    onClick={handleSyncCustomerLegalInfo}
+                                    loading={syncingLegalInfo}
+                                >
+                                    Đồng bộ từ Pháp nhân KH
+                                </Button>
+                            </div>
                             <Row gutter={16}>
                                 <Col span={12}>
                                     <Form.Item name="vat_company_name" label="Tên đơn vị (Xuất HĐ)">
