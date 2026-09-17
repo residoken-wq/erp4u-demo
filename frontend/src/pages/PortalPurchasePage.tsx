@@ -170,9 +170,9 @@ const PortalPurchasePage: React.FC = () => {
                             th, td { border: 1px solid #000; padding: 6px; font-size: 13px; }
                             th { background-color: #f2f2f2; text-align: center; }
                             @media print {
-                                @page { margin: 15mm; }
-                                body { padding: 0; }
-                                button { display: none; }
+                                @page { size: A4 portrait; margin: 10mm 12mm 10mm 12mm; }
+                                body { padding: 0 !important; margin: 0 !important; }
+                                button { display: none !important; }
                             }
                         </style>
                     </head>

@@ -25,7 +25,15 @@ const QuotationTemplate: React.FC<QuotationProps> = ({ data }) => {
     const qrLink = `https://img.vietqr.io/image/ACB-141847859-compact2.jpg?amount=${Math.floor(finalAmount)}&addInfo=${data.order_code}&accountName=CTY TNHH TM DV TUONG LINH`;
 
     return (
-        <div style={{ padding: 40, background: '#fff', fontSize: 14, fontFamily: "'Inter', sans-serif", color: '#1f2937' }}>
+        <div className="quotation-print-container" style={{ padding: 24, background: '#fff', fontSize: 13, fontFamily: "'Inter', sans-serif", color: '#1f2937' }}>
+            <style>{`
+                @media print {
+                    @page { size: A4 portrait; margin: 10mm 12mm 10mm 12mm; }
+                    body { margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                    .quotation-print-container { padding: 0 !important; }
+                    .no-print { display: none !important; }
+                }
+            `}</style>
 
             {/* HEADER */}
             <Row gutter={40} align="stretch" style={{ borderBottom: '2px solid #1e3a8a', paddingBottom: 20, marginBottom: 30 }}>

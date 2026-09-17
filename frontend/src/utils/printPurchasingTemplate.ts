@@ -11,15 +11,26 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
 
     const style = `
         <style>
-            @page { size: A4 landscape; margin: 10mm; }
-            body { font-family: 'Times New Roman', serif; padding: 20px; }
+            @page { size: A4 landscape; margin: 8mm 10mm 8mm 10mm; }
+            * { box-sizing: border-box; }
+            body { 
+                font-family: 'Times New Roman', serif; 
+                margin: 0;
+                padding: 10px; 
+                font-size: 12px; 
+                -webkit-print-color-adjust: exact !important; 
+                print-color-adjust: exact !important; 
+            }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             th, td { border: 1px solid #000; padding: 5px; text-align: center; }
-            .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
-            .title { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 20px; }
+            .header { display: flex; justify-content: space-between; margin-bottom: 15px; }
+            .title { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 15px; }
             .left-align { text-align: left; white-space: pre-wrap; }
             .bold { font-weight: bold; }
-            @media print { .no-print { display: none; } }
+            @media print { 
+                body { padding: 0 !important; }
+                .no-print { display: none !important; } 
+            }
         </style>
     `;
 

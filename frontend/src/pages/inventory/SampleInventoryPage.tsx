@@ -186,27 +186,39 @@ const SampleInventoryPage: React.FC = () => {
             <head>
                 <title>In Phiếu Xuất Kho Hàng Mẫu - ${tx.code}</title>
                 <style>
-                    body { font-family: 'Times New Roman', Times, serif; padding: 20px; font-size: 14px; }
-                    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #0050b3; padding-bottom: 10px; }
-                    .company-info { width: 60%; }
-                    .company-info h1 { margin: 0; color: #0050b3; font-size: 24px; text-transform: uppercase; }
-                    .company-info p { margin: 2px 0; font-size: 13px; }
-                    .header-logo { width: 60%; text-align: left; }
-                    .title-section { text-align: center; width: 40%; }
-                    .title-section h2 { margin: 0 0 5px; font-size: 22px; text-transform: uppercase; }
-                    .info-grid { margin-bottom: 20px; }
-                    .info-row { display: flex; margin-bottom: 8px; }
-                    .info-label { width: 130px; font-weight: bold; }
+                    @page { size: A4 portrait; margin: 10mm 12mm 10mm 12mm; }
+                    * { box-sizing: border-box; }
+                    body { 
+                        font-family: 'Times New Roman', Times, serif; 
+                        margin: 0; 
+                        padding: 0; 
+                        font-size: 13px; 
+                        line-height: 1.4;
+                        color: #1a1a1a;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #0050b3; padding-bottom: 10px; }
+                    .header-logo { width: 55%; text-align: left; }
+                    .title-section { text-align: right; width: 45%; }
+                    .title-section h2 { margin: 0 0 5px; font-size: 22px; text-transform: uppercase; color: #0050b3; letter-spacing: 1px; }
+                    .info-grid { margin-bottom: 15px; }
+                    .info-row { display: flex; margin-bottom: 6px; }
+                    .info-label { width: 140px; font-weight: bold; flex-shrink: 0; }
                     .info-val { flex: 1; }
 
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-                    th, td { border: 1px solid #000; padding: 8px; text-align: center; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+                    th, td { border: 1px solid #000; padding: 6px 8px; text-align: center; }
                     th { background-color: #fce4d6; font-weight: bold; }
 
-                    .footer { display: flex; justify-content: space-between; text-align: center; margin-top: 50px; }
+                    .footer { display: flex; justify-content: space-between; text-align: center; margin-top: 35px; page-break-inside: avoid; }
                     .footer-col { width: 30%; }
-                    .footer-col .role { font-weight: bold; margin-bottom: 80px; }
-                    .note-bottom { font-style: italic; font-size: 12px; margin-top: 40px; border-top: 1px solid #eee; padding-top: 10px; }
+                    .footer-col .role { font-weight: bold; margin-bottom: 65px; }
+                    .note-bottom { font-style: italic; font-size: 12px; margin-top: 25px; border-top: 1px solid #eee; padding-top: 8px; page-break-inside: avoid; }
+                    @media print {
+                        body { padding: 0 !important; }
+                        .no-print { display: none !important; }
+                    }
                 </style>
             </head>
             <body>

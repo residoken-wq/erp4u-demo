@@ -895,7 +895,18 @@ const CrmPage: React.FC = () => {
             />
             <Modal title="Xem Trước" open={isPreviewOpen} onCancel={() => setIsPreviewOpen(false)} footer={null} width={isMobile ? '100%' : 900} style={isMobile ? { top: 10, maxWidth: '100vw', padding: 8 } : undefined}>
                 <div id="printableArea"><QuotationTemplate data={editingOrder} /></div>
-                <div style={{ textAlign: 'center', marginTop: 20 }}><Button type="primary" onClick={() => { const c = document.getElementById('printableArea'); const w = window.open(); if (w && c) { w.document.write(c.innerHTML); w.print(); } }}>In Ngay</Button></div>
+                <div style={{ textAlign: 'center', marginTop: 20 }}>
+                    <Button type="primary" onClick={() => {
+                        const c = document.getElementById('printableArea');
+                        const w = window.open('', '_blank');
+                        if (w && c) {
+                            w.document.write(`<!DOCTYPE html><html><head><title>In Báo Giá</title><style>@page { size: A4 portrait; margin: 10mm 12mm 10mm 12mm; } * { box-sizing: border-box; } body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } .quotation-print-container { padding: 0 !important; } @media print { .no-print { display: none !important; } }</style></head><body>${c.innerHTML}</body></html>`);
+                            w.document.close();
+                            w.focus();
+                            setTimeout(() => w.print(), 500);
+                        }
+                    }}>In Ngay</Button>
+                </div>
             </Modal>
             <QuickTaskModal open={taskModalOpen} onClose={() => setTaskModalOpen(false)} initialValues={taskInitialValues} />
 

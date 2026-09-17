@@ -18,7 +18,7 @@ const printStyles = `
 @media print {
     @page { 
         size: A4 portrait; 
-        margin: 10mm 15mm; 
+        margin: 10mm 12mm 10mm 12mm; 
     }
     body { 
         -webkit-print-color-adjust: exact !important; 
@@ -347,7 +347,7 @@ const PortalQuotePage: React.FC = () => {
     <meta charset="utf-8">
     <title>${docTitle} - ${data.order_code}</title>
     <style>
-        @page { size: A4 portrait; margin: 12mm 15mm 15mm 15mm; }
+        @page { size: A4 portrait; margin: 10mm 12mm 10mm 12mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: 'Times New Roman', Times, serif; 

@@ -792,9 +792,21 @@ const ProductsPage: React.FC = () => {
             <head>
                 <title>In Danh Sách Sản Phẩm</title>
                 <style>
-                    @page { size: landscape; margin: 10mm; }
-                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 12px; color: #333; }
-                    h2 { text-align: center; margin-bottom: 20px; text-transform: uppercase; }
+                    @page { size: landscape; margin: 8mm 10mm 8mm 10mm; }
+                    * { box-sizing: border-box; }
+                    body { 
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+                        font-size: 12px; 
+                        color: #333; 
+                        margin: 0;
+                        padding: 10px;
+                        -webkit-print-color-adjust: exact !important; 
+                        print-color-adjust: exact !important; 
+                    }
+                    @media print {
+                        body { padding: 0 !important; }
+                    }
+                    h2 { text-align: center; margin-bottom: 15px; text-transform: uppercase; }
                     table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
                     th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; vertical-align: middle; }
                     th { background-color: #f0f0f0; font-weight: bold; text-align: center; }

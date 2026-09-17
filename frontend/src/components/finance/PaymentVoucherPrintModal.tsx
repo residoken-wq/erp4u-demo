@@ -178,7 +178,8 @@ export const PaymentVoucherPrintModal: React.FC<PaymentVoucherPrintModalProps> =
                             left: 0;
                             top: 0;
                             width: 100%;
-                            padding: 0;
+                            padding: 0 !important;
+                            margin: 0 !important;
                             background: transparent;
                         }
                         .ant-modal-mask, .ant-modal-wrap, .ant-modal-header, .ant-modal-footer {
@@ -186,7 +187,7 @@ export const PaymentVoucherPrintModal: React.FC<PaymentVoucherPrintModalProps> =
                         }
                         @page {
                             size: A5 landscape;
-                            margin: 10mm;
+                            margin: 8mm 10mm 8mm 10mm;
                         }
                     }
                 `}</style>

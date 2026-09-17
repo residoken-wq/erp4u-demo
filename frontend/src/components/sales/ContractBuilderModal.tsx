@@ -540,12 +540,19 @@ const ContractBuilderModal: React.FC<Props> = ({ open, onCancel, onSuccess, init
                     <head>
                         <title>In Hợp Đồng - ${initialData.order_code}</title>
                         <style>
+                            @page { 
+                                size: A4 portrait; 
+                                margin: 10mm 12mm 10mm 12mm; 
+                            }
+                            * { box-sizing: border-box; }
                             body { 
                                 font-family: 'Times New Roman', serif; 
                                 font-size: 12pt; 
                                 line-height: 1.5; 
-                                padding: 2cm; /* Move margin to body to avoid header/footer */
+                                padding: 10mm 12mm;
                                 margin: 0;
+                                -webkit-print-color-adjust: exact !important;
+                                print-color-adjust: exact !important;
                             }
                             table { border-collapse: collapse; width: 100%; page-break-inside: avoid; }
                             tr, td { page-break-inside: avoid; }
@@ -553,9 +560,7 @@ const ContractBuilderModal: React.FC<Props> = ({ open, onCancel, onSuccess, init
                             /* Prevent signatures and other blocks from breaking */
                             .keep-together { page-break-inside: avoid; }
                             @media print {
-                                @page { 
-                                    margin: 0; /* This removes the default header (date/title) and footer (about:blank) */
-                                }
+                                body { padding: 0 !important; }
                                 .no-print { display: none; }
                             }
                         </style>
