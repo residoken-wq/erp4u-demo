@@ -153,7 +153,8 @@ export class SystemService {
     async getCompanyConfig() {
         const keys = ['COMPANY_NAME', 'COMPANY_ADDRESS', 'COMPANY_PHONE', 'COMPANY_EMAIL', 'COMPANY_WEBSITE',
             'COMPANY_TAX_CODE', 'COMPANY_REPRESENTATIVE',
-            'COMPANY_BANK_NAME', 'COMPANY_BANK_ACCOUNT', 'COMPANY_BANK_HOLDER'];
+            'COMPANY_BANK_NAME', 'COMPANY_BANK_ACCOUNT', 'COMPANY_BANK_HOLDER',
+            'COMPANY_STAMP_IMAGE'];
         const configs = await this.configRepo.findByIds(keys);
         const result: any = {};
         keys.forEach(k => {

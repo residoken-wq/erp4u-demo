@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Table, Button, Statistic, Row, Col, Divider, Modal, Form, InputNumber, Radio, Input, message, DatePicker, Tag, Space, Tooltip, Popconfirm } from 'antd';
-import { DollarOutlined, QrcodeOutlined, CheckCircleOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Button, Statistic, Row, Col, Divider, Modal, Form, InputNumber, Radio, Input, message, DatePicker, Tag, Space, Tooltip, Popconfirm, Dropdown } from 'antd';
+import { DollarOutlined, QrcodeOutlined, CheckCircleOutlined, EditOutlined, DeleteOutlined, FilePdfOutlined, PrinterOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
 import dayjs from 'dayjs';
 import AttachmentUpload from '../common/AttachmentUpload';
 import useMobile from '../../hooks/useMobile';
 import { getVietQRBankCode } from '../../utils/vietqr';
+import { handlePrintPaymentRequest } from '../../utils/printPaymentRequest';
 
 interface Props {
     orderId: number;
@@ -15,10 +16,11 @@ interface Props {
     customerName?: string;
     customerId?: number;
     orderStatus?: string; // NEW: order status to control delete/upload
+    order?: any;
     onSuccess: () => void;
 }
 
-const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidAmount, customerName, customerId, orderStatus, onSuccess }) => {
+const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidAmount, customerName, customerId, orderStatus, order, onSuccess }) => {
     const [history, setHistory] = useState<any[]>([]);
     const [companyConfig, setCompanyConfig] = useState<any>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -254,6 +256,38 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
         });
     };
 
+    const handlePrintDNTT = async (item: any, printMode: 'pdf' | 'print') => {
+        let config = companyConfig;
+        if (!config) {
+            config = await fetchCompanyConfig();
+        }
+        handlePrintPaymentRequest({
+            order,
+            orderCode,
+            customerName,
+            requesterName: order?.assigned_to?.full_name || order?.assigned_to?.name || order?.created_by?.full_name || order?.created_by?.name,
+            paymentAmount: Number(item?.amount) || 0,
+            paymentDate: item?.date || item?.created_at || new Date(),
+            paymentNote: item?.description || item?.note || '',
+            companyConfig: config,
+            mode: printMode
+        });
+    };
+
+    const handlePrintFromModal = (printMode: 'pdf' | 'print') => {
+        if (!amount || amount <= 0) {
+            message.warning('Vui lòng nhập số tiền lớn hơn 0 để in Đề nghị thanh toán');
+            return;
+        }
+        const prefix = type === 'DEPOSIT' ? '[ĐẶT CỌC]' : type === 'FINAL' ? '[TẤT TOÁN]' : '[THANH TOÁN]';
+        const finalNote = `${prefix} ${note}`.trim();
+        handlePrintDNTT({
+            amount,
+            date: date ? date.toDate() : new Date(),
+            description: finalNote
+        }, printMode);
+    };
+
     return (
         <div>
             {/* STATS - HORIZONTAL SCROLL ON MOBILE */}
@@ -317,40 +351,77 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
                     },
                     { title: 'Nội dung', dataIndex: 'description' },
                     {
-                        title: 'Trạng thái',
+                        title: 'Trạng thái & In ĐNTT',
                         dataIndex: 'status',
-                        width: 175,
+                        width: 220,
                         render: (status: string, r: any) => (
-                            <Space direction="vertical" size="small">
-                                {status === 'DRAFT' ? (
-                                    <Tag color="warning">Nháp (Chờ TT)</Tag>
-                                ) : (
-                                    <Tag color="success">Đã Thu</Tag>
-                                )}
-                                {status === 'DRAFT' && (
-                                    <Space size={4}>
-                                        <Tooltip title="Xem QR">
-                                            <Button size="small" icon={<QrcodeOutlined />} onClick={() => showQR(r)} />
-                                        </Tooltip>
-                                        <Tooltip title="Sửa thanh toán nháp">
-                                            <Button size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(r)} />
-                                        </Tooltip>
-                                        <Tooltip title="Xác nhận đã thu">
-                                            <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={() => handleConfirmPayment(r.id)} />
-                                        </Tooltip>
-                                        <Tooltip title="Xóa nháp">
-                                            <Popconfirm
-                                                title="Xóa đợt thanh toán nháp này?"
-                                                onConfirm={() => handleDeleteDraft(r.id)}
-                                                okText="Xóa"
-                                                cancelText="Hủy"
-                                                okButtonProps={{ danger: true }}
-                                            >
-                                                <Button size="small" danger icon={<DeleteOutlined />} />
-                                            </Popconfirm>
-                                        </Tooltip>
-                                    </Space>
-                                )}
+                            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+                                    {status === 'DRAFT' ? (
+                                        <Tag color="warning">Nháp (Chờ TT)</Tag>
+                                    ) : (
+                                        <Tag color="success">Đã Thu</Tag>
+                                    )}
+                                    <Dropdown
+                                        menu={{
+                                            items: [
+                                                {
+                                                    key: 'dntt_pdf',
+                                                    label: 'Mẫu 1: DNTT PDF (Có mộc & Chữ ký GĐ)',
+                                                    icon: <FilePdfOutlined style={{ color: '#cf1322' }} />,
+                                                    onClick: () => handlePrintDNTT(r, 'pdf')
+                                                },
+                                                {
+                                                    key: 'dntt_print',
+                                                    label: 'Mẫu 2: In DNTT (Ký sống, không mộc)',
+                                                    icon: <PrinterOutlined style={{ color: '#1677ff' }} />,
+                                                    onClick: () => handlePrintDNTT(r, 'print')
+                                                }
+                                            ]
+                                        }}
+                                        placement="bottomRight"
+                                    >
+                                        <Button size="small" icon={<PrinterOutlined style={{ color: '#1677ff' }} />}>
+                                            In ĐNTT
+                                        </Button>
+                                    </Dropdown>
+                                </div>
+                                <Space size={4} wrap>
+                                    {status === 'DRAFT' && (
+                                        <>
+                                            <Tooltip title="Xem QR VietQR">
+                                                <Button size="small" icon={<QrcodeOutlined />} onClick={() => showQR(r)} />
+                                            </Tooltip>
+                                            <Tooltip title="Sửa thanh toán nháp">
+                                                <Button size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(r)} />
+                                            </Tooltip>
+                                            <Tooltip title="Xác nhận đã thu">
+                                                <Button size="small" type="primary" icon={<CheckCircleOutlined />} onClick={() => handleConfirmPayment(r.id)} />
+                                            </Tooltip>
+                                            <Tooltip title="Xóa nháp">
+                                                <Popconfirm
+                                                    title="Xóa đợt thanh toán nháp này?"
+                                                    onConfirm={() => handleDeleteDraft(r.id)}
+                                                    okText="Xóa"
+                                                    cancelText="Hủy"
+                                                    okButtonProps={{ danger: true }}
+                                                >
+                                                    <Button size="small" danger icon={<DeleteOutlined />} />
+                                                </Popconfirm>
+                                            </Tooltip>
+                                        </>
+                                    )}
+                                    <Tooltip title="Mẫu 1: DNTT PDF (Có mộc & Chữ ký GĐ)">
+                                        <Button
+                                            size="small"
+                                            icon={<FilePdfOutlined style={{ color: '#cf1322' }} />}
+                                            onClick={() => handlePrintDNTT(r, 'pdf')}
+                                            style={{ color: '#cf1322', borderColor: '#ffa39e' }}
+                                        >
+                                            DNTT PDF
+                                        </Button>
+                                    </Tooltip>
+                                </Space>
                             </Space>
                         )
                     },
@@ -390,6 +461,29 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
                             </Button>
                         </Popconfirm>
                     ),
+                    <Dropdown
+                        key="print_dntt"
+                        menu={{
+                            items: [
+                                {
+                                    key: 'pdf',
+                                    label: 'Mẫu 1: DNTT PDF (Có mộc & Chữ ký GĐ)',
+                                    icon: <FilePdfOutlined style={{ color: '#cf1322' }} />,
+                                    onClick: () => handlePrintFromModal('pdf')
+                                },
+                                {
+                                    key: 'print',
+                                    label: 'Mẫu 2: In DNTT (Ký sống, không mộc)',
+                                    icon: <PrinterOutlined style={{ color: '#1677ff' }} />,
+                                    onClick: () => handlePrintFromModal('print')
+                                }
+                            ]
+                        }}
+                    >
+                        <Button icon={<PrinterOutlined style={{ color: '#1677ff' }} />} style={{ float: 'left' }}>
+                            In Mẫu ĐNTT
+                        </Button>
+                    </Dropdown>,
                     <Button key="cancel" onClick={() => { setIsModalOpen(false); setEditingPayment(null); }}>
                         Hủy
                     </Button>,

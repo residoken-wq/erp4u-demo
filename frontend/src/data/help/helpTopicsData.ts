@@ -256,6 +256,101 @@ export const HELP_TOPICS: HelpTopic[] = [
         ]
     },
     {
+        id: 'sales-order-detail-full-guide',
+        title: 'Cẩm Nang Chi Tiết Đơn Hàng (SO Detail): Toàn Bộ 9 Tab & Chức Năng Nút Thao Tác',
+        category: 'SALES',
+        categoryName: 'Bán Hàng & CRM',
+        tags: ['SO Detail', 'Chi tiết đơn hàng', '9 Tab', 'Thao tác', 'Báo giá', 'Nút bấm', 'Mới'],
+        summary: 'Hướng dẫn toàn diện về cấu trúc giao diện Chi Tiết Đơn Hàng (SO Detail): Chức năng chuyên sâu của 9 Tab nghiệp vụ (Thông tin SP, Hợp đồng & Hóa đơn, Thanh toán, Giao hàng, Trao đổi, Checklist, Mẫu SX, Lịch sử báo giá, Lịch sử hoạt động) và ý nghĩa từng nút hành động.',
+        estimatedReadTime: '8 phút',
+        updatedAt: '17/09/2026',
+        isNew: true,
+        isFeatured: true,
+        deepLink: {
+            label: 'Xem Danh Sách Đơn Hàng',
+            path: '/orders'
+        },
+        steps: [
+            {
+                title: '1. Vòng Đời Trạng Thái Đơn Hàng (Order Lifecycle)',
+                description: 'Đơn hàng trải qua các trạng thái: Báo giá (QUOTATION) -> Xác nhận đơn (SO_PENDING) -> Đã đặt cọc (DEPOSITED) -> Đã duyệt mẫu SX (SAMPLE_APPROVED) -> Đang sản xuất (IN_PRODUCTION) -> Giao 1 phần (PARTIAL_DELIVERY) -> Đã giao hàng (DELIVERED) -> Hoàn tất (COMPLETED). Nếu có sự cố, đơn có thể chuyển sang Đã hủy (CANCELLED).',
+                tip: 'Trạng thái đơn hàng sẽ quyết định những thao tác nào được phép thực hiện (ví dụ: chỉ đơn SO_PENDING mới được xóa; đơn đã hoàn tất không thể hủy).'
+            },
+            {
+                title: '2. Tab 1: 1. Thông tin & Sản phẩm',
+                description: 'Quản lý thông tin chung: Khách hàng, Ngày đặt, Ngày giao dự kiến, Nhân sự phụ trách (assigned_to), Công tắc "Lấy hóa đơn VAT", Checkbox "Đã duyệt mẫu SX". Nhập Ghi chú nội bộ hiển thị trên Portal và Chọn mẫu Điều khoản & Quy định báo giá. Bảng sản phẩm hỗ trợ: gõ SKU tìm kiếm, tùy biến đơn giá bán sỉ/lẻ, chỉnh sửa ô Mô tả VAT riêng, tải ảnh mẫu thực tế và tính năng "Copy từ Báo giá / Đơn cũ". Phía dưới tự động tính: Tổng tiền hàng, Giảm giá (% hoặc VNĐ), Thuế VAT, Phí ship, và Yêu cầu đặt cọc.',
+                tip: 'Sử dụng nút "Copy từ Báo giá cũ" ở đầu bảng sản phẩm giúp nhân viên sale tái sử dụng đơn giá và quy cách sản phẩm cực kỳ nhanh chóng.'
+            },
+            {
+                title: '3. Tab 2: 2. Hợp đồng & Hóa đơn',
+                description: 'Phân hệ pháp lý và hóa đơn: Cung cấp nút "Đồng bộ pháp nhân từ KH" để tự động điền Tên đơn vị, MST, Địa chỉ xuất hóa đơn. Tích hợp nút "Tra cứu MST" kiểm tra trực tiếp trạng thái doanh nghiệp từ cơ quan thuế. Nút "Tạo / Chỉnh Sửa Hợp Đồng" mở trình soạn thảo hợp đồng kinh tế theo mẫu có sẵn, hỗ trợ "In Hợp Đồng" và "Tải PDF HĐ". Phía dưới là phân hệ tích hợp EasyInvoice hỗ trợ tạo Hóa đơn nháp nhiều đợt, Đồng bộ trạng thái ký số, Xem/Tải PDF hóa đơn và Gửi email hóa đơn cho khách.',
+                warning: 'Cần kiểm tra chính xác MST trước khi nhấn "Tạo Hóa Đơn Nháp" để tránh sai sót dữ liệu thuế.'
+            },
+            {
+                title: '4. Tab 3: 3. Thanh toán & In Mẫu Đề Nghị Thanh Toán (DNTT)',
+                description: 'Theo dõi tài chính đơn hàng: Thanh số liệu thống kê thời gian thực gồm Tổng tiền, Đã thanh toán, Còn lại. Bảng lịch sử thanh toán ghi nhận các đợt [ĐẶT CỌC], [THANH TOÁN], [TẤT TOÁN] (hỗ trợ tạo đợt nháp DRAFT hoặc ghi nhận COMPLETED, tự động xử lý tiền dư sang Credit khách hàng hoặc Hoàn tiền). Nút "Xem QR" tạo mã VietQR động theo số tiền từng đợt kèm STK công ty. Tải lên và lưu chứng từ chuyển khoản (ủy nhiệm chi). ĐẶC BIỆT: Chức năng "In ĐNTT" và "DNTT PDF" cho phép xuất Giấy Đề Nghị Thanh Toán với 2 mẫu chuyên nghiệp: Mẫu 1 (PDF có mộc tròn đỏ và chữ ký giám đốc) và Mẫu 2 (In DNTT để ký sống).',
+                tip: 'Bạn có thể in Giấy đề nghị thanh toán ngay trong Modal tạo đợt thanh toán bằng nút "In Mẫu ĐNTT" hoặc in từ từng dòng trong bảng lịch sử.'
+            },
+            {
+                title: '5. Tab 4: 4. Giao hàng & Logistics',
+                description: 'Quản lý giao nhận hàng hóa: Lấy danh sách địa chỉ/chi nhánh giao hàng từ hồ sơ khách hàng. Quản lý việc lập các đợt giao hàng từng phần (Partial Deliveries), tạo phiếu giao hàng / phiếu xuất kho (Delivery Note). Hỗ trợ liên kết đẩy đơn hãng vận chuyển (GHTK), in trực tiếp nhãn bưu gửi PDF và theo dõi hành trình đơn giao hàng thời gian thực.',
+            },
+            {
+                title: '6. Tab 5 & Tab 6: 5. Trao đổi & 6. Checklist',
+                description: 'Tab Trao đổi: Kênh chat nội bộ gắn liền với từng đơn hàng, hỗ trợ gắn thẻ @nhân_sự để thông báo, đính kèm ảnh và tài liệu trao đổi giữa Sales, Kế toán và Xưởng sản xuất. Tab Checklist: Danh sách các mốc kiểm soát quy trình chuẩn (Checklist SOP) từ tiếp nhận đơn, chuẩn bị NPL, tiến độ may/in đến đóng gói và đối soát công nợ.',
+            },
+            {
+                title: '7. Tab 7, Tab 8 & Tab 9: 7. Mẫu SX, 8. Lịch sử Báo giá & 9. Lịch sử hoạt động',
+                description: 'Tab Mẫu SX: Quản lý hồ sơ ảnh mẫu thực tế, market in/thêu, thực hiện xác nhận "Đã duyệt mẫu sản xuất" trước khi chuyển xưởng chạy số lượng lớn. Tab Lịch sử Báo giá: Lưu trữ các phiên bản báo giá (v1, v2, v3...) giúp sales dễ dàng đối chiếu khi khách yêu cầu thay đổi số lượng hoặc cấu hình sản phẩm. Tab Lịch sử hoạt động: Nhật ký kiểm toán (Audit Trail) ghi nhận chi tiết thời gian và nhân viên đã thực hiện chỉnh sửa dữ liệu, đổi trạng thái hoặc thu tiền trên đơn.',
+            },
+            {
+                title: '8. Chi Tiết Chức Năng Từng Nút Thao Tác (Action Buttons)',
+                description: 'Hệ thống các nút thao tác tại thanh tiêu đề và thanh công cụ phía dưới Drawer SO Detail: \n• "Lưu Thông Tin": Lưu toàn bộ các thay đổi về sản phẩm, đơn giá, địa chỉ giao hàng và điều khoản.\n• "Tạo Version Mới" (Báo giá): Nhân bản báo giá thành phiên bản tiếp theo (v2, v3...) mà không làm mất lịch sử cũ.\n• "Xóa Báo Giá / Xóa Đơn Hàng": Xóa đơn khi đơn còn ở trạng thái sơ khởi (SO_PENDING) hoặc báo giá nháp.\n• "Lịch Sử Phiên Bản": Mở cửa sổ so sánh giữa các phiên bản báo giá trước đây.\n• "Copy Báo Giá Cũ": Mở bộ lọc tìm kiếm đơn cũ và sao chép danh mục sản phẩm vào đơn hiện tại.\n• "Gửi ZNS Xác Nhận": Gửi tin nhắn thông báo xác nhận đơn tự động qua Zalo Official Account (ZNS) đến số điện thoại khách hàng.\n• "Hủy Đơn": Mở modal bắt buộc nhập lý do hủy và chuyển trạng thái đơn hàng sang CANCELLED.\n• "Tạo Dự Án": Chuyển giao thông tin đơn hàng sang phân hệ Kế hoạch & Sản xuất để lập tiến độ gia công.\n• "Giữ Kho (Book)": Khóa và giữ trước số lượng nguyên phụ liệu tồn kho dành riêng cho đơn hàng này để tránh bị xuất nhầm cho đơn khác.\n• "Hoàn Tất Đơn Hàng": Xác nhận đóng đơn hàng sau khi đã giao đủ hàng và thu đủ tiền.',
+                warning: 'Thao tác "Hủy Đơn" và "Xóa Đơn" cần được thực hiện cẩn trọng vì sẽ ảnh hưởng đến kế hoạch vật tư liên quan.'
+            }
+        ]
+    },
+    {
+        id: 'sales-payment-request-guide',
+        title: 'Quy Trình Lập & In Giấy Đề Nghị Thanh Toán (Mẫu DNTT PDF & In DNTT)',
+        category: 'SALES',
+        categoryName: 'Bán Hàng & Kế Toán',
+        tags: ['Đề nghị thanh toán', 'DNTT', 'In DNTT', 'PDF', 'Dấu mộc', 'Chữ ký', 'Mới'],
+        summary: 'Hướng dẫn Sales và Kế toán tạo đợt thanh toán, lấy mã VietQR và in Giấy Đề Nghị Thanh Toán theo 2 mẫu chuẩn: Mẫu 1 (DNTT PDF có mộc đỏ và chữ ký Giám đốc) và Mẫu 2 (In DNTT để ký sống).',
+        estimatedReadTime: '5 phút',
+        updatedAt: '17/09/2026',
+        isNew: true,
+        isFeatured: true,
+        deepLink: {
+            label: 'Mở Danh Sách Đơn Hàng',
+            path: '/orders'
+        },
+        steps: [
+            {
+                title: 'Bước 1: Mục Đích & Thời Điểm Lập Đề Nghị Thanh Toán (DNTT)',
+                description: 'Giấy Đề Nghị Thanh Toán (DNTT) là chứng từ chính thức của doanh nghiệp gửi cho khách hàng để yêu cầu thực hiện thanh toán tạm ứng hợp đồng (đặt cọc) hoặc thanh toán các đợt tiếp theo / tất toán còn lại theo tiến độ giao hàng.',
+                tip: 'Hệ thống tự động liên kết mã đơn hàng vào nội dung chuyển khoản để khi khách quét mã hoặc chuyển tiền, kế toán đối soát được ngay lập tức.'
+            },
+            {
+                title: 'Bước 2: Truy Cập Tab Thanh Toán & Nhập Thông Tin Đợt Thu',
+                description: 'Tại SO Detail, mở Tab "3. Thanh toán". Nhấn nút "Thêm thanh toán" (hoặc chọn sửa một đợt thanh toán nháp hiện có). Nhập số tiền thanh toán, chọn loại (Đặt Cọc, Thanh Toán hoặc Tất Toán), nhập ghi chú nội dung đợt thu.',
+            },
+            {
+                title: 'Bước 3: In Mẫu 1 = DNTT PDF (Có Dấu Mộc Tròn & Chữ Ký Giám Đốc)',
+                description: 'Nhấn nút "DNTT PDF" (hoặc chọn trong menu In ĐNTT -> "Mẫu 1: DNTT PDF"). Hệ thống hiển thị bản xem trước chuẩn định dạng A4 dọc gồm: \n• Quốc hiệu tiêu ngữ và thông tin đơn vị bên bán (Công ty TNHH TM DV Tường Linh).\n• Tên đơn vị bên mua (Kính gửi) và Họ tên nhân viên đề nghị.\n• Nội dung thanh toán, Số tiền bằng số và Số tiền bằng chữ chuẩn xác (VD: "Mười một triệu tám trăm mười hai ngàn năm trăm đồng./").\n• Thông tin tài khoản ngân hàng nhận tiền (ACB - STK: 141847859).\n• Bên phải có sẵn Con dấu tròn đỏ và Chữ ký số của Giám đốc (Phạm Thu Hằng); Bên trái người đề nghị để trống chữ ký (chỉ hiển thị họ tên nhân viên).\n• Trình duyệt tự động mở hộp thoại in, bạn có thể bấm "Lưu dưới dạng PDF" (Save as PDF) để gửi file qua Zalo/Email cho khách.',
+                tip: 'Mẫu 1 cực kỳ thích hợp cho các giao dịch trực tuyến, chốt hợp đồng từ xa mà không cần in giấy gửi bưu điện.'
+            },
+            {
+                title: 'Bước 4: In Mẫu 2 = In DNTT (Bản In Tiêu Chuẩn Ký Sống)',
+                description: 'Nhấn nút "In DNTT" (hoặc chọn trong menu In ĐNTT -> "Mẫu 2: In DNTT"). Toàn bộ nội dung biểu mẫu hoàn toàn giống Mẫu 1, nhưng KHÔNG CÓ chữ ký và KHÔNG CÓ con dấu mộc (để khoảng trống ký tên). Phía dưới hiển thị họ tên Giám đốc và Nhân viên đề nghị. Bản in này dùng để in ra máy in giấy văn phòng, chuyển giao cho Giám đốc và Nhân viên ký sống bằng bút mực và đóng mộc cơ học thực tế.',
+            },
+            {
+                title: 'Bước 5: Cấu Hình Thông Tin Doanh Nghiệp & Con Dấu Trong Cài Đặt',
+                description: 'Để thay đổi thông tin xuất hiện trên Giấy Đề Nghị Thanh Toán: \n• Quản trị viên vào menu "Cài Đặt Hệ Thống" -> Tab 1: "Hồ Sơ Doanh Nghiệp & Tài Khoản Ngân Hàng" để cập nhật Tên công ty, Địa chỉ, Số tài khoản ACB, Chủ tài khoản và Người đại diện pháp luật.\n• Tại Tab 2: "Mẫu In & Nhận Diện Portal", có thể tải lên file ảnh Con dấu tròn & Chữ ký doanh nghiệp mới (khuyến nghị file PNG nền trong suốt). Hệ thống sẽ tự động áp dụng con dấu mới nhất vào Mẫu 1 (DNTT PDF).',
+            }
+        ]
+    },
+    {
         id: 'sales-process',
         title: 'Quy Trình Phối Kết Hợp Bán Hàng Sỉ (Wholesale Workflow)',
         category: 'SALES',

@@ -2,12 +2,49 @@ import { ChangelogItem } from './types';
 
 export const CHANGELOG_DATA: ChangelogItem[] = [
     {
+        id: 'release-2026-09-dntt',
+        date: '17/09/2026',
+        title: 'Bản Cập Nhật: Bổ Sung In Mẫu Đề Nghị Thanh Toán (DNTT) & Cẩm Nang SO Detail Toàn Diện',
+        tag: 'Phiên bản 2.6.5',
+        tagColor: 'blue',
+        isLatest: true,
+        modules: [
+            {
+                name: 'In Mẫu Đề Nghị Thanh Toán (Sales Payments)',
+                tag: 'Tính năng Mới 📄',
+                highlights: [
+                    'Bổ sung chức năng In Giấy Đề Nghị Thanh Toán (DNTT) tại Tab 3. Thanh toán trong SO Detail.',
+                    'Mẫu 1 (DNTT PDF): Tích hợp con dấu tròn đỏ và chữ ký số Giám đốc (Phạm Thu Hằng), tự động dịch số tiền thành chữ tiếng Việt, tải/lưu file PDF gửi khách hàng trực tuyến.',
+                    'Mẫu 2 (In DNTT): Mẫu sạch không mộc và không chữ ký, hiển thị họ tên Giám đốc và Nhân viên đề nghị để in ký sống.',
+                    'Hỗ trợ in trực tiếp từ bảng lịch sử thanh toán hoặc ngay trong modal tạo đợt thu.'
+                ],
+                deepLink: {
+                    label: 'Xem trong Đơn Hàng',
+                    path: '/orders'
+                }
+            },
+            {
+                name: 'Cẩm Nang SO Detail & Trợ Lý HelpPage',
+                tag: 'Tài liệu Mới 📚',
+                highlights: [
+                    'Bổ sung tài liệu chuyên sâu hướng dẫn toàn bộ 9 Tab của SO Detail.',
+                    'Hướng dẫn chi tiết chức năng từng nút thao tác: Lưu, Hủy đơn, Tạo dự án, Giữ kho Book, Gửi ZNS, Copy báo giá, Tạo version...',
+                    'Thêm cẩm nang quy trình lập và in Giấy đề nghị thanh toán chuẩn cho Sales và Kế toán.'
+                ],
+                deepLink: {
+                    label: 'Xem Hướng Dẫn HelpPage',
+                    path: '/help'
+                }
+            }
+        ]
+    },
+    {
         id: 'release-2026-09',
         date: '14/09/2026',
         title: 'Bản Cập Nhật Lớn: Phân Hệ Thiết Kế In Ấn, Sơ Đồ 2D Nesting & Trung Tâm Tri Thức',
         tag: 'Phiên bản 2.6.0',
         tagColor: 'green',
-        isLatest: true,
+        isLatest: false,
         modules: [
             {
                 name: 'Quản Lý Thiết Kế In Ấn & Thêu (Design Management)',
