@@ -159,7 +159,7 @@ export const handlePrintPaymentRequest = (options: PrintPaymentRequestOptions) =
     <style>
         @page {
             size: A4 portrait;
-            margin: 18mm 20mm 15mm 20mm;
+            margin: 10mm 12mm 10mm 12mm;
         }
         * {
             box-sizing: border-box;
@@ -172,7 +172,7 @@ export const handlePrintPaymentRequest = (options: PrintPaymentRequestOptions) =
             line-height: 1.45;
             color: #111;
             margin: 0;
-            padding: 24px;
+            padding: 20px;
             background: #f5f5f7;
         }
         .page-container {
@@ -180,7 +180,7 @@ export const handlePrintPaymentRequest = (options: PrintPaymentRequestOptions) =
             min-height: 297mm;
             margin: 0 auto;
             background: #fff;
-            padding: 28mm 24mm 22mm 24mm;
+            padding: 14mm 12mm 14mm 12mm;
             box-shadow: 0 4px 18px rgba(0,0,0,0.1);
             position: relative;
         }
@@ -255,43 +255,51 @@ export const handlePrintPaymentRequest = (options: PrintPaymentRequestOptions) =
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 24px;
+            margin-bottom: 22px;
+            gap: 12px;
         }
         .header-left {
-            width: 53%;
+            flex: 1;
+            min-width: 0;
             line-height: 1.4;
         }
+        .company-name-row {
+            font-size: 13.5px;
+            white-space: nowrap;
+        }
         .company-name {
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: bold;
             text-transform: uppercase;
         }
         .company-address {
-            font-size: 13.5px;
+            font-size: 13px;
             margin-top: 4px;
             color: #222;
-        }
-        .header-right {
-            width: 47%;
-            text-align: center;
             line-height: 1.35;
         }
+        .header-right {
+            flex-shrink: 0;
+            text-align: center;
+            line-height: 1.35;
+            white-space: nowrap;
+        }
         .nation-title {
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.2px;
         }
         .nation-motto {
-            font-size: 13.5px;
+            font-size: 13px;
             font-weight: bold;
             margin-top: 3px;
         }
         .divider-line {
-            width: 140px;
+            width: 130px;
             height: 1px;
             background: #333;
-            margin: 5px auto 0 auto;
+            margin: 4px auto 0 auto;
         }
 
         /* TITLE */
@@ -413,7 +421,7 @@ export const handlePrintPaymentRequest = (options: PrintPaymentRequestOptions) =
         <!-- HEADER -->
         <div class="doc-header">
             <div class="header-left">
-                <div>Đơn vị: <span class="company-name">${companyName}</span></div>
+                <div class="company-name-row">Đơn vị: <span class="company-name">${companyName}</span></div>
                 <div class="company-address">Địa chỉ: ${companyAddress}</div>
             </div>
             <div class="header-right">
