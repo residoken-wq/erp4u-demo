@@ -1406,10 +1406,11 @@ const PurchasingPage: React.FC = () => {
                                         )
                                     },
                                     {
-                                        title: 'Ghi chú', width: 150, render: (r: any, _: any, index: number) => (
+                                        title: 'Ghi chú', width: 210, render: (r: any, _: any, index: number) => (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                                <Input
-                                                    placeholder="Ghi chú PO..."
+                                                <Input.TextArea
+                                                    autoSize={{ minRows: 1, maxRows: 3 }}
+                                                    placeholder="Ghi chú PO (in/NCC)..."
                                                     value={r.note}
                                                     onChange={(e) => {
                                                         const newItems = [...editingItems];
@@ -1418,8 +1419,8 @@ const PurchasingPage: React.FC = () => {
                                                     }}
                                                 />
                                                 <Input.TextArea
-                                                    rows={1}
-                                                    placeholder="Ghi chú NB..."
+                                                    autoSize={{ minRows: 1, maxRows: 3 }}
+                                                    placeholder="Ghi chú nội bộ (NB)..."
                                                     value={r.internal_note}
                                                     style={{ color: '#cf1322', fontSize: 12 }}
                                                     onChange={(e) => {

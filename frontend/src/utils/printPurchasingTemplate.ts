@@ -84,8 +84,30 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
             </table>
         `;
     } else if (template === 'OUTSOURCING') {
-        const priceHeaders = showPrice ? `<th>Đơn giá</th><th>Thành tiền</th>` : '';
+        const priceHeaders = showPrice ? `<th style="width: 9%;">Đơn giá</th><th style="width: 9%;">Thành tiền</th>` : '';
         const priceColspan = showPrice ? 2 : 0;
+
+        const colWidths = showPrice ? {
+            stt: '3.5%',
+            sku: '6%',
+            size: '7.5%',
+            colorMt: '7.5%',
+            colorMs: '7.5%',
+            desc: '28%',
+            qty: '5%',
+            embroidery: '5%',
+            note: '12%'
+        } : {
+            stt: '4%',
+            sku: '6.5%',
+            size: '9%',
+            colorMt: '9%',
+            colorMs: '9%',
+            desc: '33%',
+            qty: '6%',
+            embroidery: '6.5%',
+            note: '17%'
+        };
 
         const rows = currentPO?.items?.map((i: any, idx: number) => {
             const priceCells = showPrice ? `<td>${Number(i.unit_price || 0).toLocaleString()}</td><td>${Number(i.subtotal || 0).toLocaleString()}</td>` : '';
@@ -121,15 +143,15 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
             return `
             <tr>
                 <td>${idx + 1}</td>
-                <td class="left-align">${productSku || productName}</td>
+                <td class="left-align" style="word-break: break-all; overflow-wrap: anywhere; font-size: 11px; line-height: 1.2;">${productSku || productName}</td>
                 <td>${size}</td>
                 <td>${frontColor}</td>
                 <td>${backColor}</td>
-                <td class="left-align">${processingDesc}</td>
+                <td class="left-align" style="word-break: break-word; overflow-wrap: anywhere;">${processingDesc}</td>
                 <td>${Number(i.quantity).toLocaleString()}</td>
                 <td>${theuText}</td> 
                 ${priceCells}
-                <td>${i.note || ''}</td>
+                <td class="left-align" style="word-break: break-word; overflow-wrap: anywhere;">${i.note || ''}</td>
             </tr>
         `}).join('');
 
@@ -148,19 +170,19 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
             </div>
             <div class="title">ĐƠN ĐẶT HÀNG GIA CÔNG</div>
             <div style="margin-bottom:10px;"><b>Kính gửi:</b> ${supplierDisplayName}</div>
-                <table>
+                <table style="table-layout: fixed; width: 100%;">
                 <thead>
                     <tr>
-                        <th style="width: 5%;">STT</th>
-                        <th style="width: 12%;">Mã SKU</th>
-                        <th>Kích thước</th>
-                        <th>Màu MT</th>
-                        <th>Màu MS</th>
-                        <th>Mô tả sản xuất</th>
-                        <th>Số lượng</th>
-                        <th>Thêu/in</th>
+                        <th style="width: ${colWidths.stt};">STT</th>
+                        <th style="width: ${colWidths.sku};">Mã SKU</th>
+                        <th style="width: ${colWidths.size};">Kích thước</th>
+                        <th style="width: ${colWidths.colorMt};">Màu MT</th>
+                        <th style="width: ${colWidths.colorMs};">Màu MS</th>
+                        <th style="width: ${colWidths.desc};">Mô tả sản xuất</th>
+                        <th style="width: ${colWidths.qty};">Số lượng</th>
+                        <th style="width: ${colWidths.embroidery};">Thêu/in</th>
                         ${priceHeaders}
-                        <th style="width: 25%;">Ghi chú</th>
+                        <th style="width: ${colWidths.note};">Ghi chú</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>

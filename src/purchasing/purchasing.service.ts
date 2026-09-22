@@ -302,6 +302,7 @@ export class PurchasingService {
                     if (itemDTO.quantity !== undefined) poItem.quantity = Number(itemDTO.quantity);
                     if (itemDTO.unit_price !== undefined) poItem.unit_price = Number(itemDTO.unit_price);
                     if (itemDTO.note !== undefined) poItem.note = itemDTO.note; // Update Item Note
+                    if (itemDTO.internal_note !== undefined) poItem.internal_note = itemDTO.internal_note; // Update Internal Note
                     if (itemDTO.front_color !== undefined) poItem.front_color = itemDTO.front_color;
                     if (itemDTO.back_color !== undefined) poItem.back_color = itemDTO.back_color;
                     if (itemDTO.print_design_id !== undefined) {
