@@ -144,10 +144,10 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
             <tr>
                 <td>${idx + 1}</td>
                 <td class="left-align" style="word-break: break-all; overflow-wrap: anywhere; font-size: 11px; line-height: 1.2;">${productSku || productName}</td>
+                <td class="left-align" style="word-break: break-word; overflow-wrap: anywhere;">${processingDesc}</td>
                 <td>${size}</td>
                 <td>${frontColor}</td>
                 <td>${backColor}</td>
-                <td class="left-align" style="word-break: break-word; overflow-wrap: anywhere;">${processingDesc}</td>
                 <td>${Number(i.quantity).toLocaleString()}</td>
                 <td>${theuText}</td> 
                 ${priceCells}
@@ -175,10 +175,10 @@ export const handlePrintPO = (currentPO: any, packingList: any[], template: stri
                     <tr>
                         <th style="width: ${colWidths.stt};">STT</th>
                         <th style="width: ${colWidths.sku};">Mã SKU</th>
+                        <th style="width: ${colWidths.desc};">Mô tả sản xuất</th>
                         <th style="width: ${colWidths.size};">Kích thước</th>
                         <th style="width: ${colWidths.colorMt};">Màu MT</th>
                         <th style="width: ${colWidths.colorMs};">Màu MS</th>
-                        <th style="width: ${colWidths.desc};">Mô tả sản xuất</th>
                         <th style="width: ${colWidths.qty};">Số lượng</th>
                         <th style="width: ${colWidths.embroidery};">Thêu/in</th>
                         ${priceHeaders}
