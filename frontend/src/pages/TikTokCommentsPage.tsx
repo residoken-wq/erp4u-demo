@@ -8,8 +8,7 @@ import {
     SmileOutlined, FrownOutlined, MehOutlined, FilterOutlined,
     EyeOutlined, VideoCameraOutlined
 } from '@ant-design/icons';
-import axios from 'axios';
-import { API_URL } from '../config';
+import api from '../utils/api';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -68,9 +67,9 @@ const TikTokCommentsPage: React.FC = () => {
             if (filterVideoId) params.video_id = filterVideoId;
 
             const [commentsRes, statsRes, channelsRes] = await Promise.all([
-                axios.get(`${API_URL}/tiktok/comments`, { params }),
-                axios.get(`${API_URL}/tiktok/comments/stats`),
-                axios.get(`${API_URL}/tiktok/auth/channels`),
+                api.get('/tiktok/comments', { params }),
+                api.get('/tiktok/comments/stats'),
+                api.get('/tiktok/auth/channels'),
             ]);
             setComments(commentsRes.data);
             setStats(statsRes.data);
@@ -92,7 +91,7 @@ const TikTokCommentsPage: React.FC = () => {
         }
         setSyncing(true);
         try {
-            await axios.post(`${API_URL}/tiktok/comments/sync`, {
+            await api.post('/tiktok/comments/sync', {
                 channel_id: channelIdToSync,
                 video_id: videoIdToSync.trim(),
             });
@@ -110,7 +109,7 @@ const TikTokCommentsPage: React.FC = () => {
         if (!replyText.trim() || !selectedComment) return;
         setSendingReply(true);
         try {
-            await axios.post(`${API_URL}/tiktok/comments/${selectedComment.id}/reply`, {
+            await api.post(`/tiktok/comments/${selectedComment.id}/reply`, {
                 text: replyText,
             });
             message.success('Đã trả lời comment');

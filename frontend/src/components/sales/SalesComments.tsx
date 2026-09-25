@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { List, Avatar, Button, message, Tabs, Tag, Empty, Mentions } from 'antd';
 import { UserOutlined, MessageOutlined, EyeInvisibleOutlined, EyeOutlined, TeamOutlined, CustomerServiceOutlined, SendOutlined } from '@ant-design/icons';
-import axios from 'axios';
 import dayjs from 'dayjs';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
@@ -9,7 +8,6 @@ import 'react-quill/dist/quill.snow.css';
 // Note: quill-mention temporarily disabled due to react-quill conflict
 // TODO: Consider using @yaireo/tagify or custom implementation later
 
-import { API_URL } from '../../config';
 import api from '../../utils/api';
 import useMobile from '../../hooks/useMobile';
 import './SalesComments.css';

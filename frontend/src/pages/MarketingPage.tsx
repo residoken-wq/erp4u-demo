@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, Tag, Modal, Form, Input, Select, message, Space, Tooltip, Popconfirm, Row, Col, Statistic, Progress, Badge, Tabs, DatePicker } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined, MailOutlined, MessageOutlined, RocketOutlined, BarChartOutlined, TeamOutlined, ThunderboltOutlined, CommentOutlined, InboxOutlined } from '@ant-design/icons';
-import axios from 'axios';
-import { API_URL } from '../config';
+import api from '../utils/api';
 
 // Lazy load TikTok pages
 const TikTokInboxPage = React.lazy(() => import('./TikTokInboxPage'));
@@ -49,9 +48,9 @@ const MarketingPage: React.FC = () => {
         setLoading(true);
         try {
             const [campaignsRes, segmentsRes, statsRes] = await Promise.all([
-                axios.get(`${API_URL}/marketing/campaigns`),
-                axios.get(`${API_URL}/marketing/segments`),
-                axios.get(`${API_URL}/marketing/dashboard`),
+                api.get('/marketing/campaigns'),
+                api.get('/marketing/segments'),
+                api.get('/marketing/dashboard'),
             ]);
             setCampaigns(campaignsRes.data);
             setSegments(segmentsRes.data);
@@ -69,10 +68,10 @@ const MarketingPage: React.FC = () => {
     const handleSave = async (values: any) => {
         try {
             if (editingItem) {
-                await axios.put(`${API_URL}/marketing/campaigns/${editingItem.id}`, values);
+                await api.put(`/marketing/campaigns/${editingItem.id}`, values);
                 message.success('Cập nhật thành công');
             } else {
-                await axios.post(`${API_URL}/marketing/campaigns`, values);
+                await api.post('/marketing/campaigns', values);
                 message.success('Tạo chiến dịch thành công');
             }
             setIsModalOpen(false);
@@ -84,7 +83,7 @@ const MarketingPage: React.FC = () => {
 
     const handleDelete = async (id: number) => {
         try {
-            await axios.delete(`${API_URL}/marketing/campaigns/${id}`);
+            await api.delete(`/marketing/campaigns/${id}`);
             message.success('Đã xóa');
             fetchData();
         } catch (e) {
@@ -94,7 +93,7 @@ const MarketingPage: React.FC = () => {
 
     const handleStatusChange = async (id: number, status: string) => {
         try {
-            await axios.put(`${API_URL}/marketing/campaigns/${id}/status`, { status });
+            await api.put(`/marketing/campaigns/${id}/status`, { status });
             message.success('Cập nhật trạng thái thành công');
             fetchData();
         } catch (e) {

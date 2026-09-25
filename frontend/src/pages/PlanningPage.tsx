@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Card, Modal, Form, Input, InputNumber, DatePicker, Tabs, Button, message, Drawer, Space, Typography, Tag, Divider, Row, Col, Table, Statistic, Descriptions, Tooltip } from 'antd';
 import { ReloadOutlined, PlusOutlined, SettingOutlined, CalculatorOutlined, ShoppingCartOutlined, FileTextOutlined, DeleteOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import api from '../utils/api';
 import dayjs from 'dayjs';
-import { API_URL } from '../config';
 import useMobile from '../hooks/useMobile';
 
 // Components
@@ -49,9 +48,9 @@ const PlanningPage: React.FC = () => {
         setLoading(true);
         try {
             const [resSuggest, resPfos, resSuppliers] = await Promise.all([
-                axios.get(`${API_URL}/planning/pfo/suggestions`).catch(() => ({ data: [] })),
-                axios.get(`${API_URL}/planning`).catch(() => ({ data: [] })),
-                axios.get(`${API_URL}/suppliers`).catch(() => ({ data: [] }))
+                api.get('/planning/pfo/suggestions').catch(() => ({ data: [] })),
+                api.get('/planning').catch(() => ({ data: [] })),
+                api.get('/suppliers').catch(() => ({ data: [] }))
             ]);
             setPendingOrders(Array.isArray(resSuggest.data) ? resSuggest.data : []);
             
@@ -83,7 +82,7 @@ const PlanningPage: React.FC = () => {
                 end_date: values.dateRange[1].toISOString(),
                 orderCode: selectedOrders[0]?.order_code
             };
-            await axios.post(`${API_URL}/planning/pfo/generate`, payload);
+            await api.post('/planning/pfo/generate', payload);
             message.success('Đã phát hành Lệnh SX (PFO)');
             setIsCreateModalOpen(false); setSelectedRowKeys([]); fetchData(); setActiveTab('CONTROL_TOWER');
         } catch (e: any) { 
@@ -93,9 +92,9 @@ const PlanningPage: React.FC = () => {
 
     const fetchPfoDetails = async (id: number) => {
         try {
-            const res = await axios.get(`${API_URL}/planning/pfo/${id}`);
-            const poRes = await axios.get(`${API_URL}/planning/pfo/${id}/pos`).catch(() => ({ data: { pos_npl: [], pos_gc: [] } }));
-            const pxkRes = await axios.get(`${API_URL}/planning/pfo/${id}/pxks`).catch(() => ({ data: { pxk_npl: [], pxk_gc: [] } }));
+            const res = await api.get(`/planning/pfo/${id}`);
+            const poRes = await api.get(`/planning/pfo/${id}/pos`).catch(() => ({ data: { pos_npl: [], pos_gc: [] } }));
+            const pxkRes = await api.get(`/planning/pfo/${id}/pxks`).catch(() => ({ data: { pxk_npl: [], pxk_gc: [] } }));
             return { ...res.data, pos: poRes.data, pxks: pxkRes.data };
         } catch (e) {
             return null;
@@ -123,7 +122,7 @@ const PlanningPage: React.FC = () => {
         setUsePfoQtyForBom(usePfoQty);
         setLoading(true);
         try {
-            const previewRes = await axios.get(`${API_URL}/planning/pfo/${selectedPfo.id}/preview-btp?usePfoQty=${usePfoQty}&t=${Date.now()}`);
+            const previewRes = await api.get(`/planning/pfo/${selectedPfo.id}/preview-btp?usePfoQty=${usePfoQty}&t=${Date.now()}`);
             if (previewRes.data && previewRes.data.length > 0) {
                 setBtpPreviewData(previewRes.data);
                 
@@ -147,7 +146,7 @@ const PlanningPage: React.FC = () => {
         if (!selectedPfo) return;
         setLoading(true);
         try {
-            const res = await axios.post(`${API_URL}/planning/pfo/${selectedPfo.id}/calculate-bom`, { btpOverrides: overrides, usePfoQty });
+            const res = await api.post(`/planning/pfo/${selectedPfo.id}/calculate-bom`, { btpOverrides: overrides, usePfoQty });
             message.success(res.data.message || 'Đã bóc tách BOM thành công!');
             
             const newReqs = res.data.requirements || [];
@@ -169,7 +168,7 @@ const PlanningPage: React.FC = () => {
         if (!selectedPfo) return;
         setLoading(true);
         try {
-            const res = await axios.post(`${API_URL}/planning/pfo/${selectedPfo.id}/process-routing`, {
+            const res = await api.post(`/planning/pfo/${selectedPfo.id}/process-routing`, {
                 routing: routingData
             });
             message.success(res.data.message || 'Đã lưu phân công xưởng gia công!');
@@ -187,7 +186,7 @@ const PlanningPage: React.FC = () => {
         if (!selectedPfo) return;
         setLoading(true);
         try {
-            await axios.post(`${API_URL}/planning/pfo/${selectedPfo.id}/save-requirements`, { requirements: reqs });
+            await api.post(`/planning/pfo/${selectedPfo.id}/save-requirements`, { requirements: reqs });
             message.success('Đã lưu cấu hình vật tư');
             fetchData();
         } catch (e: any) {
@@ -201,9 +200,9 @@ const PlanningPage: React.FC = () => {
         setLoading(true);
         try {
             if (reqs && reqs.length > 0) {
-                await axios.post(`${API_URL}/planning/pfo/${selectedPfo.id}/save-requirements`, { requirements: reqs });
+                await api.post(`/planning/pfo/${selectedPfo.id}/save-requirements`, { requirements: reqs });
             }
-            const res = await axios.post(`${API_URL}/planning/pfo/${selectedPfo.id}/generate-pos`);
+            const res = await api.post(`/planning/pfo/${selectedPfo.id}/generate-pos`);
             message.success(res.data.message || 'Đã phát hành các Đơn đặt hàng (PO)');
             
             const details = await fetchPfoDetails(selectedPfo.id);
@@ -226,7 +225,7 @@ const PlanningPage: React.FC = () => {
             onOk: async () => {
                 setLoading(true);
                 try {
-                    const res = await axios.delete(`${API_URL}/planning/pfo/${selectedPfo.id}`);
+                    const res = await api.delete(`/planning/pfo/${selectedPfo.id}`);
                     message.success(res.data.message || 'Đã xóa Lệnh Sản Xuất');
                     setIsDrawerOpen(false);
                     setSelectedPfo(null);

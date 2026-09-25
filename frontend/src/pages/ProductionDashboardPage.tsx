@@ -5,9 +5,8 @@ import {
     WarningOutlined, TruckOutlined, ExperimentOutlined, ShopOutlined,
     RiseOutlined, FallOutlined
 } from '@ant-design/icons';
-import axios from 'axios';
+import api from '../utils/api';
 import dayjs from 'dayjs';
-import { API_URL } from '../config';
 
 const ProductionDashboardPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
@@ -20,10 +19,10 @@ const ProductionDashboardPage: React.FC = () => {
         setLoading(true);
         try {
             const [plansRes, posRes, qcRes, assignRes] = await Promise.all([
-                axios.get(`${API_URL}/planning`),
-                axios.get(`${API_URL}/purchasing`),
-                axios.get(`${API_URL}/qc/summary`).catch(() => ({ data: null })),
-                axios.get(`${API_URL}/production/assignments`).catch(() => ({ data: [] }))
+                api.get('/planning'),
+                api.get('/purchasing'),
+                api.get('/qc/summary').catch(() => ({ data: null })),
+                api.get('/production/assignments').catch(() => ({ data: [] }))
             ]);
             setPlans(Array.isArray(plansRes.data) ? plansRes.data : []);
             setPOs(Array.isArray(posRes.data) ? posRes.data : []);

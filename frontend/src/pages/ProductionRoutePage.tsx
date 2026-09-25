@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, message, Card, Modal, Form, Input, Select, Tag, Space, Steps, InputNumber, Row, Col, Checkbox, Popconfirm, Typography } from 'antd';
 import { ReloadOutlined, ExperimentOutlined, NodeIndexOutlined, DeleteOutlined, PlusOutlined, SaveOutlined, ArrowRightOutlined } from '@ant-design/icons';
-import axios from 'axios';
-import { API_URL } from '../config';
+import api from '../utils/api';
 
 const { Text } = Typography;
 
@@ -20,12 +19,12 @@ const ProductionRoutePage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-        const resProd = await axios.get(`${API_URL}/products`);
+        const resProd = await api.get('/products');
         // Chỉ lấy sản phẩm lẻ (ko phải combo)
         const prods = Array.isArray(resProd.data) ? resProd.data.filter((p:any) => !p.category?.includes('Combo')) : [];
         setProducts(prods);
 
-        const resSupp = await axios.get(`${API_URL}/suppliers`);
+        const resSupp = await api.get('/suppliers');
         const manu = Array.isArray(resSupp.data) ? resSupp.data.filter((s:any) => s.type !== 'MATERIAL') : [];
         setManufacturers(manu.map((m:any) => ({ label: m.name, value: m.id })));
     } catch(e) {}
@@ -39,7 +38,7 @@ const ProductionRoutePage: React.FC = () => {
       setCurrentProduct(product);
       try {
           // Lấy routing hiện tại
-          const res = await axios.get(`${API_URL}/products/${product.id}/routings`);
+          const res = await api.get(`/products/${product.id}/routings`);
           let routings = res.data;
           
           // Nếu chưa có, gợi ý quy trình chuẩn 5 bước
@@ -61,11 +60,11 @@ const ProductionRoutePage: React.FC = () => {
   // 3. Save Routing
   const handleSave = async (values: any) => {
       try {
-          await axios.post(`${API_URL}/products/${currentProduct.id}/routings`, values.routings);
+          await api.post(`/products/${currentProduct.id}/routings`, values.routings);
           message.success('Đã lưu quy trình sản xuất');
           setIsModalOpen(false);
           // Gọi API tính lại giá vốn để update cost_price
-          await axios.get(`${API_URL}/products/calculate-cost/${currentProduct.sku}`);
+          await api.get(`/products/calculate-cost/${currentProduct.sku}`);
       } catch(e) { message.error('Lỗi lưu'); }
   };
 

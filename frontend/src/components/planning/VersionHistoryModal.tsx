@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Table, Tag, Typography } from 'antd';
-import axios from 'axios';
+import api from '../../utils/api';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
-import { API_URL } from '../../config';
 
 interface VersionHistoryModalProps {
     planId: number;
@@ -25,7 +24,7 @@ const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({ planId, open,
     const fetchHistory = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/planning/${planId}/history`);
+            const res = await api.get(`/planning/${planId}/history`);
             setHistory(res.data);
         } catch (error) {
             console.error('Failed to fetch history:', error);

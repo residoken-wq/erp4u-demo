@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, Tag, Modal, Form, Input, Select, message, Space, Tooltip, Popconfirm, Statistic, Row, Col, Badge, Switch } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SyncOutlined, LinkOutlined, DisconnectOutlined, FacebookOutlined, ShopOutlined, TikTokOutlined, SettingOutlined } from '@ant-design/icons';
-import axios from 'axios';
-import { API_URL } from '../config';
+import api from '../utils/api';
 
 const { Option } = Select;
 
@@ -29,11 +28,11 @@ const SocialChannelsPage: React.FC = () => {
     const fetchChannels = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/social/channels`);
+            const res = await api.get('/social/channels');
             setChannels(res.data);
             // Fetch stats for each channel
             for (const channel of res.data) {
-                const statsRes = await axios.get(`${API_URL}/social/channels/${channel.id}/stats`);
+                const statsRes = await api.get(`/social/channels/${channel.id}/stats`);
                 setStats(prev => ({ ...prev, [channel.id]: statsRes.data }));
             }
         } catch (e) {
@@ -49,10 +48,10 @@ const SocialChannelsPage: React.FC = () => {
     const handleSave = async (values: any) => {
         try {
             if (editingItem) {
-                await axios.put(`${API_URL}/social/channels/${editingItem.id}`, values);
+                await api.put(`/social/channels/${editingItem.id}`, values);
                 message.success('Cập nhật thành công');
             } else {
-                await axios.post(`${API_URL}/social/channels`, values);
+                await api.post('/social/channels', values);
                 message.success('Thêm kênh thành công');
             }
             setIsModalOpen(false);
@@ -64,7 +63,7 @@ const SocialChannelsPage: React.FC = () => {
 
     const handleDelete = async (id: number) => {
         try {
-            await axios.delete(`${API_URL}/social/channels/${id}`);
+            await api.delete(`/social/channels/${id}`);
             message.success('Đã xóa');
             fetchChannels();
         } catch (e) {

@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, message, Card, Modal, Form, Input, Select, Tag, Space, Popconfirm, Row, Col, Divider, Drawer, List, DatePicker, InputNumber, Checkbox, Radio, Typography, Tooltip, Tabs, Statistic, Avatar, Segmented, Dropdown, Menu } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, BankOutlined, DollarOutlined, AppstoreOutlined, CalendarOutlined, StarFilled, StarOutlined, ShopOutlined, LinkOutlined, ReloadOutlined, HistoryOutlined, MoreOutlined, FilterOutlined, EnvironmentOutlined, PhoneOutlined, MailOutlined, FileTextOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import api from '../utils/api';
 import dayjs from 'dayjs';
-import { API_URL } from '../config';
 import useMobile from '../hooks/useMobile';
 import RichTextEditor from '../components/common/RichTextEditor';
 
@@ -39,10 +38,10 @@ const SuppliersPage: React.FC = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/suppliers`);
+            const res = await api.get('/suppliers');
             setData(Array.isArray(res.data) ? res.data : []);
             // Load NPL
-            const resMat = await axios.get(`${API_URL}/materials`);
+            const resMat = await api.get('/materials');
             if (Array.isArray(resMat.data)) setMaterials(resMat.data.map((m: any) => ({ label: `${m.code} - ${m.name} (${m.unit})`, value: m.id })));
         } catch (e) { message.error('Lỗi tải dữ liệu'); }
         setLoading(false);
@@ -53,14 +52,14 @@ const SuppliersPage: React.FC = () => {
     // 2. Main CRUD
     const handleSave = async (values: any) => {
         try {
-            if (editingItem) await axios.put(`${API_URL}/suppliers/${editingItem.id}`, values);
-            else await axios.post(`${API_URL}/suppliers`, values);
+            if (editingItem) await api.put(`/suppliers/${editingItem.id}`, values);
+            else await api.post('/suppliers', values);
             message.success('Thành công'); setIsModalOpen(false); fetchData();
         } catch (e) { message.error('Lỗi lưu'); }
     };
 
     const handleDelete = async (id: number) => {
-        try { await axios.delete(`${API_URL}/suppliers/${id}`); fetchData(); } catch (e) { message.error('Lỗi xóa'); }
+        try { await api.delete(`/suppliers/${id}`); fetchData(); } catch (e) { message.error('Lỗi xóa'); }
     };
 
     // DRAWER PRICE STATE REMOVED - MERGED INTO MAIN DRAWER
@@ -88,7 +87,7 @@ const SuppliersPage: React.FC = () => {
     const loadPOs = async (supplierId: number) => {
         try {
             // Fallback to fetch all and filter if no endpoint
-            const res = await axios.get(`${API_URL}/purchasing`);
+            const res = await api.get('/purchasing');
             const all = Array.isArray(res.data) ? res.data : [];
             setSupplierPOs(all.filter((p: any) => p.supplier_id === supplierId || p.supplier?.id === supplierId));
         } catch (e) { }
@@ -99,19 +98,19 @@ const SuppliersPage: React.FC = () => {
 
     const loadTransactions = async (supplierId: number) => {
         try {
-            const res = await axios.get(`${API_URL}/suppliers/${supplierId}/transactions`); // New API
+            const res = await api.get(`/suppliers/${supplierId}/transactions`); // New API
             setSupplierTransactions(res.data || []);
         } catch (e) { setSupplierTransactions([]); }
     }
 
     const loadPrices = async (id: number) => {
-        try { const res = await axios.get(`${API_URL}/suppliers/${id}`); setPriceList(res.data.price_list || []); } catch (e) { setPriceList([]); }
+        try { const res = await api.get(`/suppliers/${id}`); setPriceList(res.data.price_list || []); } catch (e) { setPriceList([]); }
     };
 
     const handleAddPrice = async () => {
         if (!selectedMatId || !inputPrice) return message.warning('Chọn NPL và nhập giá');
         try {
-            await axios.post(`${API_URL}/suppliers/${currentSupplier.id}/material-price`, {
+            await api.post(`/suppliers/${currentSupplier.id}/material-price`, {
                 material_id: selectedMatId,
                 price: inputPrice,
                 valid_from: dateRange?.[0], valid_to: dateRange?.[1],
@@ -127,7 +126,7 @@ const SuppliersPage: React.FC = () => {
     const handleRemovePrice = async (priceId: number) => {
         try {
             // Giả sử có API delete, nếu chưa có thì update controller
-            await axios.delete(`${API_URL}/suppliers/material-price/${priceId}`).catch(() => message.info('Backend cần thêm API xóa'));
+            await api.delete(`/suppliers/material-price/${priceId}`).catch(() => message.info('Backend cần thêm API xóa'));
             loadPrices(currentSupplier.id);
         } catch (e) { }
     };
@@ -268,7 +267,7 @@ const SuppliersPage: React.FC = () => {
         setIsDebtModalOpen(true);
         // Fetch Unpaid POs
         try {
-            const res = await axios.get(`${API_URL}/purchasing`); // Need filter by supplier & unpaid?
+            const res = await api.get('/purchasing'); // Need filter by supplier & unpaid?
             // Since we don't have a dedicated endpoint yet, filter on client side for now or add endpoint.
             // Requirement: "user vào NCC... chọn các PO chưa thanh toán"
             // Let's filter client side from purchasing list for simplicity or fetch specific.
@@ -330,7 +329,7 @@ const SuppliersPage: React.FC = () => {
 
             const totalAllocated = allocationData.reduce((sum, a) => sum + a.amount, 0);
 
-            await axios.post(`${API_URL}/finance/payment/bulk-po`, {
+            await api.post('/finance/payment/bulk-po', {
                 poCode: selectedDebtPOs.map((p: any) => p.id), // Send IDs array as fallback
                 amount: totalAllocated,
                 note: paymentNote,

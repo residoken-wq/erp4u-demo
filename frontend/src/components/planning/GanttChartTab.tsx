@@ -4,9 +4,8 @@ import { WarningOutlined, CheckCircleOutlined, ClockCircleOutlined, DragOutlined
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import axios from 'axios';
+import api from '../../utils/api';
 import dayjs from 'dayjs';
-import { API_URL } from '../../config';
 
 const { RangePicker } = DatePicker;
 
@@ -83,7 +82,7 @@ const GanttChartTab: React.FC<GanttChartTabProps> = ({ ganttPlans, setGanttPlans
             };
         }
         try {
-            await axios.post(`${API_URL}/planning/gantt/${planId}/config`, config);
+            await api.post(`/planning/gantt/${planId}/config`, config);
             return true;
         } catch { return false; }
     };

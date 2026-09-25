@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Table, Button, message, Card, Modal, Form, Input, Select, Tag, Popconfirm, Row, Col, Divider, Tabs, InputNumber, Tooltip, Space, Badge, Checkbox, DatePicker, Dropdown, Slider, Popover, Alert } from 'antd';
 import type { MenuProps } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DollarOutlined, ExperimentOutlined, AppstoreOutlined, BuildOutlined, SettingOutlined, SyncOutlined, LinkOutlined, TagOutlined, FileTextOutlined, SendOutlined, ForkOutlined, ScissorOutlined, FolderOpenOutlined, EyeOutlined, PrinterOutlined, StarOutlined, StarFilled, BranchesOutlined, WarningOutlined, CloseCircleOutlined, ApartmentOutlined, HistoryOutlined } from '@ant-design/icons';
-import axios from 'axios';
 import api from '../utils/api';
 import useMobile from '../hooks/useMobile';
 import usePermission from '../hooks/usePermission';
@@ -314,13 +313,8 @@ const ProductsPage: React.FC = () => {
             message.success(`Đã tạo biến thể mới: ${newSku}`);
             setIsVariantModalOpen(false);
             fetchData();
-        } catch (e) {
-            let errorMessage = "Đã xảy ra lỗi không xác định.";
-            if (axios.isAxiosError(e)) {
-                errorMessage = e.response?.data?.message || e.message;
-            } else if (e instanceof Error) {
-                errorMessage = e.message;
-            }
+        } catch (e: any) {
+            const errorMessage = e?.response?.data?.message || e?.message || "Đã xảy ra lỗi không xác định.";
             message.error(`Lỗi tạo biến thể: ${errorMessage}`);
         }
     }

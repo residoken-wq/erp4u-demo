@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Upload, Button, message, Popover } from 'antd';
 import { UploadOutlined, FileOutlined, DeleteOutlined, PaperClipOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons';
 import { API_URL } from '../../config';
-import axios from 'axios';
+import api from '../../utils/api';
 
 interface Props {
     value?: string[]; // Array of file URLs
@@ -48,7 +48,7 @@ const AttachmentUpload: React.FC<Props> = ({
 
         setUploading(true);
         try {
-            const res = await axios.post(`${API_URL}/upload/file`, formData, {
+            const res = await api.post('/upload/file', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             const newUrl = res.data.url;
@@ -72,7 +72,7 @@ const AttachmentUpload: React.FC<Props> = ({
             const filename = fileUrl.split('/').pop();
             if (filename) {
                 try {
-                    await axios.delete(`${API_URL}/upload/files/${encodeURIComponent(filename)}`);
+                    await api.delete(`/upload/files/${encodeURIComponent(filename)}`);
                 } catch (e) {
                     // Silently fail - file might already be deleted
                     console.warn('Could not delete physical file:', e);

@@ -5,7 +5,8 @@ import type { MenuProps } from 'antd';
 import {
     DesktopOutlined, PieChartOutlined, TeamOutlined, ShopOutlined, DropboxOutlined, CloudUploadOutlined,
     SettingOutlined, UserOutlined, LogoutOutlined, BankOutlined, CalendarOutlined, ShoppingCartOutlined, QuestionCircleOutlined, CodeOutlined, MenuOutlined, IdcardOutlined,
-    LinkOutlined, RocketOutlined, FacebookOutlined, NotificationOutlined, FolderOutlined, MessageOutlined, GlobalOutlined, PrinterOutlined, ExperimentOutlined, RobotOutlined
+    LinkOutlined, RocketOutlined, FacebookOutlined, NotificationOutlined, FolderOutlined, MessageOutlined, GlobalOutlined, PrinterOutlined, ExperimentOutlined, RobotOutlined,
+    SafetyCertificateOutlined
 } from '@ant-design/icons';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { Drawer } from 'antd'; // <--- Import Drawer
@@ -79,6 +80,7 @@ const ProductionDashboardPage = React.lazy(() => import('./pages/ProductionDashb
 const ProcessesPage = React.lazy(() => import('./pages/ProcessesPage'));
 const PrintReportDashboard = React.lazy(() => import('./pages/PrintReportDashboard'));
 const AiDashboardPage = React.lazy(() => import('./pages/AiDashboardPage'));
+const RbacLogPage = React.lazy(() => import('./pages/RbacLogPage'));
 
 
 function getItem(label: React.ReactNode, key: React.Key, icon?: React.ReactNode, children?: MenuItem[]): MenuItem {
@@ -123,12 +125,31 @@ const App: React.FC = () => {
         const userStr = localStorage.getItem('user');
 
         if (token && userStr) {
-            const user = JSON.parse(userStr);
-            setIsAuthenticated(true);
-            setCurrentUser(user);
-            const perms = user.permissions || [];
-            setPermissions(perms);
-            // axios.defaults.headers.common['Authorization'] = `Bearer ${token}`; // Handled by api interceptor
+            try {
+                const user = JSON.parse(userStr);
+                setIsAuthenticated(true);
+                setCurrentUser(user);
+                const perms = user.permissions || [];
+                setPermissions(perms);
+            } catch {
+                // Ignore parse error
+            }
+
+            // P0.9: Auth refresh on mount
+            api.get('/auth/me')
+                .then(res => {
+                    if (res.data) {
+                        localStorage.setItem('user', JSON.stringify(res.data));
+                        setCurrentUser(res.data);
+                        setPermissions(res.data.permissions || []);
+                        window.dispatchEvent(new Event('erp4u:auth-updated'));
+                    }
+                })
+                .catch(err => {
+                    // Network error: giữ token cũ trong RAM/localStorage, KHÔNG redirect login
+                    // 401: api interceptor đã xử lý (xóa token, redirect)
+                    console.warn('[App] Failed to refresh auth info from /auth/me:', err?.message);
+                });
         }
     }, []);
 
@@ -248,14 +269,22 @@ const App: React.FC = () => {
 
         // 9. Hệ thống
         if (hasPerm('USERS')) {
-            items.push(getItem('Hệ thống & Phân quyền', 'sub_sys', <SettingOutlined />, [
+            const systemChildren: MenuItem[] = [
                 getItem(<Link to="/users">Danh sách User</Link>, 'user_list'),
                 getItem(<Link to="/users/groups">Nhóm & Phân quyền</Link>, 'group_perm'),
                 getItem(<Link to="/announcements">Thông báo nội bộ</Link>, 'announcements'),
                 getItem(<Link to="/system/settings">Cấu hình Email (SMTP)</Link>, 'sys_smtp'),
                 getItem(<Link to="/system/logs">Nhật ký hoạt động</Link>, 'sys_logs'), // <--- Activity Log Menu
                 getItem(<Link to="/ai-dashboard">AI Dashboard</Link>, 'ai_dash', <RobotOutlined />),
-            ]));
+            ];
+
+            if (currentUser?.username === 'admin') {
+                systemChildren.push(
+                    getItem(<Link to="/system/rbac">🛡️ Nhật ký RBAC</Link>, 'sys_rbac', <SafetyCertificateOutlined />)
+                );
+            }
+
+            items.push(getItem('Hệ thống & Phân quyền', 'sub_sys', <SettingOutlined />, systemChildren));
         }
 
         return items;
@@ -420,6 +449,9 @@ const App: React.FC = () => {
                                                         <Route path="/announcements" element={<AnnouncementsPage />} />
                                                         <Route path="/system/settings" element={<SystemSettingsPage />} />
                                                         <Route path="/system/logs" element={<ActivityLogPage />} /> {/* <--- Activity Log Route */}
+                                                        {currentUser?.username === 'admin' && (
+                                                            <Route path="/system/rbac" element={<RbacLogPage />} />
+                                                        )}
                                                     </>
                                                 )}
 

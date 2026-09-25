@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Table, Button, Tag, message, Input, Select, Space, Card, Row, Col, Statistic, Tooltip } from 'antd';
 import { ReloadOutlined, SearchOutlined, AppstoreOutlined, TagsOutlined, ShoppingCartOutlined, ExclamationCircleOutlined, DollarOutlined } from '@ant-design/icons';
-import axios from 'axios';
-import { API_URL } from '../../config';
+import api from '../../utils/api';
 
 interface Props {
     isMobile?: boolean;
@@ -20,8 +19,8 @@ const ProductDemandDashboard: React.FC<Props> = ({ isMobile }) => {
         setLoading(true);
         try {
             const [demandRes, catRes] = await Promise.allSettled([
-                axios.get(`${API_URL}/planning/demand/gc`),
-                axios.get(`${API_URL}/categories`)
+                api.get('/planning/demand/gc'),
+                api.get('/categories')
             ]);
 
             if (demandRes.status === 'fulfilled') {

@@ -7,8 +7,7 @@ import {
     MessageOutlined, SendOutlined, SyncOutlined, UserOutlined,
     InboxOutlined, CheckCircleOutlined, ClockCircleOutlined
 } from '@ant-design/icons';
-import axios from 'axios';
-import { API_URL } from '../config';
+import api from '../utils/api';
 
 const { Text, Paragraph } = Typography;
 const { Search } = Input;
@@ -62,8 +61,8 @@ const TikTokInboxPage: React.FC = () => {
         setLoading(true);
         try {
             const [convRes, statsRes] = await Promise.all([
-                axios.get(`${API_URL}/tiktok/inbox/conversations`),
-                axios.get(`${API_URL}/tiktok/inbox/stats`),
+                api.get('/tiktok/inbox/conversations'),
+                api.get('/tiktok/inbox/stats'),
             ]);
             setConversations(convRes.data);
             setStats(statsRes.data);
@@ -76,7 +75,7 @@ const TikTokInboxPage: React.FC = () => {
     const syncConversations = async () => {
         setSyncing(true);
         try {
-            await axios.post(`${API_URL}/tiktok/inbox/sync`);
+            await api.post('/tiktok/inbox/sync');
             message.success('Đồng bộ hội thoại thành công');
             await fetchConversations();
         } catch (e: any) {
@@ -90,13 +89,13 @@ const TikTokInboxPage: React.FC = () => {
         setMsgLoading(true);
         try {
             // Sync first, then get local
-            await axios.post(`${API_URL}/tiktok/inbox/conversations/${conv.id}/sync`);
-            const res = await axios.get(`${API_URL}/tiktok/inbox/conversations/${conv.id}/messages`);
+            await api.post(`/tiktok/inbox/conversations/${conv.id}/sync`);
+            const res = await api.get(`/tiktok/inbox/conversations/${conv.id}/messages`);
             setMessages(res.data);
         } catch (e) {
             // Try local only
             try {
-                const res = await axios.get(`${API_URL}/tiktok/inbox/conversations/${conv.id}/messages`);
+                const res = await api.get(`/tiktok/inbox/conversations/${conv.id}/messages`);
                 setMessages(res.data);
             } catch {
                 setMessages([]);
@@ -109,12 +108,12 @@ const TikTokInboxPage: React.FC = () => {
         if (!replyText.trim() || !selectedConv) return;
         setSending(true);
         try {
-            await axios.post(`${API_URL}/tiktok/inbox/conversations/${selectedConv.id}/reply`, {
+            await api.post(`/tiktok/inbox/conversations/${selectedConv.id}/reply`, {
                 text: replyText,
             });
             setReplyText('');
             // Refresh messages
-            const res = await axios.get(`${API_URL}/tiktok/inbox/conversations/${selectedConv.id}/messages`);
+            const res = await api.get(`/tiktok/inbox/conversations/${selectedConv.id}/messages`);
             setMessages(res.data);
             message.success('Đã gửi tin nhắn');
         } catch (e: any) {

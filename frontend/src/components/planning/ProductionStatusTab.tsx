@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Steps, Card, Spin, message, Space, Tag, Popconfirm } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
-import axios from 'axios';
-
-import { API_URL } from '../../config';
+import api from '../../utils/api';
 
 interface ProductionStatusTabProps {
     planId: number;
@@ -16,7 +14,7 @@ const ProductionStatusTab: React.FC<ProductionStatusTabProps> = ({ planId }) => 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/planning/${planId}/production-status`);
+            const res = await api.get(`/planning/${planId}/production-status`);
             setData(res.data);
         } catch (error) {
             console.error('Failed to load production status', error);
@@ -34,7 +32,7 @@ const ProductionStatusTab: React.FC<ProductionStatusTabProps> = ({ planId }) => 
     const handleInitProduction = async () => {
         setLoading(true);
         try {
-            const res = await axios.post(`${API_URL}/planning/${planId}/init-production`);
+            const res = await api.post(`/planning/${planId}/init-production`);
             message.success(res.data.message);
             fetchData();
         } catch (error) {
@@ -47,7 +45,7 @@ const ProductionStatusTab: React.FC<ProductionStatusTabProps> = ({ planId }) => 
     const handleUpdateStepStatus = async (stepId: number, currentStatus: string) => {
         const nextStatus = currentStatus === 'PENDING' ? 'IN_PROGRESS' : 'COMPLETED';
         try {
-            await axios.put(`${API_URL}/production/steps/${stepId}/status`, { status: nextStatus });
+            await api.put(`/production/steps/${stepId}/status`, { status: nextStatus });
             message.success('Cập nhật trạng thái thành công');
             fetchData();
         } catch (error) {
@@ -57,7 +55,7 @@ const ProductionStatusTab: React.FC<ProductionStatusTabProps> = ({ planId }) => 
 
     const handleDeleteStep = async (stepId: number) => {
         try {
-            await axios.delete(`${API_URL}/production/steps/${stepId}`);
+            await api.delete(`/production/steps/${stepId}`);
             message.success('Đã xóa công đoạn');
             fetchData();
         } catch (error) {

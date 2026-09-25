@@ -42,7 +42,7 @@ export class ActivitySubscriber implements EntitySubscriberInterface {
     private shouldLog(targetName: any): boolean {
         // Exclude ActivityLog and maybe others
         const name = typeof targetName === 'function' ? targetName.name : targetName;
-        if (name === 'ActivityLog' || name === 'SystemConfig' || name === 'AnalyticsVisitor') return false;
+        if (name === 'ActivityLog' || name === 'SystemConfig' || name === 'AnalyticsVisitor' || name === 'RbacAccessLog') return false;
         return true;
     }
 

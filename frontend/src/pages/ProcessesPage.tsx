@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, message, Card, Modal, Form, Input, InputNumber, Popconfirm, Space, Tag } from 'antd';
 import { PlusOutlined, ReloadOutlined, EditOutlined, DeleteOutlined, ExperimentOutlined } from '@ant-design/icons';
-import axios from 'axios';
-import { API_URL } from '../config';
+import api from '../utils/api';
 
 const ProcessesPage: React.FC = () => {
   const [data, setData] = useState<any[]>([]);
@@ -14,7 +13,7 @@ const ProcessesPage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-        const res = await axios.get(`${API_URL}/processes`);
+        const res = await api.get('/processes');
         setData(res.data);
     } catch(e) { message.error('Lỗi tải dữ liệu'); }
     setLoading(false);
@@ -30,8 +29,8 @@ const ProcessesPage: React.FC = () => {
               standard_cost: values.standard_cost || 0
           };
 
-          if(editingItem) await axios.put(`${API_URL}/processes/${editingItem.id}`, payload);
-          else await axios.post(`${API_URL}/processes`, payload);
+          if(editingItem) await api.put(`/processes/${editingItem.id}`, payload);
+          else await api.post('/processes', payload);
           
           message.success('Thành công');
           setIsModalOpen(false); fetchData();
@@ -39,7 +38,7 @@ const ProcessesPage: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-      try { await axios.delete(`${API_URL}/processes/${id}`); fetchData(); } 
+      try { await api.delete(`/processes/${id}`); fetchData(); } 
       catch(e) { message.error('Không thể xóa (Đang được sử dụng)'); }
   };
 

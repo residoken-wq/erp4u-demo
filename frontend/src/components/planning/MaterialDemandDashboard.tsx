@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Space, Tag, message, Input } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
-import axios from 'axios';
-import { API_URL } from '../../config';
+import api from '../../utils/api';
 
 interface Props {
     isMobile?: boolean;
@@ -16,7 +15,7 @@ const MaterialDemandDashboard: React.FC<Props> = ({ isMobile }) => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/planning/demand/npl`);
+            const res = await api.get('/planning/demand/npl');
             setData(res.data);
         } catch (e) {
             message.error('Lỗi tải dữ liệu nhu cầu NPL');

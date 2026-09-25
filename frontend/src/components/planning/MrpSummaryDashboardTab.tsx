@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Select, DatePicker, Button, Tabs, Row, Col, Typography, Space, Tag, message } from 'antd';
 import { SearchOutlined, AppstoreOutlined, ScissorOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import api from '../../utils/api';
 import dayjs from 'dayjs';
-import { API_URL } from '../../config';
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
@@ -35,7 +34,7 @@ const MrpSummaryDashboardTab: React.FC<MrpSummaryDashboardTabProps> = ({ isMobil
                 params.customers = selectedCustomers.join(',');
             }
 
-            const res = await axios.get(`${API_URL}/planning/summary-dashboard`, { params });
+            const res = await api.get('/planning/summary-dashboard', { params });
             setMrpSummary(res.data.mrp_summary || []);
             setOutsourcingSummary(res.data.outsourcing_summary || []);
             setPlanCodes(res.data.plan_codes || []);

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, Tag, Modal, message, Space, Tooltip, Badge, Tabs, Select, DatePicker } from 'antd';
 import { SyncOutlined, EyeOutlined, CheckCircleOutlined, CloseCircleOutlined, ShoppingCartOutlined, FacebookOutlined, ShopOutlined, TikTokOutlined } from '@ant-design/icons';
-import axios from 'axios';
-import { API_URL } from '../config';
+import api from '../utils/api';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -37,13 +36,13 @@ const SocialOrdersPage: React.FC = () => {
     const fetchOrders = async () => {
         setLoading(true);
         try {
-            let url = `${API_URL}/social/orders`;
+            let url = '/social/orders';
             const params = new URLSearchParams();
             if (platformFilter) params.append('platform', platformFilter);
             if (statusFilter) params.append('status', statusFilter);
             if (params.toString()) url += `?${params.toString()}`;
 
-            const res = await axios.get(url);
+            const res = await api.get(url);
             setOrders(res.data);
         } catch (e) {
             message.error('Lỗi tải đơn hàng');
@@ -57,7 +56,7 @@ const SocialOrdersPage: React.FC = () => {
 
     const handleSync = async (orderId: number) => {
         try {
-            await axios.post(`${API_URL}/social/orders/${orderId}/sync`);
+            await api.post(`/social/orders/${orderId}/sync`);
             message.success('Đồng bộ thành công');
             fetchOrders();
         } catch (e: any) {

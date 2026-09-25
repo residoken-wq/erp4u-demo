@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, message, Card, Modal, Form, Input, InputNumber, Popconfirm, Space } from 'antd';
 import { ReloadOutlined, PlusOutlined, EditOutlined, DeleteOutlined, PercentageOutlined, AppstoreOutlined } from '@ant-design/icons';
-import axios from 'axios';
-import { API_URL } from '../config';
+import api from '../utils/api';
 
 const CategoriesPage: React.FC = () => {
   const [data, setData] = useState<any[]>([]);
@@ -13,7 +12,7 @@ const CategoriesPage: React.FC = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    try { const res = await axios.get(`${API_URL}/categories`); setData(res.data); } 
+    try { const res = await api.get('/categories'); setData(res.data); } 
     catch(e) { message.error('Lỗi tải dữ liệu'); }
     setLoading(false);
   };
@@ -22,8 +21,8 @@ const CategoriesPage: React.FC = () => {
 
   const handleSave = async (values: any) => {
       try {
-          if(editingItem) await axios.put(`${API_URL}/categories/${editingItem.id}`, values);
-          else await axios.post(`${API_URL}/categories`, values);
+          if(editingItem) await api.put(`/categories/${editingItem.id}`, values);
+          else await api.post('/categories', values);
           message.success('Thành công. Giá sản phẩm sẽ được tự động cập nhật!');
           setIsModalOpen(false); fetchData();
       } catch(e: any) { message.error(e.response?.data?.message || 'Lỗi lưu'); }
@@ -31,14 +30,14 @@ const CategoriesPage: React.FC = () => {
 
   const handleSyncSize = async (id: number) => {
       try { 
-          const res = await axios.post(`${API_URL}/categories/${id}/sync-size`); 
+          const res = await api.post(`/categories/${id}/sync-size`); 
           message.success(res.data.message || 'Đồng bộ thành công');
       } 
       catch(e: any) { message.error(e.response?.data?.message || 'Lỗi đồng bộ'); }
   };
 
   const handleDelete = async (id: number) => {
-      try { await axios.delete(`${API_URL}/categories/${id}`); fetchData(); } 
+      try { await api.delete(`/categories/${id}`); fetchData(); } 
       catch(e) { message.error('Không thể xóa danh mục đang có sản phẩm'); }
   };
 

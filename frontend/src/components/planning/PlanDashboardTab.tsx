@@ -4,8 +4,7 @@ import { DollarOutlined, ShoppingCartOutlined, ScissorOutlined, TruckOutlined, A
 import dayjs from 'dayjs';
 import ProductionStatusTab from './ProductionStatusTab';
 import VersionHistoryModal from './VersionHistoryModal';
-import axios from 'axios';
-import { API_URL } from '../../config';
+import api from '../../utils/api';
 
 const { Option } = Select;
 
@@ -42,7 +41,7 @@ const PlanDashboardTab: React.FC<PlanDashboardTabProps> = ({
 
     const handleSyncBOD = async (planId: number) => {
         try {
-            await axios.post(`${API_URL}/planning/${planId}/sync-bod-followup`);
+            await api.post(`/planning/${planId}/sync-bod-followup`);
             alert('Đồng bộ thành công');
         } catch (error) {
             alert('Đồng bộ thất bại');

@@ -122,6 +122,7 @@ import { Category } from './categories/category.entity';
 import { User } from './users/entities/user.entity';
 import { UserGroup } from './users/entities/user-group.entity';
 import { GroupPermission } from './users/entities/group-permission.entity';
+import { RbacAccessLog } from './auth/entities/rbac-access-log.entity';
 import { SystemConfig } from './system/system-config.entity';
 import { ApiToken } from './system/entities/api-token.entity';
 import { ContractTemplate } from './system/contract-template.entity';
@@ -218,7 +219,7 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
             Supplier, SupplierMaterial, SupplierContact,
             Customer, CustomerContact, CustomerComment, CustomerCredit,
             ProductionFulfillmentOrder, PfoMaterialRequirement, PfoMilestone, PfoQcRecord, Process, Category,
-            User, UserGroup, GroupPermission,
+            User, UserGroup, GroupPermission, RbacAccessLog,
             SystemConfig, ActivityLog, ApiToken,
             BlogPost,
             Employee, Attendance, LeaveRequest, LeaveEntitlement, AssetAssignment, Payslip, TrainingPlan, WorkShift,

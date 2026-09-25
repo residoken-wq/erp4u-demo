@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
  * Hook phân quyền CRUD cho từng module.
@@ -11,13 +11,21 @@ import { useMemo } from 'react';
  * // Sử dụng:
  * {canCreate && <Button>Thêm mới</Button>}
  */
-const usePermission = (moduleCode: string) => {
-    return useMemo(() => {
-        const userStr = localStorage.getItem('user');
-        if (!userStr) {
-            return { canView: false, canCreate: false, canUpdate: false, canDelete: false, canViewCost: false };
-        }
+export interface PermissionFlags {
+    canView: boolean;
+    canCreate: boolean;
+    canUpdate: boolean;
+    canDelete: boolean;
+    canViewCost: boolean;
+}
 
+const getPermissionFlags = (moduleCode: string): PermissionFlags => {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) {
+        return { canView: false, canCreate: false, canUpdate: false, canDelete: false, canViewCost: false };
+    }
+
+    try {
         const user = JSON.parse(userStr);
 
         // Admin bypass tất cả
@@ -39,7 +47,34 @@ const usePermission = (moduleCode: string) => {
             canDelete: !!(perm.can_delete === true || perm.can_delete === 1),
             canViewCost: !!(perm.view_cost_price === true || perm.view_cost_price === 1),
         };
-    }, [moduleCode]);
+    } catch {
+        return { canView: false, canCreate: false, canUpdate: false, canDelete: false, canViewCost: false };
+    }
 };
 
+const usePermission = (moduleCode: string): PermissionFlags => {
+    const [perms, setPerms] = useState<PermissionFlags>(() => getPermissionFlags(moduleCode));
+
+    useEffect(() => {
+        const update = () => {
+            setPerms(getPermissionFlags(moduleCode));
+        };
+
+        // Recompute on mount / moduleCode change
+        update();
+
+        window.addEventListener('erp4u:auth-updated', update);
+        window.addEventListener('storage', update);
+
+        return () => {
+            window.removeEventListener('erp4u:auth-updated', update);
+            window.removeEventListener('storage', update);
+        };
+    }, [moduleCode]);
+
+    return perms;
+};
+
+export { usePermission };
 export default usePermission;
+

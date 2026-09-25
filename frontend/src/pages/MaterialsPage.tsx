@@ -1,10 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Table, Tag, Button, message, Card, Row, Col, Modal, Form, Input, InputNumber, Select, Popconfirm, Space, Divider, Tabs, Tooltip } from 'antd';
 import { ReloadOutlined, PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined, SearchOutlined } from '@ant-design/icons';
-import axios from 'axios';
-
-import { API_URL } from '../config'; 
-const API = `${API_URL}/materials`;
+import api from '../utils/api';
 
 const MaterialsPage: React.FC = () => {
   const [data, setData] = useState<any[]>([]);
@@ -20,7 +17,7 @@ const MaterialsPage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try { 
-        const res = await axios.get(API); 
+        const res = await api.get('/materials'); 
         // Đảm bảo data luôn là mảng
         setData(Array.isArray(res.data) ? res.data : []); 
     } catch (e) { 
@@ -34,10 +31,10 @@ const MaterialsPage: React.FC = () => {
   const handleSave = async (values: any) => {
     try {
       if (editingItem) {
-        await axios.put(`${API}/${editingItem.id}`, values);
+        await api.put(`/materials/${editingItem.id}`, values);
         message.success('Cập nhật thành công');
       } else {
-        await axios.post(API, values);
+        await api.post('/materials', values);
         message.success('Thêm mới thành công');
       }
       setIsModalOpen(false);
@@ -46,7 +43,7 @@ const MaterialsPage: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    try { await axios.delete(`${API}/${id}`); message.success('Đã xóa'); fetchData(); } 
+    try { await api.delete(`/materials/${id}`); message.success('Đã xóa'); fetchData(); } 
     catch (e) { message.error('Xóa thất bại'); }
   };
 
