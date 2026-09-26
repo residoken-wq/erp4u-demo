@@ -117,7 +117,7 @@ const PortalSupplierDashboard: React.FC = () => {
         setNplModalOpen(true);
         setNplLoading(true);
         try {
-            const res = await axios.get(`${API_URL}/purchasing/${poId}/outsourcing-materials`);
+            const res = await axios.get(`${API_URL}/purchasing/supplier-portal/${uuid}/outsourcing-materials/${poId}`);
             setNplData(res.data || []);
         } catch (e: any) {
             message.error('Không thể tải danh sách NPL');

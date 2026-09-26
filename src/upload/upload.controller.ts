@@ -252,7 +252,7 @@ export class UploadController {
     return this.uploadService.setWatermarkImage(file, 'watermark_b2b_config');
   }
 
-  @Perm('CMS', 'view')
+  @Public()
   @Get('watermark/b2b/config')
   async getWatermarkB2BConfig() {
     return this.uploadService.getWatermarkConfig('watermark_b2b_config');

@@ -1198,4 +1198,18 @@ export class PurchasingService {
             qcLogs
         };
     }
+
+    async getSupplierPortalOutsourcingMaterials(uuid: string, poId: number) {
+        const supplier = await this.poRepo.manager.findOne('Supplier', { where: { uuid } }) as any;
+        if (!supplier) throw new NotFoundException('Không tìm thấy Supplier hoặc link đã hết hạn');
+
+        const po = await this.poRepo.findOne({
+            where: { id: Number(poId), supplier_id: supplier.id }
+        });
+        if (!po) {
+            throw new NotFoundException('Không tìm thấy đơn mua hàng hoặc đơn không thuộc nhà cung cấp này');
+        }
+
+        return this.getOutsourcingMaterials(Number(poId));
+    }
 }
