@@ -1,3 +1,4 @@
+import { AuthOnly, Perm } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { AnnouncementsService } from './announcements.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -10,6 +11,7 @@ export class AnnouncementsController {
 
     // ==================== ADMIN ENDPOINTS ====================
 
+    @AuthOnly()
     @Get()
     findAll(
         @Query('type') type?: AnnouncementType,
@@ -21,11 +23,13 @@ export class AnnouncementsController {
         });
     }
 
+    @AuthOnly()
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.service.findOne(+id);
     }
 
+    @Perm('USERS', 'create')
     @Post()
     create(@Body() data: any, @Request() req: any) {
         return this.service.create({
@@ -34,11 +38,13 @@ export class AnnouncementsController {
         });
     }
 
+    @Perm('USERS', 'update')
     @Put(':id')
     update(@Param('id') id: string, @Body() data: any) {
         return this.service.update(+id, data);
     }
 
+    @Perm('USERS', 'delete')
     @Delete(':id')
     delete(@Param('id') id: string) {
         return this.service.delete(+id);
@@ -49,6 +55,7 @@ export class AnnouncementsController {
     /**
      * Lấy announcements đang hiệu lực cho user hiện tại
      */
+    @AuthOnly()
     @Get('user/active')
     findActiveForCurrentUser(@Request() req: any) {
         // Lấy department từ user profile nếu có
@@ -59,6 +66,7 @@ export class AnnouncementsController {
     /**
      * Lấy announcements chưa đọc cho user hiện tại
      */
+    @AuthOnly()
     @Get('user/unread')
     findUnreadForCurrentUser(@Request() req: any) {
         const userDepartment = req.user.department;
@@ -68,6 +76,7 @@ export class AnnouncementsController {
     /**
      * Đếm số announcements chưa đọc
      */
+    @AuthOnly()
     @Get('user/unread-count')
     getUnreadCount(@Request() req: any) {
         const userDepartment = req.user.department;
@@ -77,6 +86,7 @@ export class AnnouncementsController {
     /**
      * Đánh dấu announcement đã đọc
      */
+    @Perm('USERS', 'create')
     @Post(':id/read')
     markAsRead(@Param('id') id: string, @Request() req: any) {
         return this.service.markAsRead(+id, req.user.userId);
@@ -85,6 +95,7 @@ export class AnnouncementsController {
     /**
      * Đánh dấu tất cả announcements đã đọc
      */
+    @Perm('USERS', 'create')
     @Post('user/read-all')
     markAllAsRead(@Request() req: any) {
         return this.service.markAllAsRead(req.user.userId);

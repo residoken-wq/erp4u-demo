@@ -1,3 +1,4 @@
+import { Perm } from './permissions.decorator';
 import { Controller, Get, Put, Body, Query, UseGuards, Req } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { SuperAdminGuard } from './super-admin.guard';
@@ -12,12 +13,14 @@ export class RbacController {
     private readonly logService: RbacAccessLogService,
   ) {}
 
+  @Perm('SYSTEM', 'view')
   @Get('mode')
   async getMode() {
     const mode = await this.rbacModeService.get();
     return { mode };
   }
 
+  @Perm('SYSTEM', 'update')
   @Put('mode')
   async setMode(@Body() body: { mode: string }, @Req() req: any) {
     const username = req.user?.username || 'admin';
@@ -25,6 +28,7 @@ export class RbacController {
     return { mode };
   }
 
+  @Perm('SYSTEM', 'view')
   @Get('report')
   async getReport(
     @Query('from') from?: string,
@@ -34,6 +38,7 @@ export class RbacController {
     return this.logService.getReport(from, to, decision);
   }
 
+  @Perm('SYSTEM', 'view')
   @Get('unclassified')
   async getUnclassified() {
     return this.logService.getUnclassifiedRoutes();

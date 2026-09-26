@@ -3,7 +3,7 @@ import { InventoryService } from './inventory.service';
 import { CreateInventoryDto } from './create-inventory.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
-import { RequirePermission } from '../auth/permissions.decorator';
+import { RequirePermission, Perm } from '../auth/permissions.decorator';
 
 @Controller('inventory')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -43,6 +43,7 @@ export class InventoryController {
   }
 
   // API Chuyển kho
+  @Perm('INVENTORY', 'create')
   @Post('transfer')
   async transfer(@Body() body: any, @Req() req: any) {
     return this.inventoryService.transferStock(
@@ -53,6 +54,7 @@ export class InventoryController {
   }
 
   // API Chuyển đổi BTP
+  @Perm('INVENTORY', 'create')
   @Post('convert-btp')
   async convertBtp(@Body() body: { sourceSku: string, targetSku: string, quantity: number }, @Req() req: any) {
     return this.inventoryService.convertBtp(
@@ -62,38 +64,46 @@ export class InventoryController {
   }
 
   // --- GOODS RECEIPT API ---
+  @Perm('INVENTORY', 'create')
   @Post('goods-receipt/draft')
   async createDraft(@Body() body: any) {
     return this.inventoryService.createDraftReceipt(body);
   }
 
+  @Perm('INVENTORY', 'view')
   @Get('goods-receipt/pending')
   getPendingGoodsReceipts() { return this.inventoryService.getPendingReceipts(); }
 
+  @Perm('INVENTORY', 'view')
   @Get('goods-receipt/po/:poId')
   getReceiptsByPo(@Param('poId') poId: number) { return this.inventoryService.getReceiptsByPo(poId); }
 
+  @Perm('INVENTORY', 'create')
   @Post('goods-receipt/:id/confirm')
   async confirm(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     return this.inventoryService.confirmReceipt(Number(id), body, 'KHO_NPL', req.user?.full_name || req.user?.username || 'System');
   }
 
+  @Perm('INVENTORY', 'delete')
   @Delete('goods-receipt/:id')
   async deleteReceipt(@Param('id') id: string) {
     return this.inventoryService.deleteDraftReceipt(Number(id));
   }
 
   // --- EXPORT CONFIRMATION API ---
+  @Perm('INVENTORY', 'view')
   @Get('deliveries/pending')
   async getPendingDeliveries() {
     return this.inventoryService.getPendingDeliveries();
   }
 
+  @Perm('INVENTORY', 'view')
   @Get('deliveries/completed')
   async getCompletedDeliveries() {
     return this.inventoryService.getCompletedDeliveries();
   }
 
+  @Perm('INVENTORY', 'create')
   @Post('deliveries/:id/confirm')
   async confirmDelivery(
     @Param('id') id: string,
@@ -104,21 +114,25 @@ export class InventoryController {
   }
 
   // --- SHIPPING CARRIERS API ---
+  @Perm('INVENTORY', 'view')
   @Get('shipping-carriers')
   async getShippingCarriers() {
     return this.inventoryService.getAllShippingCarriers();
   }
 
+  @Perm('INVENTORY', 'create')
   @Post('shipping-carriers')
   async createShippingCarrier(@Body() body: any) {
     return this.inventoryService.createShippingCarrier(body);
   }
 
+  @Perm('INVENTORY', 'update')
   @Put('shipping-carriers/:id')
   async updateShippingCarrier(@Param('id') id: string, @Body() body: any) {
     return this.inventoryService.updateShippingCarrier(Number(id), body);
   }
 
+  @Perm('INVENTORY', 'delete')
   @Delete('shipping-carriers/:id')
   async deleteShippingCarrier(@Param('id') id: string) {
     return this.inventoryService.deleteShippingCarrier(Number(id));
@@ -140,16 +154,19 @@ export class InventoryController {
     return this.inventoryService.updateGoodsIssue(Number(id), body);
   }
 
+  @Perm('INVENTORY', 'view')
   @Get('goods-issue/unlinked/:pfoId')
   async getUnlinkedIssues(@Param('pfoId') pfoId: string) {
     return this.inventoryService.getUnlinkedIssues(Number(pfoId));
   }
 
+  @Perm('INVENTORY', 'create')
   @Post('goods-issue/:id/link-po')
   async linkGoodsIssueToPo(@Param('id') id: string, @Body('po_id') poId: number) {
     return this.inventoryService.linkGoodsIssueToPo(Number(id), poId);
   }
 
+  @Perm('INVENTORY', 'view')
   @Get('goods-issue')
   async getGoodsIssues(@Query('po_id') poId?: string, @Query('supplier_id') supplierId?: string) {
     const query: any = {};
@@ -158,16 +175,19 @@ export class InventoryController {
     return this.inventoryService.getGoodsIssues(query);
   }
 
+  @Perm('INVENTORY', 'view')
   @Get('goods-issue/:id')
   async getGoodsIssueDetail(@Param('id') id: string) {
     return this.inventoryService.getGoodsIssueDetail(Number(id));
   }
 
+  @Perm('INVENTORY', 'create')
   @Post('goods-issue/:id/confirm')
   async confirmGoodsIssue(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     return this.inventoryService.confirmGoodsIssue(Number(id), req.user?.full_name || req.user?.username || 'System', body);
   }
 
+  @Perm('INVENTORY', 'create')
   @Post('goods-issue/:id/delivered')
   async markGoodsIssueDelivered(@Param('id') id: string) {
     return this.inventoryService.markGoodsIssueDelivered(Number(id));
@@ -183,11 +203,13 @@ export class InventoryController {
   // --- SUPPLIER STOCKS ---
   // ===========================================
 
+  @Perm('INVENTORY', 'view')
   @Get('supplier-stocks/all')
   async getAllSupplierStocks() {
     return this.inventoryService.getAllSupplierStocks();
   }
 
+  @Perm('INVENTORY', 'view')
   @Get('supplier-stocks/:supplierId')
   async getSupplierStocks(
     @Param('supplierId') supplierId: string,

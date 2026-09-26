@@ -14,8 +14,10 @@ import { RbacGuard } from './rbac.guard';
 import { RbacModeService } from './rbac-mode.service';
 import { RbacAccessLogService } from './rbac-access-log.service';
 import { PermissionCacheService } from './permission-cache.service';
+import { RbacSeedService } from './rbac-seed.service';
 import { GroupPermission } from '../users/entities/group-permission.entity';
 import { User } from '../users/entities/user.entity';
+import { UserGroup } from '../users/entities/user-group.entity';
 import { SystemConfig } from '../system/system-config.entity';
 import { RbacAccessLog } from './entities/rbac-access-log.entity';
 
@@ -27,7 +29,7 @@ import { RbacAccessLog } from './entities/rbac-access-log.entity';
       secret: 'ERP4U_SECRET_KEY',
       signOptions: { expiresIn: '1d' }, // Token hết hạn sau 1 ngày
     }),
-    TypeOrmModule.forFeature([GroupPermission, User, SystemConfig, RbacAccessLog]),
+    TypeOrmModule.forFeature([GroupPermission, User, UserGroup, SystemConfig, RbacAccessLog]),
   ],
   providers: [
     AuthService,
@@ -37,6 +39,7 @@ import { RbacAccessLog } from './entities/rbac-access-log.entity';
     RbacModeService,
     PermissionCacheService,
     RbacAccessLogService,
+    RbacSeedService,
     {
       provide: APP_GUARD,
       useClass: RbacGuard,
@@ -52,6 +55,7 @@ import { RbacAccessLog } from './entities/rbac-access-log.entity';
     RbacModeService,
     PermissionCacheService,
     RbacAccessLogService,
+    RbacSeedService,
     TypeOrmModule,
   ],
 })

@@ -46,23 +46,23 @@ const ProfilePage: React.FC = () => {
 
     const [leaveBalance, setLeaveBalance] = useState<any>(null);
 
-    const loadEmployeeData = async (userId: number) => {
+    const loadEmployeeData = async (_userId?: number) => {
         setLoading(true);
         try {
-            const empRes = await api.get(`/hr/employees/by-user/${userId}`);
+            const empRes = await api.get('/hr/me');
             const emp = empRes.data;
             setEmployee(emp);
 
             if (emp) {
                 const [attRes, leaveRes, payRes, assetRes, balRes] = await Promise.all([
-                    api.get(`/hr/attendances?employee_id=${emp.id}`),
-                    api.get('/hr/leaves'),
-                    api.get(`/hr/payslips?employee_id=${emp.id}`),
-                    api.get(`/hr/assets?employee_id=${emp.id}`),
-                    api.get(`/hr/balance/${emp.id}?year=${new Date().getFullYear()}`).catch(() => ({ data: null })),
+                    api.get('/hr/me/attendances'),
+                    api.get('/hr/me/leaves'),
+                    api.get('/hr/me/payslips'),
+                    api.get('/hr/me/assets'),
+                    api.get(`/hr/me/balance?year=${new Date().getFullYear()}`).catch(() => ({ data: null })),
                 ]);
                 setAttendances(attRes.data || []);
-                const myLeaves = (leaveRes.data || []).filter((l: any) => l.employee_id === emp.id);
+                const myLeaves = leaveRes.data || [];
                 setLeaves(myLeaves);
                 setPayslips(payRes.data || []);
                 setAssets(assetRes.data || []);
@@ -95,7 +95,7 @@ const ProfilePage: React.FC = () => {
     const handleCheckIn = async () => {
         if (!employee) return;
         try {
-            await api.post('/hr/check-in', { employee_id: employee.id });
+            await api.post('/hr/me/check-in');
             message.success('Check-in thành công!');
             loadEmployeeData(currentUser.id);
         } catch (e) { message.error('Lỗi check-in'); }
@@ -104,7 +104,7 @@ const ProfilePage: React.FC = () => {
     const handleCheckOut = async () => {
         if (!employee) return;
         try {
-            await api.post('/hr/check-out', { employee_id: employee.id });
+            await api.post('/hr/me/check-out');
             message.success('Check-out thành công!');
             loadEmployeeData(currentUser.id);
         } catch (e) { message.error('Lỗi check-out'); }
@@ -113,8 +113,7 @@ const ProfilePage: React.FC = () => {
     const handleRequestLeave = async (values: any) => {
         if (!employee) return;
         try {
-            await api.post('/hr/leaves', {
-                employee_id: employee.id,
+            await api.post('/hr/me/leaves', {
                 leave_type: 'ANNUAL',
                 start_date: values.start_date.format('YYYY-MM-DD'),
                 end_date: values.end_date.format('YYYY-MM-DD'),

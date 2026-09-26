@@ -1,3 +1,4 @@
+import { Perm, AnyPerm, AuthOnly } from '../auth/permissions.decorator';
 import { Controller, Post, Get, Delete, Param, Res, Body, UseInterceptors, UploadedFile, BadRequestException, Query } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
@@ -26,6 +27,7 @@ export class UploadController {
     @InjectRepository(SystemConfig) private configRepo: Repository<SystemConfig>,
   ) { }
 
+  @Perm('CMS', 'view')
   @Get('list')
   async listFiles(@Query('source') source?: string) {
     const uploadDir = path.join(process.cwd(), 'uploads');
@@ -51,6 +53,7 @@ export class UploadController {
   }
 
   // --- IMAGE USAGE TRACKING ---
+  @Perm('CMS', 'view')
   @Get('usage')
   async getImageUsage() {
     const usageMap: Record<string, Array<{ type: string; id?: number; label: string }>> = {};
@@ -143,6 +146,7 @@ export class UploadController {
     return usageMap;
   }
 
+  @AnyPerm(['INVENTORY', 'create'], ['PRODUCT', 'create'])
   @Post('materials')
   @UseInterceptors(FileInterceptor('file'))
   async uploadMaterials(@UploadedFile() file: Express.Multer.File) {
@@ -150,6 +154,7 @@ export class UploadController {
     return this.uploadService.importMaterials(file.buffer);
   }
 
+  @AuthOnly()
   @Post('image')
   @UseInterceptors(FileInterceptor('file'))
   async uploadImage(@UploadedFile() file: Express.Multer.File, @Body('source') source?: string) {
@@ -157,6 +162,7 @@ export class UploadController {
     return this.uploadService.uploadImage(file, source);
   }
 
+  @Perm('PRODUCT', 'create')
   @Post('products')
   @UseInterceptors(FileInterceptor('file'))
   async uploadProducts(@UploadedFile() file: Express.Multer.File) {
@@ -164,6 +170,7 @@ export class UploadController {
     return this.uploadService.importProducts(file.buffer);
   }
 
+  @AnyPerm(['INVENTORY', 'create'], ['PRODUCT', 'create'])
   @Post('boms')
   @UseInterceptors(FileInterceptor('file'))
   async uploadBoms(@UploadedFile() file: Express.Multer.File) {
@@ -171,6 +178,7 @@ export class UploadController {
     return this.uploadService.importBoms(file.buffer);
   }
 
+  @Perm('PRODUCT', 'create')
   @Post('combos')
   @UseInterceptors(FileInterceptor('file'))
   async uploadCombos(@UploadedFile() file: Express.Multer.File) {
@@ -179,6 +187,7 @@ export class UploadController {
   }
 
   // --- API IMPORT CUSTOMERS (MOI) ---
+  @Perm('SALES', 'create')
   @Post('customers')
   @UseInterceptors(FileInterceptor('file'))
   async uploadCustomers(@UploadedFile() file: Express.Multer.File) {
@@ -187,6 +196,7 @@ export class UploadController {
   }
 
   // --- API IMPORT SUPPLIERS (MOI) ---
+  @Perm('INVENTORY', 'create')
   @Post('suppliers')
   @UseInterceptors(FileInterceptor('file'))
   async uploadSuppliers(@UploadedFile() file: Express.Multer.File) {
@@ -195,6 +205,7 @@ export class UploadController {
   }
 
   // --- API IMPORT SALES ORDERS (MOI) ---
+  @Perm('SALES', 'create')
   @Post('sales')
   @UseInterceptors(FileInterceptor('file'))
   async uploadSales(@UploadedFile() file: Express.Multer.File) {
@@ -203,6 +214,7 @@ export class UploadController {
   }
   // ----------------------------------
 
+  @AuthOnly()
   @Post('file')
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(@UploadedFile() file: Express.Multer.File, @Body('source') source?: string) {
@@ -211,6 +223,7 @@ export class UploadController {
   }
 
   // --- WATERMARK MANAGEMENT ---
+  @Perm('CMS', 'create')
   @Post('watermark/image')
   @UseInterceptors(FileInterceptor('file'))
   async uploadWatermarkImage(@UploadedFile() file: Express.Multer.File) {
@@ -218,17 +231,20 @@ export class UploadController {
     return this.uploadService.setWatermarkImage(file, 'watermark_config');
   }
 
+  @Perm('CMS', 'view')
   @Get('watermark/config')
   async getWatermarkConfig() {
     return this.uploadService.getWatermarkConfig('watermark_config');
   }
 
+  @Perm('CMS', 'create')
   @Post('watermark/config')
   async saveWatermarkConfig(@Body() body: any) {
     return this.uploadService.saveWatermarkConfig(body, 'watermark_config');
   }
 
   // --- B2B WATERMARK MANAGEMENT ---
+  @Perm('CMS', 'create')
   @Post('watermark/b2b/image')
   @UseInterceptors(FileInterceptor('file'))
   async uploadWatermarkB2BImage(@UploadedFile() file: Express.Multer.File) {
@@ -236,16 +252,19 @@ export class UploadController {
     return this.uploadService.setWatermarkImage(file, 'watermark_b2b_config');
   }
 
+  @Perm('CMS', 'view')
   @Get('watermark/b2b/config')
   async getWatermarkB2BConfig() {
     return this.uploadService.getWatermarkConfig('watermark_b2b_config');
   }
 
+  @Perm('CMS', 'create')
   @Post('watermark/b2b/config')
   async saveWatermarkB2BConfig(@Body() body: any) {
     return this.uploadService.saveWatermarkConfig(body, 'watermark_b2b_config');
   }
 
+  @Perm('CMS', 'create')
   @Post('watermark/regenerate')
   async regenerateWatermarks() {
     return this.uploadService.regenerateAllWatermarks();
@@ -263,6 +282,7 @@ export class UploadController {
     return this.uploadService.serveB2BFile(filename, res);
   }
 
+  @AuthOnly()
   @Get('template/:type')
   async downloadTemplate(@Param('type') type: string, @Res() res: Response) {
     const buffer = this.uploadService.getTemplate(type);
@@ -282,6 +302,7 @@ export class UploadController {
     return this.uploadService.serveFile(filename, res);
   }
 
+  @Perm('CMS', 'delete')
   @Delete('files/:filename')
   async deleteFile(@Param('filename') filename: string) {
     return this.uploadService.deleteFile(filename);

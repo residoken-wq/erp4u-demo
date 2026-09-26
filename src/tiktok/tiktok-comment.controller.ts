@@ -1,3 +1,4 @@
+import { Perm } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Body, Param, Query, ParseIntPipe } from '@nestjs/common';
 import { TikTokService } from './tiktok.service';
 import { CommentSentiment } from './entities/tiktok-comment.entity';
@@ -10,6 +11,7 @@ export class TikTokCommentController {
      * GET /tiktok/comments/stats
      * Dashboard statistics for comments
      */
+    @Perm('MARKETING', 'view')
     @Get('stats')
     async getStats(@Query('channel_id') channelId?: string) {
         return this.tiktokService.getCommentStats(channelId ? parseInt(channelId) : undefined);
@@ -19,6 +21,7 @@ export class TikTokCommentController {
      * POST /tiktok/comments/sync
      * Sync comments for a specific video from TikTok API
      */
+    @Perm('MARKETING', 'create')
     @Post('sync')
     async syncComments(
         @Body('channel_id') channelId: number,
@@ -31,6 +34,7 @@ export class TikTokCommentController {
      * GET /tiktok/comments
      * Get locally stored comments with filters
      */
+    @Perm('MARKETING', 'view')
     @Get()
     async getComments(
         @Query('channel_id') channelId?: string,
@@ -50,6 +54,7 @@ export class TikTokCommentController {
      * GET /tiktok/comments/:id/replies
      * Get replies to a specific comment
      */
+    @Perm('MARKETING', 'view')
     @Get(':id/replies')
     async getReplies(@Param('id', ParseIntPipe) id: number) {
         return this.tiktokService.getCommentReplies(id);
@@ -59,6 +64,7 @@ export class TikTokCommentController {
      * POST /tiktok/comments/:id/reply
      * Reply to a comment
      */
+    @Perm('MARKETING', 'create')
     @Post(':id/reply')
     async replyToComment(
         @Param('id', ParseIntPipe) id: number,

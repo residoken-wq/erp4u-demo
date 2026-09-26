@@ -1,3 +1,4 @@
+import { Public } from '../auth/public.decorator';
 import { Controller, Post, Get, Body, Param, HttpException, HttpStatus, Headers, Query } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
@@ -66,6 +67,7 @@ export class PortalController {
     // ============================================================
     // 1. REQUEST OTP
     // ============================================================
+    @Public()
     @Post('request-otp')
     async requestOtp(@Body() body: { email: string }) {
         const email = body.email?.trim()?.toLowerCase();
@@ -158,6 +160,7 @@ export class PortalController {
     // ============================================================
     // 2. VERIFY OTP
     // ============================================================
+    @Public()
     @Post('verify-otp')
     async verifyOtp(@Body() body: { email: string; otp_code: string }) {
         const email = body.email?.trim()?.toLowerCase();
@@ -228,6 +231,7 @@ export class PortalController {
     // ============================================================
     // 3. DASHBOARD DATA
     // ============================================================
+    @Public()
     @Get('dashboard/:slug')
     async getDashboard(
         @Param('slug') slug: string,
@@ -337,6 +341,7 @@ export class PortalController {
     // ============================================================
     // 4. REORDER (Create new Quotation from old order)
     // ============================================================
+    @Public()
     @Post('reorder/:slug')
     async reorder(
         @Param('slug') slug: string,
@@ -412,6 +417,7 @@ export class PortalController {
     // ============================================================
     // 5. VALIDATE TOKEN (for frontend to check if session is valid)
     // ============================================================
+    @Public()
     @Get('validate-token')
     async validateToken(@Headers('authorization') authHeader: string) {
         const session = await this.validateSession(authHeader);
@@ -430,6 +436,7 @@ export class PortalController {
     // ============================================================
     // 6. PROMOTION DETAIL (Products list for a promotion)
     // ============================================================
+    @Public()
     @Get('promotion/:slug/:id')
     async getPromotionDetail(
         @Param('slug') slug: string,
@@ -456,6 +463,7 @@ export class PortalController {
     // ============================================================
     // 7. ORDER FROM PROMOTION
     // ============================================================
+    @Public()
     @Post('promotion/:slug/:id/order')
     async orderFromPromotion(
         @Param('slug') slug: string,
@@ -538,6 +546,7 @@ export class PortalController {
     // ============================================================
     // 8. PRODUCT STATS (For customer to check their inventory/purchases)
     // ============================================================
+    @Public()
     @Get('product-stats/:slug')
     async getProductStats(
         @Param('slug') slug: string,
@@ -602,6 +611,7 @@ export class PortalController {
     // ============================================================
     // 9. CUSTOM ORDER FROM PORTAL B2B
     // ============================================================
+    @Public()
     @Post('custom-order/:slug')
     async createCustomOrder(
         @Param('slug') slug: string,

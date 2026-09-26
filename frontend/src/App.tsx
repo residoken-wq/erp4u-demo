@@ -185,7 +185,7 @@ const App: React.FC = () => {
         }
 
         // CMS Website
-        if (hasPerm('PRODUCT') || hasPerm('SALES')) {
+        if (hasPerm('PRODUCT')) {
             items.push(getItem('CMS Website', 'sub_cms', <GlobalOutlined />, [
                 getItem(<Link to="/website-products">Sản phẩm (Bán online)</Link>, 'web_prod'),
             ]));
@@ -222,21 +222,28 @@ const App: React.FC = () => {
             ]));
         }
 
-        // 6. Sản xuất (MRP)
+        // 6. Sản xuất (MRP) & Mua hàng
+        const prodChildren: MenuItem[] = [];
         if (hasPerm('PRODUCTION')) {
-            items.push(getItem('Sản xuất (MRP)', '9', <DesktopOutlined />, [
-                getItem(<Link to="/planning">Lập Kế Hoạch SX</Link>, 'plan'),
-                getItem(<Link to="/purchasing">Đơn Mua Hàng & GC</Link>, 'po_page'),
-                getItem(<Link to="/print-production">Báo cáo Gia công In</Link>, 'print-production', <PrinterOutlined />),
-                getItem(<Link to="/designs">Thiết kế In ấn & Thêu</Link>, 'designs_page'),
-                getItem(<Link to="/routes">Định nghĩa Quy trình</Link>, 'route'),
-                getItem(<Link to="/processes">DM Công Đoạn</Link>, 'proc_list'),
-                getItem(<Link to="/qc">🔬 Kiểm Tra Chất Lượng</Link>, 'qc_page'),
-                getItem(<Link to="/production-dashboard">📊 Dashboard Sản xuất</Link>, 'prod_dashboard'),
-            ]));
+            prodChildren.push(getItem(<Link to="/planning">Lập Kế Hoạch SX</Link>, 'plan'));
+        }
+        if (hasPerm('PURCHASE')) {
+            prodChildren.push(getItem(<Link to="/purchasing">Đơn Mua Hàng & GC</Link>, 'po_page'));
+        }
+        if (hasPerm('PRODUCT') || hasPerm('PRODUCTION')) {
+            prodChildren.push(getItem(<Link to="/print-production">Báo cáo Gia công In</Link>, 'print-production', <PrinterOutlined />));
+            prodChildren.push(getItem(<Link to="/designs">Thiết kế In ấn & Thêu</Link>, 'designs_page'));
+        }
+        if (hasPerm('PRODUCTION')) {
+            prodChildren.push(getItem(<Link to="/routes">Định nghĩa Quy trình</Link>, 'route'));
+            prodChildren.push(getItem(<Link to="/processes">DM Công Đoạn</Link>, 'proc_list'));
+            prodChildren.push(getItem(<Link to="/qc">🔬 Kiểm Tra Chất Lượng</Link>, 'qc_page'));
+            prodChildren.push(getItem(<Link to="/production-dashboard">📊 Dashboard Sản xuất</Link>, 'prod_dashboard'));
+        }
+        if (prodChildren.length > 0) {
+            items.push(getItem('Sản xuất (MRP)', '9', <DesktopOutlined />, prodChildren));
         }
 
-        // 7. Tài chính
         // 7. Tài chính
         if (hasPerm('FINANCE')) {
             items.push(getItem(<Link to="/finance">Tài chính (Thu/Chi)</Link>, 'finance', <BankOutlined />));
@@ -259,7 +266,7 @@ const App: React.FC = () => {
         }
 
         // SOCIAL & MARKETING
-        if (hasPerm('SALES')) {
+        if (hasPerm('MARKETING')) {
             items.push(getItem('Kênh Bán Hàng Social', 'sub_social', <FacebookOutlined />, [
                 getItem(<Link to="/social/channels">Quản lý Kênh</Link>, 'social_channels'),
                 getItem(<Link to="/social/orders">Đơn hàng từ Sàn</Link>, 'social_orders'),
@@ -268,15 +275,20 @@ const App: React.FC = () => {
         }
 
         // 9. Hệ thống
-        if (hasPerm('USERS')) {
-            const systemChildren: MenuItem[] = [
-                getItem(<Link to="/users">Danh sách User</Link>, 'user_list'),
-                getItem(<Link to="/users/groups">Nhóm & Phân quyền</Link>, 'group_perm'),
-                getItem(<Link to="/announcements">Thông báo nội bộ</Link>, 'announcements'),
-                getItem(<Link to="/system/settings">Cấu hình Email (SMTP)</Link>, 'sys_smtp'),
-                getItem(<Link to="/system/logs">Nhật ký hoạt động</Link>, 'sys_logs'), // <--- Activity Log Menu
-                getItem(<Link to="/ai-dashboard">AI Dashboard</Link>, 'ai_dash', <RobotOutlined />),
-            ];
+        if (hasPerm('USERS') || hasPerm('SYSTEM')) {
+            const systemChildren: MenuItem[] = [];
+            if (hasPerm('USERS')) {
+                systemChildren.push(getItem(<Link to="/users">Danh sách User</Link>, 'user_list'));
+                systemChildren.push(getItem(<Link to="/users/groups">Nhóm & Phân quyền</Link>, 'group_perm'));
+                systemChildren.push(getItem(<Link to="/announcements">Thông báo nội bộ</Link>, 'announcements'));
+            }
+            if (hasPerm('SYSTEM')) {
+                systemChildren.push(getItem(<Link to="/system/settings">Cấu hình Email (SMTP)</Link>, 'sys_smtp'));
+            }
+            if (hasPerm('USERS')) {
+                systemChildren.push(getItem(<Link to="/system/logs">Nhật ký hoạt động</Link>, 'sys_logs'));
+                systemChildren.push(getItem(<Link to="/ai-dashboard">AI Dashboard</Link>, 'ai_dash', <RobotOutlined />));
+            }
 
             if (currentUser?.username === 'admin') {
                 systemChildren.push(
@@ -404,16 +416,24 @@ const App: React.FC = () => {
                                                     </>
                                                 )}
 
+                                                {hasPerm('PURCHASE') && (
+                                                    <Route path="/purchasing" element={<PurchasingPage />} />
+                                                )}
+
+                                                {(hasPerm('PRODUCT') || hasPerm('PRODUCTION')) && (
+                                                    <>
+                                                        <Route path="/designs" element={<DesignManagementPage />} />
+                                                        <Route path="/print-production" element={<PrintReportDashboard />} />
+                                                    </>
+                                                )}
+
                                                 {hasPerm('PRODUCTION') && (
                                                     <>
                                                         <Route path="/planning" element={<PlanningPage />} />
                                                         <Route path="/routes" element={<ProductionRoutePage />} />
                                                         <Route path="/processes" element={<ProcessesPage />} />
-                                                        <Route path="/purchasing" element={<PurchasingPage />} />
                                                         <Route path="/qc" element={<QCPage />} />
                                                         <Route path="/production-dashboard" element={<ProductionDashboardPage />} />
-                                                        <Route path="/designs" element={<DesignManagementPage />} />
-                                                        <Route path="/print-production" element={<PrintReportDashboard />} />
                                                     </>
                                                 )}
 
@@ -426,7 +446,9 @@ const App: React.FC = () => {
                                                 <Route path="/projects" element={<ProjectsPage />} />
                                                 <Route path="/projects/:id" element={<ProjectDetailPage />} />
                                                 <Route path="/help" element={<HelpPage />} />
-                                                <Route path="/docs" element={<DocsPage />} />
+                                                {currentUser?.username === 'admin' && (
+                                                    <Route path="/docs" element={<DocsPage />} />
+                                                )}
                                                 <Route path="/profile" element={<ProfilePage />} />
 
                                                 {hasPerm('HR') && (
@@ -434,7 +456,7 @@ const App: React.FC = () => {
                                                 )}
 
                                                 {/* SOCIAL & MARKETING ROUTES */}
-                                                {hasPerm('SALES') && (
+                                                {hasPerm('MARKETING') && (
                                                     <>
                                                         <Route path="/social/channels" element={<SocialChannelsPage />} />
                                                         <Route path="/social/orders" element={<SocialOrdersPage />} />
@@ -447,15 +469,17 @@ const App: React.FC = () => {
                                                         <Route path="/users" element={<UsersPage />} />
                                                         <Route path="/users/groups" element={<UserGroupsPage />} />
                                                         <Route path="/announcements" element={<AnnouncementsPage />} />
-                                                        <Route path="/system/settings" element={<SystemSettingsPage />} />
                                                         <Route path="/system/logs" element={<ActivityLogPage />} /> {/* <--- Activity Log Route */}
+                                                        <Route path="/ai-dashboard" element={<AiDashboardPage />} />
                                                         {currentUser?.username === 'admin' && (
                                                             <Route path="/system/rbac" element={<RbacLogPage />} />
                                                         )}
                                                     </>
                                                 )}
 
-                                                <Route path="/ai-dashboard" element={<AiDashboardPage />} />
+                                                {hasPerm('SYSTEM') && (
+                                                    <Route path="/system/settings" element={<SystemSettingsPage />} />
+                                                )}
 
                                                 <Route path="*" element={<h2>Không tìm thấy trang hoặc bạn không có quyền truy cập.</h2>} />
                                             </Routes>

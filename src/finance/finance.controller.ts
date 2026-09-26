@@ -2,7 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } fro
 import { FinanceService } from './finance.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
-import { RequirePermission } from '../auth/permissions.decorator';
+import { RequirePermission, Perm } from '../auth/permissions.decorator';
 
 @Controller('finance')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -55,6 +55,7 @@ export class FinanceController {
   }
 
   // --- MỚI: BÁO CÁO TÀI CHÍNH ---
+  @Perm('FINANCE', 'view')
   @Get('report')
   getReport(@Query('month') month: string, @Query('year') year: string) {
     return this.s.getFinancialReport(month, year);
@@ -68,26 +69,31 @@ export class FinanceController {
   // -----------------------------
 
   // --- MỚI: API LỊCH SỬ THANH TOÁN CỦA 1 ĐƠN HÀNG ---
+  @Perm('FINANCE', 'view')
   @Get('history/:refCode')
   getHistory(@Param('refCode') refCode: string) {
     return this.s.getTransactionsByRef(refCode);
   }
   // --------------------------------------------------
 
+  @Perm('FINANCE', 'create')
   @Post('payment') createPayment(@Body() b: any) { return this.s.createPayment(b); }
 
+  @Perm('FINANCE', 'create')
   @Post('payment/po')
   createPOPayment(@Body() b: any) {
     // b includes: amount, poCode, note, date, vatCode, vatUrl
     return this.s.createPOPayment(b);
   }
 
+  @Perm('FINANCE', 'create')
   @Post('payment/bulk-po')
   createBulkPOPayment(@Body() b: any) {
     return this.s.createBulkPoPayment(b);
   }
 
   // --- FIX DATA ENDPOINT ---
+  @Perm('FINANCE', 'create')
   @Post('payment/fix-mapping')
   fixMapping() {
     return this.s.mapOldTransactions();

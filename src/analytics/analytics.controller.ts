@@ -1,3 +1,5 @@
+import { Perm } from '../auth/permissions.decorator';
+import { Public } from '../auth/public.decorator';
 import { Controller, Post, Get, Body, Req } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { Request } from 'express';
@@ -22,6 +24,7 @@ function isPrivateOrLocalIp(ip?: string): boolean {
 export class AnalyticsController {
     constructor(private readonly analyticsService: AnalyticsService) { }
 
+    @Public()
     @Post('ping')
     async ping(
         @Body() body: { session_id: string; client_ip?: string; user_agent?: string },
@@ -69,11 +72,13 @@ export class AnalyticsController {
         });
     }
 
+    @Perm('CMS', 'view')
     @Get('stats')
     async getStats(@Req() req: Request) {
         return this.analyticsService.getStats(req.query);
     }
 
+    @Perm('CMS', 'view')
     @Get('visitors')
     async getVisitors(@Req() req: Request) {
         return this.analyticsService.getVisitors(req.query);

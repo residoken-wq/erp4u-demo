@@ -1,3 +1,4 @@
+import { AuthOnly, Perm } from '../auth/permissions.decorator';
 import { Controller, Post, Body, UseGuards, Req, Res, Get } from '@nestjs/common';
 import { Response } from 'express';
 import { AiService } from './ai.service';
@@ -16,16 +17,19 @@ export class AiController {
         private readonly aiProactiveService: AiProactiveService
     ) { }
 
+    @AuthOnly()
     @Post('pricing')
     async suggestPrice(@Body() body: any) {
         return this.aiService.suggestPrice(body);
     }
 
+    @AuthOnly()
     @Post('chat')
     async chat(@Body() body: any) {
         return this.aiService.chat(body);
     }
 
+    @AuthOnly()
     @Post('chat-stream')
     async chatStream(@Body() body: any, @Req() req: any, @Res() res: Response) {
         const userId = req.user.id.toString();
@@ -60,27 +64,32 @@ export class AiController {
         }
     }
 
+    @AuthOnly()
     @Post('suggest-reply')
     async suggestReply(@Body() body: any) {
         return this.aiService.suggestReply(body);
     }
 
+    @AuthOnly()
     @Post('customer-360-summary')
     async summarizeCustomer360(@Body('customerId') customerId: number) {
         return this.aiService.summarizeCustomer360(customerId);
     }
 
+    @AuthOnly()
     @Post('feedback')
     async submitFeedback(@Body() body: any, @Req() req: any) {
         const userId = req.user.id.toString();
         return this.aiLearningService.saveFeedback({ ...body, userId });
     }
 
+    @Perm('USERS', 'view')
     @Get('analytics')
     async getAnalytics() {
         return this.aiAnalyticsService.getUsageStats();
     }
 
+    @AuthOnly()
     @Get('proactive')
     async getProactiveInsights() {
         return this.aiProactiveService.generateDailyInsights();

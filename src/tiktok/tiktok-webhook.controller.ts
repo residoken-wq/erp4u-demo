@@ -1,3 +1,4 @@
+import { Public } from '../auth/public.decorator';
 import { Controller, Post, Body, Req, Logger, HttpCode } from '@nestjs/common';
 import { TikTokService } from './tiktok.service';
 import { TikTokApiClient } from './tiktok-api.client';
@@ -17,6 +18,7 @@ export class TikTokWebhookController {
      * Receives webhook events from TikTok Shop
      * Events: NEW_MESSAGE, ORDER_STATUS_CHANGE, etc.
      */
+    @Public()
     @Post()
     @HttpCode(200)
     async handleWebhook(@Body() body: any, @Req() req: Request) {

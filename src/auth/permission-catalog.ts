@@ -15,11 +15,12 @@ export interface PermissionModule {
 
 // Thứ tự = thứ tự hiển thị trên màn hình phân quyền.
 // P0 = đúng các mã UI đang có (kể cả PURCHASE, CMS dù backend chưa check) + SYSTEM (backend ZNS đã dùng).
-// MARKETING chỉ được thêm ở P1, cùng lúc với seed dữ liệu.
+// P1 = thêm MARKETING cùng lúc với seed dữ liệu.
 export const PERMISSION_MODULES: PermissionModule[] = [
   { code: 'DASHBOARD', name: 'Tổng quan', group: 'Chung' },
   { code: 'PRODUCT', name: 'Quản lý Sản phẩm', group: 'Nghiệp vụ' },
   { code: 'SALES', name: 'Bán hàng (Sales/CRM)', group: 'Nghiệp vụ' },
+  { code: 'MARKETING', name: 'Marketing & Kênh bán (Social/TikTok)', group: 'Nghiệp vụ' },
   { code: 'INVENTORY', name: 'Kho & Tồn kho', group: 'Nghiệp vụ' },
   { code: 'PURCHASE', name: 'Mua hàng (PO)', group: 'Nghiệp vụ' },
   { code: 'PRODUCTION', name: 'Sản xuất (MRP)', group: 'Nghiệp vụ' },

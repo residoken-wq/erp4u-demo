@@ -1,3 +1,5 @@
+import { Perm } from '../auth/permissions.decorator';
+import { Public } from '../auth/public.decorator';
 import { Controller, Get, Query, Res } from '@nestjs/common';
 import { TikTokService } from './tiktok.service';
 import { Response } from 'express';
@@ -11,6 +13,7 @@ export class TikTokAuthController {
      * Generates the TikTok Shop authorization URL
      * Frontend redirects user to this URL to grant permissions
      */
+    @Perm('MARKETING', 'view')
     @Get('url')
     getAuthUrl(@Query('state') state?: string) {
         const url = this.tiktokService.getAuthorizationUrl(state);
@@ -22,6 +25,7 @@ export class TikTokAuthController {
      * OAuth callback handler — TikTok redirects here after user approval
      * Exchanges authorization code for access/refresh tokens
      */
+    @Public()
     @Get('callback')
     async handleCallback(
         @Query('code') code: string,
@@ -42,6 +46,7 @@ export class TikTokAuthController {
      * GET /tiktok/auth/channels
      * List all connected TikTok channels
      */
+    @Perm('MARKETING', 'view')
     @Get('channels')
     async getChannels() {
         return this.tiktokService.getTikTokChannels();

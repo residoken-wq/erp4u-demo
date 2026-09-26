@@ -3,7 +3,7 @@ import { Response } from 'express';
 import { SalesService } from './sales.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
-import { RequirePermission } from '../auth/permissions.decorator';
+import { RequirePermission, Perm } from '../auth/permissions.decorator';
 
 @Controller('sales')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -28,14 +28,17 @@ export class SalesController {
     @RequirePermission('SALES', 'can_create')
     createRule(@Param('id') id: number, @Body() body: any) { return this.s.createPriceListRule(id, body); }
 
+    @Perm('SALES', 'view')
     @Get('price-lists/:id/rules')
     getRules(@Param('id') id: number) { return this.s.getPriceListRules(id); }
 
+    @Perm('SALES', 'view')
     @Get('validate-price')
     async validatePrice(@Query('sku') sku: string, @Query('unitPrice') unitPrice: number, @Query('userId') userId: number) {
         return this.s.validatePriceAgainstPriceList(sku, Number(unitPrice), Number(userId));
     }
 
+    @Perm('SALES', 'view')
     @Get('samples/all')
     getAllSamples() { return this.s.sampleRepo.find({ order: { created_at: 'DESC' } }); }
 
@@ -71,12 +74,15 @@ export class SalesController {
     }
 
     // --- PROMOTIONS ---
+    @Perm('SALES', 'view')
     @Get('promotions')
     getAllPromotions() { return this.s.getAllPromotions(); }
 
+    @Perm('SALES', 'view')
     @Get('promotions/active')
     getActivePromotions() { return this.s.getActivePromotions(); }
 
+    @Perm('SALES', 'view')
     @Get('promotions/for-customer/:customerId')
     getPromotionsForCustomer(@Param('customerId') customerId: number) {
         return this.s.getActivePromotionsForCustomer(Number(customerId));
@@ -102,42 +108,53 @@ export class SalesController {
     // 2. CÁC API CON (SUB-RESOURCES)
     // ============================================================
 
+    @Perm('SALES', 'view')
     @Get(':id/comments')
     getComments(@Param('id') id: number) { return this.s.getComments(id); }
 
+    @Perm('SALES', 'create')
     @Post(':id/comment')
     addComment(@Param('id') id: number, @Body() body: any) {
         return this.s.addComment(id, body.content, body.sender, body.name, body.comment_type, body.mentioned_user_ids);
     }
 
+    @Perm('SALES', 'update')
     @Put('comment/:id')
     updateComment(@Param('id') id: number, @Body() body: any) { return this.s.updateComment(id, body.content); }
 
+    @Perm('SALES', 'create')
     @Post('comment/:id/toggle')
     toggleComment(@Param('id') id: number) { return this.s.toggleCommentVisibility(id); }
 
+    @Perm('SALES', 'delete')
     @Delete('comment/:id')
     softDeleteComment(@Param('id') id: number, @Body() body: any) {
         return this.s.softDeleteComment(id, body?.deletedBy || 'Khách hàng');
     }
 
+    @Perm('SALES', 'view')
     @Get(':id/activities')
     getActivities(@Param('id') id: number) {
         return this.s.getActivities(id);
     }
 
+    @Perm('SALES', 'view')
     @Get(':id/deliveries')
     getDeliveries(@Param('id') id: number) { return this.s.getDeliveryHistory(id); }
 
+    @Perm('SALES', 'create')
     @Post(':id/delivery')
     createDelivery(@Param('id') id: number, @Body() b: any) { return this.s.createDelivery(id, b); }
 
+    @Perm('SALES', 'update')
     @Put('delivery/:deliveryId')
     updateDelivery(@Param('deliveryId') deliveryId: number, @Body() b: any) { return this.s.updateDelivery(deliveryId, b); }
 
+    @Perm('SALES', 'view')
     @Get(':code/payments')
     getPayments(@Param('code') code: string) { return this.s.getPaymentHistory(code); }
 
+    @Perm('SALES', 'view')
     @Get(':code/payment-history')
     getPaymentHistory(@Param('code') code: string) { return this.s.getPaymentHistory(code); }
 
@@ -204,7 +221,9 @@ export class SalesController {
 
 
     // Portal APIs
+    @Perm('SALES', 'view')
     @Get('portal/:uuid') getPortal(@Param('uuid') uuid: string) { return this.s.getQuoteByUuid(uuid); }
+    @Perm('SALES', 'update')
     @Post('portal/:uuid/action')
     customerAction(@Param('uuid') uuid: string, @Body() body: any, @Req() req: any) {
         const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -227,6 +246,7 @@ export class SalesController {
 
     // --- QUAN TRỌNG: FIX LỖI 500 ---
     // Dùng chung 1 API để tìm theo ID hoặc CODE
+    @Perm('SALES', 'view')
     @Get(':idOrCode')
     findOne(@Param('idOrCode') idOrCode: string) {
         console.log('--- GET /sales/:idOrCode ---', idOrCode); // Debug
@@ -241,41 +261,51 @@ export class SalesController {
     }
     // ------------------------------------------
 
+    @Perm('SALES', 'create')
     @Post(':id/convert')
     convert(@Param('id') id: number, @Body('accepted') accepted: boolean) { return this.s.convertQuoteToSo(id, accepted); }
 
     // --- BOD FOLLOW UP ---
+    @Perm('SALES', 'update')
     @Put(':id/bod-follow-up')
     updateBodFollowUp(@Param('id') id: number, @Body() body: any) {
         return this.s.updateBodFollowUp(Number(id), body);
     }
 
+    @Perm('SALES', 'update')
     @Put('quote/:id')
     updateQuote(@Param('id') id: number, @Body() b: any) { return this.s.updateQuote(id, b); }
 
+    @Perm('SALES', 'delete')
     @Delete('quote/:id')
     deleteQuote(@Param('id') id: number, @Query('cascade') cascade?: boolean) { 
         return this.s.deleteQuote(id, String(cascade) === 'true'); 
     }
 
+    @Perm('SALES', 'create')
     @Post(':id/approve-samples')
     approveSamples(@Param('id') id: number) { return this.s.approveAllSamples(id); }
 
+    @Perm('SALES', 'create')
     @Post(':id/complete')
     complete(@Param('id') id: number) { return this.s.completeOrder(id); }
 
+    @Perm('SALES', 'create')
     @Post(':id/cancel')
     cancel(@Param('id') id: number, @Body('reason') reason: string) { return this.s.cancelOrder(id, reason); }
 
     // --- REVISIONS ---
+    @Perm('SALES', 'create')
     @Post(':id/revision')
     createRevision(@Param('id') id: number, @Body() body: any) {
         return this.s.createRevision(id, body.userId, body.username);
     }
 
+    @Perm('SALES', 'view')
     @Get(':id/revisions')
     getRevisions(@Param('id') id: number) { return this.s.getRevisions(id); }
 
+    @Perm('SALES', 'delete')
     @Delete('delivery/:deliveryId')
     deleteDelivery(@Param('deliveryId') deliveryId: number) {
         return this.s.deleteDelivery(deliveryId);
@@ -289,6 +319,7 @@ export class SalesController {
     }
 
     // --- BOOK ITEMS ---
+    @Perm('SALES', 'create')
     @Post(':id/book-items')
     bookItems(@Param('id') id: number, @Body() body: any) {
         return this.s.bookItems(Number(id), body.items || []);
@@ -299,34 +330,41 @@ export class SalesController {
     // 4. CHECKLIST APIS
     // ============================================================
 
+    @Perm('SALES', 'view')
     @Get(':id/checklist')
     getChecklist(@Param('id') id: number) { return this.s.getChecklist(id); }
 
+    @Perm('SALES', 'view')
     @Post(':id/checklist/init')
     initChecklist(@Param('id') id: number, @Body() body: any) {
         return this.s.initChecklist(id, body.status || 'QUOTATION');
     }
 
+    @Perm('SALES', 'view')
     @Post(':id/checklist/toggle/:itemId')
     toggleChecklistItem(@Param('id') id: number, @Param('itemId') itemId: number, @Body() body: any) {
         return this.s.toggleChecklistItem(itemId, body.username);
     }
 
+    @Perm('SALES', 'view')
     @Post(':id/checklist/add')
     addChecklistItem(@Param('id') id: number, @Body() body: any) {
         return this.s.addCustomChecklistItem(id, body.task_name, body.due_date);
     }
 
+    @Perm('SALES', 'update')
     @Put(':id/checklist/:itemId/note')
     updateChecklistNote(@Param('itemId') itemId: number, @Body() body: any) {
         return this.s.updateChecklistItemNote(itemId, body.note);
     }
 
+    @Perm('SALES', 'delete')
     @Delete(':id/checklist/:itemId')
     deleteChecklistItem(@Param('itemId') itemId: number) {
         return this.s.deleteChecklistItem(itemId);
     }
 
+    @Perm('SALES', 'view')
     @Post(':id/checklist/sync')
     syncChecklist(@Param('id') id: number, @Body() body: any) {
         return this.s.syncChecklistWithStatus(id, body.status);

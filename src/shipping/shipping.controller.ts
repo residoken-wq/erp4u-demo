@@ -1,3 +1,5 @@
+import { AnyPerm, Perm } from '../auth/permissions.decorator';
+import { Public } from '../auth/public.decorator';
 // Shipping Controller - Logistics & Deliveries Management
 import { Controller, Post, Get, Body, Param, Query, Res, UseGuards, HttpCode } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -25,6 +27,7 @@ export class ShippingController {
     // QUẢN LÝ TẬP TRUNG DANH SÁCH VẬN ĐƠN
     // ==========================================
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Get('deliveries')
     async getAllDeliveries(
         @Query('carrier') carrier?: string,
@@ -222,6 +225,7 @@ export class ShippingController {
     // CẤU HÌNH GHTK
     // ==========================================
 
+    @Perm('SYSTEM', 'view')
     @Get('config')
     async getConfig() {
         const cfg = await this.ghtkService.getConfig();
@@ -237,31 +241,37 @@ export class ShippingController {
         };
     }
 
+    @Perm('SYSTEM', 'create')
     @Post('config')
     async saveConfig(@Body() body: any) {
         return this.ghtkService.saveConfig(body);
     }
 
+    @Perm('SYSTEM', 'view')
     @Post('test-connection')
     async testConnection(@Body() body: any) {
         return this.ghtkService.testConnection(body);
     }
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Post('ghtk/parse-address')
     async parseAddress(@Body('address') address: string) {
         return this.ghtkService.parseAddress(address);
     }
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Get('ghtk/pick-addresses')
     async getPickAddresses() {
         return this.ghtkService.getPickAddresses();
     }
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Post('ghtk/estimate-fee')
     async estimateFee(@Body() body: GhtkFeeDto) {
         return this.ghtkService.calculateFee(body);
     }
 
+    @AnyPerm(['SALES', 'create'], ['INVENTORY', 'create'])
     @Post('delivery/:deliveryId/push-ghtk')
     async pushDeliveryToGhtk(
         @Param('deliveryId') deliveryId: string,
@@ -270,16 +280,19 @@ export class ShippingController {
         return this.ghtkService.pushDeliveryToGhtk(Number(deliveryId), options);
     }
 
+    @AnyPerm(['SALES', 'create'], ['INVENTORY', 'create'])
     @Post('delivery/:deliveryId/cancel-ghtk')
     async cancelGhtkOrder(@Param('deliveryId') deliveryId: string) {
         return this.ghtkService.cancelGhtkOrder(Number(deliveryId));
     }
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Get('delivery/:deliveryId/tracking')
     async getTracking(@Param('deliveryId') deliveryId: string) {
         return this.ghtkService.getTracking(Number(deliveryId));
     }
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Get('delivery/:deliveryId/label')
     async getLabelUrl(
         @Param('deliveryId') deliveryId: string,
@@ -301,6 +314,7 @@ export class ShippingController {
         return this.streamLabelPdf(id, pageSize, res);
     }
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Get('delivery/:deliveryId/print-label')
     async printLabel(
         @Param('deliveryId') deliveryId: string,
@@ -310,6 +324,7 @@ export class ShippingController {
         return this.streamLabelPdf(Number(deliveryId), pageSize, res);
     }
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Get('delivery/:deliveryId/label-pdf')
     async printLabelPdf(
         @Param('deliveryId') deliveryId: string,
@@ -335,6 +350,7 @@ export class ShippingController {
         }
     }
 
+    @Public()
     @Post('webhook/ghtk')
     @HttpCode(200)
     async handleGhtkWebhook(@Body() body: any) {
@@ -345,6 +361,7 @@ export class ShippingController {
     // CẤU HÌNH & TÍCH HỢP LALAMOVE API v3
     // ==========================================
 
+    @Perm('SYSTEM', 'view')
     @Get('lalamove/config')
     async getLalamoveConfig() {
         const cfg = await this.lalamoveService.getConfig();
@@ -366,36 +383,43 @@ export class ShippingController {
         };
     }
 
+    @Perm('SYSTEM', 'create')
     @Post('lalamove/config')
     async saveLalamoveConfig(@Body() body: any) {
         return this.lalamoveService.saveConfig(body);
     }
 
+    @Perm('SYSTEM', 'view')
     @Post('lalamove/test-connection')
     async testLalamoveConnection(@Body() body: any) {
         return this.lalamoveService.testConnection(body);
     }
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Get('lalamove/vehicles')
     getLalamoveVehicles() {
         return LALAMOVE_VIETNAM_VEHICLES;
     }
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Post('lalamove/geocode')
     async geocodeLalamoveAddress(@Body('address') address: string) {
         return this.lalamoveService.geocodeAddress(address);
     }
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Post('lalamove/quotation')
     async getLalamoveQuotation(@Body() body: LalamoveQuotationDto) {
         return this.lalamoveService.getQuotation(body);
     }
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Post('lalamove/estimate-fee')
     async estimateLalamoveFee(@Body() body: any) {
         return this.lalamoveService.estimateFee(body);
     }
 
+    @AnyPerm(['SALES', 'create'], ['INVENTORY', 'create'])
     @Post('delivery/:deliveryId/push-lalamove')
     async pushDeliveryToLalamove(
         @Param('deliveryId') deliveryId: string,
@@ -404,11 +428,13 @@ export class ShippingController {
         return this.lalamoveService.pushDeliveryToLalamove(Number(deliveryId), options);
     }
 
+    @AnyPerm(['SALES', 'create'], ['INVENTORY', 'create'])
     @Post('delivery/:deliveryId/sync-lalamove')
     async syncLalamoveStatus(@Param('deliveryId') deliveryId: string) {
         return this.lalamoveService.syncDeliveryStatus(Number(deliveryId));
     }
 
+    @AnyPerm(['SALES', 'create'], ['INVENTORY', 'create'])
     @Post('delivery/:deliveryId/sync-carrier')
     async syncCarrierStatus(@Param('deliveryId') deliveryId: string) {
         const id = Number(deliveryId);
@@ -433,6 +459,7 @@ export class ShippingController {
         }
     }
 
+    @AnyPerm(['SALES', 'create'], ['INVENTORY', 'create'])
     @Post('delivery/:deliveryId/create-expense')
     async createDeliveryExpense(
         @Param('deliveryId') deliveryId: string,
@@ -441,6 +468,7 @@ export class ShippingController {
         return this.financeService.createOrUpdateDeliveryShippingExpense(Number(deliveryId), body);
     }
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Get('delivery/:deliveryId/lalamove-order/:orderId')
     async getLalamoveOrderDetails(
         @Param('deliveryId') deliveryId: string,
@@ -449,6 +477,7 @@ export class ShippingController {
         return this.lalamoveService.getOrderDetails(orderId);
     }
 
+    @AnyPerm(['SALES', 'view'], ['INVENTORY', 'view'])
     @Get('delivery/:deliveryId/lalamove-driver/:driverId')
     async getLalamoveDriverDetails(
         @Param('deliveryId') deliveryId: string,
@@ -457,6 +486,7 @@ export class ShippingController {
         return this.lalamoveService.getDriverDetails(deliveryId, driverId);
     }
 
+    @AnyPerm(['SALES', 'create'], ['INVENTORY', 'create'])
     @Post('delivery/:deliveryId/lalamove-priority-fee')
     async addLalamovePriorityFee(
         @Param('deliveryId') deliveryId: string,
@@ -465,17 +495,20 @@ export class ShippingController {
         return this.lalamoveService.addPriorityFee(Number(deliveryId), Number(priorityFee));
     }
 
+    @AnyPerm(['SALES', 'create'], ['INVENTORY', 'create'])
     @Post('delivery/:deliveryId/cancel-lalamove')
     async cancelLalamoveOrder(@Param('deliveryId') deliveryId: string) {
         return this.lalamoveService.cancelOrder(Number(deliveryId));
     }
 
+    @Public()
     @Get('webhook/lalamove')
     @HttpCode(200)
     async verifyLalamoveWebhook() {
         return { success: true, message: 'Lalamove Webhook endpoint is active' };
     }
 
+    @Public()
     @Post('webhook/lalamove')
     @HttpCode(200)
     async handleLalamoveWebhook(@Body() body: any) {

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HrController } from './hr.controller';
+import { HrMeController } from './hr-me.controller';
 import { HrService } from './hr.service';
 import { Employee } from './entities/employee.entity';
 import { Attendance } from './entities/attendance.entity';
@@ -43,7 +44,7 @@ import { AuthModule } from '../auth/auth.module';
         AiModule,
         AuthModule,
     ],
-    controllers: [HrController],
+    controllers: [HrController, HrMeController],
     providers: [HrService, EmailService],
     exports: [HrService],
 })

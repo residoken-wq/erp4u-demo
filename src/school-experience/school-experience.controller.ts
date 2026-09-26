@@ -1,3 +1,4 @@
+import { Perm } from '../auth/permissions.decorator';
 import {
     Controller,
     Get,
@@ -29,6 +30,7 @@ export class SchoolExperienceController {
      * Admin: Get current draft configuration
      */
     @UseGuards(JwtAuthGuard)
+    @Perm('CMS', 'view')
     @Get('draft')
     getDraft() {
         return this.service.getDraftConfig();
@@ -38,6 +40,7 @@ export class SchoolExperienceController {
      * Admin: Save working draft
      */
     @UseGuards(JwtAuthGuard)
+    @Perm('CMS', 'update')
     @Put('draft')
     saveDraft(@Body() body: any, @Req() req: any) {
         const author = req?.user?.username || req?.user?.email || 'Admin';
@@ -48,6 +51,7 @@ export class SchoolExperienceController {
      * Admin: Atomically publish the draft
      */
     @UseGuards(JwtAuthGuard)
+    @Perm('CMS', 'create')
     @Post('publish')
     publishDraft(@Body() body: { changelog?: string }, @Req() req: any) {
         const author = req?.user?.username || req?.user?.email || 'Admin';
@@ -58,6 +62,7 @@ export class SchoolExperienceController {
      * Admin: List publication revision history
      */
     @UseGuards(JwtAuthGuard)
+    @Perm('CMS', 'view')
     @Get('revisions')
     getRevisions() {
         return this.service.getRevisions();
@@ -67,6 +72,7 @@ export class SchoolExperienceController {
      * Admin: Rollback to a specific revision
      */
     @UseGuards(JwtAuthGuard)
+    @Perm('CMS', 'create')
     @Post('rollback/:id')
     rollback(@Param('id') id: string, @Req() req: any) {
         const author = req?.user?.username || req?.user?.email || 'Admin';

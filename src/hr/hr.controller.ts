@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { LeaveStatus } from './entities/leave-request.entity';
 import { Public } from '../auth/public.decorator';
 import { PermissionsGuard } from '../auth/permissions.guard';
-import { RequirePermission } from '../auth/permissions.decorator';
+import { RequirePermission, Perm } from '../auth/permissions.decorator';
 
 @Controller('hr')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -12,58 +12,80 @@ export class HrController {
     constructor(private readonly hrService: HrService) { }
 
     // ==================== WORK SHIFT ====================
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('shifts')
     findAllShifts() {
         return this.hrService.findAllShifts();
     }
 
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('shifts')
     createShift(@Body() data: any) {
         return this.hrService.createShift(data);
     }
 
+    @RequirePermission('HR', 'can_update')
+    @Perm('HR', 'update')
     @Put('shifts/:id')
     updateShift(@Param('id') id: string, @Body() data: any) {
         return this.hrService.updateShift(+id, data);
     }
 
+    @RequirePermission('HR', 'can_delete')
+    @Perm('HR', 'delete')
     @Delete('shifts/:id')
     deleteShift(@Param('id') id: string) {
         return this.hrService.deleteShift(+id);
     }
 
     // ==================== EMPLOYEE ====================
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('employees')
     findAllEmployees() {
         return this.hrService.findAllEmployees();
     }
 
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('employees/by-user/:userId')
     findEmployeeByUserId(@Param('userId') userId: string) {
         return this.hrService.findEmployeeByUserId(+userId);
     }
 
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('employees/:id')
     findOneEmployee(@Param('id') id: string) {
         return this.hrService.findOneEmployee(+id);
     }
 
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('employees')
     createEmployee(@Body() data: any) {
         return this.hrService.createEmployee(data);
     }
 
+    @RequirePermission('HR', 'can_update')
+    @Perm('HR', 'update')
     @Put('employees/:id')
     updateEmployee(@Param('id') id: string, @Body() data: any) {
         return this.hrService.updateEmployee(+id, data);
     }
 
+    @RequirePermission('HR', 'can_delete')
+    @Perm('HR', 'delete')
     @Delete('employees/:id')
     deleteEmployee(@Param('id') id: string) {
         return this.hrService.deleteEmployee(+id);
     }
 
     // ==================== ATTENDANCE ====================
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('attendances')
     findAttendances(
         @Query('employee_id') employeeId?: string,
@@ -77,42 +99,58 @@ export class HrController {
         );
     }
 
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('check-in')
     checkIn(@Body('employee_id') employeeId: number) {
         return this.hrService.checkIn(employeeId);
     }
 
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('check-out')
     checkOut(@Body('employee_id') employeeId: number) {
         return this.hrService.checkOut(employeeId);
     }
 
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('attendances')
     createAttendance(@Body() data: any) {
         return this.hrService.createAttendance(data);
     }
 
+    @RequirePermission('HR', 'can_update')
+    @Perm('HR', 'update')
     @Put('attendances/:id')
     updateAttendance(@Param('id') id: string, @Body() data: any) {
         return this.hrService.updateAttendance(+id, data);
     }
 
+    @RequirePermission('HR', 'can_delete')
+    @Perm('HR', 'delete')
     @Delete('attendances/:id')
     deleteAttendance(@Param('id') id: string) {
         return this.hrService.deleteAttendance(+id);
     }
 
     // ==================== LEAVE REQUEST ====================
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('leaves')
     findAllLeaves(@Query('status') status?: LeaveStatus) {
         return this.hrService.findAllLeaves(status);
     }
 
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('leaves')
     createLeave(@Body() data: any) {
         return this.hrService.createLeave(data);
     }
 
+    @RequirePermission('HR', 'can_update')
+    @Perm('HR', 'update')
     @Put('leaves/:id/approve')
     approveLeave(
         @Param('id') id: string,
@@ -122,12 +160,16 @@ export class HrController {
         return this.hrService.approveLeave(+id, req.user.userId, body.approved, body.reject_reason);
     }
 
+    @RequirePermission('HR', 'can_delete')
+    @Perm('HR', 'delete')
     @Delete('leaves/:id')
     deleteLeave(@Param('id') id: string) {
         return this.hrService.deleteLeave(+id);
     }
 
     // ==================== LEAVE ENTITLEMENT ====================
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('entitlements')
     findEntitlements(
         @Query('employee_id') employeeId?: string,
@@ -139,16 +181,22 @@ export class HrController {
         );
     }
 
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('entitlements')
     createEntitlement(@Body() data: any) {
         return this.hrService.createEntitlement(data);
     }
 
+    @RequirePermission('HR', 'can_update')
+    @Perm('HR', 'update')
     @Put('entitlements/:id')
     updateEntitlement(@Param('id') id: string, @Body() data: any) {
         return this.hrService.updateEntitlement(+id, data);
     }
 
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('balance/:employeeId')
     getLeaveBalance(
         @Param('employeeId') employeeId: string,
@@ -159,27 +207,37 @@ export class HrController {
     }
 
     // ==================== ASSET ASSIGNMENT ====================
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('assets')
     findAllAssets(@Query('employee_id') employeeId?: string) {
         return this.hrService.findAllAssets(employeeId ? +employeeId : undefined);
     }
 
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('assets')
     createAsset(@Body() data: any) {
         return this.hrService.createAsset(data);
     }
 
+    @RequirePermission('HR', 'can_update')
+    @Perm('HR', 'update')
     @Put('assets/:id')
     updateAsset(@Param('id') id: string, @Body() data: any) {
         return this.hrService.updateAsset(+id, data);
     }
 
+    @RequirePermission('HR', 'can_delete')
+    @Perm('HR', 'delete')
     @Delete('assets/:id')
     deleteAsset(@Param('id') id: string) {
         return this.hrService.deleteAsset(+id);
     }
 
     // ==================== PAYSLIP ====================
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('payslips')
     findPayslips(
         @Query('employee_id') employeeId?: string,
@@ -193,37 +251,51 @@ export class HrController {
         );
     }
 
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('payslips')
     createPayslip(@Body() data: any) {
         return this.hrService.createPayslip(data);
     }
 
+    @RequirePermission('HR', 'can_update')
+    @Perm('HR', 'update')
     @Put('payslips/:id')
     updatePayslip(@Param('id') id: string, @Body() data: any) {
         return this.hrService.updatePayslip(+id, data);
     }
 
+    @RequirePermission('HR', 'can_delete')
+    @Perm('HR', 'delete')
     @Delete('payslips/:id')
     deletePayslip(@Param('id') id: string) {
         return this.hrService.deletePayslip(+id);
     }
 
     // ==================== TRAINING PLAN ====================
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('trainings')
     findTrainingPlans(@Query('employee_id') employeeId?: string) {
         return this.hrService.findTrainingPlans(employeeId ? +employeeId : undefined);
     }
 
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('trainings')
     createTrainingPlan(@Body() data: any) {
         return this.hrService.createTrainingPlan(data);
     }
 
+    @RequirePermission('HR', 'can_update')
+    @Perm('HR', 'update')
     @Put('trainings/:id')
     updateTrainingPlan(@Param('id') id: string, @Body() data: any) {
         return this.hrService.updateTrainingPlan(+id, data);
     }
 
+    @RequirePermission('HR', 'can_delete')
+    @Perm('HR', 'delete')
     @Delete('trainings/:id')
     deleteTrainingPlan(@Param('id') id: string) {
         return this.hrService.deleteTrainingPlan(+id);
@@ -338,48 +410,66 @@ export class HrController {
     // ==================== 360 REVIEW MODULE ====================
 
     // --- Review Questions ---
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('review-questions')
     findAllReviewQuestions() {
         return this.hrService.findAllReviewQuestions();
     }
 
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('review-questions')
     createReviewQuestion(@Body() data: any) {
         return this.hrService.createReviewQuestion(data);
     }
 
+    @RequirePermission('HR', 'can_update')
+    @Perm('HR', 'update')
     @Put('review-questions/:id')
     updateReviewQuestion(@Param('id') id: string, @Body() data: any) {
         return this.hrService.updateReviewQuestion(+id, data);
     }
 
+    @RequirePermission('HR', 'can_delete')
+    @Perm('HR', 'delete')
     @Delete('review-questions/:id')
     deleteReviewQuestion(@Param('id') id: string) {
         return this.hrService.deleteReviewQuestion(+id);
     }
 
     // --- Review Campaigns ---
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('review-campaigns')
     findAllReviewCampaigns() {
         return this.hrService.findAllReviewCampaigns();
     }
 
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('review-campaigns')
     createReviewCampaign(@Body() data: any) {
         return this.hrService.createReviewCampaign(data);
     }
 
+    @RequirePermission('HR', 'can_update')
+    @Perm('HR', 'update')
     @Put('review-campaigns/:id')
     updateReviewCampaign(@Param('id') id: string, @Body() data: any) {
         return this.hrService.updateReviewCampaign(+id, data);
     }
 
+    @RequirePermission('HR', 'can_delete')
+    @Perm('HR', 'delete')
     @Delete('review-campaigns/:id')
     deleteReviewCampaign(@Param('id') id: string) {
         return this.hrService.deleteReviewCampaign(+id);
     }
 
     // --- Employee Reviews ---
+    @RequirePermission('HR', 'can_view')
+    @Perm('HR', 'view')
     @Get('employee-reviews')
     findEmployeeReviews(
         @Query('reviewer_id') reviewerId?: string,
@@ -391,12 +481,15 @@ export class HrController {
         );
     }
 
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('employee-reviews/:id/submit')
     submitEmployeeReview(@Param('id') id: string, @Body('answers') answers: any) {
         return this.hrService.submitEmployeeReview(+id, answers);
     }
 
-    @Public()
+    @RequirePermission('HR', 'can_create')
+    @Perm('HR', 'create')
     @Post('review-questions-seed')
     async seedReviewQuestions() {
         const fs = require('fs');

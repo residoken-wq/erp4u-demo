@@ -32,7 +32,7 @@ const EmployeeReviewTab: React.FC<Props> = ({ employee }) => {
     const loadReviews = async () => {
         setLoading(true);
         try {
-            const res = await api.get(`/hr/employee-reviews?reviewer_id=${employee.id}`);
+            const res = await api.get('/hr/me/reviews');
             setReviews(res.data);
         } catch (e) {
             console.error(e);
@@ -54,7 +54,7 @@ const EmployeeReviewTab: React.FC<Props> = ({ employee }) => {
     const handleSubmitReview = async (values: any) => {
         setSubmitting(true);
         try {
-            await api.post(`/hr/employee-reviews/${currentReview.id}/submit`, { answers: values });
+            await api.post(`/hr/me/reviews/${currentReview.id}/submit`, { answers: values });
             message.success('Đã nộp bài đánh giá thành công! Đang chờ AI phân tích...');
             setDoModal(false);
             setCurrentReview(null);

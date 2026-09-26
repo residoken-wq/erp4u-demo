@@ -1,3 +1,5 @@
+import { Perm } from '../auth/permissions.decorator';
+import { Public } from '../auth/public.decorator';
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, HttpException, HttpStatus, Headers, Req, Res } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -52,21 +54,25 @@ export class PublicController {
     // PUBLIC CONFIG APIs
     // ========================================
 
+    @Public()
     @Get('school-experience')
     async getSchoolExperienceConfig() {
         return this.schoolExperienceService.getPublishedConfig();
     }
 
+    @Public()
     @Get('home-config')
     async getHomeConfig() {
         return this.systemService.getHomeConfig();
     }
 
+    @Public()
     @Get('about-config')
     async getAboutConfig() {
         return this.systemService.getAboutConfig();
     }
 
+    @Public()
     @Get('settings')
     async getSettings(
         @Headers('origin') origin?: string,
@@ -212,6 +218,7 @@ export class PublicController {
 
     // ... (settings code)
 
+    @Public()
     @Get('products/:sku')
     async getProductBySku(@Param('sku') sku: string) {
         const product = await this.productRepo.findOne({
@@ -250,6 +257,7 @@ export class PublicController {
     // CATEGORIES APIs
     // ========================================
 
+    @Public()
     @Get('categories')
     async getCategories() {
         // Only return categories that have at least one product visible on website
@@ -273,6 +281,7 @@ export class PublicController {
     // BLOGS APIs
     // ========================================
 
+    @Public()
     @Get('blogs')
     async getBlogs(@Query('limit') limit?: number) {
         const query = this.blogRepo.createQueryBuilder('b')
@@ -297,6 +306,7 @@ export class PublicController {
         }));
     }
 
+    @Public()
     @Get('blogs/:slug')
     async getBlogBySlug(@Param('slug') slug: string) {
         const blog = await this.blogRepo.findOne({
@@ -337,6 +347,7 @@ export class PublicController {
     // LEADS APIs (Form đăng ký sỉ)
     // ========================================
 
+    @Public()
     @Post('leads')
     async createLead(@Body() body: {
         company_name: string;
@@ -383,6 +394,7 @@ export class PublicController {
     // ORDERS APIs (ShopCart checkout)
     // ========================================
 
+    @Public()
     @Post('orders')
     async createOrder(@Body() body: {
         customer_name: string;
@@ -461,6 +473,7 @@ export class PublicController {
     // PRODUCTS APIs (Public)
     // ========================================
 
+    @Public()
     @Get('products')
     async getProducts(
         @Query('page') page = 1,
@@ -540,6 +553,7 @@ export class PublicController {
     // POLICIES APIs
     // ========================================
 
+    @Public()
     @Get('policies')
     async getPolicies() {
         // Return all active policies (for website sidebar/footer)
@@ -575,6 +589,7 @@ export class PublicController {
         return policies;
     }
 
+    @Public()
     @Get('policies/:slug')
     async getPolicy(@Param('slug') slug: string) {
         const policy = await this.policyRepo.findOne({
@@ -588,6 +603,7 @@ export class PublicController {
         return policy;
     }
 
+    @Perm('CMS', 'update')
     @Put('policies/:slug')
     async updatePolicy(@Param('slug') slug: string, @Body() data: any) {
         // Upsert policy
@@ -619,6 +635,7 @@ export class PublicController {
     // WIZARD CUSTOMIZATION APIs
     // ========================================
 
+    @Public()
     @Get('wizard/config')
     async getWizardConfig() {
         try {
@@ -641,6 +658,7 @@ export class PublicController {
         }
     }
 
+    @Perm('CMS', 'update')
     @Put('wizard/config')
     async updateWizardConfig(@Body() data: WizardConfigData) {
         try {
@@ -665,6 +683,7 @@ export class PublicController {
     // RECRUITMENT PUBLIC APIs
     // ========================================
 
+    @Public()
     @Get('recruitment/jobs')
     async getPublicJobs() {
         // Return only published & show_on_website jobs
@@ -672,6 +691,7 @@ export class PublicController {
         return allJobs.filter(job => job.status === JobPostStatus.PUBLISHED && job.show_on_website);
     }
 
+    @Public()
     @Get('recruitment/jobs/:slug')
     async getJobBySlug(@Param('slug') slug: string) {
         const job = await this.hrService.findJobBySlug(slug);
@@ -681,6 +701,7 @@ export class PublicController {
         return job;
     }
 
+    @Public()
     @Post('recruitment/apply')
     async applyJob(@Body() data: any) {
         // data contains job_post_id, name, email, phone, cv_url, etc.
@@ -695,6 +716,7 @@ export class PublicController {
         };
     }
 
+    @Public()
     @Get('recruitment/portal/:token')
     async getCandidatePortal(@Param('token') token: string) {
         const candidate = await this.hrService.getCandidateByToken(token);
@@ -711,11 +733,13 @@ export class PublicController {
         };
     }
 
+    @Public()
     @Post('recruitment/portal/:token/submit-assessment')
     async submitPortalAssessment(@Param('token') token: string, @Body() body: any) {
         return this.hrService.submitAssessment(token, body.answers);
     }
 
+    @Public()
     @Post('wizard/submit')
     async submitWizardLead(@Body() body: {
         customer_name: string;
@@ -793,6 +817,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
     // WEBSITE PROJECTS APIs (Portfolio/Showcase)
     // ========================================
 
+    @Public()
     @Get('projects')
     async getWebsiteProjects() {
         const projects = await this.websiteProjectRepo.find({
@@ -802,6 +827,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
         return { data: projects };
     }
 
+    @Public()
     @Get('projects/:slug')
     async getWebsiteProject(@Param('slug') slug: string) {
         const project = await this.websiteProjectRepo.findOne({
@@ -813,18 +839,21 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
         return project;
     }
 
+    @Perm('CMS', 'create')
     @Post('projects')
     async createWebsiteProject(@Body() body: any) {
         const project = this.websiteProjectRepo.create(body);
         return this.websiteProjectRepo.save(project);
     }
 
+    @Perm('CMS', 'update')
     @Put('projects/:id')
     async updateWebsiteProject(@Param('id') id: number, @Body() body: any) {
         await this.websiteProjectRepo.update(id, body);
         return this.websiteProjectRepo.findOne({ where: { id } });
     }
 
+    @Perm('CMS', 'delete')
     @Delete('projects/:id')
     async deleteWebsiteProject(@Param('id') id: number) {
         await this.websiteProjectRepo.delete(id);
@@ -836,6 +865,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
     // Cho phép khách hàng truy cập báo giá qua UUID link
     // ========================================
 
+    @Public()
     @Get('portal/quote/:uuid')
     async getPortalQuote(@Param('uuid') uuid: string, @Req() req: any) {
         let quote: any = await this.salesService.getQuoteByUuid(uuid);
@@ -940,6 +970,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
         };
     }
 
+    @Public()
     @Post('portal/quote/:uuid/action')
     async portalQuoteAction(@Param('uuid') uuid: string, @Body() body: any, @Req() req: any) {
         const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -959,6 +990,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
         return this.salesService.customerAction(uuid, body.action, metadata);
     }
 
+    @Public()
     @Post('portal/quote/:orderId/comment')
     portalAddComment(@Param('orderId') orderId: number, @Body() body: any) {
         return this.salesService.addComment(
@@ -971,11 +1003,13 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
         );
     }
 
+    @Public()
     @Delete('portal/quote/comment/:commentId')
     portalDeleteComment(@Param('commentId') commentId: number, @Body() body: any) {
         return this.salesService.softDeleteComment(Number(commentId), body?.deletedBy || 'Khách hàng');
     }
 
+    @Public()
     @Get('proxy-image')
     async proxyImage(@Query('url') url: string, @Res() res: Response) {
         if (!url) return res.status(400).send('Missing url');
