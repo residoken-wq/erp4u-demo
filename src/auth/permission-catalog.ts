@@ -27,6 +27,8 @@ export const PERMISSION_MODULES: PermissionModule[] = [
   { code: 'FINANCE', name: 'Tài chính (Thu/Chi)', group: 'Nghiệp vụ' },
   { code: 'HR', name: 'Nhân sự (HR)', group: 'Nghiệp vụ' },
   { code: 'CMS', name: 'CMS Website', group: 'Website' },
+  { code: 'CHATBOT', name: 'Trợ lý AI website — Hộp thư, Yêu cầu, CSKH', group: 'Website' },
+  { code: 'CHATBOT_KB', name: 'Trợ lý AI website — Tri thức & Giá (Xoá = Duyệt/Xuất bản)', group: 'Website' },
   { code: 'USERS', name: 'Hệ thống & User', group: 'Quản trị' },
   { code: 'SYSTEM', name: 'Cấu hình tích hợp (SMTP, Hoá đơn, Vận chuyển, ZNS)', group: 'Quản trị' },
   // 6 mã FUP_* copy nguyên tên từ frontend/src/pages/UserGroupsPage.tsx:18-23 (FUP_SALES … FUP_OTHER), group: 'BOD FollowUp'

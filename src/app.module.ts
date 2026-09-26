@@ -43,6 +43,8 @@ import { ZnsMessageLog } from './zns/entities/zns-message-log.entity';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { SchoolExperienceModule } from './school-experience/school-experience.module';
 import { SchoolExperienceRevision } from './school-experience/entities/school-experience-revision.entity';
+import { ChatbotModule } from './chatbot/chatbot.module';
+import { CHATBOT_ENTITIES } from './chatbot/entities';
 
 // Entities
 import { Product } from './products/product.entity';
@@ -247,7 +249,9 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
             SchoolExperienceRevision,
             // Zalo ZNS
             ZaloApiConfig,
-            ZnsMessageLog
+            ZnsMessageLog,
+            // Chatbot (P0)
+            ...CHATBOT_ENTITIES,
           ],
           synchronize: true, // Always sync demo database schema
           subscribers: [],
@@ -273,6 +277,7 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
     ShippingModule, // Shipping & GHTK carrier integration
     SchoolExperienceModule, // ERP4U-360 School Experience CMS & revisions
     ZnsModule, // Zalo ZNS Integration module
+    ChatbotModule, // Trợ lý AI website module (P0)
     TypeOrmModule.forFeature([User]), // Needed for ActivityInterceptor
   ],
   providers: [
