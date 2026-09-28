@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 import { SystemConfig } from '../../system/system-config.entity';
 import { ChatbotSource } from '../entities/chatbot-source.entity';
@@ -17,8 +18,13 @@ export class ChatbotKbSeedService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    await this.schemaService.initSchema();
-    await this.seed();
+    // Seed failure must never block application startup (hotfix 2026-09-28: prod 502).
+    try {
+      await this.schemaService.initSchema();
+      await this.seed();
+    } catch (err: any) {
+      this.logger.error(`Chatbot KB init skipped: ${err?.message}`);
+    }
   }
 
   async seed() {
@@ -384,6 +390,7 @@ export class ChatbotKbSeedService implements OnModuleInit {
         const searchText = normalizeVi(fullText);
         const item = queryRunner.manager.create(ChatbotKnowledgeItem, {
           ...k,
+          item_key: randomUUID(),
           search_text: searchText,
         });
         await queryRunner.manager.save(ChatbotKnowledgeItem, item);

@@ -6,7 +6,7 @@ export class ChatbotKnowledgeItem {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', default: () => 'gen_random_uuid()' })
   item_key: string;
 
   @Column({ type: 'int', default: 1 })
