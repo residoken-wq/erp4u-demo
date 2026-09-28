@@ -68,7 +68,8 @@ export const ChatbotConfigTab: React.FC = () => {
     if (!val) return '';
     if (val.startsWith('http') || val.startsWith('data:')) return val;
     if (val.startsWith('/uploads/')) return `${API_URL}/upload/files/${val.replace('/uploads/', '')}`;
-    return `${API_URL}${val}`;
+    if (val.startsWith('/') && !val.startsWith('//')) return val; // ảnh tĩnh của website, vd /images/chatbot/...
+    return ''; // giá trị không hợp lệ (vd đường dẫn fakepath của trình duyệt) → không tải
   };
 
   const renderedPreviewGreeting = useMemo(() => {
@@ -155,7 +156,7 @@ export const ChatbotConfigTab: React.FC = () => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const url = uploadRes.data?.url || uploadRes.data?.data?.url;
-      if (url) {
+      if (typeof url === 'string' && url.startsWith('/')) {
         form.setFieldValue('avatar_url', url);
         message.success('Tải ảnh avatar thành công!');
       }
@@ -325,14 +326,24 @@ export const ChatbotConfigTab: React.FC = () => {
                 />
               </Form.Item>
 
+              {/* Hotfix 2026-09-28: Form.Item chỉ bind vào Input (noStyle), không bọc cả div,
+                  nếu không sự kiện change của ô chọn file sẽ ghi đường dẫn "fakepath" vào avatar_url. */}
               <Form.Item
-                name="avatar_url"
                 label="Ảnh đại diện (Avatar)"
-                rules={[{ required: true, message: 'Nhập đường dẫn avatar (/ hoặc https://)' }]}
+                required
                 extra="Đường dẫn ảnh công khai hoặc tải ảnh từ máy tính"
               >
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <Input placeholder="/images/chatbot/cuu-erp4u-192.webp" />
+                  <Form.Item
+                    name="avatar_url"
+                    noStyle
+                    rules={[
+                      { required: true, message: 'Nhập đường dẫn avatar (/ hoặc https://)' },
+                      { pattern: /^(\/(?!\/)|https:\/\/)/, message: 'Avatar phải bắt đầu bằng / hoặc https://' },
+                    ]}
+                  >
+                    <Input placeholder="/images/chatbot/cuu-erp4u-192.webp" style={{ flex: 1 }} />
+                  </Form.Item>
                   <Upload
                     beforeUpload={(file) => {
                       handleUploadAvatar(file);
