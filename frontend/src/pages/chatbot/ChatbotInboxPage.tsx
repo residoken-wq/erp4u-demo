@@ -346,7 +346,7 @@ const ChatbotInboxPage: React.FC = () => {
                 style={{ marginBottom: 8 }}
               />
 
-              <Space orientation="horizontal" size={6} wrap style={{ width: '100%' }}>
+              <Space direction="horizontal" size={6} wrap style={{ width: '100%' }}>
                 <Select
                   size="small"
                   placeholder="Trạng thái"

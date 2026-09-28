@@ -5,6 +5,16 @@ import { ChatbotProductFact } from '../entities/chatbot-product-fact.entity';
 import { ChatbotPriceRule } from '../entities/chatbot-price-rule.entity';
 import { ChatbotConfigService } from '../config/chatbot-config.service';
 import { normalizeVi } from '../security/pii';
+import { renderKnowledgeAnswer } from './knowledge-template';
+import { detectTopicHint } from '../llm/fake.provider';
+import { redactPiiForLlm } from '../conversation/reply-validator';
+
+const STOP_WORDS = new Set([
+  'a', 'o', 'oi', 'nhe', 'nha', 'thi', 'la', 'co', 'khong', 'cho', 'em', 'anh',
+  'chi', 'minh', 'ben', 'cua', 'va', 'hay', 'duoc', 'voi', 'cac', 'nhung',
+  'nay', 'do', 'bao', 'nhieu', 'gi', 'nao', 'the', 'ra', 'vao', 'muon', 'can',
+  'toi', 'ah', 'u', 'vay', 'roi', 'luon', 'giup', 'xin',
+]);
 
 @Injectable()
 export class ChatbotToolsService {
@@ -74,13 +84,14 @@ export class ChatbotToolsService {
     }
 
     // Map strictly without leaking source_refs or internal URLs
+    const publicView = await this.configService.publicView();
     const resultItems = (items || []).map((it) => ({
       id: it.id,
       item_key: it.item_key,
       version: it.version,
       topic: it.topic,
       question: it.question,
-      answer: it.answer,
+      answer: renderKnowledgeAnswer(it.answer, publicView),
     }));
 
     return { items: resultItems };
@@ -408,5 +419,111 @@ export class ChatbotToolsService {
       missing: [],
       currency: 'VND',
     };
+  }
+
+  // --- 6. retrieveForTurn (P3.4) ---
+  async retrieveForTurn(
+    text: string,
+    options: { intent?: string; topic_hint?: string } = {},
+  ) {
+    if (!text || !text.trim()) {
+      return { items: [] };
+    }
+
+    const today = this.getVietnamToday();
+    const norm = normalizeVi(text);
+    const words = norm.split(/[\s,.;:!?()\[\]"'/\\-]+/).filter(Boolean);
+    const tokens = words.filter((w) => {
+      if (w.length <= 1) return false;
+      if (/^\d+$/.test(w)) return false;
+      if (STOP_WORDS.has(w)) return false;
+      return true;
+    });
+
+    const topicHint = options.topic_hint || detectTopicHint(norm);
+
+    const repo = this.dataSource.getRepository(ChatbotKnowledgeItem);
+    const qb = repo
+      .createQueryBuilder('item')
+      .where('item.status = :status', { status: 'published' })
+      .andWhere('item.public_allowed = true')
+      .andWhere("item.topic NOT LIKE 'script.%'")
+      .andWhere('(item.effective_from IS NULL OR item.effective_from <= :today)', { today })
+      .andWhere('(item.effective_to IS NULL OR item.effective_to >= :today)', { today });
+
+    const candidates = await qb.getMany();
+    const publicView = await this.configService.publicView();
+
+    const scored: Array<{ item: ChatbotKnowledgeItem; score: number }> = [];
+
+    for (const item of candidates) {
+      const lowerTopic = (item.topic || '').toLowerCase();
+      const matchesTopicHint = Boolean(topicHint && lowerTopic.includes(topicHint.toLowerCase()));
+
+      const itemNormSearch = normalizeVi(`${item.topic} ${item.question || ''} ${item.answer}`);
+      const itemWords = new Set(itemNormSearch.split(/[\s,.;:!?()\[\]"'/\\-]+/).filter(Boolean));
+      let matchingTokenCount = 0;
+      for (const tok of tokens) {
+        if (itemWords.has(tok)) {
+          matchingTokenCount++;
+        }
+      }
+
+      const meetsTokenThreshold =
+        tokens.length > 0 && matchingTokenCount >= Math.ceil(tokens.length * 0.5);
+
+      if (matchesTopicHint || meetsTokenThreshold) {
+        let score = tokens.length > 0 ? matchingTokenCount / tokens.length : 0;
+        if (matchesTopicHint) score += 1.0;
+        if (options.intent && item.intent === options.intent) score += 0.5;
+
+        scored.push({ item, score });
+      }
+    }
+
+    scored.sort((a, b) => b.score - a.score);
+    const top3 = scored.slice(0, 3).map((s) => ({
+      id: s.item.id,
+      item_key: s.item.item_key,
+      version: s.item.version,
+      topic: s.item.topic,
+      question: s.item.question,
+      answer: renderKnowledgeAnswer(s.item.answer, publicView),
+    }));
+
+    if (top3.length === 0) {
+      await this.recordKnowledgeGap(text, options.intent);
+    }
+
+    return { items: top3 };
+  }
+
+  async recordKnowledgeGap(text: string, intent?: string): Promise<void> {
+    const questionNorm = normalizeVi(text).trim();
+    if (!questionNorm) return;
+    const cleanSample = redactPiiForLlm(text).slice(0, 300);
+
+    try {
+      await this.dataSource.query(
+        `INSERT INTO chatbot_knowledge_gaps (id, question_norm, sample_text, intent, count, status, first_seen_at, last_seen_at)
+         VALUES (gen_random_uuid(), $1, $2, $3, 1, 'open', now(), now())
+         ON CONFLICT (question_norm)
+         DO UPDATE SET count = chatbot_knowledge_gaps.count + 1, last_seen_at = now()`,
+        [questionNorm, cleanSample, intent || null],
+      );
+    } catch (err: any) {
+      this.logger.warn(`Could not record knowledge gap: ${err?.message}`);
+    }
+  }
+
+  async getKbVersion(): Promise<number> {
+    try {
+      const res = await this.dataSource.query(
+        `SELECT value FROM system_configs WHERE key = 'CHATBOT_KB_VERSION'`,
+      );
+      return Number(res[0]?.value) || 1;
+    } catch {
+      return 1;
+    }
   }
 }

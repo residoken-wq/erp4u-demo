@@ -29,13 +29,20 @@ export class ScriptedResponderService {
       return { slots, hasNewSlots };
     }
 
-    // 1. Quantity: (\d{1,6})\s*(bộ|cái|chiếc|set|bé)
-    const qtyMatch = text.match(/(\d{1,6})\s*(bộ|cái|chiếc|set|bé)/i);
-    if (qtyMatch) {
-      const q = parseInt(qtyMatch[1], 10);
+    // 1. Quantity: (\d{1,6})\s*(bộ|cái|chiếc|set|bé|bạn|túi|tấm|chăn|gối|đệm|nệm)
+    const textWithoutApparel = text.replace(/(?:đồng phục|áo|tạp dề)[^,.;!?\n]*?(\d+)\s*(?:bộ|cái|chiếc)/gi, '');
+    const validQtyRegex = /(\d{1,6})\s*(bộ|cái|chiếc|set|bé|bạn|túi|tấm|chăn|gối|đệm|nệm)/gi;
+    let qm: RegExpExecArray | null;
+    while ((qm = validQtyRegex.exec(textWithoutApparel)) !== null) {
+      const afterMatch = textWithoutApparel.slice(qm.index + qm[0].length);
+      if (/^\s*(tuổi|tháng|năm|cm\b)/i.test(afterMatch)) continue;
+      const beforeMatch = textWithoutApparel.slice(Math.max(0, qm.index - 10), qm.index);
+      if (/bé\s*$/i.test(beforeMatch) && /^\s*(tuổi|tháng)/i.test(afterMatch)) continue;
+      const q = parseInt(qm[1], 10);
       if (q > 0 && q !== currentData.quantity) {
         slots.quantity = q;
         hasNewSlots = true;
+        break;
       }
     }
 

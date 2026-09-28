@@ -278,6 +278,20 @@ export class LlmConfigDto {
   @Min(1000)
   @Max(120000)
   timeout_ms: number;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^(script_first|llm_first|script_only)$/, {
+    message: 'mode must be script_first, llm_first, or script_only',
+  })
+  mode?: 'script_first' | 'llm_first' | 'script_only';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  @Matches(/^[^<>{}]*$/, { message: 'model cannot contain <, >, {, }' })
+  @IsNoSecret()
+  model?: string;
 }
 
 export class WidgetDto {
@@ -287,6 +301,13 @@ export class WidgetDto {
   @Matches(/^[^<>{}]*$/, { message: 'cta_label cannot contain <, >, {, }' })
   @IsNoSecret()
   cta_label?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  @Matches(/^[^<>{}]*$/, { message: 'subtitle cannot contain <, >, {, }' })
+  @IsNoSecret()
+  subtitle?: string;
 
   @IsOptional()
   @IsBoolean()

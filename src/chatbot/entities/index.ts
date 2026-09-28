@@ -14,6 +14,7 @@ export * from './chatbot-bundle.entity';
 export * from './chatbot-price-rule.entity';
 export * from './chatbot-conflict.entity';
 export * from './chatbot-source.entity';
+export * from './chatbot-knowledge-gap.entity';
 
 import { ChatbotConversation } from './chatbot-conversation.entity';
 import { ChatbotSession } from './chatbot-session.entity';
@@ -31,6 +32,7 @@ import { ChatbotBundle } from './chatbot-bundle.entity';
 import { ChatbotPriceRule } from './chatbot-price-rule.entity';
 import { ChatbotConflict } from './chatbot-conflict.entity';
 import { ChatbotSource } from './chatbot-source.entity';
+import { ChatbotKnowledgeGap } from './chatbot-knowledge-gap.entity';
 
 export const CHATBOT_ENTITIES = [
   ChatbotConversation,
@@ -49,4 +51,5 @@ export const CHATBOT_ENTITIES = [
   ChatbotPriceRule,
   ChatbotConflict,
   ChatbotSource,
+  ChatbotKnowledgeGap,
 ];

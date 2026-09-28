@@ -24,6 +24,7 @@ import {
   checkTimezone,
   checkZaloUrl,
   checkCtaLabel,
+  checkSubtitle,
   checkAutoOpenDelay,
   checkAutoOpenMobile,
   checkSnoozeHours,
@@ -332,6 +333,16 @@ export class ChatbotConfigService {
       } else if (raw.llm.timeout_ms !== undefined) {
         this.logger.warn('chatbot config invalid field llm.timeout_ms');
       }
+      if (['script_first', 'llm_first', 'script_only'].includes(raw.llm.mode)) {
+        result.llm.mode = raw.llm.mode;
+      } else if (raw.llm.mode !== undefined) {
+        this.logger.warn('chatbot config invalid field llm.mode');
+      }
+      if (typeof raw.llm.model === 'string' && /^[^<>{}]*$/.test(raw.llm.model) && checkNoSecret(raw.llm.model)) {
+        result.llm.model = raw.llm.model.trim();
+      } else if (raw.llm.model !== undefined) {
+        this.logger.warn('chatbot config invalid field llm.model');
+      }
     }
 
     // Widget: P2
@@ -341,6 +352,13 @@ export class ChatbotConfigService {
         result.widget.cta_label = raw.widget.cta_label;
       } else if (raw.widget.cta_label !== undefined) {
         this.logger.warn('chatbot config invalid field widget.cta_label');
+      }
+
+      if (checkSubtitle(raw.widget.subtitle)) {
+        result.widget.subtitle = raw.widget.subtitle !== undefined ? raw.widget.subtitle : defaults.widget.subtitle;
+      } else if (raw.widget.subtitle !== undefined) {
+        this.logger.warn('chatbot config invalid field widget.subtitle');
+        result.widget.subtitle = defaults.widget.subtitle;
       }
 
       if (typeof raw.widget.auto_open === 'boolean') {

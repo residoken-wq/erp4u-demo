@@ -1,12 +1,10 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { DataSource } from 'typeorm';
 import { SystemConfig } from '../../system/system-config.entity';
 import { ChatbotSource } from '../entities/chatbot-source.entity';
 import { ChatbotConflict } from '../entities/chatbot-conflict.entity';
 import { ChatbotKnowledgeItem } from '../entities/chatbot-knowledge-item.entity';
 import { ChatbotSchemaService } from '../schema/chatbot-schema.service';
-import { scanPii, normalizeVi } from '../security/pii';
 
 @Injectable()
 export class ChatbotKbSeedService implements OnModuleInit {
@@ -22,6 +20,7 @@ export class ChatbotKbSeedService implements OnModuleInit {
     try {
       await this.schemaService.initSchema();
       await this.seed();
+      await this.cleanupV1Seed();
     } catch (err: any) {
       this.logger.error(`Chatbot KB init skipped: ${err?.message}`);
     }
@@ -64,7 +63,7 @@ export class ChatbotKbSeedService implements OnModuleInit {
         },
         {
           code: 'S4',
-          title: 'Hồ sơ công bố hợp quy & chứng nhận kiểm định dệt may',
+          title: 'Hồ sơ công bố hợp quy & kiểm định dệt may',
           internal_ref: 'https://docs.google.com/document/d/1s4-certifications',
           sensitivity: 'public',
         },
@@ -222,181 +221,7 @@ export class ChatbotKbSeedService implements OnModuleInit {
         await queryRunner.manager.save(ChatbotConflict, queryRunner.manager.create(ChatbotConflict, c));
       }
 
-      // 3. Knowledge Items: 11 spec items (§4.2) + 8 script items (§6.7)
-      const specItems = [
-        {
-          topic: 'product.spec.mattress_mesh',
-          question: 'Quy cách nệm lưới mầm non',
-          answer: 'Nệm lưới mầm non khung inox, vải lưới thoáng khí kháng khuẩn, chân nhựa chống trầy xước sàn.',
-          status: 'needs_review',
-          public_allowed: false,
-          source_refs: ['S1', 'S4'],
-        },
-        {
-          topic: 'product.spec.mattress_cotton',
-          question: 'Quy cách nệm gòn cotton mầm non',
-          answer: 'Nệm gòn chần vải cotton 100% Thắng Lợi, ruột gòn polyester nguyên sinh ép nhiệt, có thể gấp gọn.',
-          status: 'needs_review',
-          public_allowed: false,
-          source_refs: ['S1'],
-        },
-        {
-          topic: 'product.spec.pillow_flat',
-          question: 'Quy cách gối nằm mầm non',
-          answer: 'Gối nằm kích thước 30x45cm hoặc 35x50cm, ruột gòn bi siêu êm ái, vỏ cotton có khóa kéo tiện giặt.',
-          status: 'needs_review',
-          public_allowed: false,
-          source_refs: ['S1'],
-        },
-        {
-          topic: 'product.spec.pillow_hug',
-          question: 'Quy cách gối ôm bé',
-          answer: 'Gối ôm kích thước 15x60cm, ruột gòn tơi cao cấp, vỏ tháo rời được.',
-          status: 'needs_review',
-          public_allowed: false,
-          source_refs: ['S1'],
-        },
-        {
-          topic: 'product.spec.blanket_cotton',
-          question: 'Quy cách chăn mầm non vải cotton',
-          answer: 'Chăn cotton 1 lớp hoặc chần gòn hè thu kích thước 110x140cm, mềm nhẹ, thoáng mát cho bé.',
-          status: 'needs_review',
-          public_allowed: false,
-          source_refs: ['S1'],
-        },
-        {
-          topic: 'product.spec.bag_canvas',
-          question: 'Quy cách túi đựng nệm canvas',
-          answer: 'Túi đựng nệm chất liệu vải bố canvas dày dặn, có quai xách và khóa kéo chắc chắn.',
-          status: 'needs_review',
-          public_allowed: false,
-          source_refs: ['S1'],
-        },
-        {
-          topic: 'product.spec.bag_waterproof',
-          question: 'Quy cách túi chống thấm đựng nệm',
-          answer: 'Túi vải tráng PU/PVC chống thấm nước, bảo vệ nệm gối sạch sẽ khi di chuyển trời mưa.',
-          status: 'needs_review',
-          public_allowed: false,
-          source_refs: ['S1'],
-        },
-        {
-          topic: 'product.spec.sheet_mesh',
-          question: 'Quy cách ga trải nệm lưới',
-          answer: 'Ga bọc nệm lưới chất liệu cotton chun 4 góc, giữ ấm lưng cho bé khi nằm điều hòa.',
-          status: 'needs_review',
-          public_allowed: false,
-          source_refs: ['S1'],
-        },
-        {
-          topic: 'product.spec.uniform_boy',
-          question: 'Quy cách đồng phục bé trai',
-          answer: 'Áo thun cotton cá sấu co giãn 4 chiều phối quần short kaki mềm có thun lưng.',
-          status: 'needs_review',
-          public_allowed: false,
-          source_refs: ['S2'],
-        },
-        {
-          topic: 'product.spec.uniform_girl',
-          question: 'Quy cách đồng phục bé gái',
-          answer: 'Áo thun kết hợp chân váy xòe có quần lót trong bảo hộ hoặc đầm liền cotton.',
-          status: 'needs_review',
-          public_allowed: false,
-          source_refs: ['S2'],
-        },
-        {
-          topic: 'product.spec.fabric_safety',
-          question: 'Tiêu chuẩn an toàn vải dệt may',
-          answer: 'Vải đạt chứng nhận không chứa formaldehyde và amin thơm độc hại theo quy chuẩn QCVN 01:2017/BCT.',
-          status: 'needs_review',
-          public_allowed: false,
-          source_refs: ['S4'],
-        },
-      ];
-
-      const scriptItems = [
-        {
-          topic: 'script.greeting',
-          question: 'Lời chào ban đầu',
-          answer: 'Dạ em chào anh/chị ạ! Em là {short_name}, trợ lý của ERP4U. Anh/chị đang cần tìm hiểu nệm gối mầm non hay đồng phục cho các bé ạ?',
-          status: 'draft',
-          public_allowed: true,
-          source_refs: ['SPEC'],
-        },
-        {
-          topic: 'script.ask_segment',
-          question: 'Khảo sát phân khúc khách hàng',
-          answer: 'Dạ anh/chị đang tham khảo sản phẩm cho trường mầm non, lớp học hay mua cho bé nhà mình ạ?',
-          status: 'draft',
-          public_allowed: true,
-          source_refs: ['SPEC'],
-        },
-        {
-          topic: 'script.ask_quantity',
-          question: 'Hỏi số lượng đặt may',
-          answer: 'Dạ trường mình dự kiến đặt khoảng bao nhiêu bộ ạ để em hỗ trợ kiểm tra khung giá tốt nhất cho mình ạ?',
-          status: 'draft',
-          public_allowed: true,
-          source_refs: ['SPEC'],
-        },
-        {
-          topic: 'script.ask_size',
-          question: 'Hỏi độ tuổi hoặc kích thước',
-          answer: 'Dạ các bé ở trường mình nằm giường lưới hay nằm sàn trực tiếp ạ? Bé mấy tuổi để em gợi ý kích thước chuẩn ạ?',
-          status: 'draft',
-          public_allowed: true,
-          source_refs: ['SPEC'],
-        },
-        {
-          topic: 'script.logo_support',
-          question: 'Tư vấn in thêu logo',
-          answer: 'Dạ bên em có hỗ trợ in thêu tên trường hoặc tên từng bé lên nệm gối và túi đựng ạ.',
-          status: 'draft',
-          public_allowed: true,
-          source_refs: ['SPEC'],
-        },
-        {
-          topic: 'script.lead_contact',
-          question: 'Đề nghị liên hệ chuyên viên',
-          answer: 'Dạ để gửi bảng mẫu vải và báo giá chiết khấu cụ thể, anh/chị cho em xin số điện thoại hoặc Zalo nhé ạ.',
-          status: 'draft',
-          public_allowed: true,
-          source_refs: ['SPEC'],
-        },
-        {
-          topic: 'script.outside_hours',
-          question: 'Thông báo ngoài giờ làm việc',
-          answer: 'Dạ hiện tại đang ngoài giờ làm việc của nhân viên tư vấn. Em đã ghi nhận thông tin và chuyên viên sẽ phản hồi sớm nhất vào đầu ca sáng mai ạ.',
-          status: 'draft',
-          public_allowed: true,
-          source_refs: ['SPEC'],
-        },
-        {
-          topic: 'script.fallback_busy',
-          question: 'Nhân viên bận ca cao điểm',
-          answer: 'Dạ các bạn tư vấn đang hỗ trợ khách khác. Anh/chị để lại thông tin nhu cầu, em sẽ ưu tiên chuyển thông báo ngay ạ.',
-          status: 'draft',
-          public_allowed: true,
-          source_refs: ['SPEC'],
-        },
-      ];
-
-      const allKnowledge = [...specItems, ...scriptItems];
-      for (const k of allKnowledge) {
-        const fullText = (k.question || '') + ' ' + k.answer;
-        if (scanPii(fullText)) {
-          throw new Error(`PII detected in seed knowledge item: ${k.topic}`);
-        }
-        const searchText = normalizeVi(fullText);
-        const item = queryRunner.manager.create(ChatbotKnowledgeItem, {
-          ...k,
-          item_key: randomUUID(),
-          search_text: searchText,
-        });
-        await queryRunner.manager.save(ChatbotKnowledgeItem, item);
-      }
-
-      // 4. Mark CHATBOT_KB_SEED_V1 done
+      // 3. Mark CHATBOT_KB_SEED_V1 done (seed V1 now only contains sources and conflicts)
       const seedMarker = queryRunner.manager.create(SystemConfig, {
         key: 'CHATBOT_KB_SEED_V1',
         value: JSON.stringify({ at: new Date().toISOString(), version: 1 }),
@@ -410,6 +235,89 @@ export class ChatbotKbSeedService implements OnModuleInit {
       await queryRunner.rollbackTransaction();
       this.logger.error(`Chatbot KB Seed V1 failed: ${err.message}`, err.stack);
       throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async cleanupV1Seed(): Promise<void> {
+    const configRepo = this.dataSource.getRepository(SystemConfig);
+    const existing = await configRepo.findOne({ where: { key: 'CHATBOT_KB_SEED_V1_CLEANUP' } });
+    if (existing) {
+      this.logger.log('CHATBOT_KB_SEED_V1_CLEANUP already applied, skipping.');
+      return;
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      this.logger.log('Starting CHATBOT_KB_SEED_V1_CLEANUP migration...');
+
+      const targetTopics = [
+        'product.spec.mattress_mesh',
+        'product.spec.mattress_cotton',
+        'product.spec.pillow_flat',
+        'product.spec.pillow_hug',
+        'product.spec.blanket_cotton',
+        'product.spec.bag_canvas',
+        'product.spec.bag_waterproof',
+        'product.spec.sheet_mesh',
+        'product.spec.uniform_boy',
+        'product.spec.uniform_girl',
+        'product.spec.fabric_safety',
+        'script.greeting',
+        'script.ask_segment',
+        'script.ask_quantity',
+        'script.ask_size',
+        'script.logo_support',
+        'script.lead_contact',
+        'script.outside_hours',
+        'script.fallback_busy',
+      ];
+
+      const qb = queryRunner.manager
+        .createQueryBuilder(ChatbotKnowledgeItem, 'item')
+        .where('item.topic IN (:...targetTopics)', { targetTopics })
+        .andWhere('(item.seed_key IS NULL OR item.seed_key NOT LIKE :kb2Prefix)', { kb2Prefix: 'kb2.%' });
+
+      const items = await qb.getMany();
+
+      let retiredCount = 0;
+      let skippedPublishedCount = 0;
+
+      for (const item of items) {
+        if (item.status === 'published') {
+          this.logger.warn(
+            `CHATBOT_KB_SEED_V1_CLEANUP: item ${item.id} (topic: ${item.topic}) is already published, skipping retirement.`,
+          );
+          skippedPublishedCount++;
+        } else if (item.status === 'draft' || item.status === 'needs_review') {
+          item.status = 'retired';
+          await queryRunner.manager.save(ChatbotKnowledgeItem, item);
+          retiredCount++;
+        }
+      }
+
+      const marker = queryRunner.manager.create(SystemConfig, {
+        key: 'CHATBOT_KB_SEED_V1_CLEANUP',
+        value: JSON.stringify({
+          at: new Date().toISOString(),
+          retired_count: retiredCount,
+          skipped_published_count: skippedPublishedCount,
+        }),
+        description: 'Chatbot Knowledge Base Seed V1 Cleanup marker (retire fabricated seed items)',
+      });
+      await queryRunner.manager.save(SystemConfig, marker);
+
+      await queryRunner.commitTransaction();
+      this.logger.log(
+        `CHATBOT_KB_SEED_V1_CLEANUP completed: retired=${retiredCount}, skipped_published=${skippedPublishedCount}`,
+      );
+    } catch (err: any) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(`CHATBOT_KB_SEED_V1_CLEANUP failed: ${err.message}`, err.stack);
     } finally {
       await queryRunner.release();
     }

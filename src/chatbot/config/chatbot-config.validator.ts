@@ -175,3 +175,11 @@ export function checkSnoozeHours(val: any): boolean {
   return val >= 1 && val <= 168;
 }
 
+export function checkSubtitle(val: any): boolean {
+  if (val === undefined || val === null || val === '') return true;
+  if (typeof val !== 'string') return false;
+  if (val.length > 40) return false;
+  if (!SAFE_TEXT_REGEX.test(val)) return false;
+  return checkNoSecret(val);
+}
+

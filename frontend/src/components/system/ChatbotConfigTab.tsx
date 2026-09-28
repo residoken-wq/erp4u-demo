@@ -560,7 +560,105 @@ export const ChatbotConfigTab: React.FC = () => {
               </Form.Item>
             </Card>
 
-            {/* 6. Cấu hình Nâng cao (Collapse) */}
+            {/* 6. Nút & Tự Mở Chat (Widget) */}
+            <Card
+              size="small"
+              title={<span style={{ fontWeight: 700 }}>Nút & Tự Mở Chat</span>}
+              style={{ marginBottom: 20, borderRadius: 8 }}
+            >
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name={['widget', 'cta_label']}
+                    label="Nhãn nút mở chat"
+                    rules={[
+                      { min: 2, max: 30, message: 'Độ dài 2–30 ký tự' },
+                      { pattern: /^[^<>{}]*$/, message: 'Không chứa ký tự <, >, {, }' },
+                    ]}
+                  >
+                    <Input placeholder="Tư vấn ngay" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name={['widget', 'subtitle']}
+                    label="Phụ đề panel / teaser"
+                    rules={[
+                      { max: 40, message: 'Độ dài tối đa 40 ký tự' },
+                      { pattern: /^[^<>{}]*$/, message: 'Không chứa ký tự <, >, {, }' },
+                    ]}
+                  >
+                    <Input placeholder="Tư vấn nệm mầm non" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    name={['widget', 'auto_open']}
+                    label="Tự động mở chat"
+                    valuePropName="checked"
+                  >
+                    <Switch checkedChildren="BẬT" unCheckedChildren="TẮT" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    name={['widget', 'auto_open_delay_s']}
+                    label="Thời gian chờ tự mở (giây)"
+                  >
+                    <InputNumber min={3} max={60} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    name={['widget', 'auto_open_mobile']}
+                    label="Tự mở trên mobile"
+                  >
+                    <Select>
+                      <Select.Option value="teaser">Teaser (nhắc nhỏ)</Select.Option>
+                      <Select.Option value="panel">Mở cả panel</Select.Option>
+                      <Select.Option value="off">Tắt trên mobile</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name={['widget', 'snooze_hours']}
+                    label="Thời gian ẩn khi khách đóng (giờ)"
+                  >
+                    <InputNumber min={1} max={168} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Card>
+
+            {/* 7. Chiến Lược Trả Lời & Mô Hình AI */}
+            <Card
+              size="small"
+              title={<span style={{ fontWeight: 700 }}>Chiến Lược Trả Lời & Mô Hình AI</span>}
+              style={{ marginBottom: 20, borderRadius: 8 }}
+            >
+              <Form.Item
+                name={['llm', 'mode']}
+                label="Chế độ trả lời"
+                extra="Chọn chiến lược kết hợp giữa kịch bản / kho tri thức và mô hình AI"
+              >
+                <Select>
+                  <Select.Option value="script_first">Kịch bản trước, AI sau (tiết kiệm quota, mặc định)</Select.Option>
+                  <Select.Option value="llm_first">AI trước (tiêu chuẩn)</Select.Option>
+                  <Select.Option value="script_only">Chỉ dùng kịch bản (không gọi AI)</Select.Option>
+                </Select>
+              </Form.Item>
+
+              <Form.Item
+                name={['llm', 'model']}
+                label="Mô hình LLM tùy chọn"
+                extra="Để trống để tự động chọn mô hình flash tốt nhất (hoặc ghi đè bằng env CHATBOT_LLM_MODEL)"
+              >
+                <Input placeholder="Tự chọn mô hình tối ưu (vd: models/gemini-1.5-flash)" />
+              </Form.Item>
+            </Card>
+
+            {/* 8. Cấu hình Nâng cao (Collapse) */}
             <Collapse
               style={{ marginBottom: 24, borderRadius: 8, background: '#fff' }}
               items={[
@@ -580,13 +678,13 @@ export const ChatbotConfigTab: React.FC = () => {
                         style={{ marginBottom: 16, background: '#f9f9f9', borderRadius: 8 }}
                       >
                         <Row gutter={16}>
-                          <Col span={8}>
+                          <Col span={6}>
                             <Text type="secondary">Nhà cung cấp LLM:</Text>
                             <div>
                               <Tag color="blue">{statusData?.llm_provider || 'fake'}</Tag>
                             </div>
                           </Col>
-                          <Col span={8}>
+                          <Col span={6}>
                             <Text type="secondary">Khóa LLM:</Text>
                             <div>
                               {statusData?.llm_key_configured ? (
@@ -599,8 +697,19 @@ export const ChatbotConfigTab: React.FC = () => {
                                 </Tag>
                               )}
                             </div>
+                            {statusData?.llm_key_source === 'GEMINI_API_KEY' && (
+                              <div style={{ fontSize: 11, color: '#1890ff', marginTop: 4 }}>
+                                Dùng chung với trợ lý nội bộ
+                              </div>
+                            )}
                           </Col>
-                          <Col span={8}>
+                          <Col span={6}>
+                            <Text type="secondary">Mô hình hoạt động:</Text>
+                            <div>
+                              <Tag color="purple">{statusData?.llm_model || 'models/gemini-1.5-flash'}</Tag>
+                            </div>
+                          </Col>
+                          <Col span={6}>
                             <Text type="secondary">Lượt gọi hôm nay:</Text>
                             <div>
                               <Text strong style={{ fontSize: 16 }}>

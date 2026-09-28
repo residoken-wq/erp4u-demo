@@ -102,6 +102,33 @@ export class ChatbotKbController {
     return this.kbService.getSources();
   }
 
+  // CB-120: POST /import
+  @RequirePermission('CHATBOT_KB', 'can_create')
+  @Perm('CHATBOT_KB', 'create')
+  @HttpCode(HttpStatus.OK)
+  @Post('import')
+  async importKb(@Body() body: any, @Req() req: any) {
+    const userId = req.user?.id || req.user?.userId;
+    return this.kbService.importKb(body, userId);
+  }
+
+  // CB-121: GET /gaps
+  @RequirePermission('CHATBOT_KB', 'can_view')
+  @Perm('CHATBOT_KB', 'view')
+  @Get('gaps')
+  async getGaps(@Query() query: any) {
+    return this.kbService.getGaps(query);
+  }
+
+  // CB-122: PUT /gaps/:id
+  @RequirePermission('CHATBOT_KB', 'can_update')
+  @Perm('CHATBOT_KB', 'update')
+  @Put('gaps/:id')
+  async updateGap(@Param('id') id: string, @Body() body: any, @Req() req: any) {
+    const userId = req.user?.id || req.user?.userId;
+    return this.kbService.updateGap(id, body, userId);
+  }
+
   // --- Dynamic /:type Routes ---
 
   // CB-101: GET /:type

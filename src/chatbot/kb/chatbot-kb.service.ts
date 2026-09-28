@@ -13,6 +13,7 @@ import { ChatbotPriceRule } from '../entities/chatbot-price-rule.entity';
 import { ChatbotConflict } from '../entities/chatbot-conflict.entity';
 import { ChatbotSource } from '../entities/chatbot-source.entity';
 import { ChatbotAuditEvent } from '../entities/chatbot-audit-event.entity';
+import { ChatbotKnowledgeGap } from '../entities/chatbot-knowledge-gap.entity';
 import { SystemConfig } from '../../system/system-config.entity';
 import { normalizeVi } from '../security/pii';
 import { randomUUID } from 'crypto';
@@ -854,5 +855,234 @@ export class ChatbotKbService {
       kb_version: kbVersion,
       allow_fixtures: process.env.CHATBOT_ALLOW_FIXTURES === 'true',
     };
+  }
+
+  // --- 12. Import KB from JSON (CB-120) ---
+  async importKb(body: any, userId?: number) {
+    if (!body || typeof body !== 'object') {
+      throw new BadRequestException('Request body is required');
+    }
+    if (body.format !== 'erp4u-chatbot-kb') {
+      throw new BadRequestException({ code: 'INVALID_FORMAT', message: 'Format must be erp4u-chatbot-kb' });
+    }
+    if (!Array.isArray(body.knowledge) || !Array.isArray(body.scripts)) {
+      throw new BadRequestException('knowledge and scripts arrays are required');
+    }
+
+    const allowedKnowledgeKeys = [
+      'seed_key',
+      'topic',
+      'intent',
+      'question',
+      'answer',
+      'public_allowed',
+      'status',
+      'source_refs',
+      'review_note',
+      'conflict_code',
+    ];
+
+    for (const k of body.knowledge) {
+      if (!k || typeof k !== 'object') {
+        throw new BadRequestException('Knowledge items must be objects');
+      }
+      for (const field of Object.keys(k)) {
+        if (!allowedKnowledgeKeys.includes(field)) {
+          throw new BadRequestException({ code: 'UNKNOWN_FIELD', message: `Unknown field in knowledge: ${field}` });
+        }
+      }
+      if (!k.seed_key || typeof k.seed_key !== 'string') {
+        throw new BadRequestException('seed_key is required for knowledge items');
+      }
+      if (!k.topic || typeof k.topic !== 'string' || !/^[a-z0-9_.]+$/.test(k.topic)) {
+        throw new BadRequestException(`Invalid topic: ${k.topic}`);
+      }
+      if (!k.answer || typeof k.answer !== 'string' || !k.answer.trim()) {
+        throw new BadRequestException('answer is required for knowledge items');
+      }
+      if (k.status === 'published') {
+        throw new BadRequestException({
+          code: 'IMPORT_STATUS_NOT_ALLOWED',
+          message: 'Direct import of published status is not allowed',
+        });
+      }
+      if (k.status && !['draft', 'needs_review'].includes(k.status)) {
+        throw new BadRequestException({
+          code: 'IMPORT_STATUS_NOT_ALLOWED',
+          message: `Status must be draft or needs_review, got: ${k.status}`,
+        });
+      }
+    }
+
+    const allowedScriptKeys = ['seed_key', 'topic', 'answer', 'source_refs'];
+    for (const s of body.scripts) {
+      if (!s || typeof s !== 'object') {
+        throw new BadRequestException('Script items must be objects');
+      }
+      for (const field of Object.keys(s)) {
+        if (!allowedScriptKeys.includes(field)) {
+          throw new BadRequestException({ code: 'UNKNOWN_FIELD', message: `Unknown field in scripts: ${field}` });
+        }
+      }
+      if (!s.seed_key || typeof s.seed_key !== 'string') {
+        throw new BadRequestException('seed_key is required for script items');
+      }
+      if (!s.topic || typeof s.topic !== 'string' || !/^[a-z0-9_.]+$/.test(s.topic)) {
+        throw new BadRequestException(`Invalid script topic: ${s.topic}`);
+      }
+      if (!s.answer || typeof s.answer !== 'string' || !s.answer.trim()) {
+        throw new BadRequestException('answer is required for script items');
+      }
+    }
+
+    return await this.dataSource.transaction(async (mgr) => {
+      let conflicts_inserted = 0;
+      if (Array.isArray(body.conflicts)) {
+        for (const c of body.conflicts) {
+          const existing = await mgr.findOne(ChatbotConflict, { where: { code: c.code } });
+          if (!existing) {
+            const conflict = mgr.create(ChatbotConflict, {
+              code: c.code,
+              title: c.title,
+              risk: c.risk || null,
+              locked_topics: c.locked_topics || [],
+              owner_role: c.owner_role || null,
+              status: 'open',
+            });
+            await mgr.save(ChatbotConflict, conflict);
+            conflicts_inserted++;
+          }
+        }
+      }
+
+      let inserted = 0;
+      let skipped = 0;
+
+      const allItems: any[] = [];
+      for (const k of body.knowledge) {
+        allItems.push({
+          seed_key: k.seed_key,
+          topic: k.topic,
+          intent: k.intent || null,
+          question: k.question || null,
+          answer: k.answer,
+          public_allowed: k.public_allowed ?? true,
+          status: k.status || 'draft',
+          source_refs: k.source_refs,
+          review_note: k.review_note,
+          conflict_code: k.conflict_code || null,
+        });
+      }
+      for (const s of body.scripts) {
+        allItems.push({
+          seed_key: s.seed_key,
+          topic: s.topic,
+          intent: null,
+          question: null,
+          answer: s.answer,
+          public_allowed: true,
+          status: 'draft',
+          source_refs: s.source_refs,
+          review_note: null,
+          conflict_code: null,
+        });
+      }
+
+      for (const it of allItems) {
+        const existing = await mgr.findOne(ChatbotKnowledgeItem, { where: { seed_key: it.seed_key } });
+        if (existing) {
+          skipped++;
+        } else {
+          const sourceRefs = Array.isArray(it.source_refs) ? [...it.source_refs] : [];
+          if (it.review_note) {
+            sourceRefs.push({ note: it.review_note, review_note: it.review_note });
+          }
+          const searchText = normalizeVi((it.question || '') + ' ' + it.answer);
+          const newItem = mgr.create(ChatbotKnowledgeItem, {
+            id: randomUUID(),
+            item_key: randomUUID(),
+            version: 1,
+            seed_key: it.seed_key,
+            topic: it.topic,
+            status: it.status,
+            source_refs: sourceRefs,
+            search_text: searchText,
+            answer: it.answer,
+            question: it.question,
+            intent: it.intent,
+            conflict_code: it.conflict_code,
+            public_allowed: it.public_allowed,
+            author_id: userId || null,
+          });
+          await mgr.save(ChatbotKnowledgeItem, newItem);
+          inserted++;
+        }
+      }
+
+      const audit = mgr.create(ChatbotAuditEvent, {
+        actor_type: userId ? 'user' : 'system',
+        actor_user_id: userId || null,
+        op: 'kb.import',
+        object_type: 'knowledge',
+        object_id: 'import',
+        after_ref: { inserted, skipped, conflicts_inserted },
+      });
+      await mgr.save(ChatbotAuditEvent, audit);
+
+      return { inserted, skipped, conflicts_inserted };
+    });
+  }
+
+  // --- 13. Knowledge Gaps (CB-121) ---
+  async getGaps(query: any) {
+    const repo = this.dataSource.getRepository(ChatbotKnowledgeGap);
+    const qb = repo.createQueryBuilder('gap');
+
+    if (query.status) {
+      qb.andWhere('gap.status = :status', { status: query.status });
+    }
+    if (query.q) {
+      qb.andWhere('(gap.question_norm ILIKE :q OR gap.sample_text ILIKE :q)', { q: `%${query.q}%` });
+    }
+
+    const page = Math.max(1, parseInt(query.page || '1', 10));
+    const limit = Math.max(1, Math.min(100, parseInt(query.limit || '50', 10)));
+    qb.skip((page - 1) * limit).take(limit);
+    qb.orderBy('gap.count', 'DESC').addOrderBy('gap.last_seen_at', 'DESC');
+
+    const [items, total] = await qb.getManyAndCount();
+    return { items, total };
+  }
+
+  // --- 14. Update Gap Status (CB-122) ---
+  async updateGap(id: string, body: any, userId?: number) {
+    if (!id || !/^[0-9a-fA-F-]{36}$/.test(id)) {
+      throw new BadRequestException({ code: 'INVALID_ID', message: `Invalid UUID: ${id}` });
+    }
+    if (!body || !['open', 'answered', 'ignored'].includes(body.status)) {
+      throw new BadRequestException('Status must be one of: open, answered, ignored');
+    }
+
+    const repo = this.dataSource.getRepository(ChatbotKnowledgeGap);
+    const gap = await repo.findOne({ where: { id } });
+    if (!gap) {
+      throw new NotFoundException(`Gap ${id} not found`);
+    }
+
+    gap.status = body.status;
+    const saved = await repo.save(gap);
+
+    const auditRepo = this.dataSource.getRepository(ChatbotAuditEvent);
+    const audit = auditRepo.create({
+      actor_type: userId ? 'user' : 'system',
+      actor_user_id: userId || null,
+      op: 'kb.gap.update',
+      object_type: 'gap',
+      object_id: id,
+      after_ref: { status: body.status },
+    });
+    await auditRepo.save(audit);
+
+    return saved;
   }
 }

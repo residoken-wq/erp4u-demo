@@ -19,6 +19,7 @@ import { ChatbotAuditEvent } from '../entities/chatbot-audit-event.entity';
 import { Customer, CustomerType } from '../../customers/customer.entity';
 import { ChatbotConfigService } from '../config/chatbot-config.service';
 import { ScriptedResponderService } from './scripted-responder.service';
+import { TurnOrchestratorService } from './turn-orchestrator.service';
 import { ChatSessionService } from '../session/chat-session.service';
 import { ChatRateLimiter } from '../security/chat-rate-limiter';
 
@@ -27,6 +28,8 @@ const ALLOWED_BRIEF_KEYS = [
   'items',
   'quantity',
   'colors',
+  'fabric',
+  'dimensions',
   'logo',
   'surface',
   'care',
@@ -59,6 +62,7 @@ export class ChatbotConversationService {
     private readonly customerRepo: Repository<Customer>,
     private readonly configService: ChatbotConfigService,
     private readonly responderService: ScriptedResponderService,
+    private readonly turnOrchestrator: TurnOrchestratorService,
     private readonly sessionService: ChatSessionService,
     private readonly rateLimiter: ChatRateLimiter,
     private readonly dataSource: DataSource,
@@ -187,129 +191,15 @@ export class ChatbotConversationService {
       }
     }
 
-    // 2. Test Hook: delay before saving reply
-    if (process.env.CHATBOT_TEST_HOOKS === 'true' && rawText.includes('[[delay:')) {
-      const match = rawText.match(/\[\[delay:(\d+)\]\]/);
-      if (match) {
-        const delayMs = Math.min(parseInt(match[1], 10), 10000);
-        await new Promise((r) => setTimeout(r, delayMs));
-      }
-    }
-
-    // 3. Save customer message in a transaction & run scripted responder
-    let customerMsg: ChatbotMessage;
-    let aiReplies: ChatbotMessage[] = [];
-    let updatedConv: ChatbotConversation = conv;
-
-    await this.dataSource.transaction(async (manager) => {
-      // Lock conversation row
-      const currentConv = await manager.findOne(ChatbotConversation, {
-        where: { id: conv.id },
-        lock: { mode: 'pessimistic_write' },
-      });
-
-      if (!currentConv) return;
-      updatedConv = currentConv;
-
-      // Save customer message
-      customerMsg = manager.create(ChatbotMessage, {
-        conversation_id: currentConv.id,
-        role: 'customer',
-        text: rawText,
-        client_msg_id: clientMsgId || null,
-      });
-      await manager.save(ChatbotMessage, customerMsg);
-
-      // Update last_message_at
-      currentConv.last_message_at = new Date();
-
-      // If human active: bot drops reply, unread_staff + 1
-      if (currentConv.human_active) {
-        this.logger.log('ai_reply_dropped_takeover: human is active');
-        currentConv.unread_staff += 1;
-        await manager.save(ChatbotConversation, currentConv);
-        return;
-      }
-
-      // 4. Extract slots and update brief
-      const latestBrief = await manager.findOne(ChatbotBrief, {
-        where: { conversation_id: currentConv.id },
-        order: { revision: 'DESC' },
-      });
-
-      const currentBriefData = latestBrief ? { ...latestBrief.data } : {};
-      const currentRevision = latestBrief ? latestBrief.revision : 0;
-
-      const { slots, hasNewSlots } = this.responderService.extractSlots(rawText, currentBriefData);
-      let activeRevision = currentRevision;
-      let activeData = currentBriefData;
-
-      if (hasNewSlots) {
-        activeRevision = currentRevision + 1;
-        activeData = { ...currentBriefData, ...slots };
-        const newBrief = manager.create(ChatbotBrief, {
-          conversation_id: currentConv.id,
-          revision: activeRevision,
-          data: activeData,
-          changed_by: 'customer',
-        });
-        await manager.save(ChatbotBrief, newBrief);
-      }
-
-      // 5. Generate reply from scripted responder
-      const response = this.responderService.generateResponse(
-        rawText,
-        activeData,
-        activeRevision,
-        config,
-      );
-
-      if (response.newState) {
-        currentConv.state = response.newState;
-      }
-
-      // Check if human requested -> outbox
-      if (response.isHumanRequest) {
-        const outboxInapp = manager.create(ChatbotOutbox, {
-          event: 'human.requested',
-          channel: 'inapp',
-          ref_id: currentConv.id,
-          payload: { conversation_id: currentConv.id, text: rawText },
-        });
-        await manager.save(ChatbotOutbox, outboxInapp);
-
-        if (config.notify_emails && config.notify_emails.length > 0) {
-          const outboxEmail = manager.create(ChatbotOutbox, {
-            event: 'human.requested',
-            channel: 'email',
-            ref_id: currentConv.id,
-            payload: { conversation_id: currentConv.id, text: rawText, emails: config.notify_emails },
-          });
-          await manager.save(ChatbotOutbox, outboxEmail);
-        }
-      }
-
-      await manager.save(ChatbotConversation, currentConv);
-
-      // Save AI reply if generated
-      if (response.replyText) {
-        const aiMsg = manager.create(ChatbotMessage, {
-          conversation_id: currentConv.id,
-          role: 'ai',
-          text: response.replyText,
-          payload: response.payload || null,
-        });
-        await manager.save(ChatbotMessage, aiMsg);
-        aiReplies.push(aiMsg);
-      }
-    });
+    // 2. Delegate turn execution to TurnOrchestrator
+    const result = await this.turnOrchestrator.handleTurn(conv, rawText, clientMsgId);
 
     return {
-      message: this.formatMsg(customerMsg!, config),
-      replies: aiReplies.map((r) => this.formatMsg(r, config)),
+      message: this.formatMsg(result.customerMsg, config),
+      replies: result.replies.map((r) => this.formatMsg(r, config)),
       conversation: {
-        state: updatedConv.state,
-        human_active: updatedConv.human_active,
+        state: result.conversation.state,
+        human_active: result.conversation.human_active,
       },
     };
   }

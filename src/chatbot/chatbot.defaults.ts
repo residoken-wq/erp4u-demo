@@ -28,6 +28,7 @@ export const CHATBOT_DEFAULTS = {
   notify_user_ids: [] as number[],
   widget: {
     cta_label: 'Tư vấn ngay',
+    subtitle: 'Tư vấn nệm mầm non',
     auto_open: true,
     auto_open_delay_s: 5,
     auto_open_mobile: 'teaser' as 'teaser' | 'panel' | 'off',
@@ -57,8 +58,10 @@ export const CHATBOT_DEFAULTS = {
     audit: 730,
   },
   llm: {
-    daily_call_budget: 2000,
+    daily_call_budget: 600,
     timeout_ms: 20000,
+    mode: 'script_first' as 'script_first' | 'llm_first' | 'script_only',
+    model: '',
   },
 };
 

@@ -9,7 +9,11 @@ export class ChatbotSchemaService implements OnModuleInit {
   constructor(private readonly dataSource: DataSource) {}
 
   async onModuleInit() {
-    await this.initSchema();
+    try {
+      await this.initSchema();
+    } catch (err: any) {
+      this.logger.error(`Chatbot schema init failed: ${err?.message}`);
+    }
   }
 
   async initSchema(): Promise<void> {
@@ -284,12 +288,21 @@ export class ChatbotSchemaService implements OnModuleInit {
           product_sku varchar(100) NULL,
           public_allowed boolean NOT NULL DEFAULT false,
           search_text text NOT NULL,
+          seed_key varchar(80) NULL,
           CONSTRAINT uq_chatbot_knowledge_items_key_version UNIQUE (item_key, version)
         );`,
       },
       {
+        name: 'alter table chatbot_knowledge_items add seed_key',
+        sql: `ALTER TABLE chatbot_knowledge_items ADD COLUMN IF NOT EXISTS seed_key varchar(80) NULL;`,
+      },
+      {
         name: 'index uq_chatbot_knowledge_items_published',
         sql: `CREATE UNIQUE INDEX IF NOT EXISTS uq_chatbot_knowledge_items_published ON chatbot_knowledge_items (item_key) WHERE status = 'published';`,
+      },
+      {
+        name: 'index idx_chatbot_knowledge_items_seed_key',
+        sql: `CREATE UNIQUE INDEX IF NOT EXISTS idx_chatbot_knowledge_items_seed_key ON chatbot_knowledge_items (seed_key) WHERE seed_key IS NOT NULL;`,
       },
       {
         name: 'index idx_chatbot_knowledge_items_topic',
@@ -438,6 +451,30 @@ export class ChatbotSchemaService implements OnModuleInit {
           sensitivity varchar(16) NOT NULL,
           imported_at timestamptz NOT NULL DEFAULT now()
         );`,
+      },
+
+      // 17. chatbot_knowledge_gaps
+      {
+        name: 'table chatbot_knowledge_gaps',
+        sql: `CREATE TABLE IF NOT EXISTS chatbot_knowledge_gaps (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          question_norm text NOT NULL,
+          sample_text text NULL,
+          intent varchar(32) NULL,
+          count int NOT NULL DEFAULT 1,
+          status varchar(12) NOT NULL DEFAULT 'open',
+          first_seen_at timestamptz NOT NULL DEFAULT now(),
+          last_seen_at timestamptz NOT NULL DEFAULT now(),
+          CONSTRAINT uq_chatbot_knowledge_gaps_norm UNIQUE (question_norm)
+        );`,
+      },
+      {
+        name: 'index idx_chatbot_knowledge_gaps_status',
+        sql: `CREATE INDEX IF NOT EXISTS idx_chatbot_knowledge_gaps_status ON chatbot_knowledge_gaps (status);`,
+      },
+      {
+        name: 'index idx_chatbot_knowledge_gaps_count',
+        sql: `CREATE INDEX IF NOT EXISTS idx_chatbot_knowledge_gaps_count ON chatbot_knowledge_gaps (count DESC);`,
       },
     ];
 

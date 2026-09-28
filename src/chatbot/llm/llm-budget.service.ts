@@ -56,7 +56,16 @@ export class LlmBudgetService {
       [key, budget],
     );
 
-    return Array.isArray(updateResult) && updateResult.length > 0;
+    if (Array.isArray(updateResult)) {
+      if (typeof updateResult[1] === 'number') {
+        return updateResult[1] > 0;
+      }
+      if (Array.isArray(updateResult[0])) {
+        return updateResult[0].length > 0;
+      }
+      return updateResult.length > 0;
+    }
+    return false;
   }
 
   async getTodayCalls(): Promise<number> {

@@ -63,4 +63,8 @@ export class ChatbotKnowledgeItem {
 
   @Column({ type: 'text' })
   search_text: string;
+
+  @Index('idx_chatbot_knowledge_items_seed_key', { where: '"seed_key" IS NOT NULL', unique: true })
+  @Column({ type: 'varchar', length: 80, nullable: true })
+  seed_key: string | null;
 }
