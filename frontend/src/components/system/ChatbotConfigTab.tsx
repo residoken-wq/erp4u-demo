@@ -61,6 +61,7 @@ export const ChatbotConfigTab: React.FC = () => {
   const displayName = Form.useWatch('display_name', form) || 'Trợ lý AI';
   const shortName = Form.useWatch('short_name', form) || 'Trợ lý';
   const avatarUrl = Form.useWatch('avatar_url', form) || '';
+  const enabledValue = !!Form.useWatch('enabled', form);
   const greeting = Form.useWatch('greeting', form) || '';
   const workingHours = Form.useWatch('working_hours', form);
 
@@ -236,12 +237,11 @@ export const ChatbotConfigTab: React.FC = () => {
       </div>
 
       <Form form={form} layout="vertical" onFinish={onFinish}>
-        {/* Cảnh báo P0 */}
         <Alert
-          type="warning"
+          type="info"
           showIcon
-          message="Widget website đang được hoàn thiện"
-          description="Widget website chưa được triển khai. Bật lúc này chỉ mở API backend."
+          message="Bật trợ lý: gạt công tắc → xác nhận → bấm Lưu Cấu Hình"
+          description="Trước khi bật cho khách: nhập và duyệt tri thức trong CMS (Trợ lý AI → Tri thức), và kiểm tra giờ làm việc, người nhận thông báo."
           style={{ marginBottom: 24, borderRadius: 8 }}
         />
 
@@ -254,32 +254,36 @@ export const ChatbotConfigTab: React.FC = () => {
               title={<span style={{ fontWeight: 700 }}>Trạng Thái Hoạt Động</span>}
               style={{ marginBottom: 20, borderRadius: 8 }}
             >
-              <Form.Item
-                name="enabled"
-                valuePropName="checked"
-                style={{ marginBottom: 0 }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              {/* Hotfix 2026-09-28: không bọc div trong Form.Item có name; trạng thái Switch lấy từ useWatch
+                  (getFieldValue không làm component vẽ lại nên công tắc luôn hiện TẮT). */}
+              <Form.Item name="enabled" valuePropName="checked" hidden>
+                <Switch />
+              </Form.Item>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                {enabledValue ? (
+                  <Switch
+                    checked
+                    onChange={() => form.setFieldValue('enabled', false)}
+                    checkedChildren="BẬT"
+                    unCheckedChildren="TẮT"
+                  />
+                ) : (
                   <Popconfirm
                     title="Bật trợ lý cho khách trên website?"
+                    description="Sau khi bấm Bật, nhớ bấm Lưu Cấu Hình."
                     onConfirm={() => form.setFieldValue('enabled', true)}
                     okText="Bật"
                     cancelText="Hủy"
                   >
-                    <Switch
-                      checked={form.getFieldValue('enabled')}
-                      onChange={(checked) => {
-                        if (!checked) form.setFieldValue('enabled', false);
-                      }}
-                      checkedChildren="BẬT"
-                      unCheckedChildren="TẮT"
-                    />
+                    <Switch checked={false} checkedChildren="BẬT" unCheckedChildren="TẮT" />
                   </Popconfirm>
-                  <Text type="secondary">
-                    Cho phép khách hàng truy cập API trợ lý AI trên website
-                  </Text>
-                </div>
-              </Form.Item>
+                )}
+                <Text type="secondary">
+                  {enabledValue
+                    ? 'Đang bật — khách thấy nút "Tư vấn ngay" mở chatbot trên website (sau khi Lưu).'
+                    : 'Đang tắt — nút "Tư vấn ngay" dẫn sang trang Liên hệ như cũ.'}
+                </Text>
+              </div>
             </Card>
 
             {/* 2. Nhận diện Trợ lý */}
