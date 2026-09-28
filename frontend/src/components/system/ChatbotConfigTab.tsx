@@ -174,15 +174,25 @@ export const ChatbotConfigTab: React.FC = () => {
     }
   };
 
-  const onFinish = async (values: any) => {
+  // Hotfix 2026-09-28: onFinish(values) chỉ chứa các ô đang được render. Ô trong Collapse chưa mở
+  // (limits, retention_days, llm) và các khối không có ô nào (limits.max_message_chars, widget)
+  // bị thiếu → backend trả 400. Gửi toàn bộ store của form, trộn lên config vừa tải.
+  const deepMerge = (base: any, over: any): any => {
+    if (Array.isArray(over)) return over;
+    if (!over || typeof over !== 'object') return over === undefined ? base : over;
+    const out: any = { ...(base && typeof base === 'object' && !Array.isArray(base) ? base : {}) };
+    for (const k of Object.keys(over)) out[k] = deepMerge(out[k], over[k]);
+    return out;
+  };
+
+  const onFinish = async (_values: any) => {
     setSaving(true);
     try {
-      const payload = {
-        ...values,
-      };
+      const payload = deepMerge(initialDefaults || {}, form.getFieldsValue(true));
 
       const res = await api.put('/chatbot/admin/config', payload);
       message.success('Đã lưu cấu hình Trợ lý AI thành công!');
+      setInitialDefaults(res.data);
       form.setFieldsValue(res.data);
       // Reload status
       api.get('/chatbot/admin/status').then((r) => setStatusData(r.data)).catch(() => {});
