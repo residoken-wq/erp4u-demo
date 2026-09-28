@@ -23,6 +23,10 @@ import {
   checkShortName,
   checkTimezone,
   checkZaloUrl,
+  checkCtaLabel,
+  checkAutoOpenDelay,
+  checkAutoOpenMobile,
+  checkSnoozeHours,
 } from './chatbot-config.validator';
 
 export function renderTemplate(template: string, vars: Record<string, string>): string {
@@ -330,6 +334,40 @@ export class ChatbotConfigService {
       }
     }
 
+    // Widget: P2
+    result.widget = { ...defaults.widget };
+    if (raw.widget && typeof raw.widget === 'object') {
+      if (checkCtaLabel(raw.widget.cta_label)) {
+        result.widget.cta_label = raw.widget.cta_label;
+      } else if (raw.widget.cta_label !== undefined) {
+        this.logger.warn('chatbot config invalid field widget.cta_label');
+      }
+
+      if (typeof raw.widget.auto_open === 'boolean') {
+        result.widget.auto_open = raw.widget.auto_open;
+      } else if (raw.widget.auto_open !== undefined) {
+        this.logger.warn('chatbot config invalid field widget.auto_open');
+      }
+
+      if (checkAutoOpenDelay(raw.widget.auto_open_delay_s)) {
+        result.widget.auto_open_delay_s = raw.widget.auto_open_delay_s;
+      } else if (raw.widget.auto_open_delay_s !== undefined) {
+        this.logger.warn('chatbot config invalid field widget.auto_open_delay_s');
+      }
+
+      if (checkAutoOpenMobile(raw.widget.auto_open_mobile)) {
+        result.widget.auto_open_mobile = raw.widget.auto_open_mobile;
+      } else if (raw.widget.auto_open_mobile !== undefined) {
+        this.logger.warn('chatbot config invalid field widget.auto_open_mobile');
+      }
+
+      if (checkSnoozeHours(raw.widget.snooze_hours)) {
+        result.widget.snooze_hours = raw.widget.snooze_hours;
+      } else if (raw.widget.snooze_hours !== undefined) {
+        this.logger.warn('chatbot config invalid field widget.snooze_hours');
+      }
+    }
+
     // Features: forced false in P0
     result.features = {
       price_estimate: false,
@@ -355,6 +393,7 @@ export class ChatbotConfigService {
       'response_sla_text',
       'notify_emails',
       'notify_user_ids',
+      'widget',
       'features',
       'limits',
       'retention_days',
@@ -526,6 +565,7 @@ export class ChatbotConfigService {
       is_open_now: isOpenNow,
       response_sla_text: config.response_sla_text || '',
       features: config.features,
+      widget: config.widget,
     };
   }
 }

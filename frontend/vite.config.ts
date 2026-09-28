@@ -6,7 +6,13 @@ export default defineConfig({
   server: {
     host: true, // Cho phep Docker map port
     port: 5173,
-    allowedHosts: ['localhost:3000']
+    allowedHosts: ['localhost:3000'],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3999',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     minify: false, // Tắt minify để tránh treo RAM trên VPS yếu

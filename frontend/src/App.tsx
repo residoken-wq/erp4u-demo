@@ -81,6 +81,8 @@ const ProcessesPage = React.lazy(() => import('./pages/ProcessesPage'));
 const PrintReportDashboard = React.lazy(() => import('./pages/PrintReportDashboard'));
 const AiDashboardPage = React.lazy(() => import('./pages/AiDashboardPage'));
 const RbacLogPage = React.lazy(() => import('./pages/RbacLogPage'));
+const ChatbotInboxPage = React.lazy(() => import('./pages/chatbot/ChatbotInboxPage'));
+const ChatbotRequestsPage = React.lazy(() => import('./pages/chatbot/ChatbotRequestsPage'));
 
 
 function getItem(label: React.ReactNode, key: React.Key, icon?: React.ReactNode, children?: MenuItem[]): MenuItem {
@@ -263,6 +265,14 @@ const App: React.FC = () => {
         // HR - Chỉ hiện cho user có quyền HR
         if (hasPerm('HR')) {
             items.push(getItem(<Link to="/hr">Nhân sự (HR)</Link>, '/hr', <IdcardOutlined />));
+        }
+
+        // Chatbot (Trợ lý AI) - Chỉ hiện cho user có quyền CHATBOT
+        if (hasPerm('CHATBOT')) {
+            items.push(getItem('Trợ lý AI', 'sub_chatbot', <MessageOutlined />, [
+                getItem(<Link to="/chatbot/inbox">Hộp thư hội thoại</Link>, 'cb_inbox'),
+                getItem(<Link to="/chatbot/requests">Yêu cầu tư vấn</Link>, 'cb_requests'),
+            ]));
         }
 
         // SOCIAL & MARKETING
@@ -453,6 +463,16 @@ const App: React.FC = () => {
 
                                                 {hasPerm('HR') && (
                                                     <Route path="/hr" element={<HRPage />} />
+                                                )}
+
+                                                {/* CHATBOT ROUTES */}
+                                                {hasPerm('CHATBOT') && (
+                                                    <>
+                                                        <Route path="/chatbot/inbox" element={<ChatbotInboxPage />} />
+                                                        <Route path="/chatbot/inbox/:id" element={<ChatbotInboxPage />} />
+                                                        <Route path="/chatbot/requests" element={<ChatbotRequestsPage />} />
+                                                        <Route path="/chatbot/requests/:id" element={<ChatbotRequestsPage />} />
+                                                    </>
                                                 )}
 
                                                 {/* SOCIAL & MARKETING ROUTES */}

@@ -46,6 +46,9 @@ export class ChatbotRequest {
   @Column({ type: 'text', nullable: true })
   internal_note: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  summary: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 

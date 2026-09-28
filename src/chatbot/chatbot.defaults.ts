@@ -26,6 +26,13 @@ export const CHATBOT_DEFAULTS = {
   response_sla_text: '',
   notify_emails: [] as string[],
   notify_user_ids: [] as number[],
+  widget: {
+    cta_label: 'Tư vấn ngay',
+    auto_open: true,
+    auto_open_delay_s: 5,
+    auto_open_mobile: 'teaser' as 'teaser' | 'panel' | 'off',
+    snooze_hours: 24,
+  },
   features: {
     price_estimate: false,
     order_lookup: false,

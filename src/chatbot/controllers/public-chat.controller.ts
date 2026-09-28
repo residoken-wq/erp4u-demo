@@ -2,11 +2,16 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Req,
+  Res,
+  Query,
   UseGuards,
   Ip,
   Headers,
+  HttpStatus,
+  HttpCode,
 } from '@nestjs/common';
 import { Public } from '../../auth/public.decorator';
 import { ChatSessionGuard } from '../session/chat-session.guard';
@@ -14,6 +19,7 @@ import { ChatSessionService } from '../session/chat-session.service';
 import { ChatbotConfigService } from '../config/chatbot-config.service';
 import { ChatRateLimiter } from '../security/chat-rate-limiter';
 import { hashIp } from '../security/pii';
+import { ChatbotConversationService } from '../conversation/chatbot-conversation.service';
 
 @Controller('public/chat')
 export class PublicChatController {
@@ -21,6 +27,7 @@ export class PublicChatController {
     private readonly configService: ChatbotConfigService,
     private readonly sessionService: ChatSessionService,
     private readonly rateLimiter: ChatRateLimiter,
+    private readonly convService: ChatbotConversationService,
   ) {}
 
   @Public()
@@ -70,6 +77,116 @@ export class PublicChatController {
     return {
       ok: true,
       public_code: req.chatSession.publicCode,
+    };
+  }
+
+  // CB-201: GET /api/public/chat/conversation
+  @Public()
+  @UseGuards(ChatSessionGuard)
+  @Get('conversation')
+  async getConversation(@Req() req: any, @Query('after') after?: string) {
+    return this.convService.getConversation(req.sessionToken, after);
+  }
+
+  // CB-202: POST /api/public/chat/messages
+  @Public()
+  @UseGuards(ChatSessionGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('messages')
+  async postMessage(
+    @Req() req: any,
+    @Ip() ip: string,
+    @Body() body: { client_msg_id: string; text: string },
+  ) {
+    const config = await this.configService.get();
+    const sessionId = req.chatSession.sessionId;
+    const ipHash = hashIp(ip || '127.0.0.1');
+    const FIVE_MIN_MS = 5 * 60 * 1000;
+
+    this.rateLimiter.consume(
+      'msg:session',
+      sessionId,
+      config.limits.msg_per_session_5m,
+      FIVE_MIN_MS,
+    );
+    this.rateLimiter.consume(
+      'msg:ip',
+      ipHash,
+      config.limits.msg_per_ip_5m,
+      FIVE_MIN_MS,
+    );
+
+    return this.convService.postMessage(req.sessionToken, body?.client_msg_id, body?.text);
+  }
+
+  // CB-203: POST /api/public/chat/actions
+  @Public()
+  @UseGuards(ChatSessionGuard)
+  @HttpCode(HttpStatus.OK)
+  @Post('actions')
+  async postAction(
+    @Req() req: any,
+    @Ip() ip: string,
+    @Body() body: { client_msg_id: string; action: string; value: any },
+  ) {
+    const config = await this.configService.get();
+    const sessionId = req.chatSession.sessionId;
+    const ipHash = hashIp(ip || '127.0.0.1');
+    const FIVE_MIN_MS = 5 * 60 * 1000;
+
+    this.rateLimiter.consume(
+      'msg:session',
+      sessionId,
+      config.limits.msg_per_session_5m,
+      FIVE_MIN_MS,
+    );
+    this.rateLimiter.consume(
+      'msg:ip',
+      ipHash,
+      config.limits.msg_per_ip_5m,
+      FIVE_MIN_MS,
+    );
+
+    return this.convService.postAction(
+      req.sessionToken,
+      body?.client_msg_id,
+      body?.action,
+      body?.value,
+    );
+  }
+
+  // CB-204: PUT /api/public/chat/brief
+  @Public()
+  @UseGuards(ChatSessionGuard)
+  @Put('brief')
+  async putBrief(
+    @Req() req: any,
+    @Body() body: { base_revision: number; patch: Record<string, any> },
+  ) {
+    return this.convService.putBrief(req.sessionToken, body?.base_revision, body?.patch);
+  }
+
+  // CB-205: POST /api/public/chat/requests
+  @Public()
+  @UseGuards(ChatSessionGuard)
+  @Post('requests')
+  async createRequest(
+    @Req() req: any,
+    @Ip() ip: string,
+    @Body() body: any,
+    @Res({ passthrough: true }) res: any,
+  ) {
+    const sessionId = req.chatSession?.sessionId;
+    const result = await this.convService.createRequest(req.sessionToken, body, sessionId);
+    if (result.isDuplicate) {
+      res.status(HttpStatus.OK);
+    } else {
+      res.status(HttpStatus.CREATED);
+    }
+
+    return {
+      code: result.code,
+      status: result.status,
     };
   }
 }

@@ -24,6 +24,12 @@ export class ChatbotOutbox {
   @Column({ type: 'varchar', length: 300, nullable: true })
   last_error: string | null;
 
+  @Column({ type: 'varchar', length: 12, nullable: true })
+  channel: string | null;
+
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  ref_id: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 }

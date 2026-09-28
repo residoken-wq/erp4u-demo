@@ -151,3 +151,27 @@ export function checkTimezone(val: any): boolean {
     return false;
   }
 }
+
+export function checkCtaLabel(val: any): boolean {
+  if (val === undefined || val === null) return false;
+  if (typeof val !== 'string') return false;
+  const trimmed = val.trim();
+  if (trimmed.length < 2 || trimmed.length > 30) return false;
+  if (!SAFE_TEXT_REGEX.test(val)) return false;
+  return checkNoSecret(val);
+}
+
+export function checkAutoOpenDelay(val: any): boolean {
+  if (typeof val !== 'number' || !Number.isInteger(val)) return false;
+  return val >= 3 && val <= 60;
+}
+
+export function checkAutoOpenMobile(val: any): boolean {
+  return val === 'teaser' || val === 'panel' || val === 'off';
+}
+
+export function checkSnoozeHours(val: any): boolean {
+  if (typeof val !== 'number' || !Number.isInteger(val)) return false;
+  return val >= 1 && val <= 168;
+}
+

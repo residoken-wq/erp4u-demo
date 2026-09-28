@@ -88,6 +88,10 @@ export class EmailService {
         const transporter = await this.createTransporter();
 
         if (!transporter) {
+            if (process.env.NODE_ENV === 'production') {
+                this.logger.error('Cannot send email: SMTP not configured in production');
+                return false;
+            }
             this.logger.debug(`[MOCK EMAIL to ${to}] Subject: ${subject}`);
             this.logger.debug(`Content:\n${html}`);
             return true;

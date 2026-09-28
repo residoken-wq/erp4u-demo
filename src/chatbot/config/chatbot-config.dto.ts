@@ -280,6 +280,36 @@ export class LlmConfigDto {
   timeout_ms: number;
 }
 
+export class WidgetDto {
+  @IsOptional()
+  @IsString()
+  @Length(2, 30)
+  @Matches(/^[^<>{}]*$/, { message: 'cta_label cannot contain <, >, {, }' })
+  @IsNoSecret()
+  cta_label?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  auto_open?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(3)
+  @Max(60)
+  auto_open_delay_s?: number;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^(teaser|panel|off)$/, { message: 'auto_open_mobile must be teaser, panel, or off' })
+  auto_open_mobile?: 'teaser' | 'panel' | 'off';
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(168)
+  snooze_hours?: number;
+}
+
 export class ChatbotConfigDto {
   @IsOptional()
   @IsBoolean()
@@ -329,6 +359,11 @@ export class ChatbotConfigDto {
   @IsArray()
   @IsInt({ each: true })
   notify_user_ids: number[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => WidgetDto)
+  widget?: WidgetDto;
 
   @IsOptional()
   @ValidateNested()

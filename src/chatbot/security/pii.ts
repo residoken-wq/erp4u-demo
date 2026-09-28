@@ -22,3 +22,23 @@ export function normalizePhone(raw: string): string {
   }
   return cleaned;
 }
+
+export function scanPii(text: string): boolean {
+  if (!text) return false;
+  const vnPhoneRegex = /((\+84|0)(3|5|7|8|9)[0-9]{8})/;
+  const emailRegex = /([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,})/;
+  const digitsRegex = /\b\d{9,14}\b/;
+  return vnPhoneRegex.test(text) || emailRegex.test(text) || digitsRegex.test(text);
+}
+
+export function normalizeVi(text: string): string {
+  if (!text) return '';
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+

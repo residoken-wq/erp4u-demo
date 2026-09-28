@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 @Injectable()
 export class ChatbotSchemaService implements OnModuleInit {
   private readonly logger = new Logger(ChatbotSchemaService.name);
+  private initPromise: Promise<void> | null = null;
 
   constructor(private readonly dataSource: DataSource) {}
 
@@ -11,7 +12,15 @@ export class ChatbotSchemaService implements OnModuleInit {
     await this.initSchema();
   }
 
-  async initSchema() {
+  async initSchema(): Promise<void> {
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+    this.initPromise = this.executeInitSchema();
+    return this.initPromise;
+  }
+
+  private async executeInitSchema(): Promise<void> {
     const ddlStatements: { name: string; sql: string }[] = [
       // Sequences
       {
@@ -166,6 +175,7 @@ export class ChatbotSchemaService implements OnModuleInit {
           customer_requested_due_at date NULL,
           promised_due_at date NULL,
           internal_note text NULL,
+          summary text NULL,
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now(),
           CONSTRAINT uq_chatbot_requests_code UNIQUE (code),
@@ -208,12 +218,26 @@ export class ChatbotSchemaService implements OnModuleInit {
           attempts int NOT NULL DEFAULT 0,
           next_attempt_at timestamptz NOT NULL DEFAULT now(),
           last_error varchar(300) NULL,
+          channel varchar(12) NULL,
+          ref_id varchar(64) NULL,
           created_at timestamptz NOT NULL DEFAULT now()
         );`,
       },
       {
         name: 'index idx_chatbot_outbox_status_next',
         sql: `CREATE INDEX IF NOT EXISTS idx_chatbot_outbox_status_next ON chatbot_outbox (status, next_attempt_at);`,
+      },
+      {
+        name: 'alter chatbot_outbox add channel',
+        sql: `ALTER TABLE chatbot_outbox ADD COLUMN IF NOT EXISTS channel varchar(12);`,
+      },
+      {
+        name: 'alter chatbot_outbox add ref_id',
+        sql: `ALTER TABLE chatbot_outbox ADD COLUMN IF NOT EXISTS ref_id varchar(64);`,
+      },
+      {
+        name: 'alter chatbot_requests add summary',
+        sql: `ALTER TABLE chatbot_requests ADD COLUMN IF NOT EXISTS summary text;`,
       },
 
       // 10. chatbot_audit_events
@@ -234,6 +258,186 @@ export class ChatbotSchemaService implements OnModuleInit {
       {
         name: 'index idx_chatbot_audit_events_object',
         sql: `CREATE INDEX IF NOT EXISTS idx_chatbot_audit_events_object ON chatbot_audit_events (object_type, object_id);`,
+      },
+
+      // 11. chatbot_knowledge_items
+      {
+        name: 'table chatbot_knowledge_items',
+        sql: `CREATE TABLE IF NOT EXISTS chatbot_knowledge_items (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          item_key uuid NOT NULL DEFAULT gen_random_uuid(),
+          version int NOT NULL DEFAULT 1,
+          status varchar(16) NOT NULL DEFAULT 'draft',
+          topic varchar(80) NOT NULL,
+          source_refs jsonb NOT NULL DEFAULT '[]',
+          conflict_code varchar(4) NULL,
+          effective_from date NULL,
+          effective_to date NULL,
+          author_id int NULL,
+          approver_id int NULL,
+          approved_at timestamptz NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          intent varchar(32) NULL,
+          question text NULL,
+          answer text NOT NULL,
+          product_sku varchar(100) NULL,
+          public_allowed boolean NOT NULL DEFAULT false,
+          search_text text NOT NULL,
+          CONSTRAINT uq_chatbot_knowledge_items_key_version UNIQUE (item_key, version)
+        );`,
+      },
+      {
+        name: 'index uq_chatbot_knowledge_items_published',
+        sql: `CREATE UNIQUE INDEX IF NOT EXISTS uq_chatbot_knowledge_items_published ON chatbot_knowledge_items (item_key) WHERE status = 'published';`,
+      },
+      {
+        name: 'index idx_chatbot_knowledge_items_topic',
+        sql: `CREATE INDEX IF NOT EXISTS idx_chatbot_knowledge_items_topic ON chatbot_knowledge_items (topic);`,
+      },
+      {
+        name: 'index idx_chatbot_knowledge_items_search',
+        sql: `CREATE INDEX IF NOT EXISTS idx_chatbot_knowledge_items_search ON chatbot_knowledge_items USING gin (to_tsvector('simple', search_text));`,
+      },
+
+      // 12. chatbot_product_facts
+      {
+        name: 'table chatbot_product_facts',
+        sql: `CREATE TABLE IF NOT EXISTS chatbot_product_facts (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          item_key uuid NOT NULL DEFAULT gen_random_uuid(),
+          version int NOT NULL DEFAULT 1,
+          status varchar(16) NOT NULL DEFAULT 'draft',
+          topic varchar(80) NOT NULL,
+          source_refs jsonb NOT NULL DEFAULT '[]',
+          conflict_code varchar(4) NULL,
+          effective_from date NULL,
+          effective_to date NULL,
+          author_id int NULL,
+          approver_id int NULL,
+          approved_at timestamptz NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          sku varchar(100) NOT NULL,
+          fact_key varchar(32) NOT NULL,
+          value text NOT NULL,
+          unit varchar(16) NULL,
+          CONSTRAINT uq_chatbot_product_facts_key_version UNIQUE (item_key, version)
+        );`,
+      },
+      {
+        name: 'index uq_chatbot_product_facts_published',
+        sql: `CREATE UNIQUE INDEX IF NOT EXISTS uq_chatbot_product_facts_published ON chatbot_product_facts (item_key) WHERE status = 'published';`,
+      },
+      {
+        name: 'index idx_chatbot_product_facts_sku',
+        sql: `CREATE INDEX IF NOT EXISTS idx_chatbot_product_facts_sku ON chatbot_product_facts (sku);`,
+      },
+
+      // 13. chatbot_bundles
+      {
+        name: 'table chatbot_bundles',
+        sql: `CREATE TABLE IF NOT EXISTS chatbot_bundles (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          item_key uuid NOT NULL DEFAULT gen_random_uuid(),
+          version int NOT NULL DEFAULT 1,
+          status varchar(16) NOT NULL DEFAULT 'draft',
+          topic varchar(80) NOT NULL,
+          source_refs jsonb NOT NULL DEFAULT '[]',
+          conflict_code varchar(4) NULL,
+          effective_from date NULL,
+          effective_to date NULL,
+          author_id int NULL,
+          approver_id int NULL,
+          approved_at timestamptz NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          code varchar(40) NOT NULL,
+          name varchar(200) NOT NULL,
+          items jsonb NOT NULL,
+          CONSTRAINT uq_chatbot_bundles_key_version UNIQUE (item_key, version)
+        );`,
+      },
+      {
+        name: 'index uq_chatbot_bundles_published',
+        sql: `CREATE UNIQUE INDEX IF NOT EXISTS uq_chatbot_bundles_published ON chatbot_bundles (item_key) WHERE status = 'published';`,
+      },
+      {
+        name: 'index idx_chatbot_bundles_code',
+        sql: `CREATE INDEX IF NOT EXISTS idx_chatbot_bundles_code ON chatbot_bundles (code);`,
+      },
+
+      // 14. chatbot_price_rules
+      {
+        name: 'table chatbot_price_rules',
+        sql: `CREATE TABLE IF NOT EXISTS chatbot_price_rules (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          item_key uuid NOT NULL DEFAULT gen_random_uuid(),
+          version int NOT NULL DEFAULT 1,
+          status varchar(16) NOT NULL DEFAULT 'draft',
+          topic varchar(80) NOT NULL,
+          source_refs jsonb NOT NULL DEFAULT '[]',
+          conflict_code varchar(4) NULL,
+          effective_from date NULL,
+          effective_to date NULL,
+          author_id int NULL,
+          approver_id int NULL,
+          approved_at timestamptz NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          target_type varchar(12) NOT NULL,
+          target_code varchar(100) NOT NULL,
+          fabric varchar(40) NULL,
+          qty_min int NOT NULL,
+          qty_max int NULL,
+          qty_scope varchar(12) NOT NULL,
+          unit_price bigint NOT NULL,
+          currency varchar(3) NOT NULL DEFAULT 'VND',
+          tax_rate numeric(5,2) NULL,
+          tax_included boolean NOT NULL,
+          shipping_included boolean NOT NULL DEFAULT false,
+          included_services jsonb NOT NULL DEFAULT '[]',
+          excluded_services jsonb NOT NULL DEFAULT '[]',
+          customer_scope varchar(40) NOT NULL DEFAULT 'PUBLIC',
+          is_fixture boolean NOT NULL DEFAULT false,
+          CONSTRAINT uq_chatbot_price_rules_key_version UNIQUE (item_key, version)
+        );`,
+      },
+      {
+        name: 'index uq_chatbot_price_rules_published',
+        sql: `CREATE UNIQUE INDEX IF NOT EXISTS uq_chatbot_price_rules_published ON chatbot_price_rules (item_key) WHERE status = 'published';`,
+      },
+      {
+        name: 'index idx_chatbot_price_rules_target',
+        sql: `CREATE INDEX IF NOT EXISTS idx_chatbot_price_rules_target ON chatbot_price_rules (target_type, target_code);`,
+      },
+
+      // 15. chatbot_conflicts
+      {
+        name: 'table chatbot_conflicts',
+        sql: `CREATE TABLE IF NOT EXISTS chatbot_conflicts (
+          code varchar(4) PRIMARY KEY,
+          title text NOT NULL,
+          risk text NOT NULL,
+          locked_topics text[] NOT NULL DEFAULT '{}',
+          owner_role varchar(40) NOT NULL,
+          status varchar(10) NOT NULL DEFAULT 'open',
+          resolution text NULL,
+          resolved_by int NULL,
+          resolved_at timestamptz NULL
+        );`,
+      },
+
+      // 16. chatbot_sources
+      {
+        name: 'table chatbot_sources',
+        sql: `CREATE TABLE IF NOT EXISTS chatbot_sources (
+          code varchar(10) PRIMARY KEY,
+          title text NOT NULL,
+          internal_ref text NOT NULL,
+          sensitivity varchar(16) NOT NULL,
+          imported_at timestamptz NOT NULL DEFAULT now()
+        );`,
       },
     ];
 
