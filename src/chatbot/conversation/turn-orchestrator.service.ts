@@ -1,5 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import { DataSource, Like } from 'typeorm';
+import { DataSource, EntityManager, Like } from 'typeorm';
 import { ChatbotConversation } from '../entities/chatbot-conversation.entity';
 import { ChatbotMessage } from '../entities/chatbot-message.entity';
 import { ChatbotBrief } from '../entities/chatbot-brief.entity';
@@ -19,6 +19,7 @@ import {
 } from '../llm/llm-provider';
 import { redactPiiForLlm, validateReply } from './reply-validator';
 import { normalizeVi } from '../security/pii';
+import { ChatbotFlowService } from '../flow/chatbot-flow.service';
 
 const STOP_WORDS = new Set([
   'a', 'o', 'oi', 'nhe', 'nha', 'thi', 'la', 'co', 'khong', 'cho', 'em', 'anh',
@@ -39,6 +40,7 @@ export class TurnOrchestratorService {
     private readonly scriptedResponder: ScriptedResponderService,
     private readonly ruleUnderstander: RuleUnderstanderService,
     @Inject(LLM_PROVIDER) private readonly llmProvider: LlmProvider,
+    private readonly flowService: ChatbotFlowService,
   ) {}
 
   async handleTurn(
@@ -163,6 +165,44 @@ export class TurnOrchestratorService {
         data: activeData,
         changed_by: 'customer',
       });
+    }
+
+    // Conversation flows (CMS "Sơ đồ kịch bản") answer before scripts/KB/AI in every mode.
+    // Safety rules always win: complaint / infant / wants human / handoff stop the running flow.
+    if (ruleRes.is_complaint || ruleRes.is_infant || ruleRes.wants_human || ruleRes.handoff) {
+      await this.flowService.clearState(currentConv.id);
+    } else {
+      const flowTurn = await this.flowService.handleText(currentConv.id, rawText, config);
+      if (flowTurn) {
+        const commitRes = await this.commitTurn({
+          convId: currentConv.id,
+          newBriefEntity,
+          targetState: null,
+          targetIntent: ruleRes.intent,
+          targetSegment: ruleRes.segment,
+          outboxEvents: [],
+          replyText: flowTurn.text,
+          payload: flowTurn.payload,
+          llmMeta: {
+            provider: 'flow',
+            model: 'flow',
+            prompt_version: 'v1',
+            kb_version: kbVersion,
+            route: 'flow',
+            flow_id: flowTurn.flow_id,
+            flow_version: flowTurn.flow_version,
+            node_ids: flowTurn.node_ids,
+            latency_ms: { understand: 0, tools: 0, compose: 0 },
+            input_preview: inputPreview,
+          },
+          afterSave: (mgr) => this.flowService.applyState(mgr, currentConv.id, flowTurn),
+        });
+        return {
+          customerMsg,
+          replies: commitRes.replies,
+          conversation: { state: commitRes.state || currentConv.state, human_active: commitRes.humanActive },
+        };
+      }
     }
 
     if (providerEnv === 'scripted') {
@@ -891,6 +931,8 @@ Lượt chat này có: is_complaint: ${isComplaint}, is_infant: ${isInfant}.`;
     replyText: string | null;
     payload: any | null;
     llmMeta: any;
+    /** Extra writes committed atomically with the AI reply (skipped when sales took over). */
+    afterSave?: (mgr: EntityManager) => Promise<void>;
   }): Promise<{ replies: any[]; humanActive: boolean; state: string }> {
     let savedAiMsg: ChatbotMessage | null = null;
     let finalState = '';
@@ -958,6 +1000,10 @@ Lượt chat này có: is_complaint: ${isComplaint}, is_infant: ${isInfant}.`;
           llm_meta: params.llmMeta,
         });
         await mgr.save(ChatbotMessage, savedAiMsg);
+      }
+
+      if (params.afterSave) {
+        await params.afterSave(mgr);
       }
     });
 

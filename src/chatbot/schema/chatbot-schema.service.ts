@@ -476,6 +476,40 @@ export class ChatbotSchemaService implements OnModuleInit {
         name: 'index idx_chatbot_knowledge_gaps_count',
         sql: `CREATE INDEX IF NOT EXISTS idx_chatbot_knowledge_gaps_count ON chatbot_knowledge_gaps (count DESC);`,
       },
+      // 18. chatbot_flows (conversation flow builder)
+      {
+        name: 'table chatbot_flows',
+        sql: `CREATE TABLE IF NOT EXISTS chatbot_flows (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          name varchar(120) NOT NULL,
+          description text NULL,
+          enabled boolean NOT NULL DEFAULT true,
+          priority int NOT NULL DEFAULT 0,
+          draft_graph jsonb NOT NULL DEFAULT '{"nodes":[],"edges":[]}'::jsonb,
+          published_graph jsonb NULL,
+          published_version int NOT NULL DEFAULT 0,
+          published_at timestamptz NULL,
+          published_by int NULL,
+          author_id int NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        );`,
+      },
+      {
+        name: 'index idx_chatbot_flows_enabled',
+        sql: `CREATE INDEX IF NOT EXISTS idx_chatbot_flows_enabled ON chatbot_flows (enabled);`,
+      },
+      // 19. chatbot_flow_states
+      {
+        name: 'table chatbot_flow_states',
+        sql: `CREATE TABLE IF NOT EXISTS chatbot_flow_states (
+          conversation_id uuid PRIMARY KEY,
+          flow_id uuid NOT NULL,
+          flow_version int NOT NULL,
+          node_id varchar(64) NOT NULL,
+          updated_at timestamptz NOT NULL DEFAULT now()
+        );`,
+      },
     ];
 
     for (const stmt of ddlStatements) {

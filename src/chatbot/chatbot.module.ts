@@ -27,6 +27,8 @@ import { PublicChatController } from './controllers/public-chat.controller';
 import { ChatbotAdminConfigController } from './controllers/chatbot-admin-config.controller';
 import { ChatbotKbController } from './controllers/chatbot-kb.controller';
 import { ChatbotInboxController } from './controllers/chatbot-inbox.controller';
+import { ChatbotFlowController } from './controllers/chatbot-flow.controller';
+import { ChatbotFlowService } from './flow/chatbot-flow.service';
 import { ChatbotKbSeedService } from './seed/chatbot-kb-seed.service';
 import { ChatbotKbService } from './kb/chatbot-kb.service';
 import { ChatbotToolsService } from './tools/chatbot-tools.service';
@@ -56,6 +58,7 @@ import { resolveGeminiKey } from './llm/gemini.provider';
     ChatbotAdminConfigController,
     ChatbotKbController,
     ChatbotInboxController,
+    ChatbotFlowController,
   ],
   providers: [
     ChatbotSchemaService,
@@ -76,6 +79,7 @@ import { resolveGeminiKey } from './llm/gemini.provider';
     TurnOrchestratorService,
     ChatbotConversationService,
     ChatbotOutboxService,
+    ChatbotFlowService,
     EmailService,
     FakeProvider,
     GeminiProvider,

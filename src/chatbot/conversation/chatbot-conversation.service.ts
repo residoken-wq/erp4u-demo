@@ -22,6 +22,8 @@ import { ScriptedResponderService } from './scripted-responder.service';
 import { TurnOrchestratorService } from './turn-orchestrator.service';
 import { ChatSessionService } from '../session/chat-session.service';
 import { ChatRateLimiter } from '../security/chat-rate-limiter';
+import { ChatbotFlowService } from '../flow/chatbot-flow.service';
+import { ChatbotFlowState } from '../entities/chatbot-flow.entity';
 
 const ALLOWED_BRIEF_KEYS = [
   'segment',
@@ -66,6 +68,7 @@ export class ChatbotConversationService {
     private readonly sessionService: ChatSessionService,
     private readonly rateLimiter: ChatRateLimiter,
     private readonly dataSource: DataSource,
+    private readonly flowService: ChatbotFlowService,
   ) {}
 
   private async getConvByToken(sessionToken: string): Promise<ChatbotConversation> {
@@ -210,6 +213,8 @@ export class ChatbotConversationService {
 
     let aiReplies: ChatbotMessage[] = [];
     let updatedConv: ChatbotConversation = conv;
+    // A published conversation flow may own this start button (CMS "Sơ đồ kịch bản").
+    const flowStart = action === 'start' ? await this.flowService.startByAction(String(value || ''), config) : null;
 
     await this.dataSource.transaction(async (manager) => {
       const currentConv = await manager.findOne(ChatbotConversation, {
@@ -229,15 +234,25 @@ export class ChatbotConversationService {
         currentConv.last_message_at = new Date();
         await manager.save(ChatbotConversation, currentConv);
 
+        const useFlow = flowStart && !currentConv.human_active ? flowStart : null;
         const aiMsg = manager.create(ChatbotMessage, {
           conversation_id: currentConv.id,
           role: 'ai',
-          text: replyText,
-          payload: null,
+          text: useFlow ? useFlow.text : replyText,
+          payload: useFlow ? useFlow.payload : null,
+          llm_meta: useFlow
+            ? { route: 'flow', model: 'flow', flow_id: useFlow.flow_id, flow_version: useFlow.flow_version, node_ids: useFlow.node_ids }
+            : null,
         });
         await manager.save(ChatbotMessage, aiMsg);
         aiReplies.push(aiMsg);
+        if (useFlow) {
+          await this.flowService.applyState(manager, currentConv.id, useFlow);
+        } else {
+          await manager.delete(ChatbotFlowState, { conversation_id: currentConv.id });
+        }
       } else if (action === 'human') {
+        await manager.delete(ChatbotFlowState, { conversation_id: currentConv.id });
         currentConv.state = 'waiting_sales';
         currentConv.last_message_at = new Date();
         await manager.save(ChatbotConversation, currentConv);
