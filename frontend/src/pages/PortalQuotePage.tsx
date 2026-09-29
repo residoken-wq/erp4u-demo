@@ -266,7 +266,7 @@ const PortalQuotePage: React.FC = () => {
         </div>
         <div style="margin-bottom: 10px;">
             <div><strong>Mã đơn:</strong> ${data.order_code}</div>
-            <div><strong>Ngày:</strong> ${dayjs(data.order_date || new Date()).format('DD/MM/YYYY HH:mm')}</div>
+            <div><strong>Ngày:</strong> ${dayjs(data.order_date || new Date()).format('DD/MM/YYYY')}</div>
             <div><strong>Khách hàng:</strong> ${customerName}</div>
             ${customerPhone ? `<div><strong>SĐT:</strong> ${customerPhone}</div>` : ''}
         </div>
