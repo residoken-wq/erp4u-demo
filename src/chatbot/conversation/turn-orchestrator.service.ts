@@ -1033,11 +1033,8 @@ Lượt chat này có: is_complaint: ${isComplaint}, is_infant: ${isInfant}.`;
   private async findKnowledgeAnswer(topicPrefix: string, config: any): Promise<string | null> {
     try {
       const item = await this.dataSource.getRepository(ChatbotKnowledgeItem).findOne({
-        where: [
-          { topic: Like(`%${topicPrefix}%`), status: 'published' },
-          { topic: Like(`%${topicPrefix}%`), status: 'needs_review' },
-          { topic: Like(`%${topicPrefix}%`), status: 'draft' },
-        ],
+        // Customers only ever see approved, public content; unapproved drafts fall back to the built-in text.
+        where: { topic: Like(`${topicPrefix}%`), status: 'published', public_allowed: true },
         order: { version: 'DESC' },
       });
       if (item && item.answer) {

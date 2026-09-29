@@ -5,6 +5,7 @@ import { ChatbotSource } from '../entities/chatbot-source.entity';
 import { ChatbotConflict } from '../entities/chatbot-conflict.entity';
 import { ChatbotKnowledgeItem } from '../entities/chatbot-knowledge-item.entity';
 import { ChatbotSchemaService } from '../schema/chatbot-schema.service';
+import { applyKbV2ConflictResolutions, applyKbV2ItemTriage } from './kb-v2-conflict-triage';
 
 @Injectable()
 export class ChatbotKbSeedService implements OnModuleInit {
@@ -21,8 +22,23 @@ export class ChatbotKbSeedService implements OnModuleInit {
       await this.schemaService.initSchema();
       await this.seed();
       await this.cleanupV1Seed();
+      await this.triageKbV2();
     } catch (err: any) {
       this.logger.error(`Chatbot KB init skipped: ${err?.message}`);
+    }
+  }
+
+  /** Owner-approved kb-v2 conflict triage (2026-09-29). Never throws. */
+  async triageKbV2(): Promise<void> {
+    try {
+      const res = await this.dataSource.transaction(async (mgr) => {
+        const resolved = await applyKbV2ConflictResolutions(mgr);
+        const items = await applyKbV2ItemTriage(mgr);
+        return { resolved, ...items };
+      });
+      this.logger.log(`kb-v2 triage: resolved=${res.resolved} retired=${res.retired} rewritten=${res.rewritten}`);
+    } catch (err: any) {
+      this.logger.error(`kb-v2 triage failed: ${err?.message}`);
     }
   }
 

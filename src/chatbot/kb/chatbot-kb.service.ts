@@ -11,6 +11,7 @@ import { ChatbotProductFact } from '../entities/chatbot-product-fact.entity';
 import { ChatbotBundle } from '../entities/chatbot-bundle.entity';
 import { ChatbotPriceRule } from '../entities/chatbot-price-rule.entity';
 import { ChatbotConflict } from '../entities/chatbot-conflict.entity';
+import { applyKbV2ItemTriage } from '../seed/kb-v2-conflict-triage';
 import { ChatbotSource } from '../entities/chatbot-source.entity';
 import { ChatbotAuditEvent } from '../entities/chatbot-audit-event.entity';
 import { ChatbotKnowledgeGap } from '../entities/chatbot-knowledge-gap.entity';
@@ -1018,6 +1019,9 @@ export class ChatbotKbService {
           inserted++;
         }
       }
+
+      // Re-importing kb-v2 must not bring back text the owner already triaged (2026-09-29).
+      await applyKbV2ItemTriage(mgr);
 
       const audit = mgr.create(ChatbotAuditEvent, {
         actor_type: userId ? 'user' : 'system',
