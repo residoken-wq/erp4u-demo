@@ -155,10 +155,18 @@ export class SalesService {
             orderCode = await this.generateOrderCode(codeType);
         }
 
+        let customerName = data.customer_name;
+        if (data.customer_id === -1) {
+            customerName = 'Sản Xuất Nội Bộ';
+        } else if (!customerName && data.customer_id) {
+            const cust = await this.customerRepo.findOne({ where: { id: data.customer_id } });
+            if (cust) customerName = cust.name;
+        }
+
         const order = this.orderRepo.create({
             order_code: orderCode,
             customer: (data.customer_id && data.customer_id !== -1) ? { id: data.customer_id } : null,
-            customer_name: (data.customer_id === -1) ? 'Sản Xuất Nội Bộ' : data.customer_name,
+            customer_name: customerName,
             order_date: data.order_date,
             delivery_date: data.delivery_date,
             status: data.is_quotation ? SalesOrderStatus.QUOTATION : SalesOrderStatus.SO_PENDING,
@@ -266,7 +274,12 @@ export class SalesService {
         // Map qua từng order để tính tiền đã trả từ bảng Transaction
         const ordersWithPayment = await Promise.all(orders.map(async (order) => {
             const info = await this.calculatePaymentInfo(order.order_code);
-            return { ...order, paid_amount: info.paid_amount, deposit_date: info.deposit_date };
+            return {
+                ...order,
+                customer_name: order.customer?.name || order.customer_name || null,
+                paid_amount: info.paid_amount,
+                deposit_date: info.deposit_date
+            };
         }));
 
         return ordersWithPayment;
@@ -300,7 +313,12 @@ export class SalesService {
         // Map over orders to include payment info
         const ordersWithPayment = await Promise.all(orders.map(async (order) => {
             const info = await this.calculatePaymentInfo(order.order_code);
-            return { ...order, paid_amount: info.paid_amount, deposit_date: info.deposit_date };
+            return {
+                ...order,
+                customer_name: order.customer?.name || order.customer_name || null,
+                paid_amount: info.paid_amount,
+                deposit_date: info.deposit_date
+            };
         }));
 
         return ordersWithPayment;
@@ -329,7 +347,12 @@ export class SalesService {
         // Tính toán số tiền đã trả
         const info = await this.calculatePaymentInfo(order.order_code);
 
-        return { ...order, paid_amount: info.paid_amount, deposit_date: info.deposit_date }; // Trả về paid_amount realtime
+        return {
+            ...order,
+            customer_name: order.customer?.name || order.customer_name || null,
+            paid_amount: info.paid_amount,
+            deposit_date: info.deposit_date
+        }; // Trả về paid_amount realtime
     }
 
     // --- UPDATE ---
@@ -346,6 +369,12 @@ export class SalesService {
                 order.customer_name = 'Sản Xuất Nội Bộ';
             } else {
                 order.customer = { id: data.customer_id } as any;
+                if (data.customer_name) {
+                    order.customer_name = data.customer_name;
+                } else {
+                    const cust = await this.customerRepo.findOne({ where: { id: data.customer_id } });
+                    if (cust) order.customer_name = cust.name;
+                }
             }
         }
         if (data.order_date) order.order_date = data.order_date;

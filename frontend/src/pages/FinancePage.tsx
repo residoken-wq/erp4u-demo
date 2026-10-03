@@ -186,8 +186,18 @@ const FinancePage: React.FC = () => {
         const supId = record.supplier_id || record.supplier?.id;
         const catId = record.category_id || record.category?.id;
 
+        let refCodes: string[] = [];
+        if (record.reference_code) {
+            if (Array.isArray(record.reference_code)) {
+                refCodes = record.reference_code;
+            } else if (typeof record.reference_code === 'string') {
+                refCodes = record.reference_code.split(',').map((s: string) => s.trim()).filter(Boolean);
+            }
+        }
+
         formTrans.setFieldsValue({
             ...record,
+            reference_code: refCodes,
             date: dayjs(record.date),
             category_id: catId,
             customer_id: custId,
@@ -290,6 +300,92 @@ const FinancePage: React.FC = () => {
         catch (e) { message.error('Không thể xóa (có thể đang có dữ liệu liên quan)'); }
     };
 
+    // --- CUSTOMER & REFERENCE HELPERS ---
+    const getOrderCustomerName = (so: any) => {
+        if (!so) return '';
+        if (so.customer?.name) return so.customer.name;
+        if (so.customer_name) return so.customer_name;
+        if (so.customer_id) {
+            const found = customers.find((c: any) => c.id === so.customer_id);
+            if (found) return found.name;
+        }
+        return '';
+    };
+
+    const getCustomerNameByOrderCode = (codesStr: any) => {
+        if (!codesStr) return '';
+        const rawStr = Array.isArray(codesStr) ? codesStr.join(', ') : String(codesStr);
+        const codes = rawStr.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+        for (const code of codes) {
+            const found = salesOrders.find((s: any) => s.order_code && s.order_code.trim().toLowerCase() === code);
+            if (found) {
+                const name = getOrderCustomerName(found);
+                if (name) return name;
+            }
+        }
+        return '';
+    };
+
+    const renderReferenceCell = (refCode: any, record?: any) => {
+        let codes: string[] = [];
+        if (refCode && typeof refCode === 'string') {
+            codes = refCode.split(',').map((s: string) => s.trim()).filter(Boolean);
+        } else if (Array.isArray(refCode)) {
+            codes = refCode.map((s: any) => String(s).trim()).filter(Boolean);
+        } else if (record?.allocations && Array.isArray(record.allocations) && record.allocations.length > 0) {
+            codes = record.allocations.map((a: any) => a.refCode).filter(Boolean);
+        }
+
+        if (codes.length === 0) return <span style={{ color: '#bbb' }}>—</span>;
+
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {codes.map((code, idx) => {
+                    const cleanCode = code.trim();
+                    const so = salesOrders.find((s: any) => s.order_code && s.order_code.trim().toLowerCase() === cleanCode.toLowerCase());
+                    let custName = getOrderCustomerName(so);
+                    if (!custName && record?.type === 'INCOME' && record?.partner_name && (cleanCode.startsWith('SO-') || cleanCode.startsWith('BG-'))) {
+                        custName = record.partner_name;
+                    }
+
+                    let tagEl: React.ReactNode;
+                    if (cleanCode.startsWith('PXK-')) {
+                        tagEl = <a href="/inventory/deliveries" title="Xem phiếu xuất kho"><Tag color="cyan" style={{ margin: 0 }}>{cleanCode}</Tag></a>;
+                    } else if (so?.id) {
+                        tagEl = <a href={`/orders?order=${so.id}`} title="Xem chi tiết đơn hàng"><Tag color="blue" style={{ cursor: 'pointer', margin: 0 }}>{cleanCode}</Tag></a>;
+                    } else if (cleanCode.startsWith('SO-') || cleanCode.startsWith('BG-') || cleanCode.startsWith('PO-')) {
+                        tagEl = <Tag color="blue" style={{ margin: 0 }}>{cleanCode}</Tag>;
+                    } else {
+                        tagEl = <Tag style={{ margin: 0 }}>{cleanCode}</Tag>;
+                    }
+
+                    return (
+                        <div key={idx} style={{ lineHeight: 1.25 }}>
+                            {custName && (
+                                <div
+                                    style={{
+                                        fontSize: 12,
+                                        fontWeight: 600,
+                                        color: '#1d39c4',
+                                        marginBottom: 2,
+                                        maxWidth: 165,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                    title={custName}
+                                >
+                                    {custName}
+                                </div>
+                            )}
+                            <div>{tagEl}</div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
     // --- COMPONENTS ---
     const columnsTrans = (type: 'INCOME' | 'EXPENSE') => [
         { 
@@ -331,17 +427,8 @@ const FinancePage: React.FC = () => {
             render: (t: any) => t ? <b>{t}</b> : '-' 
         },
         { 
-            title: 'Mã tham chiếu', dataIndex: 'reference_code', width: 140,
-            render: (t: any) => {
-                if (!t) return '-';
-                if (t.startsWith('PXK-')) {
-                    return <a href="/inventory/deliveries" title="Xem phiếu xuất kho"><Tag color="cyan">{t}</Tag></a>;
-                }
-                if (t.startsWith('SO-') || t.startsWith('PO-')) {
-                    return <Tag color="blue">{t}</Tag>;
-                }
-                return <Tag>{t}</Tag>;
-            }
+            title: 'Mã tham chiếu', dataIndex: 'reference_code', width: 170,
+            render: (t: any, r: any) => renderReferenceCell(t, r)
         },
         {
             title: 'Số tiền', dataIndex: 'amount', align: 'right' as const, width: 130,
@@ -517,10 +604,12 @@ const FinancePage: React.FC = () => {
     const filteredTransactions = transactions.filter(t => {
         if (!searchText) return true;
         const s = searchText.toLowerCase();
+        const refCustName = getCustomerNameByOrderCode(t.reference_code);
         return (
             t.description?.toLowerCase().includes(s) ||
             t.partner_name?.toLowerCase().includes(s) ||
             t.reference_code?.toLowerCase().includes(s) ||
+            (refCustName && refCustName.toLowerCase().includes(s)) ||
             t.category?.name?.toLowerCase().includes(s)
         );
     });
@@ -531,10 +620,12 @@ const FinancePage: React.FC = () => {
             
             if (searchText) {
                 const s = searchText.toLowerCase();
+                const refCustName = getCustomerNameByOrderCode(t.reference_code);
                 const matches = (
                     t.description?.toLowerCase().includes(s) ||
                     t.partner_name?.toLowerCase().includes(s) ||
                     t.reference_code?.toLowerCase().includes(s) ||
+                    (refCustName && refCustName.toLowerCase().includes(s)) ||
                     t.category?.name?.toLowerCase().includes(s)
                 );
                 if (!matches) return false;
@@ -1333,13 +1424,6 @@ const FinancePage: React.FC = () => {
                                 </Form.Item>
                             </Col>
                         </Row>
-                        <Row gutter={16}>
-                            <Col span={24}>
-                                <Form.Item name="reference_code" label="Mã tham chiếu (PO, Hợp đồng...)">
-                                    <Input placeholder="Vd: PO-2311-0001" />
-                                </Form.Item>
-                            </Col>
-                        </Row>
                     </div>
 
                     <Form.Item
@@ -1362,12 +1446,24 @@ const FinancePage: React.FC = () => {
                     <Form.Item name="description" label="Diễn giải / Lý do"><Input.TextArea rows={3} /></Form.Item>
                     
                     <div style={{ background: '#f5f5f5', padding: 12, borderRadius: 6, marginBottom: 16 }}>
-                        <Form.Item name="reference_code" label="Mã tham chiếu SO / Hợp đồng">
+                        <Form.Item name="reference_code" label="Mã tham chiếu (SO, PO, Hợp đồng...)">
                             <Select
                                 mode="tags"
                                 style={{ width: '100%' }}
-                                placeholder="Chọn hoặc nhập mã SO..."
-                                options={salesOrders.map(so => ({ value: so.order_code, label: `${so.order_code} - ${so.customer_name} (${Number(so.total_amount).toLocaleString()})` }))}
+                                placeholder="Chọn đơn hàng SO hoặc nhập mã (PO, Hợp đồng...)"
+                                showSearch
+                                filterOption={(input, option) =>
+                                    (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
+                                }
+                                options={salesOrders.map(so => {
+                                    const custName = getOrderCustomerName(so);
+                                    const custPart = custName ? ` - ${custName}` : '';
+                                    const amountPart = so.total_amount != null ? ` (${Number(so.total_amount).toLocaleString()} đ)` : '';
+                                    return {
+                                        value: so.order_code,
+                                        label: `${so.order_code}${custPart}${amountPart}`
+                                    };
+                                })}
                                 onChange={(val: string[]) => {
                                     // Tự động chia đều allocations nếu đã nhập số tiền
                                     const amount = formTrans.getFieldValue('amount') || 0;
@@ -1399,28 +1495,38 @@ const FinancePage: React.FC = () => {
                                     {fields.length > 0 && (
                                         <div style={{ marginBottom: 16 }}>
                                             <div style={{ fontWeight: 500, marginBottom: 8 }}>Phân bổ số tiền (Nhập tay nếu cần chỉnh sửa)</div>
-                                            {fields.map(({ key, name, ...restField }) => (
-                                                <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                                                    <Form.Item
-                                                        {...restField}
-                                                        name={[name, 'refCode']}
-                                                        rules={[{ required: true, message: 'Thiếu mã' }]}
-                                                    >
-                                                        <Input placeholder="Mã SO" readOnly />
-                                                    </Form.Item>
-                                                    <Form.Item
-                                                        {...restField}
-                                                        name={[name, 'amount']}
-                                                        rules={[{ required: true, message: 'Thiếu số tiền' }]}
-                                                    >
-                                                        <InputNumber
-                                                            placeholder="Số tiền"
-                                                            formatter={(v: any) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                                            style={{ width: 150 }}
-                                                        />
-                                                    </Form.Item>
-                                                </Space>
-                                            ))}
+                                            {fields.map(({ key, name, ...restField }) => {
+                                                const allocItem = formTrans.getFieldValue('allocations')?.[name];
+                                                const curRefCode = allocItem?.refCode;
+                                                const cust = getCustomerNameByOrderCode(curRefCode);
+                                                return (
+                                                    <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                                                        <Form.Item
+                                                            {...restField}
+                                                            name={[name, 'refCode']}
+                                                            rules={[{ required: true, message: 'Thiếu mã' }]}
+                                                        >
+                                                            <Input placeholder="Mã SO" readOnly />
+                                                        </Form.Item>
+                                                        {cust && (
+                                                            <span style={{ fontSize: 12, color: '#1d39c4', fontWeight: 500, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={cust}>
+                                                                ({cust})
+                                                            </span>
+                                                        )}
+                                                        <Form.Item
+                                                            {...restField}
+                                                            name={[name, 'amount']}
+                                                            rules={[{ required: true, message: 'Thiếu số tiền' }]}
+                                                        >
+                                                            <InputNumber
+                                                                placeholder="Số tiền"
+                                                                formatter={(v: any) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                                                style={{ width: 150 }}
+                                                            />
+                                                        </Form.Item>
+                                                    </Space>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </>
@@ -1465,7 +1571,9 @@ const FinancePage: React.FC = () => {
                             <Descriptions.Item label="Danh mục" span={1}>
                                 {selectedTransaction.category_name ? <Tag color={selectedTransaction.category_color || 'default'}>{selectedTransaction.category_name}</Tag> : '—'}
                             </Descriptions.Item>
-                            <Descriptions.Item label="Mã tham chiếu" span={1}>{selectedTransaction.reference_code || '—'}</Descriptions.Item>
+                            <Descriptions.Item label="Mã tham chiếu" span={1}>
+                                {renderReferenceCell(selectedTransaction.reference_code, selectedTransaction)}
+                            </Descriptions.Item>
                             <Descriptions.Item label="Mã HĐ VAT" span={1}>
                                 {selectedTransaction.vat_invoice_code ? <b>{selectedTransaction.vat_invoice_code}</b> : <span style={{ color: '#bbb' }}>Chưa có</span>}
                             </Descriptions.Item>
@@ -1516,8 +1624,11 @@ const FinancePage: React.FC = () => {
                                 <b>Mục đích / Diễn giải:</b> {approvingTrans.description}
                             </div>
                             {approvingTrans.reference_code && (
-                                <div style={{ marginTop: 4, fontSize: 12, color: '#595959' }}>
-                                    <b>Mã tham chiếu:</b> <Tag color="blue">{approvingTrans.reference_code}</Tag>
+                                <div style={{ marginTop: 6, fontSize: 12, color: '#595959' }}>
+                                    <b>Mã tham chiếu:</b>
+                                    <div style={{ marginTop: 4 }}>
+                                        {renderReferenceCell(approvingTrans.reference_code, approvingTrans)}
+                                    </div>
                                 </div>
                             )}
                         </div>
