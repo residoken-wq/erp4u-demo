@@ -21,4 +21,7 @@ export class ProductComponent {
 
   @Column({ default: 0 })
   sort_order: number;
+
+  @Column({ default: false })
+  include_in_cost: boolean; // Manual checkbox: Cho phép tính BTP này vào giá vốn sản phẩm chính (mặc định: false)
 }

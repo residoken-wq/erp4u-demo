@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Input, InputNumber, Select, Space, Tag, Typography, Row, Col, Popconfirm, message, Alert, Tooltip, Divider, Table } from 'antd';
+import { Card, Button, Input, InputNumber, Select, Space, Tag, Typography, Row, Col, Popconfirm, message, Alert, Tooltip, Divider, Table, Checkbox } from 'antd';
 import { PlusOutlined, DeleteOutlined, CopyOutlined, SaveOutlined, ArrowRightOutlined, ExperimentOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
 
@@ -23,6 +23,7 @@ export interface SemiFinishedDraft {
     name: string;
     unit: string;
     quantity_usage: number; // Định mức dùng cho 1 SP chính
+    include_in_cost?: boolean; // Manual: Cho phép tính BTP này vào giá vốn SP chính (mặc định false)
     components: BtpComponent[];
 }
 
@@ -84,6 +85,7 @@ const ProductSemiFinishedTab: React.FC<ProductSemiFinishedTabProps> = ({ editing
                         name: child.name,
                         unit: child.unit || 'cái',
                         quantity_usage: Number(comp.quantity),
+                        include_in_cost: Boolean(comp.include_in_cost),
                         components: bomComponents
                     });
                 }
@@ -108,6 +110,7 @@ const ProductSemiFinishedTab: React.FC<ProductSemiFinishedTabProps> = ({ editing
             name: `${editingItem.name} - (Tên BTP mới)`,
             unit: 'cái',
             quantity_usage: 1,
+            include_in_cost: false,
             components: []
         };
         setBtpList(prev => [...prev, newBtp]);
@@ -149,6 +152,7 @@ const ProductSemiFinishedTab: React.FC<ProductSemiFinishedTabProps> = ({ editing
                 isNew: true,
                 sku: `${itemToClone.sku}_COPY_${Math.floor(Math.random() * 100)}`,
                 name: `${itemToClone.name} (Bản sao)`,
+                include_in_cost: Boolean(itemToClone.include_in_cost),
                 components: (itemToClone.components || []).map(c => ({ ...c, id: `COMP_${Date.now()}_${Math.floor(Math.random() * 1000)}` }))
             };
             const newList = [...prev];
@@ -230,10 +234,11 @@ const ProductSemiFinishedTab: React.FC<ProductSemiFinishedTabProps> = ({ editing
             // Lấy danh sách components (ngoài SEMI_FINISHED) để giữ lại khi save
             const otherComponents = components.filter(c => c.child_product?.product_type !== 'SEMI_FINISHED').map(c => ({
                 sku: c.child_product.sku,
-                quantity: c.quantity
+                quantity: c.quantity,
+                include_in_cost: Boolean(c.include_in_cost)
             }));
 
-            const savedBtpSkus: { sku: string, quantity: number }[] = [];
+            const savedBtpSkus: { sku: string, quantity: number, include_in_cost: boolean }[] = [];
 
             // Xử lý từng BTP
             for (const btp of btpList) {
@@ -270,7 +275,11 @@ const ProductSemiFinishedTab: React.FC<ProductSemiFinishedTabProps> = ({ editing
                 }));
                 await api.post(`/products/${currentBtpId}/boms`, bomPayload);
 
-                savedBtpSkus.push({ sku: currentBtpSku, quantity: btp.quantity_usage || 1 });
+                savedBtpSkus.push({ 
+                    sku: currentBtpSku, 
+                    quantity: btp.quantity_usage || 1,
+                    include_in_cost: Boolean(btp.include_in_cost)
+                });
             }
 
             // Cập nhật liên kết component vào Sản phẩm chính
@@ -299,7 +308,7 @@ const ProductSemiFinishedTab: React.FC<ProductSemiFinishedTabProps> = ({ editing
                 description={
                     <div>
                         Thiết lập các cấu phần Bán Thành Phẩm (BTP) được sử dụng để tạo nên sản phẩm chính. BTP vẫn đóng vai trò là NPL với định mức riêng (BOM).<br/>
-                        <i>Lưu ý: Dữ liệu BTP ở đây sẽ làm cơ sở để PO Gia Công kế thừa tự động khi triển khai sản xuất.</i>
+                        <i>Lưu ý: Dữ liệu BTP ở đây sẽ làm cơ sở để PO Gia Công kế thừa tự động khi triển khai sản xuất, <b>KHÔNG</b> tính vào giá vốn sản phẩm chính (Giá vốn SP chính = Tab BOM + Tab Gia Công + Tab Logistics & Khác).</i>
                     </div>
                 }
                 type="info"
@@ -363,6 +372,11 @@ const ProductSemiFinishedTab: React.FC<ProductSemiFinishedTabProps> = ({ editing
                                 <Tag color="blue" style={{ fontSize: 12 }}>
                                     Định mức cho 1 SP chính: <b>{btp.quantity_usage || 0} {btp.unit}</b>
                                 </Tag>
+                                {btp.include_in_cost ? (
+                                    <Tag color="red" style={{ fontWeight: 600 }}>Tính vào giá vốn SP</Tag>
+                                ) : (
+                                    <Tag color="default">Không tính giá vốn</Tag>
+                                )}
                                 {btp.isNew && <Tag color="orange">Bản nháp mới</Tag>}
                             </Space>
                         }
@@ -424,6 +438,29 @@ const ProductSemiFinishedTab: React.FC<ProductSemiFinishedTabProps> = ({ editing
                                     onChange={val => handleUpdateBtp(btpIndex, 'unit', val)}
                                     options={COMMON_UNITS}
                                 />
+                            </Col>
+
+                            <Col span={24}>
+                                <div style={{
+                                    marginTop: 4,
+                                    padding: '8px 14px',
+                                    borderRadius: 6,
+                                    background: btp.include_in_cost ? '#fff1f0' : '#f9f9f9',
+                                    border: btp.include_in_cost ? '1px solid #ffa39e' : '1px solid #f0f0f0'
+                                }}>
+                                    <Checkbox
+                                        checked={Boolean(btp.include_in_cost)}
+                                        onChange={e => handleUpdateBtp(btpIndex, 'include_in_cost', e.target.checked)}
+                                        style={{ fontWeight: 600, color: btp.include_in_cost ? '#cf1322' : '#262626' }}
+                                    >
+                                        Cho phép tính BTP này vào giá vốn sản phẩm chính (Manual Cost)
+                                    </Checkbox>
+                                    <div style={{ fontSize: 12, color: btp.include_in_cost ? '#cf1322' : '#8c8c8c', marginTop: 2, marginLeft: 24 }}>
+                                        {btp.include_in_cost 
+                                            ? '⚠️ Đang BẬT: Chi phí BTP này sẽ được cộng vào Giá Vốn sản phẩm chính khi bấm Lưu.' 
+                                            : 'Mặc định TẮT: Chi phí BTP này không cộng vào giá vốn sản phẩm chính (giá vốn SP chính chỉ gồm BOM + Gia công + Logistics).'}
+                                    </div>
+                                </div>
                             </Col>
                         </Row>
 

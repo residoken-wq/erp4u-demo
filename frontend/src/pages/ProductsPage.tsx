@@ -328,9 +328,42 @@ const ProductsPage: React.FC = () => {
                 const updatedItem = await api.get(`/products/${editingItem.id}`);
                 setEditingItem(updatedItem.data);
                 form.setFieldsValue(updatedItem.data);
+                fetchDetailData(editingItem.id);
             }
         } catch (e) { message.error('Lỗi tính giá vốn'); }
     };
+
+    // Phân rã chi phí giá vốn của sản phẩm đang mở (BOM + Gia công + Logistics + BTP manual nếu có)
+    const currentCostBreakdown = useMemo(() => {
+        if (!editingItem) return { bomCost: 0, routingCost: 0, logisticsCost: 0, btpCost: 0, total: 0 };
+        
+        // 1. BOM cost
+        const bomCost = (boms || []).reduce((sum, item) => {
+            const materialCost = Number(item.material?.cost_price || item.material?.cost_per_unit || 0);
+            const qty = Number(item.quantity || 0);
+            const waste = Number(item.waste_percent || 0) / 100;
+            return sum + (materialCost * qty * (1 + waste));
+        }, 0);
+
+        // 2. Routing cost (chỉ tính is_required === true)
+        const routingCost = (routings || []).filter(r => r.is_required).reduce((sum, r) => sum + Number(r.cost || 0), 0);
+
+        // 3. Logistics cost
+        const logisticsCost = (logistics || []).reduce((sum, l) => sum + Number(l.cost || 0), 0);
+
+        // 4. BTP cost (chỉ tính khi include_in_cost === true)
+        const btpCost = (components || [])
+            .filter(c => c.include_in_cost && c.child_product)
+            .reduce((sum, c) => sum + (Number(c.child_product?.cost_price || 0) * Number(c.quantity || 0)), 0);
+
+        return {
+            bomCost: Math.round(bomCost),
+            routingCost: Math.round(routingCost),
+            logisticsCost: Math.round(logisticsCost),
+            btpCost: Math.round(btpCost),
+            total: Math.round(bomCost + routingCost + logisticsCost + btpCost)
+        };
+    }, [editingItem, boms, routings, logistics, components]);
 
     // --- FILTER VARIANT VS BASE ---
     const [viewMode, setViewMode] = useState<string>('MAIN'); // 'MAIN' | 'SEMI' | 'FLAGGED' | 'ROOT'
@@ -1165,9 +1198,45 @@ const ProductsPage: React.FC = () => {
                                         <Form.Item name="base_price" label="Giá bán (Chưa KM)"><InputNumber style={{ width: '100%' }} addonAfter="₫" formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item>
 
                                         {canViewCost && (
-                                            <Form.Item name="cost_price" label="Giá vốn (Hệ thống tính)" tooltip="Hệ thống tính tự động (BOM + Gia công). Click refresh để tính lại.">
-                                                <InputNumber style={{ width: '100%' }} addonAfter={<Tooltip title="Tính lại Giá vốn (BOM + Gia công)"><SyncOutlined onClick={() => handleCalculateCost(form.getFieldValue('sku'))} style={{ cursor: 'pointer' }} /></Tooltip>} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} disabled />
-                                            </Form.Item>
+                                            <>
+                                                <Form.Item 
+                                                    name="cost_price" 
+                                                    label="Giá vốn (Hệ thống tính)" 
+                                                    tooltip="Hệ thống tính tự động = Tab BOM + Tab Gia Công + Tab Logistic & Khác (và BTP nếu được chọn tính vào giá). Click biểu tượng để tính lại."
+                                                    style={{ marginBottom: editingItem ? 8 : 24 }}
+                                                >
+                                                    <InputNumber 
+                                                        style={{ width: '100%' }} 
+                                                        addonAfter={
+                                                            <Tooltip title="Tính lại Giá vốn (BOM + Gia công + Logistics + BTP manual nếu có)">
+                                                                <SyncOutlined onClick={() => handleCalculateCost(form.getFieldValue('sku'))} style={{ cursor: 'pointer' }} />
+                                                            </Tooltip>
+                                                        } 
+                                                        formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} 
+                                                        disabled 
+                                                    />
+                                                </Form.Item>
+                                                {editingItem && (
+                                                    <div style={{ background: '#f5f5f5', padding: '6px 10px', borderRadius: 6, marginBottom: 16, fontSize: 12 }}>
+                                                        <div style={{ color: '#595959', marginBottom: 2 }}>
+                                                            <b>Phân rã giá vốn:</b>
+                                                        </div>
+                                                        <Space size={4} wrap>
+                                                            <Tag color="cyan">BOM: {currentCostBreakdown.bomCost.toLocaleString()} ₫</Tag>
+                                                            <span>+</span>
+                                                            <Tag color="geekblue">Gia công: {currentCostBreakdown.routingCost.toLocaleString()} ₫</Tag>
+                                                            <span>+</span>
+                                                            <Tag color="purple">Logistics: {currentCostBreakdown.logisticsCost.toLocaleString()} ₫</Tag>
+                                                            {currentCostBreakdown.btpCost > 0 && (
+                                                                <>
+                                                                    <span>+</span>
+                                                                    <Tag color="magenta">BTP (Manual): {currentCostBreakdown.btpCost.toLocaleString()} ₫</Tag>
+                                                                </>
+                                                            )}
+                                                        </Space>
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                         <Form.Item name="profit_margin" label="Lợi nhuận mong muốn (%)" tooltip="Lấy từ Danh mục nếu tạo mới, có thể override tại đây"><InputNumber style={{ width: '100%' }} addonAfter="%" min={0} max={99} /></Form.Item>
                                         <Form.Item name="quantity_in_stock" label="Tồn kho"><InputNumber style={{ width: '100%' }} disabled /></Form.Item>

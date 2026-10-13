@@ -78,6 +78,7 @@ export class ProductsService implements OnModuleInit {
                 ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_count INTEGER DEFAULT 1;
                 ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS packing_spec_name VARCHAR(150);
                 ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS delivery_notice TEXT;
+                ALTER TABLE product_components ADD COLUMN IF NOT EXISTS include_in_cost BOOLEAN DEFAULT false;
             `);
         } catch (e) {
             console.error('[ProductsService] Error initializing product_packing_specs table or delivery columns:', e);
@@ -643,7 +644,8 @@ export class ProductsService implements OnModuleInit {
                 parent_product: target,
                 child_product: savedPhantom,
                 quantity: sourceBtpComp.quantity,
-                sort_order: sourceBtpComp.sort_order
+                sort_order: sourceBtpComp.sort_order,
+                include_in_cost: Boolean(sourceBtpComp.include_in_cost)
             }));
             
             copiedCount++;
@@ -689,40 +691,65 @@ export class ProductsService implements OnModuleInit {
         if (!product) throw new NotFoundException('SP khong ton tai');
 
         let totalCost = 0;
+        let bomCost = 0;
+        let routingCost = 0;
+        let logisticsCost = 0;
+        let componentsCost = 0;
 
-        // Check Combo
-        // 1. Cost from Components (Semi-Finished / Combo Items)
-        const components = await this.componentRepo.find({
-            where: { parent_product: { id: product.id } },
-            relations: ['child_product']
-        });
+        // 1. Trường hợp riêng: Sản phẩm COMBO
+        if (product.product_type === 'COMBO') {
+            // Giá vốn Combo = Tổng giá vốn các sản phẩm con cấu thành (loại trừ SEMI_FINISHED)
+            const components = await this.componentRepo.find({
+                where: { parent_product: { id: product.id } },
+                relations: ['child_product']
+            });
 
-        if (components.length > 0) {
-            for (const comp of components) {
-                totalCost += Number(comp.child_product?.cost_price ?? 0) * Number(comp.quantity);
+            if (components.length > 0) {
+                for (const comp of components) {
+                    if (comp.child_product && comp.child_product.product_type !== 'SEMI_FINISHED') {
+                        componentsCost += Number(comp.child_product?.cost_price ?? 0) * Number(comp.quantity);
+                    }
+                }
             }
-        }
+            totalCost = componentsCost;
+        } else {
+            // 2. Sản phẩm thông thường / Biến thể:
+            // CÔNG THỨC: Giá vốn = Giá Tab BOM + Tab giá Gia Công + Tab giá Logistic & Khác
+            // LƯU Ý: Tuyệt đối KHÔNG bao gồm giá tab Bán thành phẩm (SEMI_FINISHED / components).
 
-        // 2. Cost from BOM (Direct Materials)
-        // Now we calculate BOM cost regardless of components existence (Hybrid support)
-        const boms = await this.bomRepo.find({ where: { product_id: product.id }, relations: ['material'] });
-        for (const item of boms) {
-            if (item.material) {
-                const waste = Number(item.waste_percent) / 100;
-                const materialCost = Number(item.material.cost_price || item.material.cost_per_unit);
-                totalCost += materialCost * Number(item.quantity) * (1 + waste);
+            // 2.1. Tab BOM (Direct Materials)
+            const boms = await this.bomRepo.find({ where: { product_id: product.id }, relations: ['material'] });
+            for (const item of boms) {
+                if (item.material) {
+                    const waste = Number(item.waste_percent || 0) / 100;
+                    const materialCost = Number(item.material.cost_price || item.material.cost_per_unit || 0);
+                    bomCost += materialCost * Number(item.quantity || 0) * (1 + waste);
+                }
             }
+
+            // 2.2. Tab Gia Công (Routing Cost - chỉ tính các bước bắt buộc is_required = true)
+            const routings = await this.routingRepo.find({ where: { product_id: product.id } });
+            routings.forEach(r => {
+                if (r.is_required) routingCost += Number(r.cost || 0);
+            });
+
+            // 2.3. Tab Logistic & Khác (Logistics Cost)
+            const logistics = await this.logisticRepo.find({ where: { product_id: product.id } });
+            logistics.forEach(l => { logisticsCost += Number(l.cost || 0); });
+
+            // 2.4. Tab Bán Thành Phẩm (BTP): Mặc định KHÔNG tính vào giá vốn, CHỈ tính khi người dùng manual check 'include_in_cost === true'
+            const btpComponents = await this.componentRepo.find({
+                where: { parent_product: { id: product.id } },
+                relations: ['child_product']
+            });
+            for (const comp of btpComponents) {
+                if (comp.include_in_cost && comp.child_product) {
+                    componentsCost += Number(comp.child_product.cost_price || 0) * Number(comp.quantity || 0);
+                }
+            }
+
+            totalCost = bomCost + routingCost + logisticsCost + componentsCost;
         }
-
-        // 3. Routing Cost
-        const routings = await this.routingRepo.find({ where: { product_id: product.id } });
-        routings.forEach(r => {
-            if (r.is_required) totalCost += Number(r.cost);
-        });
-
-        // 4. Logistics Cost
-        const logistics = await this.logisticRepo.find({ where: { product_id: product.id } });
-        logistics.forEach(l => { totalCost += Number(l.cost); });
 
         totalCost = Math.round(totalCost);
 
@@ -738,7 +765,19 @@ export class ProductsService implements OnModuleInit {
         product.base_price = sellingPrice;
         await this.productRepo.save(product);
 
-        return { sku, new_cost_price: totalCost, new_base_price: sellingPrice, margin_used: margin };
+        return {
+            sku,
+            new_cost_price: totalCost,
+            new_base_price: sellingPrice,
+            margin_used: margin,
+            breakdowns: {
+                boms: Math.round(bomCost),
+                routings: Math.round(routingCost),
+                logistics: Math.round(logisticsCost),
+                btp: Math.round(componentsCost),
+                components: Math.round(componentsCost)
+            }
+        };
     }
 
     async getCostBreakdowns(productIds: number[]): Promise<Record<number, { boms: number, routings: number, logistics: number, components: number }>> {
@@ -771,7 +810,7 @@ export class ProductsService implements OnModuleInit {
             result[l.product_id].logistics += Number(l.cost || 0);
         }
 
-        // 4. Components (Combo)
+        // 4. Components (Chỉ tính cho COMBO hoặc BTP có include_in_cost = true)
         const components = await this.componentRepo.find({
             where: { parent_product: { id: In(productIds) } },
             relations: ['child_product', 'parent_product']
@@ -779,7 +818,11 @@ export class ProductsService implements OnModuleInit {
         for (const c of components) {
              const parentId = c.parent_product?.id;
              if (parentId && c.child_product) {
-                 result[parentId].components += Number(c.child_product.cost_price || 0) * Number(c.quantity || 0);
+                 const isComboItem = c.child_product.product_type !== 'SEMI_FINISHED';
+                 const isBtpIncluded = c.child_product.product_type === 'SEMI_FINISHED' && Boolean(c.include_in_cost);
+                 if (isComboItem || isBtpIncluded) {
+                     result[parentId].components += Number(c.child_product.cost_price || 0) * Number(c.quantity || 0);
+                 }
              }
         }
 
@@ -879,7 +922,8 @@ export class ProductsService implements OnModuleInit {
                     parent_product: { id: pId },
                     child_product: child,
                     quantity: Number(item.quantity),
-                    sort_order: i + 1 // Save sort order (1-based)
+                    sort_order: i + 1, // Save sort order (1-based)
+                    include_in_cost: Boolean(item.include_in_cost)
                 }));
             }
         }

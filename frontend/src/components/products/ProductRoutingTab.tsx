@@ -1,6 +1,6 @@
-import React, { useState } from 'react'; // Bổ sung useState
-import { Table, Button, message, Card, Form, Select, InputNumber, Popconfirm, Row, Col, Tag, Checkbox, Input } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import React, { useState, useMemo } from 'react'; // Bổ sung useMemo
+import { Table, Button, message, Card, Form, Select, InputNumber, Popconfirm, Row, Col, Tag, Checkbox, Input, Statistic } from 'antd';
+import { PlusOutlined, DeleteOutlined, DollarOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
 
 interface ProductRoutingTabProps {
@@ -14,6 +14,16 @@ interface ProductRoutingTabProps {
 
 const ProductRoutingTab: React.FC<ProductRoutingTabProps> = ({ editingItem, routings, suppliers, processes, fetchDetailData, setRoutings }) => {
     const [routingForm] = Form.useForm();
+
+    // Tính tổng chi phí gia công bắt buộc (tính vào giá vốn)
+    const totalRequiredCost = useMemo(() => {
+        return routings.filter(r => r.is_required).reduce((sum, r) => sum + Number(r.cost || 0), 0);
+    }, [routings]);
+
+    // Tổng chi phí tất cả công đoạn (nếu có tùy chọn)
+    const totalAllCost = useMemo(() => {
+        return routings.reduce((sum, r) => sum + Number(r.cost || 0), 0);
+    }, [routings]);
 
     // Tạo danh sách tùy chọn Process để có thể lấy tên khi lưu
     const processOptions = processes.map(p => ({
@@ -104,7 +114,34 @@ const ProductRoutingTab: React.FC<ProductRoutingTabProps> = ({ editingItem, rout
                 </Card>
             </Col>
             <Col span={16}>
-                <Table dataSource={routings} columns={routingColumns} rowKey="id" pagination={false} size="small" bordered />
+                <Table 
+                    dataSource={routings} 
+                    columns={routingColumns} 
+                    rowKey="id" 
+                    pagination={false} 
+                    size="small" 
+                    bordered 
+                    summary={() => (
+                        <Table.Summary.Row>
+                            <Table.Summary.Cell index={0} colSpan={3}>
+                                <Statistic 
+                                    title="TỔNG CHI PHÍ GIA CÔNG (TÍNH VÀO GIÁ VỐN)" 
+                                    value={totalRequiredCost} 
+                                    precision={0} 
+                                    valueStyle={{ color: '#cf1322' }} 
+                                    prefix={<DollarOutlined />}
+                                    suffix="₫"
+                                />
+                                {totalAllCost !== totalRequiredCost && (
+                                    <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
+                                        (Tổng toàn bộ công đoạn bao gồm tùy chọn: {totalAllCost.toLocaleString()} ₫)
+                                    </div>
+                                )}
+                            </Table.Summary.Cell>
+                            <Table.Summary.Cell index={1} colSpan={2} />
+                        </Table.Summary.Row>
+                    )}
+                />
             </Col>
         </Row>
     );
