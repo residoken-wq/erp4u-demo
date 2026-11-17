@@ -12,9 +12,9 @@ export async function seedSystem(dataSource: DataSource) {
   const configs = [
     { key: 'COMPANY_NAME', value: 'ERP4U Manufacturing Solutions Co., Ltd.' },
     { key: 'COMPANY_ADDRESS', value: 'Khu Công Nghiệp Tân Bình, P. Tây Thạnh, Q. Tân Phú, TP. Hồ Chí Minh' },
-    { key: 'COMPANY_PHONE', value: '1900 6868' },
-    { key: 'COMPANY_EMAIL', value: 'contact@erp4u.demo' },
-    { key: 'COMPANY_TAX_CODE', value: '0318889999' },
+    { key: 'COMPANY_PHONE', value: '1900 0000' },
+    { key: 'COMPANY_EMAIL', value: 'contact@example.com' },
+    { key: 'COMPANY_TAX_CODE', value: '0000000000' },
     { key: 'DEFAULT_CURRENCY', value: 'VND' },
     { key: 'APP_VERSION', value: '1.0.0-demo' },
   ];

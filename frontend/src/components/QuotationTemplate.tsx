@@ -22,7 +22,7 @@ const QuotationTemplate: React.FC<QuotationProps> = ({ data }) => {
     const finalAmount = remainingAmount > 0 ? remainingAmount : Number(data.total_amount);
 
     const customerName = data.customer?.name || data.customer_name || data.receiver_name || 'Khách lẻ';
-    const qrLink = `https://img.vietqr.io/image/ACB-141847859-compact2.jpg?amount=${Math.floor(finalAmount)}&addInfo=${data.order_code}&accountName=CTY TNHH TM DV TUONG LINH`;
+    const qrLink = `https://img.vietqr.io/image/ACB-0000000000-compact2.jpg?amount=${Math.floor(finalAmount)}&addInfo=${data.order_code}&accountName=CTY TNHH SAN XUAT MAU`;
 
     return (
         <div className="quotation-print-container" style={{ padding: 24, background: '#fff', fontSize: 13, fontFamily: "'Inter', sans-serif", color: '#1f2937' }}>
@@ -54,11 +54,11 @@ const QuotationTemplate: React.FC<QuotationProps> = ({ data }) => {
                 <Col span={12}>
                     <div style={{ background: '#f8fafc', padding: 15, borderRadius: 8, height: '100%', border: '1px solid #e2e8f0' }}>
                         <h4 style={{ marginTop: 0, color: '#1e3a8a', borderBottom: '1px solid #cbd5e1', paddingBottom: 5, textTransform: 'uppercase', fontFamily: "'Outfit', sans-serif" }}>BÊN BÁN</h4>
-                        <p style={{ marginBottom: 5 }}><b>CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ TƯỜNG LINH</b></p>
-                        <p style={{ marginBottom: 5 }}>📍 74/21/24 Nguyễn Khuyến, Phường Bình Thạnh, TP. Hồ Chí Minh</p>
-                        <p style={{ marginBottom: 5 }}>📞 0983.882210 - 0983.796654</p>
-                        <p style={{ marginBottom: 5 }}><b>MST:</b> 0311.874.522</p>
-                        <p style={{ marginBottom: 5 }}><b>Email:</b> {(data.assigned_to?.email || data.created_by?.email || data.sale_agent?.email || data.sale_email)?.trim() || 'nemmanonerp4u@gmail.com'}</p>
+                        <p style={{ marginBottom: 5 }}><b>CÔNG TY TNHH SẢN XUẤT MẪU</b></p>
+                        <p style={{ marginBottom: 5 }}>📍 Số 123 Đường Demo, Phường Demo, Quận 1, TP. Hồ Chí Minh</p>
+                        <p style={{ marginBottom: 5 }}>📞 1900-0000 - 0900000001</p>
+                        <p style={{ marginBottom: 5 }}><b>MST:</b> 0000000000</p>
+                        <p style={{ marginBottom: 5 }}><b>Email:</b> {(data.assigned_to?.email || data.created_by?.email || data.sale_agent?.email || data.sale_email)?.trim() || 'support@example.com'}</p>
                         <p style={{ marginBottom: 0 }}><b>Sale Agent:</b> {data.assigned_to?.full_name || data.created_by?.full_name || data.created_by?.name || data.sale_agent?.name || data.sale_name || '...'} - {data.assigned_to?.phone || data.created_by?.phone || data.sale_agent?.phone || data.sale_phone || '...'}</p>
                     </div>
                 </Col>
@@ -189,8 +189,8 @@ const QuotationTemplate: React.FC<QuotationProps> = ({ data }) => {
                         </div>
                         <div style={{ fontSize: 11, lineHeight: 1.6, textAlign: 'left', marginBottom: 15 }}>
                             <div><b>ACB - TP.HCM</b></div>
-                            <div>STK: <span style={{ fontFamily: 'monospace', background: '#f0f0f0', padding: '0 4px' }}>141847859</span></div>
-                            <div>Chủ TK: CTY TNHH TM DV TƯỜNG LINH</div>
+                            <div>STK: <span style={{ fontFamily: 'monospace', background: '#f0f0f0', padding: '0 4px' }}>0000000000</span></div>
+                            <div>Chủ TK: CTY TNHH SAN XUAT MAU</div>
                             <div>Nội dung: <b>{data.order_code}</b></div>
                         </div>
                         
@@ -203,7 +203,7 @@ const QuotationTemplate: React.FC<QuotationProps> = ({ data }) => {
 
             <Row style={{ marginTop: 50, textAlign: 'center' }}>
                 <Col span={12}><b>ĐẠI DIỆN KHÁCH HÀNG</b><br /><i>(Ký, ghi rõ họ tên)</i></Col>
-                <Col span={12}><b>ĐẠI DIỆN CÔNG TY TƯỜNG LINH</b><br /><i>(Ký, đóng dấu)</i><div style={{ height: 80 }}></div></Col>
+                <Col span={12}><b>ĐẠI DIỆN BÊN BÁN</b><br /><i>(Ký, đóng dấu)</i><div style={{ height: 80 }}></div></Col>
             </Row>
         </div>
     );

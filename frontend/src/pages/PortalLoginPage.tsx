@@ -93,7 +93,7 @@ const PortalLoginPage: React.FC = () => {
                                             type="email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            placeholder="email@truonghoc.edu.vn"
+                                            placeholder="email@example.com"
                                             required
                                             style={styles.input}
                                             autoFocus

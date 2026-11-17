@@ -21,7 +21,7 @@ describe('EncryptionTransformer', () => {
   });
 
   it('should encrypt complex sensitive PII (tax code, legal representative, unicode name)', () => {
-    const taxCode = '0317891234';
+    const taxCode = '0100000001';
     const vietnameseName = 'Nguyễn Hoàng Hải';
     const email = 'hai.nh@ecoplast-vn.com';
 

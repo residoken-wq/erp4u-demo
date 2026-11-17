@@ -54,49 +54,47 @@ export const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
             bodyStyle={{ padding: 0, borderRadius: 12, overflow: 'hidden' }}
         >
             {/* Media Display Area */}
-            <div style={{ background: '#090d16', position: 'relative', width: '100%', minHeight: 460 }}>
-                {embedSrc ? (
-                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden' }}>
-                        <iframe
-                            title={title || 'Video Hướng dẫn ERP4U'}
-                            src={embedSrc}
-                            style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                border: 0
-                            }}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                        />
-                    </div>
-                ) : imageUrl ? (
-                    <div style={{ textAlign: 'center', padding: 20 }}>
-                        <img
-                            src={imageUrl}
-                            alt={title}
-                            style={{ maxWidth: '100%', maxHeight: 520, objectFit: 'contain', borderRadius: 8 }}
-                        />
-                    </div>
-                ) : (
-                    <div style={{ height: 350, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-                        Không có dữ liệu media
-                    </div>
-                )}
-            </div>
+            {(embedSrc || imageUrl) ? (
+                <div style={{ background: '#090d16', position: 'relative', width: '100%', minHeight: embedSrc ? 460 : 320 }}>
+                    {embedSrc ? (
+                        <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden' }}>
+                            <iframe
+                                title={title || 'Video Hướng dẫn ERP4U'}
+                                src={embedSrc}
+                                style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    border: 0
+                                }}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                            />
+                        </div>
+                    ) : imageUrl ? (
+                        <div style={{ textAlign: 'center', padding: 20 }}>
+                            <img
+                                src={imageUrl}
+                                alt={title}
+                                style={{ maxWidth: '100%', maxHeight: 420, objectFit: 'contain', borderRadius: 8 }}
+                            />
+                        </div>
+                    ) : null}
+                </div>
+            ) : null}
 
             {/* Content & Metadata */}
             <div style={{ padding: '20px 24px', background: '#ffffff' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                            <Tag color="red" icon={<YoutubeOutlined />} style={{ borderRadius: 6, padding: '2px 8px' }}>
-                                Video Tutorial
+                            <Tag color="blue" style={{ borderRadius: 6, padding: '2px 8px' }}>
+                                {embedSrc ? 'Video Tutorial' : 'Tài Liệu Hướng Dẫn'}
                             </Tag>
                             <Text type="secondary" style={{ fontSize: 13 }}>
-                                ERP4U Video Knowledge Center
+                                ERP4U Knowledge Center
                             </Text>
                         </div>
                         <Title level={4} style={{ margin: '0 0 8px 0', color: '#0f172a' }}>

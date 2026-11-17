@@ -197,15 +197,15 @@ const PortalQuotePage: React.FC = () => {
         const vatAddress = data.customer?.legal_address || data.vat_address || customerAddress;
 
         // Dynamic Company / Seller Info
-        const sellerName = data.company_info?.COMPANY_NAME || 'CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ TƯỜNG LINH';
-        const sellerAddress = data.company_info?.COMPANY_ADDRESS || '74/21/24 Nguyễn Khuyến, P. Bình Thạnh, TP. HCM, VN';
-        const sellerPhone = data.company_info?.COMPANY_PHONE || '0983.882210 - 0983.796654';
-        const sellerTaxCode = data.company_info?.COMPANY_TAX_CODE || '0311.874.522';
+        const sellerName = data.company_info?.COMPANY_NAME || 'CÔNG TY TNHH SẢN XUẤT MẪU';
+        const sellerAddress = data.company_info?.COMPANY_ADDRESS || 'Số 123 Đường Demo, Phường Demo, Quận 1, TP. HCM, VN';
+        const sellerPhone = data.company_info?.COMPANY_PHONE || '1900-0000 - 0900000001';
+        const sellerTaxCode = data.company_info?.COMPANY_TAX_CODE || '0000000000';
         const saleAgentEmail = (data.assigned_to?.email || data.sale_agent?.email || data.sale_email || data.created_by?.email)?.trim();
-        const sellerEmail = saleAgentEmail || data.company_info?.COMPANY_EMAIL || 'nemmanonerp4u@gmail.com';
+        const sellerEmail = saleAgentEmail || data.company_info?.COMPANY_EMAIL || 'support@example.com';
         const sellerBankName = data.company_info?.COMPANY_BANK_NAME || 'ACB - TP.HCM';
-        const sellerBankAccount = data.company_info?.COMPANY_BANK_ACCOUNT || '141847859';
-        const sellerBankHolder = data.company_info?.COMPANY_BANK_HOLDER || 'CTY TNHH TM DV TUONG LINH';
+        const sellerBankAccount = data.company_info?.COMPANY_BANK_ACCOUNT || '0000000000';
+        const sellerBankHolder = data.company_info?.COMPANY_BANK_HOLDER || 'CTY TNHH SAN XUAT MAU';
         
         const bannerUrl = data.print_header_banner
             ? (data.print_header_banner.startsWith('/uploads/') ? `${API_URL}/upload/files/${data.print_header_banner.replace('/uploads/', '')}` : data.print_header_banner)
@@ -1206,8 +1206,8 @@ const PortalQuotePage: React.FC = () => {
                             </div>
                             <div style={{ fontSize: 13, lineHeight: 1.6 }}>
                                 <div><b>ACB - TP.HCM</b></div>
-                                <div>STK: <span style={{ fontFamily: 'monospace', background: '#f0f0f0', padding: '0 4px' }}>141847859</span></div>
-                                <div>Chủ TK: CTY TNHH TM DV TƯỜNG LINH</div>
+                                <div>STK: <span style={{ fontFamily: 'monospace', background: '#f0f0f0', padding: '0 4px' }}>0000000000</span></div>
+                                <div>Chủ TK: CTY TNHH SAN XUAT MAU</div>
                                 <div>Nội dung: <b>{data.order_code}</b></div>
                             </div>
                         </Card>
@@ -1715,8 +1715,8 @@ const PortalQuotePage: React.FC = () => {
                                 }
                                 
                                 const sellerBankName = data.company_info?.COMPANY_BANK_NAME || 'ACB - TP.HCM';
-                                const sellerBankAccount = data.company_info?.COMPANY_BANK_ACCOUNT || '141847859';
-                                const sellerBankHolder = data.company_info?.COMPANY_BANK_HOLDER || 'CTY TNHH TM DV TUONG LINH';
+                                const sellerBankAccount = data.company_info?.COMPANY_BANK_ACCOUNT || '0000000000';
+                                const sellerBankHolder = data.company_info?.COMPANY_BANK_HOLDER || 'CTY TNHH SAN XUAT MAU';
                                 const rawBankCode = getVietQRBankCode(sellerBankName);
                                 
                                 const pendingDrafts = (data.payments || []).filter((p: any) => p.status === 'DRAFT');

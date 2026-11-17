@@ -16,7 +16,7 @@ export async function seedCustomers(dataSource: DataSource) {
       code: 'KH-ECOPLAST',
       name: 'Công Ty Cổ Phần Bao Bì EcoPlast Sài Gòn',
       type: CustomerType.CUSTOMER,
-      tax_code: '0317891234',
+      tax_code: '0107891234',
       phone: '0903123456',
       email: 'dat-hang@ecoplast-vn.com',
       legal_name: 'CÔNG TY CỔ PHẦN BAO BÌ ECOPLAST SÀI GÒN',
@@ -31,15 +31,15 @@ export async function seedCustomers(dataSource: DataSource) {
       lead_status: 'WON',
       contacts: [
         { full_name: 'Nguyễn Hoàng Hải', job_title: 'Tổng Giám Đốc', phone: '0903123456', email: 'hai.nh@ecoplast-vn.com' },
-        { full_name: 'Lê Thị Thuỳ Dung', job_title: 'Trưởng Phòng Mua Hàng', phone: '0918776655', email: 'dung.lt@ecoplast-vn.com' },
+        { full_name: 'Lê Thị Thuỳ Dung', job_title: 'Trưởng Phòng Mua Hàng', phone: '0900000004', email: 'dung.lt@ecoplast-vn.com' },
       ],
     },
     {
       code: 'KH-GREENFOOD',
       name: 'Công Ty TNHH Thực Phẩm Xanh GreenFood',
       type: CustomerType.CUSTOMER,
-      tax_code: '0316554433',
-      phone: '0988776611',
+      tax_code: '0106554433',
+      phone: '0900000005',
       email: 'purchase@greenfood.vn',
       legal_name: 'CÔNG TY TNHH THỰC PHẨM XANH GREENFOOD',
       legal_address: '45 Lê Duẩn, P. Bến Nghé, Quận 1, TP. HCM',
@@ -52,7 +52,7 @@ export async function seedCustomers(dataSource: DataSource) {
       potential_value: 120000000,
       lead_status: 'WON',
       contacts: [
-        { full_name: 'Trần Kim Yến', job_title: 'Giám Đốc Vận Hành', phone: '0988776611', email: 'yen.tk@greenfood.vn' },
+        { full_name: 'Trần Kim Yến', job_title: 'Giám Đốc Vận Hành', phone: '0900000005', email: 'yen.tk@greenfood.vn' },
       ],
     },
     {
@@ -60,7 +60,7 @@ export async function seedCustomers(dataSource: DataSource) {
       name: 'Thương Hiệu Thời Trang SunStyle',
       type: CustomerType.CUSTOMER,
       tax_code: '0109887766',
-      phone: '0977665544',
+      phone: '0900000006',
       email: 'packaging@sunstyle.vn',
       legal_name: 'CÔNG TY CP THỜI TRANG SUNSTYLE VIỆT NAM',
       legal_address: '88 Thái Hà, Đống Đa, Hà Nội',
@@ -73,15 +73,15 @@ export async function seedCustomers(dataSource: DataSource) {
       potential_value: 500000000,
       lead_status: 'WON',
       contacts: [
-        { full_name: 'Đặng Quốc Tuấn', job_title: 'Giám Đốc Kinh Doanh', phone: '0977665544', email: 'tuan.dq@sunstyle.vn' },
+        { full_name: 'Đặng Quốc Tuấn', job_title: 'Giám Đốc Kinh Doanh', phone: '0900000006', email: 'tuan.dq@sunstyle.vn' },
       ],
     },
     {
       code: 'LEAD-COFFEE-ROAST',
       name: 'Chuỗi Cà Phê Mộc Artisan Coffee',
       type: CustomerType.LEAD,
-      tax_code: '0319223344',
-      phone: '0933112233',
+      tax_code: '0109223344',
+      phone: '0900000007',
       email: 'artisan@mochicoffee.com',
       legal_name: 'HỘ KINH DOANH ARTISAN COFFEE',
       legal_address: '15 Thảo Điền, TP. Thủ Đức, TP. HCM',
@@ -94,7 +94,7 @@ export async function seedCustomers(dataSource: DataSource) {
       potential_value: 65000000,
       lead_status: 'QUALIFIED',
       contacts: [
-        { full_name: 'Vũ Minh Trang', job_title: 'Founder & CEO', phone: '0933112233', email: 'trang.vm@mochicoffee.com' },
+        { full_name: 'Vũ Minh Trang', job_title: 'Founder & CEO', phone: '0900000007', email: 'trang.vm@mochicoffee.com' },
       ],
     },
   ];

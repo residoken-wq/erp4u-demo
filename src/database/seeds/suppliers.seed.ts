@@ -19,7 +19,7 @@ export async function seedSuppliers(dataSource: DataSource) {
       address: 'P. Bến Gót, TP. Việt Trì, Tỉnh Phú Thọ',
       note: 'Nhà cung cấp giấy cuộn Kraft hàng đầu miền Bắc, cấp hạn mức nợ 30 ngày',
       contacts: [
-        { full_name: 'Nguyễn Tiến Dũng', job_title: 'Giám Đốc Bán Hàng Công Nghiệp', phone_number: '0912345678', email: 'dung.nt@viettripaper.vn' },
+        { full_name: 'Nguyễn Tiến Dũng', job_title: 'Giám Đốc Bán Hàng Công Nghiệp', phone_number: '0900000021', email: 'dung.nt@viettripaper.vn' },
       ],
     },
     {
@@ -33,21 +33,21 @@ export async function seedSuppliers(dataSource: DataSource) {
       address: 'KCN VSIP 1, Thuận An, Bình Dương',
       note: 'Cung cấp mực in Offset và hóa chất ngành in chất lượng cao đạt chuẩn RoHS',
       contacts: [
-        { full_name: 'Trần Văn Nam', job_title: 'Trưởng Phòng Kinh Doanh Phía Nam', phone_number: '0908998877', email: 'nam.tv@dic.com.vn' },
+        { full_name: 'Trần Văn Nam', job_title: 'Trưởng Phòng Kinh Doanh Phía Nam', phone_number: '0900000022', email: 'nam.tv@dic.com.vn' },
       ],
     },
     {
       code: 'NCC-LOGISTICS-VN',
       name: 'Vận Tải & Giao Nhận Siêu Tốc Express',
       type: SupplierType.LOGISTICS,
-      tax_code: '0315998877',
+      tax_code: '0105998877',
       phone: '1900545432',
       email: 'support@sieutoclogistics.vn',
       legal_name: 'CÔNG TY CP TIẾP VẬN VÀ GIAO NHẬN SIÊU TỐC',
       address: 'Kho K1, Cảng Cát Lái, P. Cát Lái, TP. Thủ Đức',
       note: 'Đối tác xe tải 2.5T - 8T giao hàng thành phẩm tới các KCN lân cận',
       contacts: [
-        { full_name: 'Lê Thành Đạt', job_title: 'Điều Phối Xe Hàng', phone_number: '0938554433', email: 'dat.lt@sieutoclogistics.vn' },
+        { full_name: 'Lê Thành Đạt', job_title: 'Điều Phối Xe Hàng', phone_number: '0900000023', email: 'dat.lt@sieutoclogistics.vn' },
       ],
     },
   ];

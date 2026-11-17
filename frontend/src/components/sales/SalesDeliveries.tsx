@@ -4017,7 +4017,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                         <div>
                             <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>Số điện thoại gửi ZNS: <span style={{ color: 'red' }}>*</span></div>
                             <Input
-                                placeholder="VD: 0938429210"
+                                placeholder="VD: 0900000001"
                                 value={znsDeliveryPhone}
                                 onChange={e => setZnsDeliveryPhone(e.target.value)}
                             />

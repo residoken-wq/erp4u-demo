@@ -312,7 +312,7 @@ export const ZnsConfigTab: React.FC = () => {
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 240 }}>
             <Input
-              placeholder="Nhập số điện thoại Zalo thử nghiệm (VD: 0938429210)"
+              placeholder="Nhập số điện thoại Zalo thử nghiệm (VD: 0900000001)"
               value={testPhone}
               onChange={e => setTestPhone(e.target.value)}
             />

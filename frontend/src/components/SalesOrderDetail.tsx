@@ -401,24 +401,24 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             r5.getCell(5).font = { bold: true, color: { argb: 'FFD2691E' } };
 
             // Row 6: Address
-            const r6 = sheet.addRow(['74/21/24 Nguyễn Khuyến, Phường 12, Bình Thạnh, HCM', '', '', '', form.getFieldValue('vat_company_name') || initialData?.customer?.legal_name || initialData?.customer?.name || '']);
+            const r6 = sheet.addRow(['Số 123 Đường Demo, Phường Demo, Quận 1, TP. HCM', '', '', '', form.getFieldValue('vat_company_name') || initialData?.customer?.legal_name || initialData?.customer?.name || '']);
             sheet.mergeCells('A6:D6');
             sheet.mergeCells('E6:H6');
             r6.getCell(5).font = { bold: true };
 
             // Row 7: Phone / Address
-            const r7 = sheet.addRow(['SĐT: 0983.882210 - 0983.796654', '', '', '', 'Địa chỉ: ' + (form.getFieldValue('vat_address') || initialData?.customer?.legal_address || initialData?.customer?.address || '')]);
+            const r7 = sheet.addRow(['SĐT: 1900-0000 - 0900000001', '', '', '', 'Địa chỉ: ' + (form.getFieldValue('vat_address') || initialData?.customer?.legal_address || initialData?.customer?.address || '')]);
             sheet.mergeCells('A7:D7');
             sheet.mergeCells('E7:H7');
             r7.getCell(5).alignment = { wrapText: true };
 
             // Row 8: MST / Phone
-            const r8 = sheet.addRow(['MST: 0311.874.522', '', '', '', 'SĐT: ' + (form.getFieldValue('contact_phone') || initialData?.customer?.phone || '')]);
+            const r8 = sheet.addRow(['MST: 0000000000', '', '', '', 'SĐT: ' + (form.getFieldValue('contact_phone') || initialData?.customer?.phone || '')]);
             sheet.mergeCells('A8:D8');
             sheet.mergeCells('E8:H8');
 
             // Row 9: Email / MST
-            const r9 = sheet.addRow(['Email: erp4uerp4u@gmail.com', '', '', '', 'MST: ' + (form.getFieldValue('vat_tax_code') || initialData?.customer?.tax_code || '')]);
+            const r9 = sheet.addRow(['Email: support@example.com', '', '', '', 'MST: ' + (form.getFieldValue('vat_tax_code') || initialData?.customer?.tax_code || '')]);
             sheet.mergeCells('A9:D9');
             sheet.mergeCells('E9:H9');
 

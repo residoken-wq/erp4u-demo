@@ -66,8 +66,6 @@ export const HELP_TOPICS: HelpTopic[] = [
         updatedAt: '14/09/2026',
         isNew: true,
         isFeatured: true,
-        youtubeId: 'kJQP7kiw5Fk',
-        videoUrl: 'https://www.youtube.com/embed/kJQP7kiw5Fk',
         deepLink: {
             label: 'Mở Quản Lý Thiết Kế',
             path: '/designs'
@@ -113,8 +111,6 @@ export const HELP_TOPICS: HelpTopic[] = [
         updatedAt: '14/09/2026',
         isNew: true,
         isFeatured: true,
-        youtubeId: 'p7ZkQ8Q5n0M',
-        videoUrl: 'https://www.youtube.com/embed/p7ZkQ8Q5n0M',
         deepLink: {
             label: 'Xem trong Lập Kế Hoạch',
             path: '/planning'
@@ -224,8 +220,6 @@ export const HELP_TOPICS: HelpTopic[] = [
         estimatedReadTime: '5 phút',
         updatedAt: '14/09/2026',
         isFeatured: true,
-        youtubeId: '3mYFm-q5a_k',
-        videoUrl: 'https://www.youtube.com/embed/3mYFm-q5a_k',
         deepLink: {
             label: 'Xem Danh Sách Đơn Hàng',
             path: '/orders'
@@ -482,8 +476,6 @@ export const HELP_TOPICS: HelpTopic[] = [
         estimatedReadTime: '5 phút',
         updatedAt: '14/09/2026',
         isFeatured: true,
-        youtubeId: 'kJQP7kiw5Fk',
-        videoUrl: 'https://www.youtube.com/embed/kJQP7kiw5Fk',
         deepLink: {
             label: 'Mở Báo Cáo Tài Chính',
             path: '/finance'
@@ -572,8 +564,6 @@ export const HELP_TOPICS: HelpTopic[] = [
         summary: 'Nguyên lý quản lý kho đa đơn vị tính: Nhập kho theo quy cách mua hàng (Cây, Cuộn, Thùng) và tự động quy đổi về đơn vị cơ sở (Mét, Cái, Gram) để phục vụ sản xuất.',
         estimatedReadTime: '5 phút',
         updatedAt: '14/09/2026',
-        youtubeId: '3mYFm-q5a_k',
-        videoUrl: 'https://www.youtube.com/embed/3mYFm-q5a_k',
         deepLink: {
             label: 'Mở Danh Mục Nguyên Liệu',
             path: '/materials'
@@ -630,8 +620,6 @@ export const HELP_TOPICS: HelpTopic[] = [
         summary: 'Quy trình gom các Đơn hàng (SO) cần sản xuất, tự động bóc tách BOM, kiểm tra tồn kho sẵn có và tự sinh PO Mua NPL & PO Gia Công.',
         estimatedReadTime: '6 phút',
         updatedAt: '14/09/2026',
-        youtubeId: 'dQw4w9WgXcQ',
-        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
         deepLink: {
             label: 'Mở Lập Kế Hoạch (MRP)',
             path: '/planning'
@@ -692,8 +680,6 @@ export const HELP_TOPICS: HelpTopic[] = [
         summary: 'Toàn bộ quy trình nhân sự: Chấm công định vị GPS/IP, gửi đơn xin nghỉ phép trực tuyến, theo dõi hạn ngạch ngày phép và tra cứu phiếu lương bảo mật.',
         estimatedReadTime: '4 phút',
         updatedAt: '14/09/2026',
-        youtubeId: 'p7ZkQ8Q5n0M',
-        videoUrl: 'https://www.youtube.com/embed/p7ZkQ8Q5n0M',
         deepLink: {
             label: 'Mở Phân Hệ Nhân Sự',
             path: '/hr'

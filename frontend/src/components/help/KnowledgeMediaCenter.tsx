@@ -324,6 +324,7 @@ export const KnowledgeMediaCenter: React.FC<KnowledgeMediaCenterProps> = ({
                     description={activeVideo.description}
                     youtubeId={activeVideo.youtubeId}
                     videoUrl={activeVideo.videoUrl}
+                    imageUrl={activeVideo.thumbnailUrl}
                     deepLink={activeVideo.deepLink}
                 />
             )}

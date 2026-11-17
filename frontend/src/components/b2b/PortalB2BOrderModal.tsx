@@ -11,10 +11,11 @@ interface Props {
     selections: Record<string, string>;
     slug: string;
     token: string;
+    zaloUrl?: string;
     onSuccess?: () => void;
 }
 
-export default function PortalB2BOrderModal({ isOpen, onClose, onSuccess, slug, token, category, subcategory, steps, selections }: Props) {
+export default function PortalB2BOrderModal({ isOpen, onClose, onSuccess, slug, token, category, subcategory, steps, selections, zaloUrl }: Props) {
     const [quantity, setQuantity] = useState<number>(50);
     const [formData, setFormData] = useState({
         customer_name: '',
@@ -212,16 +213,20 @@ export default function PortalB2BOrderModal({ isOpen, onClose, onSuccess, slug, 
                                     >
                                         {isSubmitting ? 'ĐANG GỬI...' : 'LƯU CẤU HÌNH & GỬI YÊU CẦU'}
                                     </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const message = `Xin chào, tôi muốn yêu cầu gửi mẫu vải miễn phí cho trường.`;
-                                            window.open(`https://zalo.me/0931268685?text=${encodeURIComponent(message)}`, '_blank');
-                                        }}
-                                        className="w-full py-3 bg-white text-gray-700 border-2 border-gray-200 rounded-xl font-semibold hover:border-gray-300 hover:bg-gray-50 transition"
-                                    >
-                                        YÊU CẦU GỬI MẪU VẢI MIỄN PHÍ
-                                    </button>
+                                    {zaloUrl && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const message = `Xin chào, tôi muốn yêu cầu gửi mẫu sản phẩm cho doanh nghiệp.`;
+                                                const target = zaloUrl.startsWith('http') ? zaloUrl : `https://zalo.me/${zaloUrl}`;
+                                                const sep = target.includes('?') ? '&' : '?';
+                                                window.open(`${target}${sep}text=${encodeURIComponent(message)}`, '_blank');
+                                            }}
+                                            className="w-full py-3 bg-white text-gray-700 border-2 border-gray-200 rounded-xl font-semibold hover:border-gray-300 hover:bg-gray-50 transition"
+                                        >
+                                            YÊU CẦU GỬI MẪU SẢN PHẨM
+                                        </button>
+                                    )}
                                 </div>
                             </form>
                         </>

@@ -278,12 +278,12 @@ const CompanyConfigTab: React.FC = () => {
                             <Row gutter={16}>
                                 <Col span={24}>
                                     <Form.Item name="COMPANY_NAME" label="Tên Doanh Nghiệp (In trên hóa đơn & báo giá)" rules={[{ required: true, message: 'Nhập tên doanh nghiệp' }]}>
-                                        <Input placeholder="VD: CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ TƯỜNG LINH" />
+                                        <Input placeholder="VD: CÔNG TY TNHH SẢN XUẤT MẪU" />
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
                                     <Form.Item name="COMPANY_TAX_CODE" label="Mã Số Thuế (MST)">
-                                        <Input placeholder="VD: 0311874522" />
+                                        <Input placeholder="VD: 0000000000" />
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
@@ -293,22 +293,22 @@ const CompanyConfigTab: React.FC = () => {
                                 </Col>
                                 <Col span={24}>
                                     <Form.Item name="COMPANY_ADDRESS" label="Địa Chỉ Trụ Sở Chính">
-                                        <Input.TextArea rows={2} placeholder="VD: 74/21/24 Nguyễn Khuyến, Phường 12, Quận Bình Thạnh, TP. Hồ Chí Minh" />
+                                        <Input.TextArea rows={2} placeholder="VD: Số 123 Đường Demo, Phường Demo, Quận 1, TP. Hồ Chí Minh" />
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
                                     <Form.Item name="COMPANY_PHONE" label="Hotline / Số Điện Thoại">
-                                        <Input placeholder="VD: 0983.882210 - 0983.796654" />
+                                        <Input placeholder="VD: 1900-0000 - 0900000001" />
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
                                     <Form.Item name="COMPANY_EMAIL" label="Email Liên Hệ / Nhận Đơn">
-                                        <Input placeholder="VD: nemmanonerp4u@gmail.com" />
+                                        <Input placeholder="VD: contact@example.com" />
                                     </Form.Item>
                                 </Col>
                                 <Col span={24}>
                                     <Form.Item name="COMPANY_WEBSITE" label="Website Doanh Nghiệp">
-                                        <Input placeholder="VD: https://erp4u.vn" />
+                                        <Input placeholder="VD: https://example.com" />
                                     </Form.Item>
                                 </Col>
                             </Row>
@@ -327,7 +327,7 @@ const CompanyConfigTab: React.FC = () => {
                                 <Col span={12}>
                                     <Form.Item name="COMPANY_BANK_ACCOUNT" label="Số Tài Khoản">
                                         <Input 
-                                            placeholder="VD: 141847859" 
+                                            placeholder="VD: 0000000000" 
                                             onChange={(e) => setBankValues(prev => ({ ...prev, account: e.target.value }))}
                                         />
                                     </Form.Item>
@@ -335,7 +335,7 @@ const CompanyConfigTab: React.FC = () => {
                                 <Col span={24}>
                                     <Form.Item name="COMPANY_BANK_HOLDER" label="Tên Chủ Tài Khoản (In hoa không dấu)">
                                         <Input 
-                                            placeholder="VD: CTY TNHH TM DV TUONG LINH" 
+                                            placeholder="VD: CTY TNHH SAN XUAT MAU" 
                                             onChange={(e) => setBankValues(prev => ({ ...prev, holder: e.target.value }))}
                                         />
                                     </Form.Item>
@@ -729,7 +729,7 @@ const PrintBrandingTab: React.FC = () => {
                             <Input 
                                 value={footerNote} 
                                 onChange={e => setFooterNote(e.target.value)} 
-                                placeholder="VD: ERP4U - Hệ thống quản lý bán hàng và xưởng sản xuất may mặc" 
+                                placeholder="VD: ERP4U - Hệ thống quản lý bán hàng và xưởng sản xuất" 
                             />
                         </div>
 
@@ -918,7 +918,7 @@ const ContractTemplatesTab: React.FC = () => {
                     <Col span={17}>
                         <Form form={form} layout="vertical" onFinish={handleSave}>
                             <Form.Item name="name" label={<span style={{fontWeight: 600}}>Tên mẫu hợp đồng</span>} rules={[{ required: true, message: 'Nhập tên mẫu' }]}>
-                                <Input placeholder="VD: Hợp đồng nguyên tắc may mặc 2026" size="large" />
+                                <Input placeholder="VD: Hợp đồng nguyên tắc 2026" size="large" />
                             </Form.Item>
                             <Form.Item name="content" label={<span style={{fontWeight: 600}}>Nội dung hợp đồng (Trình soạn thảo HTML trực quan)</span>} rules={[{ required: true }]}>
                                 <RichTextEditor minHeight={500} />
@@ -1842,12 +1842,12 @@ const EasyInvoiceConfigTab: React.FC = () => {
                     <Row gutter={24}>
                         <Col span={12}>
                             <Form.Item name="EASYINVOICE_EMAIL_FROM" label="Email Người Gửi (From)">
-                                <Input placeholder="Ví dụ: ketoan.erp4u@gmail.com" />
+                                <Input placeholder="Ví dụ: ketoan@example.com" />
                             </Form.Item>
                         </Col>
                         <Col span={12}>
                             <Form.Item name="EASYINVOICE_EMAIL_CC" label="Danh sách CC (Cách nhau dấu phẩy)">
-                                <Input placeholder="Ví dụ: admin@erp4u.vn,ketoan2@erp4u.vn" />
+                                <Input placeholder="Ví dụ: admin@example.com,ketoan2@example.com" />
                             </Form.Item>
                         </Col>
                     </Row>
@@ -2248,7 +2248,7 @@ const LalamoveConfigTab: React.FC = () => {
                         </Col>
                         <Col span={8}>
                             <Form.Item name="LALAMOVE_DEFAULT_SENDER_PHONE" label="Số điện thoại kho (Định dạng E.164)">
-                                <Input placeholder="VD: +84983882210" />
+                                <Input placeholder="VD: +84900000001" />
                             </Form.Item>
                         </Col>
                         <Col span={8}>
@@ -2437,7 +2437,7 @@ const EmailTemplatesSubTab: React.FC = () => {
                         <Input placeholder="VD: Gửi Báo Giá Khách Hàng B2B" size="large" />
                     </Form.Item>
                     <Form.Item name="subject" label={<span style={{fontWeight: 600}}>Tiêu đề Email</span>} rules={[{ required: true, message: 'Nhập tiêu đề email' }]}>
-                        <Input placeholder="VD: Báo giá dịch vụ may mặc từ ERP4U - {{order_code}}" size="large" />
+                        <Input placeholder="VD: Báo giá dịch vụ từ ERP4U - {{order_code}}" size="large" />
                     </Form.Item>
                     <Form.Item name="content" label={<span style={{fontWeight: 600}}>Nội dung Email (HTML trực quan)</span>} rules={[{ required: true }]}>
                         <RichTextEditor minHeight={350} />

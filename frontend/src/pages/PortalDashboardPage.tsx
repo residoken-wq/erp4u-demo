@@ -777,10 +777,10 @@ const PortalDashboardPage: React.FC = () => {
                             Cần hỗ trợ về đơn hàng, báo giá hoặc sản phẩm? Liên hệ đội ngũ Sales ngay.
                         </p>
                         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-                            <a href="tel:0983882210" style={{ ...S.supportBtn, background: '#23A7D3', color: '#fff' }}>
+                            <a href="tel:19000000" style={{ ...S.supportBtn, background: '#23A7D3', color: '#fff' }}>
                                 📞 Hotline
                             </a>
-                            <a href="mailto:phamhang.erp4u@gmail.com" style={{ ...S.supportBtn, background: '#fff', color: '#23A7D3', border: '1px solid #23A7D3' }}>
+                            <a href="mailto:support@example.com" style={{ ...S.supportBtn, background: '#fff', color: '#23A7D3', border: '1px solid #23A7D3' }}>
                                 ✉️ Email
                             </a>
                         </div>
@@ -1147,7 +1147,7 @@ const S: Record<string, React.CSSProperties> = {
     },
     // Hero
     heroSection: {
-        background: 'url("/banner-bg.jpg") center/cover no-repeat',
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #0284c7 50%, #0ea5e9 100%)',
         borderRadius: '0 0 24px 24px',
         padding: '48px 32px',
         textAlign: 'center' as const,

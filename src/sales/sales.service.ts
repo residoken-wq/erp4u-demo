@@ -1339,7 +1339,7 @@ export class SalesService {
 
         await transporter.sendMail({
             from: `"${smtpConfig.SMTP_FROM_NAME}" <${smtpConfig.SMTP_FROM_EMAIL}>`,
-            to: (customer && customer.email) || 'shinwon93@gmail.com', // Fallback for dev/demo or use contact email
+            to: (customer && customer.email) || 'support@example.com', // Fallback for dev/demo or use contact email
             subject: `[ERP4U] Thông Báo Giao Hàng - ${delivery.code}`,
             html: html
         });

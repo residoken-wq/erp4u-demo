@@ -870,13 +870,13 @@ export class GhtkService {
             products,
             order: {
                 id: delivery.code, // Mã phiếu xuất kho làm partner_id
-                pick_name: options.pick_name || pickInfo.pick_name || 'NỆM MẦM NON ERP4U',
+                pick_name: options.pick_name || pickInfo.pick_name || 'KHO ERP4U',
                 pick_money: pickMoney,
                 pick_address: options.pick_address || pickInfo.address || 'Kho ERP4U',
                 pick_province: options.pick_province || pickInfo.province || 'TP Hồ Chí Minh',
-                pick_district: options.pick_district || pickInfo.district || 'TP. Thủ Đức',
-                pick_ward: options.pick_ward || pickInfo.ward || 'Phường Bình Trưng Tây',
-                pick_tel: options.pick_tel || pickInfo.pick_tel || '0931431128',
+                pick_district: options.pick_district || pickInfo.district || 'Quận 1',
+                pick_ward: options.pick_ward || pickInfo.ward || 'Phường Bến Nghé',
+                pick_tel: options.pick_tel || pickInfo.pick_tel || '0900000001',
                 name: delivery.contact_name || delivery.sales_order?.receiver_name || 'Khách hàng',
                 address: receiverStreet,
                 province: receiverProvince,

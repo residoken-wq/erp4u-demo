@@ -300,6 +300,7 @@ export default function PortalB2BCustomizer({ slug, token, onClose }: Props) {
                     subcategory={currentL2}
                     steps={currentL2.customization_steps || []}
                     selections={stepSelections}
+                    zaloUrl={settings.zalo_url}
                 />
             )}
         </div>

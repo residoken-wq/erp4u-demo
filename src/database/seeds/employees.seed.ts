@@ -25,11 +25,11 @@ export async function seedEmployees(dataSource: DataSource) {
   const userMap = new Map(users.map((u) => [u.username, u]));
 
   const employeesData = [
-    { username: 'admin', full_name: 'Nguyễn Quản Trị', department: 'Ban Giám Đốc', position: 'Tổng Giám Đốc', base_salary: 45000000, phone: '0901000001', address: 'Quận 7, TP. HCM', gender: Gender.MALE },
-    { username: 'sales01', full_name: 'Nguyễn Văn Minh', department: 'Phòng Kinh Doanh', position: 'Trưởng Phòng Kinh Doanh', base_salary: 22000000, phone: '0901000002', address: 'Quận Tân Bình, TP. HCM', gender: Gender.MALE },
-    { username: 'warehouse01', full_name: 'Trần Thị Thu Thảo', department: 'Kho Vận & Vật Tư', position: 'Thủ Kho Trưởng', base_salary: 16000000, phone: '0901000003', address: 'Quận Bình Tân, TP. HCM', gender: Gender.FEMALE },
-    { username: 'accountant01', full_name: 'Lê Hoàng Anh', department: 'Phòng Kế Toán', position: 'Kế Toán Trưởng', base_salary: 20000000, phone: '0901000004', address: 'Quận Phú Nhuận, TP. HCM', gender: Gender.MALE },
-    { username: 'hr01', full_name: 'Phạm Ngọc Mai', department: 'Phòng Nhân Sự', position: 'Trưởng Phòng Nhân Sự', base_salary: 18000000, phone: '0901000005', address: 'Quận 3, TP. HCM', gender: Gender.FEMALE },
+    { username: 'admin', full_name: 'Nguyễn Quản Trị', department: 'Ban Giám Đốc', position: 'Tổng Giám Đốc', base_salary: 45000000, phone: '0900000011', address: 'Quận 7, TP. HCM', gender: Gender.MALE },
+    { username: 'sales01', full_name: 'Nguyễn Văn Minh', department: 'Phòng Kinh Doanh', position: 'Trưởng Phòng Kinh Doanh', base_salary: 22000000, phone: '0900000012', address: 'Quận Tân Bình, TP. HCM', gender: Gender.MALE },
+    { username: 'warehouse01', full_name: 'Trần Thị Thu Thảo', department: 'Kho Vận & Vật Tư', position: 'Thủ Kho Trưởng', base_salary: 16000000, phone: '0900000013', address: 'Quận Bình Tân, TP. HCM', gender: Gender.FEMALE },
+    { username: 'accountant01', full_name: 'Lê Hoàng Anh', department: 'Phòng Kế Toán', position: 'Kế Toán Trưởng', base_salary: 20000000, phone: '0900000014', address: 'Quận Phú Nhuận, TP. HCM', gender: Gender.MALE },
+    { username: 'hr01', full_name: 'Phạm Ngọc Mai', department: 'Phòng Nhân Sự', position: 'Trưởng Phòng Nhân Sự', base_salary: 18000000, phone: '0900000015', address: 'Quận 3, TP. HCM', gender: Gender.FEMALE },
   ];
 
   for (const e of employeesData) {

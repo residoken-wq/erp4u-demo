@@ -29,7 +29,7 @@ export interface ParsedShippingInfo {
  * ─────────────────────────
  * 👤 Tên người mua: Nguyễn Văn A
  * 📞 Số điện thoại: 0987654321
- * 📧 Email: a@gmail.com
+ * 📧 Email: a@example.com
  * 📍 Địa chỉ giao hàng: 123 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh
  * 💳 Phương thức thanh toán: COD (Thanh toán khi nhận hàng) | Chuyển khoản
  * 📝 Ghi chú: Giao giờ hành chính

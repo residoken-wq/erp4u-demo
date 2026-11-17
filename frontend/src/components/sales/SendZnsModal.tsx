@@ -166,7 +166,7 @@ export const SendZnsModal: React.FC<Props> = ({ open, onCancel, onSuccess, order
             <Input
               style={{ marginTop: 4 }}
               prefix={<PhoneOutlined style={{ color: '#1890ff' }} />}
-              placeholder="VD: 0938429210"
+              placeholder="VD: 0900000001"
               value={phone}
               onChange={e => setPhone(e.target.value)}
             />
