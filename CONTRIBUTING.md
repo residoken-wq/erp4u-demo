@@ -4,6 +4,12 @@ Thank you for your interest in contributing to **ERP4U**! We are committed to bu
 
 ---
 
+## 🚀 Independent Development & Workflow
+
+Từ tháng 11/2026, **ERP4U** phát triển hoàn toàn độc lập (đã ngưng cơ chế đồng bộ tự động từ upstream). Mọi đóng góp mã nguồn, tính năng mới hoặc bản sửa lỗi đều được thực hiện trực tiếp trên repository này thông qua Pull Request vào nhánh `main` và bắt buộc trải qua quy trình review nghiêm ngặt trước khi merge.
+
+---
+
 ## 🤝 How to Contribute
 
 ### 1. Reporting Bugs
