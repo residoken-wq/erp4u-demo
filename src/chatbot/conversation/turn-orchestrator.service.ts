@@ -302,7 +302,7 @@ export class TurnOrchestratorService {
         } else if (ruleRes.intent === 'sample') {
           replyText =
             (await this.findKnowledgeAnswer('script.sample.open', config)) ||
-            'Dạ anh/chị muốn xem mẫu vải, mẫu nệm hay cả bộ ạ? Trường mình ở khu vực nào để em ghi nhận cách xem mẫu phù hợp ạ?';
+            'Dạ anh/chị muốn xem mẫu vật liệu, mẫu sản phẩm đơn lẻ hay cả bộ combo ạ? Đơn vị mình ở khu vực nào để em ghi nhận phương án gửi mẫu phù hợp ạ?';
         } else if (ruleRes.intent === 'reorder') {
           replyText =
             (await this.findKnowledgeAnswer('faq.reorder', config)) ||

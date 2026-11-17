@@ -13,7 +13,7 @@ export interface WizardBaseImage {
 
 export interface WizardCategoryL1 {
     id: string;                    // 'BEDDING' | 'BAGS' | 'APPAREL'
-    name: string;                  // 'Bộ Nệm & Phụ Kiện Giấc Ngủ'
+    name: string;                  // 'Bộ Sản Phẩm Mẫu & Phụ Kiện'
     icon_url?: string;             // URL ảnh icon đại diện
     image_url?: string;            // URL ảnh thumbnail
     sort_order: number;
@@ -44,7 +44,7 @@ export interface WizardCustomizationStep {
 export interface WizardOption {
     id: string;                    // 'SIZE_S' | 'SIZE_M'
     name: string;                  // 'S'
-    description?: string;          // 'Phù hợp với trẻ mầm non | 130x70 cm'
+    description?: string;          // 'Kích thước tiêu chuẩn | 130x70 cm'
     price_modifier: number;        // Số tiền cộng/trừ so với giá base (VD: +20000)
     image_url?: string;            // Ảnh sản phẩm khi chọn option này
     visualization_overlay?: string; // Ảnh overlay cho visualization panel (hoặc texture/màu tinting)

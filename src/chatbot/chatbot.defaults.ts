@@ -1,9 +1,9 @@
 export const CHATBOT_DEFAULTS = {
   enabled: false,
-  display_name: 'Cừu ERP4U — Trợ lý AI', // tiêu đề widget, tên trong email, tên trong prompt
-  short_name: 'Cừu ERP4U', // dùng trong câu chào, subject email, aria-label
-  avatar_url: '/images/chatbot/cuu-erp4u-192.webp',
-  greeting: 'Dạ em là {short_name}, trợ lý AI của ERP4U. Anh/chị đang chọn sản phẩm cho bé, đặt cho trường hay cần hỗ trợ đơn đã mua ạ?',
+  display_name: 'Trợ lý ERP4U — Tư vấn AI', // tiêu đề widget, tên trong email, tên trong prompt
+  short_name: 'Trợ lý ERP4U', // dùng trong câu chào, subject email, aria-label
+  avatar_url: '',
+  greeting: 'Dạ em là {short_name}, trợ lý AI của ERP4U. Anh/chị đang cần tư vấn sản phẩm mẫu, bảng giá đại lý hay cần hỗ trợ đơn hàng ạ?',
   contact_channels: {
     hotline: '',
     zalo_url: '',
@@ -28,7 +28,7 @@ export const CHATBOT_DEFAULTS = {
   notify_user_ids: [] as number[],
   widget: {
     cta_label: 'Tư vấn ngay',
-    subtitle: 'Tư vấn nệm mầm non',
+    subtitle: 'Tư vấn sản phẩm',
     auto_open: true,
     auto_open_delay_s: 5,
     auto_open_mobile: 'teaser' as 'teaser' | 'panel' | 'off',

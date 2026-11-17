@@ -37,11 +37,11 @@ const extractAddressString = (val: any, fallback = ''): string => {
 
 export const LALAMOVE_VEHICLES = [
     { key: 'MOTORCYCLE', name: 'Xe máy', icon: '🛵', desc: 'Nhỏ gọn < 30kg' },
-    { key: 'VAN_500KG', name: 'Bán tải 500kg (Van)', icon: '🚐', desc: 'Khuyên dùng: 20-40 nệm, che mưa' },
-    { key: 'VAN_1000KG', name: 'Bán tải 1T (Van)', icon: '🚐', desc: '50-80 nệm hoặc combo bàn ghế' },
-    { key: 'TRUCK_1000KG', name: 'Xe tải 1 tấn', icon: '🚚', desc: 'Dự án trường, hàng lớn' },
+    { key: 'VAN_500KG', name: 'Bán tải 500kg (Van)', icon: '🚐', desc: 'Khuyên dùng: 20-40 kiện hàng, che mưa' },
+    { key: 'VAN_1000KG', name: 'Bán tải 1T (Van)', icon: '🚐', desc: '50-80 kiện hàng hoặc combo sản phẩm' },
+    { key: 'TRUCK_1000KG', name: 'Xe tải 1 tấn', icon: '🚚', desc: 'Dự án doanh nghiệp, hàng lớn' },
     { key: 'TRUCK_1500KG', name: 'Xe tải 1.5 tấn', icon: '🚚', desc: 'Giao sỉ ra Chành xe Bến xe' },
-    { key: 'TRUCK_2000KG', name: 'Xe tải 2 tấn', icon: '🚛', desc: 'Đơn trường mầm non lớn' },
+    { key: 'TRUCK_2000KG', name: 'Xe tải 2 tấn', icon: '🚛', desc: 'Đơn hàng dự án lớn' },
 ];
 
 export const getRecommendedLalamoveVehicle = (weightGram?: number, len?: number | null, wid?: number | null, hei?: number | null) => {
@@ -802,7 +802,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
 
         const count = delivery.package_count || packageCount || 1;
         const spec = delivery.packing_spec_name || packingSpecName || '';
-        const note = `Giao ${count} kiện ${spec ? `(${spec})` : 'hàng nệm mầm non'} - Đơn ${order.code}. ${delivery.note || ''}`.trim();
+        const note = `Giao ${count} kiện ${spec ? `(${spec})` : 'hàng sản phẩm mẫu'} - Đơn ${order.code}. ${delivery.note || ''}`.trim();
         setLalamoveRemarks(note);
 
         const initialType = 'VAN_500KG';
@@ -4128,11 +4128,11 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                             {[
                                 { key: 'MOTORCYCLE', name: 'Xe máy', icon: '🛵', desc: 'Nhỏ gọn < 30kg' },
-                                { key: 'VAN_500KG', name: 'Bán tải 500kg (Van)', icon: '🚐', desc: 'Khuyên dùng: 20-40 nệm, che mưa' },
-                                { key: 'VAN_1000KG', name: 'Bán tải 1T (Van)', icon: '🚐', desc: '50-80 nệm hoặc combo bàn ghế' },
-                                { key: 'TRUCK_1000KG', name: 'Xe tải 1 tấn', icon: '🚚', desc: 'Dự án trường, hàng lớn' },
+                                { key: 'VAN_500KG', name: 'Bán tải 500kg (Van)', icon: '🚐', desc: 'Khuyên dùng: 20-40 kiện hàng, che mưa' },
+                                { key: 'VAN_1000KG', name: 'Bán tải 1T (Van)', icon: '🚐', desc: '50-80 kiện hàng hoặc combo sản phẩm' },
+                                { key: 'TRUCK_1000KG', name: 'Xe tải 1 tấn', icon: '🚚', desc: 'Dự án doanh nghiệp, hàng lớn' },
                                 { key: 'TRUCK_1500KG', name: 'Xe tải 1.5 tấn', icon: '🚚', desc: 'Giao sỉ ra Chành xe Bến xe' },
-                                { key: 'TRUCK_2000KG', name: 'Xe tải 2 tấn', icon: '🚛', desc: 'Đơn trường mầm non lớn' },
+                                { key: 'TRUCK_2000KG', name: 'Xe tải 2 tấn', icon: '🚛', desc: 'Đơn hàng dự án lớn' },
                             ].map(veh => {
                                 const isSelected = lalamoveServiceType === veh.key;
                                 return (
@@ -4248,7 +4248,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                             rows={2} 
                             value={lalamoveRemarks} 
                             onChange={e => setLalamoveRemarks(e.target.value)} 
-                            placeholder="VD: Giao 30 nệm mầm non, yêu cầu xe bạt che mưa, bốc vào sảnh tầng trệt..."
+                            placeholder="VD: Giao 30 kiện hàng mẫu, yêu cầu xe bạt che mưa, bốc vào sảnh tầng trệt..."
                         />
                     </div>
 

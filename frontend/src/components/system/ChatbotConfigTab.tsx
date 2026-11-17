@@ -356,7 +356,7 @@ export const ChatbotConfigTab: React.FC = () => {
                       { pattern: /^(\/(?!\/)|https:\/\/)/, message: 'Avatar phải bắt đầu bằng / hoặc https://' },
                     ]}
                   >
-                    <Input placeholder="/images/chatbot/cuu-erp4u-192.webp" style={{ flex: 1 }} />
+                    <Input placeholder="/favicon.svg" style={{ flex: 1 }} />
                   </Form.Item>
                   <Upload
                     beforeUpload={(file) => {
@@ -592,7 +592,7 @@ export const ChatbotConfigTab: React.FC = () => {
                       { pattern: /^[^<>{}]*$/, message: 'Không chứa ký tự <, >, {, }' },
                     ]}
                   >
-                    <Input placeholder="Tư vấn nệm mầm non" />
+                    <Input placeholder="Tư vấn sản phẩm" />
                   </Form.Item>
                 </Col>
                 <Col span={8}>

@@ -7,11 +7,11 @@ export class Category {
   id: number;
 
   @Column({ unique: true })
-  code: string; // VD: AO_THUN, NEM
+  code: string; // VD: SP_MAU_A, LINH_KIEN
 
   @Index() // <--- Optimize Search
   @Column()
-  name: string; // VD: Áo Thun, Nệm Mầm Non
+  name: string; // VD: Sản phẩm Mẫu A, Linh kiện
 
   // % Biên lợi nhuận mong muốn (VD: 30%)
   @Column('decimal', { precision: 5, scale: 2, default: 30 })

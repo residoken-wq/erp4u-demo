@@ -60,7 +60,7 @@ export class RuleUnderstanderService {
     const textWithoutApparel = raw.replace(/(?:đồng phục|áo|tạp dề)[^,.;!?\n]*?(\d+)\s*(?:bộ|cái|chiếc)/gi, '');
 
     // Match patterns of (number) (unit)
-    const validQtyRegex = /(\d{1,6})\s*(bộ|cái|chiếc|set|bé|bạn|túi|tấm|chăn|gối|đệm|nệm)/gi;
+    const validQtyRegex = /(\d{1,6})\s*(bộ|cái|chiếc|set|túi|tấm|thùng|hộp|sản phẩm|kiện|đệm)/gi;
     let match: RegExpExecArray | null;
     while ((match = validQtyRegex.exec(textWithoutApparel)) !== null) {
       const numStr = match[1];
@@ -108,7 +108,7 @@ export class RuleUnderstanderService {
 
     // 5. Items
     const items: string[] = Array.isArray(currentData.items) ? [...currentData.items] : [];
-    if (/nệm|đệm/i.test(raw) && !items.includes('nệm')) items.push('nệm');
+    if (/đệm|tấm lót/i.test(raw) && !items.includes('đệm')) items.push('đệm');
     if (/gối/i.test(raw) && !items.includes('gối')) items.push('gối');
     if (/(chăn|mền)/i.test(raw) && !items.includes('chăn')) items.push('chăn');
     if (/túi/i.test(raw) && !items.includes('túi')) items.push('túi');
@@ -116,11 +116,11 @@ export class RuleUnderstanderService {
 
     // 6. Segment (priority: business > school > parent)
     let segment: string | undefined = currentData.segment;
-    if (/đồng phục|thương mại|hợp tác|đại lý|phân phối|khách của em|bên em làm/i.test(raw)) {
+    if (/thương mại|hợp tác|đại lý|phân phối|đối tác|bán buôn/i.test(raw)) {
       segment = 'business';
-    } else if (/trường|mầm non|lớp|mẫu giáo|cô giáo|nhà trẻ|học sinh|bảo quản tại trường/i.test(raw)) {
+    } else if (/doanh nghiệp|công ty|tổ chức|đơn vị|xưởng|nhà máy|dự án/i.test(raw)) {
       if (segment !== 'business') segment = 'school';
-    } else if (/cho bé|con em|con tôi|con mình|mẹ|nhà em|phụ huynh|bé nhà em/i.test(raw)) {
+    } else if (/khách lẻ|cá nhân|mua lẻ|cho mình|gia đình|tôi dùng/i.test(raw)) {
       if (segment !== 'business' && segment !== 'school') segment = 'parent';
     }
 

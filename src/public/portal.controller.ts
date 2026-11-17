@@ -139,7 +139,7 @@ export class PortalController {
                 </p>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
                 <p style="color: #aaa; font-size: 11px; text-align: center;">
-                    © ERP4U - Nệm Mầm Non | localhost:3000
+                    © 2026 ERP4U — Công ty TNHH Sản xuất Mẫu
                 </p>
             </div>
         `;

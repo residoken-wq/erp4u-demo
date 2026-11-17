@@ -189,7 +189,7 @@ const PortalLoginPage: React.FC = () => {
                 <div style={styles.footer}>
                     <p>Chưa có tài khoản? <a href="https://demo.erp4u.local/lien-he" style={styles.footerLink}>Đăng ký đối tác</a></p>
                     <p style={{ marginTop: 4, fontSize: 12, color: '#aaa' }}>
-                        © 2026 ERP4U - Nệm Mầm Non | localhost:8080
+                        © 2026 ERP4U — Công ty TNHH Sản xuất Mẫu
                     </p>
                 </div>
             </div>

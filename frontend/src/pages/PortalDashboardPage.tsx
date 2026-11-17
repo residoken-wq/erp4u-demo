@@ -1047,10 +1047,9 @@ const PortalDashboardPage: React.FC = () => {
 
             {/* ===== FOOTER ===== */}
             <footer style={S.footer}>
-                <p>© 2024 ERP4U — Nệm Mầm Non | Cổng Đối Tác B2B</p>
+                <p>© 2026 ERP4U — Công ty TNHH Sản xuất Mẫu | Cổng Đối Tác B2B</p>
                 <p style={{ fontSize: 11, marginTop: 4 }}>
                     <a href="https://demo.erp4u.local" style={{ color: '#23A7D3', textDecoration: 'none' }}>demo.erp4u.local</a>
-                    {' '} | localhost:3000
                 </p>
             </footer>
 

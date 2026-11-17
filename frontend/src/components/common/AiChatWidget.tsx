@@ -682,9 +682,9 @@ const AiChatWidget: React.FC = () => {
                     <Tag 
                         color="blue" 
                         style={{ cursor: 'pointer', borderRadius: 12, padding: '2px 8px' }} 
-                        onClick={() => handleSend('Tóm tắt phân tích khách hàng Trường Mầm Non Đức Trí Plus')}
+                        onClick={() => handleSend('Tóm tắt phân tích Khách hàng Demo 01')}
                     >
-                        🔍 KH Đức Trí Plus
+                        🔍 KH Demo 01
                     </Tag>
                     <Tag 
                         color="purple" 

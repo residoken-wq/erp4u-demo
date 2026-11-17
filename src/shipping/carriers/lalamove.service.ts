@@ -79,7 +79,7 @@ export const LALAMOVE_VIETNAM_VEHICLES = [
     {
         key: 'VAN_500KG',
         name: 'Xe bán tải 500kg (Van)',
-        description: 'Phù hợp 20 - 40 nệm mầm non, tránh mưa ướt tuyệt đối',
+        description: 'Phù hợp 20 - 40 kiện hàng, tránh mưa ướt tuyệt đối',
         maxWeightKg: 500,
         dimensions: '160 x 120 x 100 cm',
         icon: '🚐'
@@ -87,7 +87,7 @@ export const LALAMOVE_VIETNAM_VEHICLES = [
     {
         key: 'VAN_1000KG',
         name: 'Xe bán tải 1 tấn (Van)',
-        description: 'Phù hợp 50 - 80 nệm mầm non, combo bàn ghế tháo lắp',
+        description: 'Phù hợp 50 - 80 kiện hàng hoặc combo sản phẩm',
         maxWeightKg: 1000,
         dimensions: '210 x 130 x 120 cm',
         icon: '🚐'
@@ -95,7 +95,7 @@ export const LALAMOVE_VIETNAM_VEHICLES = [
     {
         key: 'TRUCK_1000KG',
         name: 'Xe tải 1 tấn',
-        description: 'Đơn hàng dự án trường học, kiện cồng kềnh, chuyển kho',
+        description: 'Đơn hàng dự án doanh nghiệp, kiện cồng kềnh, chuyển kho',
         maxWeightKg: 1000,
         dimensions: '300 x 160 x 160 cm',
         icon: '🚚'
@@ -111,7 +111,7 @@ export const LALAMOVE_VIETNAM_VEHICLES = [
     {
         key: 'TRUCK_2000KG',
         name: 'Xe tải 2 tấn',
-        description: 'Đơn hàng dự án trường học mầm non lớn',
+        description: 'Đơn hàng dự án doanh nghiệp lớn',
         maxWeightKg: 2000,
         dimensions: '420 x 180 x 180 cm',
         icon: '🚛'
@@ -741,7 +741,7 @@ export class LalamoveService {
                             stopId: recipientStopId,
                             name: recipientName,
                             phone: recipientPhone,
-                            remarks: options.remarks || delivery.note || 'Giao hàng nệm mầm non ERP4U',
+                            remarks: options.remarks || delivery.note || 'Giao hàng sản phẩm mẫu ERP4U',
                         },
                     ],
                     isPODEnabled: options.isPODEnabled ?? true, // Chụp ảnh và ký nhận POD

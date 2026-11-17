@@ -195,9 +195,9 @@ export const PaymentVoucherPrintModal: React.FC<PaymentVoucherPrintModalProps> =
                 {/* Header */}
                 <div className="pv-header">
                     <div>
-                        <div className="pv-company-name">CÔNG TY TNHH ERP4U</div>
-                        <div className="pv-company-sub">Sản xuất & Phân phối Thiết bị Mầm non</div>
-                        <div className="pv-company-sub">Địa chỉ: TP. Hồ Chí Minh • Hotline: 0908 005 771</div>
+                        <div className="pv-company-name">CÔNG TY TNHH SẢN XUẤT MẪU</div>
+                        <div className="pv-company-sub">Sản xuất & Gia công Hàng Gia dụng Chung</div>
+                        <div className="pv-company-sub">Địa chỉ: TP. Hồ Chí Minh • Hotline: 1900-0000</div>
                     </div>
                     <div className="pv-template-info">
                         <b>Mẫu số {isExpense ? '02 - TT' : '01 - TT'}</b>

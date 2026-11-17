@@ -1030,39 +1030,39 @@ export class UploadService {
       headers = ['SKU', 'Name', 'Category', 'Type', 'Unit', 'BasePrice', 'CostPrice', 'Qty', 'Color', 'Size', 'Fabric', 'CustomerDescription', 'ProcessingDescription', 'VatDescription', 'Tags', 'ImageUrl'];
       sampleData = [
         {
-          SKU: 'NMN_XANH_120X60',
-          Name: 'Nệm Mầm Non Xanh 120x60',
-          Category: 'Nệm Mầm Non',
+          SKU: 'SP_MAU_A_01',
+          Name: 'Sản Phẩm Mẫu A 01 (DEMO)',
+          Category: 'Sản Phẩm Mẫu',
           Type: 'Finished',
           Unit: 'cai',
-          BasePrice: 180000,
-          CostPrice: 115000,
+          BasePrice: 250000,
+          CostPrice: 150000,
           Qty: 50,
-          Color: 'Xanh dương',
-          Size: '120x60x5cm',
-          Fabric: 'Vải Cara',
-          CustomerDescription: 'Nệm mầm non chần gòn êm ái, bọc vải Cara chống thấm, thoáng mát.',
-          ProcessingDescription: 'May viền 4 cạnh bo góc, chần gòn ô vuông 10x10cm, khóa kéo giọt nước ẩn mặt đáy.',
-          VatDescription: 'Nệm nằm trẻ em kích thước 120x60cm',
-          Tags: 'Mầm non, Nệm, Cara',
+          Color: 'Xanh tiêu chuẩn',
+          Size: 'Tiêu chuẩn',
+          Fabric: 'Vải Mẫu 01',
+          CustomerDescription: 'Sản phẩm mẫu A gia công chất lượng cao, bền đẹp. (DEMO)',
+          ProcessingDescription: 'Gia công tiêu chuẩn, may viền bo góc, hoàn thiện đóng gói.',
+          VatDescription: 'Sản phẩm mẫu quy cách tiêu chuẩn',
+          Tags: 'Sản phẩm mẫu, Tiêu chuẩn',
           ImageUrl: 'https://drive.google.com/uc?id=example_file_id'
         },
         {
-          SKU: 'GOI_NAM_MN',
-          Name: 'Gối Nằm Mầm Non 30x40',
-          Category: 'Gối Trẻ Em',
+          SKU: 'SP_MAU_B_02',
+          Name: 'Bộ Sản Phẩm Mẫu B (DEMO)',
+          Category: 'Sản Phẩm Mẫu',
           Type: 'Finished',
           Unit: 'cai',
-          BasePrice: 45000,
-          CostPrice: 28000,
+          BasePrice: 100000,
+          CostPrice: 60000,
           Qty: 100,
-          Color: 'Xanh dương',
-          Size: '30x40cm',
-          Fabric: 'Cotton Cara',
-          CustomerDescription: 'Gối nằm êm ái, ruột gòn bi trắng kháng khuẩn.',
-          ProcessingDescription: 'May lồng ruột gối, có khóa kéo giọt nước.',
-          VatDescription: 'Gối nằm trẻ em kích thước 30x40cm',
-          Tags: 'Mầm non, Gối',
+          Color: 'Trắng tiêu chuẩn',
+          Size: 'Tiêu chuẩn',
+          Fabric: 'Vải Mẫu 02',
+          CustomerDescription: 'Bộ sản phẩm mẫu B hoàn thiện. (DEMO)',
+          ProcessingDescription: 'Gia công đóng gói theo bộ sản phẩm.',
+          VatDescription: 'Bộ sản phẩm mẫu quy cách tiêu chuẩn',
+          Tags: 'Sản phẩm mẫu, Combo',
           ImageUrl: ''
         }
       ];
@@ -1070,32 +1070,32 @@ export class UploadService {
       headers = ['ProductSKU', 'MaterialCode', 'Quantity', 'Waste', 'Note'];
       sampleData = [
         {
-          ProductSKU: 'NMN_XANH_120X60',
-          MaterialCode: 'VAI_COTTON_TRANG',
+          ProductSKU: 'SP_MAU_A_01',
+          MaterialCode: 'VL_MAU_01',
           Quantity: 1.5,
           Waste: 2,
-          Note: 'Vải chính may 2 mặt nệm'
+          Note: 'Nguyên liệu chính sản xuất mẫu'
         },
         {
-          ProductSKU: 'NMN_XANH_120X60',
-          MaterialCode: 'GON_TAM_2P',
-          Quantity: 1.2,
-          Waste: 3,
-          Note: 'Ruột gòn tấm chần trong'
+          ProductSKU: 'SP_MAU_A_01',
+          MaterialCode: 'PK_MAU_02',
+          Quantity: 1.0,
+          Waste: 1,
+          Note: 'Phụ kiện lắp ráp sản phẩm mẫu'
         }
       ];
     } else if (type === 'combos') {
       headers = ['ParentSKU', 'ChildSKU', 'Quantity', 'SortOrder'];
       sampleData = [
         {
-          ParentSKU: 'BO_NEM_GOI_MN',
-          ChildSKU: 'NMN_XANH_120X60',
+          ParentSKU: 'COMBO_MAU_01',
+          ChildSKU: 'SP_MAU_A_01',
           Quantity: 1,
           SortOrder: 1
         },
         {
-          ParentSKU: 'BO_NEM_GOI_MN',
-          ChildSKU: 'GOI_NAM_MN',
+          ParentSKU: 'COMBO_MAU_01',
+          ChildSKU: 'SP_MAU_B_02',
           Quantity: 1,
           SortOrder: 2
         }
@@ -1105,33 +1105,33 @@ export class UploadService {
       sampleData = [
         {
           Code: 'KH001',
-          Name: 'Trường Mầm Non Hướng Dương',
+          Name: 'Khách Hàng Demo 01',
           Type: 'CUSTOMER',
           LeadStatus: 'WON',
           LeadSource: 'REFERRAL',
-          Phone: '0909123456',
-          Email: 'huongduong.school@gmail.com',
-          Address: '123 Nguyễn Văn Cừ, Phường 4',
+          Phone: '0900000001',
+          Email: 'khachhang01@demo.local',
+          Address: '123 Đường Mẫu, Phường 1',
           Province: 'TP. Hồ Chí Minh',
-          District: 'Quận 5',
-          TaxCode: '0301234567',
-          LegalName: 'Công Ty Cổ Phần Giáo Dục Hướng Dương',
-          LegalAddress: '123 Nguyễn Văn Cừ, Phường 4, Quận 5, TP. Hồ Chí Minh',
-          LegalRepresentative: 'Nguyễn Văn A',
-          EinvoiceEmail: 'ketoan@huongduong.edu.vn',
+          District: 'Quận 1',
+          TaxCode: '0300000001',
+          LegalName: 'Công Ty TNHH Khách Hàng Demo 01',
+          LegalAddress: '123 Đường Mẫu, Phường 1, Quận 1, TP. Hồ Chí Minh',
+          LegalRepresentative: 'Đại Diện Khách Hàng 01',
+          EinvoiceEmail: 'ketoan@demo.local',
           CreditLimit: 50000000,
-          Facebook: 'fb.com/mamnonhuongduong',
-          Website: 'mamnonhuongduong.edu.vn'
+          Facebook: '',
+          Website: 'demo.local'
         },
         {
           Code: 'LEAD001',
-          Name: 'Trường Mầm Non Sao Mai',
+          Name: 'Đại Lý Mẫu A',
           Type: 'LEAD',
           LeadStatus: 'QUALIFIED',
-          LeadSource: 'FACEBOOK',
-          Phone: '0988776655',
-          Email: 'saomai.preschool@gmail.com',
-          Address: '45 Lê Lợi',
+          LeadSource: 'DIRECT',
+          Phone: '0900000002',
+          Email: 'daily01@demo.local',
+          Address: '45 Đường Mẫu, Phường 2',
           Province: 'Bình Dương',
           District: 'Thủ Dầu Một',
           TaxCode: '',
@@ -1140,7 +1140,7 @@ export class UploadService {
           LegalRepresentative: '',
           EinvoiceEmail: '',
           CreditLimit: 0,
-          Facebook: 'fb.com/saomaipreschool',
+          Facebook: '',
           Website: ''
         }
       ];
@@ -1149,29 +1149,29 @@ export class UploadService {
       sampleData = [
         {
           Code: 'NCC001',
-          Name: 'Công ty Dệt May Việt Thắng',
+          Name: 'Nhà Cung Cấp Mẫu 01',
           Type: 'MATERIAL',
-          Phone: '0283899999',
-          Email: 'sales@vietthangtextile.vn',
-          Address: 'Khu phố 1, Linh Trung, TP. Thủ Đức',
-          TaxCode: '0300123456',
-          LegalName: 'Tổng Công Ty Cổ Phần Dệt May Thắng Lợi',
-          VatAddress: 'Khu phố 1, Linh Trung, TP. Thủ Đức, TP. Hồ Chí Minh',
+          Phone: '0280000001',
+          Email: 'ncc01@demo.local',
+          Address: 'Khu công nghiệp Mẫu, TP. Hồ Chí Minh',
+          TaxCode: '0300000002',
+          LegalName: 'Công Ty Cổ Phần Cung Ứng Vật Tư Mẫu',
+          VatAddress: 'Khu công nghiệp Mẫu, TP. Hồ Chí Minh',
           Debt: 0,
-          Note: 'Cung cấp vải Cotton, Cara, TC định lượng cao'
+          Note: 'Cung cấp nguyên vật liệu mẫu các loại'
         },
         {
           Code: 'NCC002',
-          Name: 'Xưởng Thêu Vi Tính Minh Phát',
+          Name: 'Xưởng Gia Công Mẫu 02',
           Type: 'PROCESSING',
-          Phone: '0912345678',
-          Email: 'theuminhphat@gmail.com',
-          Address: 'Tân Bình, TP. Hồ Chí Minh',
-          TaxCode: '0312987654',
-          LegalName: 'Hộ Kinh Doanh Xưởng Thêu Minh Phát',
-          VatAddress: 'Tân Bình, TP. Hồ Chí Minh',
+          Phone: '0900000003',
+          Email: 'giacong02@demo.local',
+          Address: 'Quận Bình Tân, TP. Hồ Chí Minh',
+          TaxCode: '0300000003',
+          LegalName: 'Hộ Kinh Doanh Xưởng Gia Công Mẫu',
+          VatAddress: 'Quận Bình Tân, TP. Hồ Chí Minh',
           Debt: 0,
-          Note: 'Chuyên thêu logo đồng phục, nệm trường học'
+          Note: 'Chuyên gia công và hoàn thiện sản phẩm mẫu'
         }
       ];
     } else if (type === 'sales') {
@@ -1181,13 +1181,13 @@ export class UploadService {
           CustomerCode: 'KH001',
           OrderDate: '2026-08-25',
           DeliveryDate: '2026-09-01',
-          ProductSKU: 'NMN_XANH_120X60',
+          ProductSKU: 'SP_MAU_A_01',
           Quantity: 30,
-          UnitPrice: 180000,
-          VariantColor: 'Xanh dương',
-          ReceiverName: 'Cô Mai (Hiệu Trưởng)',
-          ReceiverPhone: '0909123456',
-          ShippingAddress: '123 Nguyễn Văn Cừ, P.4, Q.5, TP.HCM',
+          UnitPrice: 250000,
+          VariantColor: 'Xanh tiêu chuẩn',
+          ReceiverName: 'Người Nhận Demo',
+          ReceiverPhone: '0900000001',
+          ShippingAddress: '123 Đường Mẫu, P.1, Q.1, TP.HCM',
           DiscountRate: 5,
           VatRate: 8,
           ItemNote: 'Thêu logo trường ở góc trên bên phải',

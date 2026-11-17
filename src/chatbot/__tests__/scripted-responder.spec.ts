@@ -46,9 +46,9 @@ describe('ScriptedResponderService - SPEC §6.7 & Tone Compliance (M3 / m1)', ()
   it('no conversational replies contain banned words or unauthorized claims', () => {
     const testCases: Array<{ text: string; brief: Record<string, any> }> = [
       { text: 'Chào shop', brief: {} },
-      { text: 'Tôi muốn mua nệm', brief: { items: ['nệm'] } },
+      { text: 'Tôi muốn mua hàng', brief: { items: ['đệm'] } },
       { text: 'Cần 30 bộ', brief: { quantity: 30 } },
-      { text: '30 bộ nệm màu be', brief: { quantity: 30, items: ['nệm'], colors: 'be' } },
+      { text: '30 bộ đệm màu be', brief: { quantity: 30, items: ['đệm'], colors: 'be' } },
       { text: 'cho tôi gặp nhân viên', brief: {} },
     ];
 

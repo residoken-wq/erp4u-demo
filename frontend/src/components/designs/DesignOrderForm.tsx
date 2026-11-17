@@ -69,7 +69,7 @@ const DesignOrderForm: React.FC<DesignOrderFormProps> = ({ initialValues, onSucc
                             <Option value="Túi">Túi</Option>
                             <Option value="Gối">Gối</Option>
                             <Option value="Chăn">Chăn</Option>
-                            <Option value="Nệm">Nệm</Option>
+                            <Option value="Tấm lót">Tấm lót</Option>
                             <Option value="Bộ combo">Bộ combo</Option>
                         </Select>
                     </Form.Item>

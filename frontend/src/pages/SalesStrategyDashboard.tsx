@@ -555,7 +555,7 @@ const SalesStrategyDashboard: React.FC = () => {
                         value={productTypeFilter}
                         onChange={setProductTypeFilter}
                         options={[
-                            { label: 'Nệm', value: 'NEM' },
+                            { label: 'Sản phẩm Mẫu', value: 'MAU' },
                             { label: 'Balo', value: 'BALO' },
                             { label: 'Đồng phục', value: 'DONG_PHUC' },
                         ]}

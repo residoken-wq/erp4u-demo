@@ -580,7 +580,7 @@ const ChatbotInboxPage: React.FC = () => {
                             textAlign: isStaff ? 'right' : 'left',
                           }}
                         >
-                          {isCustomer ? 'Khách hàng' : isAi ? 'Cừu ERP4U (AI)' : 'Nhân viên hỗ trợ'} ·{' '}
+                          {isCustomer ? 'Khách hàng' : isAi ? 'Trợ lý ERP4U (AI)' : 'Nhân viên hỗ trợ'} ·{' '}
                           {formatDate(m.created_at)}
                         </div>
 
@@ -737,9 +737,9 @@ const ChatbotInboxPage: React.FC = () => {
                   </Descriptions.Item>
                   <Descriptions.Item label="Phân khúc">
                     {detail.briefs[0].data?.segment === 'school'
-                      ? 'Trường mầm non'
+                      ? 'Doanh nghiệp / Tổ chức'
                       : detail.briefs[0].data?.segment === 'parent'
-                      ? 'Phụ huynh'
+                      ? 'Khách lẻ / Cá nhân'
                       : detail.briefs[0].data?.segment || 'Chưa rõ'}
                   </Descriptions.Item>
                   <Descriptions.Item label="Số lượng">

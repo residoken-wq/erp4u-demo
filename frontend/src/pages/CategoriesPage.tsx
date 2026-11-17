@@ -72,7 +72,7 @@ const CategoriesPage: React.FC = () => {
             <Form form={form} layout="vertical" onFinish={handleSave} initialValues={{profit_margin: 30}}>
                 <Form.Item name="code" label="Mã Danh Mục" rules={[{required:true}]}><Input disabled={!!editingItem} /></Form.Item>
                 <Form.Item name="name" label="Tên Danh Mục" rules={[{required:true}]}><Input /></Form.Item>
-                <Form.Item name="outsourcing_category_name" label="Tên Danh Mục (Portal NCC)"><Input placeholder="Ví dụ: Nệm, Chăn, Gối..." /></Form.Item>
+                <Form.Item name="outsourcing_category_name" label="Tên Danh Mục (Portal NCC)"><Input placeholder="Ví dụ: Sản phẩm A, Phụ kiện, Vỏ hộp..." /></Form.Item>
                 <Form.Item name="size" label="Kích thước" help="Có thể đồng bộ kích thước này cho các sản phẩm (đang để trống kích thước) bằng nút Đồng bộ ở ngoài bảng."><Input placeholder="Ví dụ: 120x60cm, 50x70cm..." /></Form.Item>
                 <Form.Item name="profit_margin" label="% Biên Lợi Nhuận Gộp (Margin)" help="Công thức: Giá Bán = Giá Vốn / (1 - %Margin). Thay đổi ở đây sẽ cập nhật giá tất cả SP thuộc danh mục." rules={[{required:true}]}>
                     <InputNumber min={0} max={90} style={{width:'100%'}} suffix={<PercentageOutlined />} />

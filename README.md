@@ -7,7 +7,7 @@
 [![Docker](https://img.shields.io/badge/Deploy-Docker_Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Security: AES-256-GCM](https://img.shields.io/badge/Security-AES--256--GCM_PII_Encryption-green.svg)](SECURITY.md)
 
-> **ERP4U** is a comprehensive, enterprise-ready open-source ERP system crafted for manufacturing and distribution businesses (particularly in packaging, printing, apparel, and custom goods). Built with **NestJS**, **React**, **TypeORM**, and **PostgreSQL**.
+> **ERP4U** is a comprehensive, enterprise-ready open-source ERP system crafted for small and medium manufacturing enterprises (SMEs) across general goods, consumer products, assembly, and custom production. Built with **NestJS**, **React**, **TypeORM**, and **PostgreSQL**.
 
 ---
 

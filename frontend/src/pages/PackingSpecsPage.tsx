@@ -626,7 +626,7 @@ const PackingSpecsPage: React.FC = () => {
                     </Card>
 
                     <Form.Item name="note" label="Ghi chú hướng dẫn đóng gói">
-                        <Input.TextArea rows={2} placeholder="VD: Gấp đôi nệm, bọc màng co trước khi cho vào bao tải..." />
+                        <Input.TextArea rows={2} placeholder="VD: Bọc màng co bảo vệ trước khi đóng thùng carton..." />
                     </Form.Item>
                 </Form>
             </Modal>

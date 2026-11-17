@@ -100,7 +100,7 @@ export class FakeProvider implements LlmProvider {
 
       let quantity: number | undefined;
       const textWithoutApparel = lastUserMsg.replace(/(?:đồng phục|áo|tạp dề)[^,.;!?\n]*?(\d+)\s*(?:bộ|cái|chiếc)/gi, '');
-      const validQtyRegex = /(\d{1,6})\s*(bộ|cái|chiếc|set|bé|bạn|túi|tấm|chăn|gối|đệm|nệm)/gi;
+      const validQtyRegex = /(\d{1,6})\s*(bộ|cái|chiếc|set|túi|tấm|thùng|hộp|sản phẩm|kiện|đệm)/gi;
       let qm: RegExpExecArray | null;
       while ((qm = validQtyRegex.exec(textWithoutApparel)) !== null) {
         const afterMatch = textWithoutApparel.slice(qm.index + qm[0].length);
@@ -147,8 +147,8 @@ export class FakeProvider implements LlmProvider {
       else if (topicHint === 'sample') intent = 'sample';
 
       let segmentHint: string | undefined;
-      if (/(trường|mầm non|lớp|mẫu giáo|cô giáo|nhà trẻ)/i.test(lastUserMsg)) segmentHint = 'school';
-      else if (/(bé|nhà em|con em|gia đình|mẹ)/i.test(lastUserMsg)) segmentHint = 'parent';
+      if (/(doanh nghiệp|công ty|tổ chức|đơn vị|xưởng|nhà máy|dự án)/i.test(lastUserMsg)) segmentHint = 'school';
+      else if (/(khách lẻ|cá nhân|mua lẻ|cho mình|gia đình)/i.test(lastUserMsg)) segmentHint = 'parent';
 
       const colorsMatch = lastUserMsg.match(/(xanh|đỏ|vàng|hồng|tím|cam|trắng|xám|ghi|nâu|kem|pastel|hoạ tiết|hoa)/i);
       const colors = colorsMatch ? colorsMatch[1].toLowerCase() : undefined;
@@ -209,11 +209,11 @@ export class FakeProvider implements LlmProvider {
         if (isComplaint) {
           reply = 'Dạ em rất tiếc về sự bất tiện này ạ. Em đã ghi nhận phản ánh của anh/chị để nhân viên ERP4U kiểm tra xử lý ngay ạ.';
         } else if (isInfant) {
-          reply = 'Dạ với độ tuổi này, em sẽ chuyển nhu cầu để chuyên viên kiểm tra sản phẩm phù hợp. Anh/chị cho em biết kích thước khung giường và yêu cầu của trường ạ?';
+          reply = 'Dạ với yêu cầu này, em sẽ chuyển nhu cầu để chuyên viên kiểm tra sản phẩm phù hợp. Anh/chị cho em biết kích thước và yêu cầu của đơn vị mình ạ?';
         } else if (allText.includes('intent: price') || allText.includes('topic_hint: price')) {
-          reply = 'Dạ báo giá chính thức phụ thuộc vào số lượng và quy cách cụ thể của trường mình ạ.';
+          reply = 'Dạ báo giá chính thức phụ thuộc vào số lượng và quy cách cụ thể của đơn vị mình ạ.';
         } else {
-          reply = `Dạ em là ${CHATBOT_DEFAULTS.short_name}, trợ lý AI của ERP4U. Em có thể hỗ trợ tư vấn các sản phẩm chăn ga gối nệm mầm non cho anh/chị ạ.`;
+          reply = `Dạ em là ${CHATBOT_DEFAULTS.short_name}, trợ lý AI của ERP4U. Em có thể hỗ trợ tư vấn các dòng sản phẩm sản xuất mẫu cho anh/chị ạ.`;
         }
       }
 
@@ -221,9 +221,9 @@ export class FakeProvider implements LlmProvider {
       const questions: string[] = [];
       if (!isComplaint && !isInfant) {
         if (!briefObj.components && !briefObj.surface && !allText.includes('giường lưới')) {
-          questions.push('Anh/chị đang cần đặt trọn bộ nệm, gối hay chỉ cần nệm thôi ạ?');
+          questions.push('Anh/chị đang cần đặt trọn bộ combo hay chỉ cần sản phẩm đơn lẻ thôi ạ?');
         } else if (!briefObj.quantity && !allText.includes('bao nhiêu bộ') && !allText.includes('30 bộ')) {
-          questions.push('Dạ trường mình dự kiến đặt số lượng khoảng bao nhiêu bộ ạ?');
+          questions.push('Dạ đơn vị mình dự kiến đặt số lượng khoảng bao nhiêu sản phẩm ạ?');
         } else if (!briefObj.region) {
           questions.push('Dạ mình ở khu vực nào để em hỗ trợ thông tin giao hàng ạ?');
         }

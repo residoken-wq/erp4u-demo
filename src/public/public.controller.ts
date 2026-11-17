@@ -145,7 +145,7 @@ export class PublicController {
 
         // Return public system settings formatted for website
         return {
-            site_name: result.site_name || 'Nệm Mầm Non ERP4U',
+            site_name: result.site_name || 'ERP4U — Hệ Thống ERP Sản Xuất',
             site_description: result.site_description || '',
             logo_url: result.logo_url || '',
             favicon_url: result.favicon_url || '',
@@ -643,7 +643,7 @@ export class PublicController {
             if (!config) {
                 // Return default empty config v2
                 return {
-                    hero_title: 'Tự Thiết Kế Bộ Sản Phẩm Mầm Non Cao Cấp',
+                    hero_title: 'Tự Thiết Kế Bộ Sản Phẩm Sản Xuất Mẫu',
                     categories: []
                 };
             }
@@ -652,7 +652,7 @@ export class PublicController {
             // Table may not exist yet, return empty config v2
             console.error('Wizard config error:', error);
             return {
-                hero_title: 'Tự Thiết Kế Bộ Sản Phẩm Mầm Non Cao Cấp',
+                hero_title: 'Tự Thiết Kế Bộ Sản Phẩm Sản Xuất Mẫu',
                 categories: []
             };
         }

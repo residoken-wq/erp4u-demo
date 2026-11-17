@@ -45,7 +45,7 @@ const NOTE_TEMPLATES = {
 </ul>`,
     PRODUCTION_STANDARDS: `<h3>🏭 2. Tiêu chuẩn Kỹ thuật & Gia công Sản xuất</h3>
 <ul>
-  <li><strong>Quy cách đặc thù:</strong> [Kích thước phi tiêu chuẩn, độ dày nệm, loại bông/foam]</li>
+  <li><strong>Quy cách đặc thù:</strong> [Kích thước phi tiêu chuẩn, độ dày sản phẩm, loại vật liệu]</li>
   <li><strong>Thêu / In Logo:</strong> [Vị trí thêu, màu chỉ, kích thước logo theo thương hiệu]</li>
   <li><strong>Bao bì & Nhãn mác:</strong> [Tem phụ tiếng Việt, túi PE dán decal riêng, thùng carton]</li>
   <li><strong>Mức độ kiểm tra QC:</strong> [Khách kiểm tra 100% khi nhận / Kiểm tra xác suất]</li>

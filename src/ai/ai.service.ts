@@ -1372,12 +1372,12 @@ ${knowledgeContext}
 
 CRITICAL RULES & OPERATIONAL PRINCIPLES:
 1. ENTITY RECOGNITION (CRUCIAL):
-   - Any phrase with "Trường...", "Mầm non...", "Công ty...", "TNHH...", "Doanh nghiệp...", "Khách hàng...", "Anh/Chị..." is ALWAYS A CUSTOMER (Khách hàng).
-   - NEVER treat schools, companies, or partners as physical products!
-   - When asked to analyze or summarize a school, company, or customer, you MUST call \`get_customer_360_profile\` with { query: "name" }.
+   - Any phrase with "Công ty...", "TNHH...", "Doanh nghiệp...", "Đại lý...", "Khách hàng...", "Anh/Chị..." is ALWAYS A CUSTOMER (Khách hàng).
+   - NEVER treat companies or partners as physical products!
+   - When asked to analyze or summarize a company, partner, or customer, you MUST call \`get_customer_360_profile\` with { query: "name" }.
 
 2. ALWAYS EXECUTE TOOLS IMMEDIATELY. DO NOT ASK CONFIRMATION IN TEXT.
-   - When the user asks for ANY customer summary, order details, inventory status, financial report, or task list (e.g. "tổng hợp thông tin trường mầm non Trí Đức plus", "phân tích khách hàng...", "tồn kho...", "báo cáo tài chính..."), you MUST IMMEDIATELY INVOKE the appropriate tool function call.
+   - When the user asks for ANY customer summary, order details, inventory status, financial report, or task list (e.g. "tổng hợp thông tin Khách hàng Demo 01", "phân tích khách hàng...", "tồn kho...", "báo cáo tài chính..."), you MUST IMMEDIATELY INVOKE the appropriate tool function call.
    - NEVER generate conversational text asking "Bạn có muốn tôi tìm kiếm không?", "Bạn có đồng ý để tôi tra cứu không?", "Bạn có cần ERP4UBot hỗ trợ gì không?".
    - NEVER hesitate or ask permission in text. Just directly call the tool!
 
@@ -1388,7 +1388,7 @@ CRITICAL RULES & OPERATIONAL PRINCIPLES:
 4. TOOL SELECTION MAP:
    - To summarize/analyze a Customer: Call \`get_customer_360_profile\` with { query: "customer name" } or { customerId: number }.
    - To inspect a Sales Order: Call \`get_sales_order_360_profile\` with { orderCodeOrId: "SO..." }.
-   - To inspect Products / Stock: Call \`get_product_360_profile\` or \`check_stock\` ONLY for physical items (nệm, gối, ga, vải, chỉ, v.v.).
+   - To inspect Products / Stock: Call \`get_product_360_profile\` or \`check_stock\` ONLY for physical items (sản phẩm mẫu, linh kiện, nguyên vật liệu, phụ kiện, bao bì, v.v.).
    - To analyze Finances / Debt: Call \`get_finance_and_debt_analytics\` with { month: number, year: number }.
    - To check Production / MRP: Call \`check_mrp_status\`.
    - To check Tasks / Assignments: Call \`check_tasks\`.
@@ -1406,11 +1406,11 @@ CRITICAL RULES & OPERATIONAL PRINCIPLES:
             functionDeclarations: [
                 {
                     name: "get_customer_360_profile",
-                    description: "Lấy toàn bộ hồ sơ 360 độ của khách hàng (Doanh thu trọn đời LTV, công nợ, lịch sử đơn hàng, top sản phẩm mua nhiều nhất, ghi chú CRM). Hãy gọi tool này ngay khi người dùng yêu cầu tổng hợp thông tin hoặc phân tích trường mầm non, công ty, khách hàng.",
+                    description: "Lấy toàn bộ hồ sơ 360 độ của khách hàng (Doanh thu trọn đời LTV, công nợ, lịch sử đơn hàng, top sản phẩm mua nhiều nhất, ghi chú CRM). Hãy gọi tool này ngay khi người dùng yêu cầu tổng hợp thông tin hoặc phân tích đối tác, công ty, khách hàng.",
                     parameters: {
                         type: "OBJECT",
                         properties: {
-                            query: { type: "STRING", description: "Tên hoặc từ khóa tìm kiếm khách hàng (ví dụ: 'Trường mầm non Trí Đức Plus', 'Đức Trí')" },
+                            query: { type: "STRING", description: "Tên hoặc từ khóa tìm kiếm khách hàng (ví dụ: 'Khách hàng Demo 01', 'Đại lý Mẫu A')" },
                             customerId: { type: "INTEGER", description: "ID của khách hàng trong hệ thống (nếu đã biết)" }
                         }
                     }

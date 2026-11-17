@@ -29,9 +29,9 @@ export class ScriptedResponderService {
       return { slots, hasNewSlots };
     }
 
-    // 1. Quantity: (\d{1,6})\s*(bộ|cái|chiếc|set|bé|bạn|túi|tấm|chăn|gối|đệm|nệm)
+    // 1. Quantity: (\d{1,6})\s*(bộ|cái|chiếc|set|túi|tấm|thùng|hộp|sản phẩm|kiện|đệm)
     const textWithoutApparel = text.replace(/(?:đồng phục|áo|tạp dề)[^,.;!?\n]*?(\d+)\s*(?:bộ|cái|chiếc)/gi, '');
-    const validQtyRegex = /(\d{1,6})\s*(bộ|cái|chiếc|set|bé|bạn|túi|tấm|chăn|gối|đệm|nệm)/gi;
+    const validQtyRegex = /(\d{1,6})\s*(bộ|cái|chiếc|set|túi|tấm|thùng|hộp|sản phẩm|kiện|đệm)/gi;
     let qm: RegExpExecArray | null;
     while ((qm = validQtyRegex.exec(textWithoutApparel)) !== null) {
       const afterMatch = textWithoutApparel.slice(qm.index + qm[0].length);
@@ -57,23 +57,23 @@ export class ScriptedResponderService {
     }
 
     // 3. Segment
-    if (/mầm non|mẫu giáo|lớp|trường/i.test(text)) {
+    if (/doanh nghiệp|công ty|tổ chức|đơn vị|xưởng|nhà máy|dự án/i.test(text)) {
       if (currentData.segment !== 'school') {
         slots.segment = 'school';
         hasNewSlots = true;
       }
-    } else if (/cho bé|con tôi|con mình/i.test(text)) {
+    } else if (/khách lẻ|cá nhân|mua lẻ|cho mình|gia đình/i.test(text)) {
       if (currentData.segment !== 'parent') {
         slots.segment = 'parent';
         hasNewSlots = true;
       }
     }
 
-    // 4. Items (nệm, gối, chăn, ga)
+    // 4. Items (đệm, gối, chăn, ga)
     const items: string[] = Array.isArray(currentData.items) ? [...currentData.items] : [];
     let itemsChanged = false;
-    if (/nệm|đệm/i.test(text) && !items.includes('nệm')) {
-      items.push('nệm');
+    if (/đệm|tấm lót/i.test(text) && !items.includes('đệm')) {
+      items.push('đệm');
       itemsChanged = true;
     }
     if (/gối/i.test(text) && !items.includes('gối')) {
@@ -111,17 +111,17 @@ export class ScriptedResponderService {
       segment = 'school';
       intent = 'school';
       replyText =
-        'Dạ em chào anh/chị ạ. Trường mình đang cần nệm, gối hay cả bộ, và dự kiến khoảng bao nhiêu bộ ạ?';
+        'Dạ em chào anh/chị ạ. Đơn vị mình đang cần tư vấn sản phẩm mẫu đơn lẻ hay theo bộ, và dự kiến khoảng bao nhiêu bộ ạ?';
     } else if (value === 'parent') {
       segment = 'parent';
       intent = 'parent';
       replyText =
-        'Dạ em chào anh/chị ạ. Mình đang tìm nệm ngủ trưa hay bộ chăn ga gối cho bé và bé nhà mình mấy tuổi rồi ạ?';
+        'Dạ em chào anh/chị ạ. Mình đang tìm hiểu sản phẩm mẫu nào cho nhu cầu sử dụng của gia đình hay cá nhân ạ?';
     } else if (value === 'sample') {
       segment = 'school';
       intent = 'sample';
       replyText =
-        'Dạ em chào anh/chị ạ. Anh/chị đang quan tâm xem mẫu nệm, gối hay phụ kiện mầm non nào ạ?';
+        'Dạ em chào anh/chị ạ. Anh/chị đang quan tâm xem mẫu sản phẩm hay nguyên vật liệu nào của công ty ạ?';
     } else if (value === 'support') {
       segment = 'after_sale';
       intent = 'support';
@@ -131,7 +131,7 @@ export class ScriptedResponderService {
       segment = 'school';
       intent = 'school';
       replyText =
-        'Dạ em chào anh/chị ạ. Anh/chị đang tìm sản phẩm cho trường mầm non hay cho bé nhà mình ạ?';
+        'Dạ em chào anh/chị ạ. Anh/chị đang tìm sản phẩm cho doanh nghiệp/đại lý hay nhu cầu mua lẻ ạ?';
     }
 
     return { replyText, segment, intent };
@@ -208,7 +208,7 @@ export class ScriptedResponderService {
     if (!briefData.items || briefData.items.length === 0) {
       return {
         replyText:
-          'Dạ anh/chị đang cần nệm, gối hay bộ nệm kèm gối và mền ạ?',
+          'Dạ anh/chị đang cần sản phẩm mẫu đơn lẻ hay theo bộ combo sản phẩm ạ?',
         payload: null,
         isHumanRequest: false,
       };
