@@ -42,6 +42,21 @@ Từ tháng 11/2026, **ERP4U** phát triển hoàn toàn độc lập (đã ngư
 
 ---
 
+## ✍️ Contributor License Agreement (CLA)
+
+ERP4U hoạt động theo mô hình **open-core**: phần core mã nguồn mở được phát hành theo giấy phép AGPLv3, trong khi các phiên bản thương mại (như ERP4U Cloud / Enterprise) tích hợp thêm các tính năng chuyên sâu.
+
+Để bảo đảm quyền phân phối và phát hành hợp pháp cho cả cộng đồng mã nguồn mở và khách hàng thương mại, tất cả những người đóng góp (contributors) cần ký **Thỏa thuận Cấp phép Người đóng góp (CLA)** trước khi Pull Request được sáp nhập:
+
+- **Văn bản thỏa thuận:** Xem toàn văn tại [CLA.md](CLA.md) (bản dịch tham khảo tại [docs/CLA.vi.md](docs/CLA.vi.md)).
+- **Cách ký CLA:** Khi bạn mở một Pull Request, bot CLA Assistant sẽ tự động kiểm tra. Nếu bạn chưa ký, bot sẽ để lại hướng dẫn. Bạn chỉ cần phản hồi một bình luận (comment) ngay trên PR với nội dung chính xác:
+  ```
+  I have read the CLA Document and I hereby sign the CLA
+  ```
+- **Tần suất ký:** Bạn **chỉ cần ký một lần duy nhất** cho toàn bộ các đóng góp từ tài khoản GitHub của bạn trên kho lưu trữ này.
+
+---
+
 ## 📜 Code of Conduct
 
 All contributors are expected to adhere to our [Code of Conduct](CODE_OF_CONDUCT.md).
