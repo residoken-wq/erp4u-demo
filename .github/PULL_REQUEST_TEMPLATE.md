@@ -10,6 +10,7 @@ Fixes #(issue)
 - [ ] Documentation update
 
 ## Checklist:
+- [ ] Tôi đã đọc và đồng ý với [Contributor License Agreement (CLA)](CLA.md) (hoặc ký qua PR comment theo hướng dẫn của bot)
 - [ ] My code follows the style guidelines of this project
 - [ ] I have performed a self-review of my own code
 - [ ] I have commented my code, particularly in hard-to-understand areas

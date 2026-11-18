@@ -146,7 +146,7 @@ erp4u-demo/
 
 ## 🤝 Contributing
 
-We welcome contributions from the community! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before submitting pull requests.
+We welcome contributions from the community! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before submitting pull requests. All contributors are required to sign our [Contributor License Agreement (CLA)](CLA.md).
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
@@ -159,3 +159,5 @@ We welcome contributions from the community! Please read our [CONTRIBUTING.md](C
 ## 📄 License
 
 Distributed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See [`LICENSE`](LICENSE) for more information.
+
+ERP4U theo mô hình **open-core**: mã nguồn core công khai theo giấy phép AGPLv3; các phiên bản thương mại (như ERP4U Cloud) bổ sung các tính năng nâng cao. Mọi đóng góp vào repository đều tuân thủ [Contributor License Agreement (CLA)](CLA.md) theo hướng dẫn tại [CONTRIBUTING.md](CONTRIBUTING.md).
