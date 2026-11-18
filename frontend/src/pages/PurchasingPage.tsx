@@ -1979,7 +1979,7 @@ const PurchasingPage: React.FC = () => {
                     <Button block onClick={() => handlePrint('OUTSOURCING', false)}>Mẫu Gia Công (Không Đơn giá)</Button>
                     <Button block onClick={() => handlePrint('CARA')}>Mẫu Đóng Gói (Cara Style)</Button>
                     <Button block onClick={() => handlePrint('HQ')}>Mẫu Đóng Gói (HQ Style)</Button>
-                    <Button block onClick={() => handlePrint('TV')}>Mẫu Đặt Hàng (Trần Văn)</Button>
+                    <Button block onClick={() => handlePrint('TV')}>Mẫu Đặt Hàng (Mẫu 03 - TV)</Button>
                 </Space>
             </Modal>
 

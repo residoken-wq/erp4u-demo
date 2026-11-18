@@ -213,8 +213,8 @@ const CompanyConfigTab: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [bankValues, setBankValues] = useState<{ bank: string, account: string, holder: string }>({
         bank: 'ACB - TP.HCM',
-        account: '141847859',
-        holder: 'CTY TNHH TM DV TUONG LINH'
+        account: '0000000000',
+        holder: 'CTY TNHH SAN XUAT MAU'
     });
 
     const fetchCompanyInfo = async () => {
@@ -225,8 +225,8 @@ const CompanyConfigTab: React.FC = () => {
             if (res.data) {
                 setBankValues({
                     bank: res.data.COMPANY_BANK_NAME || 'ACB - TP.HCM',
-                    account: res.data.COMPANY_BANK_ACCOUNT || '141847859',
-                    holder: res.data.COMPANY_BANK_HOLDER || 'CTY TNHH TM DV TUONG LINH'
+                    account: res.data.COMPANY_BANK_ACCOUNT || '0000000000',
+                    holder: res.data.COMPANY_BANK_HOLDER || 'CTY TNHH SAN XUAT MAU'
                 });
             }
         } catch (e) {

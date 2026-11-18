@@ -200,7 +200,6 @@ export const VIETNAM_PROVINCE_COORDINATES: Record<string, LalamoveCoordinate> = 
     'ninh thuận': { lat: '11.5667000', lng: '108.9833000' },
     'phan rang': { lat: '11.5667000', lng: '108.9833000' },
     'phú thọ': { lat: '21.3167000', lng: '105.4000000' },
-    'việt trì': { lat: '21.3228000', lng: '105.4019000' },
     'phú yên': { lat: '13.0833000', lng: '109.3000000' },
     'tuy hòa': { lat: '13.0883000', lng: '109.3039000' },
     'quảng bình': { lat: '17.4833000', lng: '106.6000000' },

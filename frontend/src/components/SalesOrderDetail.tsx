@@ -375,7 +375,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             r1.getCell(5).alignment = { horizontal: 'center' };
 
             // Row 2: Company & Quote Number
-            const r2 = sheet.addRow(['CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ TƯỜNG LINH', '', '', '', `Số: ${initialData?.order_code || 'New'}`]);
+            const r2 = sheet.addRow(['CÔNG TY TNHH SẢN XUẤT MẪU', '', '', '', `Số: ${initialData?.order_code || 'New'}`]);
             sheet.mergeCells('A2:D2');
             sheet.mergeCells('E2:H2');
             r2.getCell(1).font = { bold: true, color: { argb: 'FF555555' } };
@@ -1648,7 +1648,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                             <Row gutter={16}>
                                 <Col span={12}>
                                     <Form.Item name="vat_email" label="Email Nhận Hóa Đơn">
-                                        <Input placeholder="email@company.com" />
+                                        <Input placeholder="email@example.com" />
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>

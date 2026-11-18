@@ -11,7 +11,7 @@ export async function seedSystem(dataSource: DataSource) {
   console.log('  -> Seeding System Configs...');
   const configs = [
     { key: 'COMPANY_NAME', value: 'ERP4U Manufacturing Solutions Co., Ltd.' },
-    { key: 'COMPANY_ADDRESS', value: 'Khu Công Nghiệp Tân Bình, P. Tây Thạnh, Q. Tân Phú, TP. Hồ Chí Minh' },
+    { key: 'COMPANY_ADDRESS', value: 'Số 1 Đường Mẫu, Quận Mẫu, TP. Mẫu' },
     { key: 'COMPANY_PHONE', value: '1900 0000' },
     { key: 'COMPANY_EMAIL', value: 'contact@example.com' },
     { key: 'COMPANY_TAX_CODE', value: '0000000000' },

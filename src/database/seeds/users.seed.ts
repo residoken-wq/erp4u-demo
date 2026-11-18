@@ -17,10 +17,10 @@ export async function seedUsers(dataSource: DataSource) {
 
   const demoUsers = [
     { username: 'admin', full_name: 'Quản Trị Viên (Admin)', email: 'admin@erp4u.demo', password: adminPassword, groupName: 'Admin' },
-    { username: 'sales01', full_name: 'Nguyễn Văn Minh (Sales Lead)', email: 'sales@erp4u.demo', password: demoPassword, groupName: 'Kinh Doanh' },
-    { username: 'warehouse01', full_name: 'Trần Thị Thu Thảo (Thủ Kho)', email: 'warehouse@erp4u.demo', password: demoPassword, groupName: 'Quản Lý Kho' },
-    { username: 'accountant01', full_name: 'Lê Hoàng Anh (Kế Toán Trưởng)', email: 'accounting@erp4u.demo', password: demoPassword, groupName: 'Kế Toán' },
-    { username: 'hr01', full_name: 'Phạm Ngọc Mai (Trưởng Phòng HR)', email: 'hr@erp4u.demo', password: demoPassword, groupName: 'Nhân Sự' },
+    { username: 'sales01', full_name: 'Nhân viên Demo 01 (Sales Lead)', email: 'sales@erp4u.demo', password: demoPassword, groupName: 'Kinh Doanh' },
+    { username: 'warehouse01', full_name: 'Nhân viên Demo 02 (Thủ Kho)', email: 'warehouse@erp4u.demo', password: demoPassword, groupName: 'Quản Lý Kho' },
+    { username: 'accountant01', full_name: 'Nhân viên Demo 03 (Kế Toán Trưởng)', email: 'accounting@erp4u.demo', password: demoPassword, groupName: 'Kế Toán' },
+    { username: 'hr01', full_name: 'Nhân viên Demo 04 (Trưởng Phòng HR)', email: 'hr@erp4u.demo', password: demoPassword, groupName: 'Nhân Sự' },
   ];
 
   for (const u of demoUsers) {

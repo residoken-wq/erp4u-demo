@@ -41,7 +41,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   {
     username: 'sales01',
     password: 'demo123',
-    fullName: 'Nguyễn Văn Minh',
+    fullName: 'Nhân viên Demo 01',
     roleTitle: 'Trưởng Nhóm Kinh Doanh (Sales Lead)',
     groupName: 'Kinh Doanh',
     color: '#1890ff',
@@ -51,7 +51,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   {
     username: 'warehouse01',
     password: 'demo123',
-    fullName: 'Trần Thị Thu Thảo',
+    fullName: 'Nhân viên Demo 02',
     roleTitle: 'Thủ Kho (Warehouse Manager)',
     groupName: 'Quản Lý Kho',
     color: '#fa8c16',
@@ -61,7 +61,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   {
     username: 'accountant01',
     password: 'demo123',
-    fullName: 'Lê Hoàng Anh',
+    fullName: 'Nhân viên Demo 03',
     roleTitle: 'Kế Toán Trưởng (Chief Accountant)',
     groupName: 'Kế Toán',
     color: '#52c41a',
@@ -71,7 +71,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   {
     username: 'hr01',
     password: 'demo123',
-    fullName: 'Phạm Ngọc Mai',
+    fullName: 'Nhân viên Demo 04',
     roleTitle: 'Trưởng Phòng Nhân Sự (HR Lead)',
     groupName: 'Nhân Sự',
     color: '#eb2f96',

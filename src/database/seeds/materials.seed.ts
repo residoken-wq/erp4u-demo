@@ -6,8 +6,8 @@ export async function seedMaterials(dataSource: DataSource) {
 
   console.log('  -> Seeding Materials (Raw materials)...');
   const materials = [
-    { code: 'MAT-KRAFT-180', name: 'Giấy Kraft Việt Trì 180gsm', category: 'Giấy Nguyên Liệu', unit: 'Kg', cost_price: 18500, min_stock: 500 },
-    { code: 'MAT-KRAFT-250', name: 'Giấy Kraft Nhập Khẩu Nga 250gsm', category: 'Giấy Nguyên Liệu', unit: 'Kg', cost_price: 24000, min_stock: 300 },
+    { code: 'MAT-KRAFT-180', name: 'Giấy Kraft Tiêu Chuẩn 180gsm', category: 'Giấy Nguyên Liệu', unit: 'Kg', cost_price: 18500, min_stock: 500 },
+    { code: 'MAT-KRAFT-250', name: 'Giấy Kraft Cao Cấp 250gsm', category: 'Giấy Nguyên Liệu', unit: 'Kg', cost_price: 24000, min_stock: 300 },
     { code: 'MAT-DUPLEX-300', name: 'Giấy Duplex Trắng 300gsm', category: 'Giấy Nguyên Liệu', unit: 'Kg', cost_price: 22000, min_stock: 400 },
     { code: 'MAT-IVORY-350', name: 'Giấy Ivory Cao Cấp FBB 350gsm', category: 'Giấy Nguyên Liệu', unit: 'Kg', cost_price: 32000, min_stock: 200 },
     { code: 'MAT-CORRUGATED-3L', name: 'Phôi Sóng Carton E 3 Lớp', category: 'Phôi Sóng', unit: 'm2', cost_price: 6500, min_stock: 1000 },

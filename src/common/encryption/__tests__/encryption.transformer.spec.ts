@@ -22,8 +22,8 @@ describe('EncryptionTransformer', () => {
 
   it('should encrypt complex sensitive PII (tax code, legal representative, unicode name)', () => {
     const taxCode = '0100000001';
-    const vietnameseName = 'Nguyễn Hoàng Hải';
-    const email = 'hai.nh@ecoplast-vn.com';
+    const vietnameseName = 'Người Dùng Demo';
+    const email = 'demo@example.com';
 
     const encTax = transformer.to(taxCode) as string;
     const encName = transformer.to(vietnameseName) as string;

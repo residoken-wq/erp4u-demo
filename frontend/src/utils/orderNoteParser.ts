@@ -160,7 +160,7 @@ export const VIETNAM_PROVINCES = [
     { names: ['bắc ninh', 'bac ninh'], standard: 'Bắc Ninh', defaultCity: 'Thành phố Bắc Ninh' },
     { names: ['bắc giang', 'bac giang'], standard: 'Bắc Giang', defaultCity: 'Thành phố Bắc Giang' },
     { names: ['vĩnh phúc', 'vinh phuc', 'vĩnh yên'], standard: 'Vĩnh Phúc', defaultCity: 'Thành phố Vĩnh Yên' },
-    { names: ['phú thọ', 'việt trì'], standard: 'Phú Thọ', defaultCity: 'Thành phố Việt Trì' },
+    { names: ['phú thọ', 'phu tho'], standard: 'Phú Thọ', defaultCity: 'Phú Thọ' },
     { names: ['thái nguyên', 'thai nguyen'], standard: 'Thái Nguyên', defaultCity: 'Thành phố Thái Nguyên' },
     { names: ['tuyên quang'], standard: 'Tuyên Quang', defaultCity: 'Thành phố Tuyên Quang' },
     { names: ['hà giang'], standard: 'Hà Giang', defaultCity: 'Thành phố Hà Giang' },

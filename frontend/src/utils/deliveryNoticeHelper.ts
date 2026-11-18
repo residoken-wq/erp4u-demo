@@ -286,13 +286,13 @@ export function formatDeliveryNotice(templateContent: string, params: FormatNoti
         : `Chuyển khoản`;
 
     const bankName = companyConfig.COMPANY_BANK_NAME || 'ACB - TP.HCM';
-    const bankAccount = companyConfig.COMPANY_BANK_ACCOUNT || '141847859';
-    const bankHolder = companyConfig.COMPANY_BANK_HOLDER || 'CTY TNHH TM DV TUONG LINH';
+    const bankAccount = companyConfig.COMPANY_BANK_ACCOUNT || '0000000000';
+    const bankHolder = companyConfig.COMPANY_BANK_HOLDER || 'CTY TNHH SAN XUAT MAU';
     const bankInfoStr = `NH ${bankName} - STK: ${bankAccount} - Chủ TK: ${bankHolder}`;
 
     const saleName = order.assigned_to?.full_name || order.assigned_to?.name || order.created_by?.full_name || 'Admin ERP4U';
     const salePhone = order.assigned_to?.phone || order.created_by?.phone || '';
-    const hotline = companyConfig.COMPANY_PHONE || '0983.796654 - 0983.882210';
+    const hotline = companyConfig.COMPANY_PHONE || '1900-0000 - 0900000001';
 
     let result = templateContent;
     result = result.replace(/\{CUSTOMER_NAME\}/g, customerName);

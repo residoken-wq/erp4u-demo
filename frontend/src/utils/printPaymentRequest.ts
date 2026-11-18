@@ -88,13 +88,13 @@ export const handlePrintPaymentRequest = (options: PrintPaymentRequestOptions) =
     }
 
     // 1. Company Info
-    const companyName = companyConfig?.COMPANY_NAME || 'CÔNG TY TNHH TM DV TƯỜNG LINH';
-    const companyAddress = companyConfig?.COMPANY_ADDRESS || '74/21/24 Nguyễn Khuyến, Phường 12, Quận Bình Thạnh, Tp. Hồ Chí Minh.';
-    const directorName = companyConfig?.COMPANY_REPRESENTATIVE || 'PHẠM THU HẰNG';
+    const companyName = companyConfig?.COMPANY_NAME || 'CÔNG TY TNHH SẢN XUẤT MẪU';
+    const companyAddress = companyConfig?.COMPANY_ADDRESS || 'Số 1 Đường Mẫu, Quận Mẫu, TP. Mẫu';
+    const directorName = companyConfig?.COMPANY_REPRESENTATIVE || 'ĐẠI DIỆN GIÁM ĐỐC';
 
     // 2. Bank Info
-    const bankHolder = companyConfig?.COMPANY_BANK_HOLDER || 'CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ TƯỜNG LINH';
-    const bankAccount = companyConfig?.COMPANY_BANK_ACCOUNT || '141847859';
+    const bankHolder = companyConfig?.COMPANY_BANK_HOLDER || 'CTY TNHH SAN XUAT MAU';
+    const bankAccount = companyConfig?.COMPANY_BANK_ACCOUNT || '0000000000';
     const bankName = companyConfig?.COMPANY_BANK_NAME || 'Ngân Hàng TM CP Á Châu (ACB)';
 
     // 3. Customer Name
@@ -103,7 +103,7 @@ export const handlePrintPaymentRequest = (options: PrintPaymentRequestOptions) =
         || order?.customer?.name 
         || order?.customer_name 
         || initialCustomerName 
-        || 'CÔNG TY TNHH MEG VIETNAM';
+        || 'CÔNG TY KHÁCH HÀNG MẪU A';
 
     // 4. Sales / Requester Name
     const requesterDisplayName = order?.assigned_to?.full_name 

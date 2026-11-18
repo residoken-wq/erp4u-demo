@@ -55,7 +55,7 @@ export class EmailService {
 
     async testConnection(to: string): Promise<{ success: boolean; message: string }> {
         const dbConfig = await this.getSmtpConfig();
-        let fromEmail = dbConfig['SMTP_FROM_EMAIL'] || this.configService.get<string>('SMTP_FROM') || 'noreply@erp4u.com';
+        let fromEmail = dbConfig['SMTP_FROM_EMAIL'] || this.configService.get<string>('SMTP_FROM') || 'noreply@example.com';
         let fromName = dbConfig['SMTP_FROM_NAME'] || 'ERP4U';
         const from = `"${fromName}" <${fromEmail}>`;
         
@@ -81,7 +81,7 @@ export class EmailService {
     async sendMail(to: string, subject: string, html: string, attachments?: any[], cc?: string, fromOverride?: string): Promise<boolean> {
         const dbConfig = await this.getSmtpConfig();
         
-        let fromEmail = fromOverride || dbConfig['SMTP_FROM_EMAIL'] || this.configService.get<string>('SMTP_FROM') || 'noreply@erp4u.com';
+        let fromEmail = fromOverride || dbConfig['SMTP_FROM_EMAIL'] || this.configService.get<string>('SMTP_FROM') || 'noreply@example.com';
         let fromName = dbConfig['SMTP_FROM_NAME'] || 'ERP4U';
         const from = `"${fromName}" <${fromEmail}>`;
         

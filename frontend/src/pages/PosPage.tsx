@@ -442,7 +442,7 @@ const PosPage: React.FC = () => {
         if (!printedOrder) return null;
 
         const orderItems = printedOrder.items || [];
-        const qrcodeUrl = `https://img.vietqr.io/image/ACB-141847859-compact2.jpg?amount=${printedOrder.total_amount}&addInfo=${printedOrder.order_code}&accountName=CTY TNHH TM DV TUONG LINH`;
+        const qrcodeUrl = `https://img.vietqr.io/image/ACB-0000000000-compact2.jpg?amount=${printedOrder.total_amount}&addInfo=${printedOrder.order_code}&accountName=CTY TNHH SAN XUAT MAU`;
 
         const subtotal = (printedOrder.total_amount || 0) / (1 + (printedOrder.vat_rate || 0) / 100);
         const vatVal = (printedOrder.total_amount || 0) - subtotal;

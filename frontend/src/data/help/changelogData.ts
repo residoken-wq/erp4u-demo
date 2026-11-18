@@ -14,7 +14,7 @@ export const CHANGELOG_DATA: ChangelogItem[] = [
                 tag: 'Tính năng Mới 📄',
                 highlights: [
                     'Bổ sung chức năng In Giấy Đề Nghị Thanh Toán (DNTT) tại Tab 3. Thanh toán trong SO Detail.',
-                    'Mẫu 1 (DNTT PDF): Tích hợp con dấu tròn đỏ và chữ ký số Giám đốc (Phạm Thu Hằng), tự động dịch số tiền thành chữ tiếng Việt, tải/lưu file PDF gửi khách hàng trực tuyến.',
+                    'Mẫu 1 (DNTT PDF): Tích hợp con dấu tròn đỏ và chữ ký số Giám đốc (Đại Diện Giám Đốc), tự động dịch số tiền thành chữ tiếng Việt, tải/lưu file PDF gửi khách hàng trực tuyến.',
                     'Mẫu 2 (In DNTT): Mẫu sạch không mộc và không chữ ký, hiển thị họ tên Giám đốc và Nhân viên đề nghị để in ký sống.',
                     'Hỗ trợ in trực tiếp từ bảng lịch sử thanh toán hoặc ngay trong modal tạo đợt thu.'
                 ],

@@ -238,8 +238,8 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
         }
 
         const bankName = config?.COMPANY_BANK_NAME || 'ACB - TP.HCM';
-        const bankAccount = config?.COMPANY_BANK_ACCOUNT || '141847859';
-        const bankHolder = config?.COMPANY_BANK_HOLDER || 'CTY TNHH TM DV TUONG LINH';
+        const bankAccount = config?.COMPANY_BANK_ACCOUNT || '0000000000';
+        const bankHolder = config?.COMPANY_BANK_HOLDER || 'CTY TNHH SAN XUAT MAU';
 
         if (!bankAccount) {
             return message.warning('Chưa cấu hình tài khoản ngân hàng trong hệ thống (Cài đặt > Doanh nghiệp & Ngân hàng).');

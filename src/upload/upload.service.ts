@@ -1010,7 +1010,7 @@ export class UploadService {
           CostPerUnit: 35000,
           CostPrice: 35000,
           Qty: 500,
-          Supplier: 'Công ty Dệt May Việt Thắng'
+          Supplier: 'Nhà cung cấp Mẫu 01'
         },
         {
           Code: 'GON_TAM_2P',
@@ -1023,7 +1023,7 @@ export class UploadService {
           CostPerUnit: 25000,
           CostPrice: 25000,
           Qty: 200,
-          Supplier: 'NCC Gòn Hoàng Gia'
+          Supplier: 'Nhà cung cấp Mẫu 02'
         }
       ];
     } else if (type === 'products') {
@@ -1114,7 +1114,7 @@ export class UploadService {
           Address: '123 Đường Mẫu, Phường 1',
           Province: 'TP. Hồ Chí Minh',
           District: 'Quận 1',
-          TaxCode: '0100000001',
+          TaxCode: '0000000001',
           LegalName: 'Công Ty TNHH Khách Hàng Demo 01',
           LegalAddress: '123 Đường Mẫu, Phường 1, Quận 1, TP. Hồ Chí Minh',
           LegalRepresentative: 'Đại Diện Khách Hàng 01',
@@ -1154,7 +1154,7 @@ export class UploadService {
           Phone: '0280000001',
           Email: 'ncc01@demo.local',
           Address: 'Khu công nghiệp Mẫu, TP. Hồ Chí Minh',
-          TaxCode: '0100000002',
+          TaxCode: '0000000002',
           LegalName: 'Công Ty Cổ Phần Cung Ứng Vật Tư Mẫu',
           VatAddress: 'Khu công nghiệp Mẫu, TP. Hồ Chí Minh',
           Debt: 0,
@@ -1167,7 +1167,7 @@ export class UploadService {
           Phone: '0900000003',
           Email: 'giacong02@demo.local',
           Address: 'Quận Bình Tân, TP. Hồ Chí Minh',
-          TaxCode: '0100000003',
+          TaxCode: '0000000003',
           LegalName: 'Hộ Kinh Doanh Xưởng Gia Công Mẫu',
           VatAddress: 'Quận Bình Tân, TP. Hồ Chí Minh',
           Debt: 0,
@@ -1185,29 +1185,29 @@ export class UploadService {
           Quantity: 30,
           UnitPrice: 250000,
           VariantColor: 'Xanh tiêu chuẩn',
-          ReceiverName: 'Người Nhận Demo',
+          ReceiverName: 'Người Nhận Demo 01',
           ReceiverPhone: '0900000001',
-          ShippingAddress: '123 Đường Mẫu, P.1, Q.1, TP.HCM',
+          ShippingAddress: 'Số 1 Đường Mẫu, Quận Mẫu, TP. Mẫu',
           DiscountRate: 5,
           VatRate: 8,
-          ItemNote: 'Thêu logo trường ở góc trên bên phải',
-          OrderNote: 'Giao trong giờ hành chính trước ngày khai giảng'
+          ItemNote: 'In logo thương hiệu ở góc sản phẩm',
+          OrderNote: 'Giao trong giờ hành chính'
         },
         {
           CustomerCode: 'KH001',
           OrderDate: '2026-08-25',
           DeliveryDate: '2026-09-01',
-          ProductSKU: 'GOI_NAM_MN',
+          ProductSKU: 'SP_MAU_B_02',
           Quantity: 30,
-          UnitPrice: 45000,
-          VariantColor: 'Xanh dương',
-          ReceiverName: 'Cô Mai (Hiệu Trưởng)',
-          ReceiverPhone: '0909123456',
-          ShippingAddress: '123 Nguyễn Văn Cừ, P.4, Q.5, TP.HCM',
+          UnitPrice: 100000,
+          VariantColor: 'Trắng tiêu chuẩn',
+          ReceiverName: 'Người Nhận Demo 02',
+          ReceiverPhone: '0900000002',
+          ShippingAddress: 'Số 2 Đường Mẫu, Quận Mẫu, TP. Mẫu',
           DiscountRate: 5,
           VatRate: 8,
-          ItemNote: 'Kèm bao gối',
-          OrderNote: 'Giao trong giờ hành chính trước ngày khai giảng'
+          ItemNote: 'Đóng gói theo quy cách tiêu chuẩn',
+          OrderNote: 'Giao trong giờ hành chính'
         }
       ];
     } else {
