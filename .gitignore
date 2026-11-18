@@ -1,0 +1,43 @@
+# Compiled output
+/dist
+/build
+/frontend/dist
+
+# Node dependencies
+/node_modules
+/frontend/node_modules
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment & secrets
+.env
+.env.local
+.env.production
+.env.development
+!.env.example
+**/firebase-service-account.json
+**/firebase-credentials.json
+**/service-account.json
+
+# Database data
+postgres_data
+demo_pg_data
+
+# Uploads
+/uploads
+/public/uploads
+
+# IDEs & OS
+.vscode
+.idea
+.vs
+.DS_Store
+Thumbs.db
+
+# Agent files & Backups
+.agents
+.agent
+.codebase-viz
+backups/

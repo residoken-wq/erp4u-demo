@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: erp4u_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: erp4u_user
+      POSTGRES_PASSWORD: erp4u_password
+      POSTGRES_DB: erp4u_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - erp4u_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erp4u_user -d erp4u_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - erp4u_net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: erp4u_backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USERNAME=erp4u_user
+      - DB_PASSWORD=erp4u_password
+      - DB_DATABASE=erp4u_db
+      - JWT_SECRET=${JWT_SECRET:-change-this-in-production}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:8080,http://localhost:5173}
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - erp4u_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: erp4u_frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - erp4u_net
+
+volumes:
+  erp4u_pg_data:
+
+networks:
+  erp4u_net:
+    driver: bridge

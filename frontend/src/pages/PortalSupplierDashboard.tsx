@@ -1,0 +1,529 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { Spin, Result, Button, message, Modal, Typography, Table, Tag, Input, Tabs, Card, Row, Col, Progress, Space, Divider, Form, InputNumber, Dropdown } from 'antd';
+import { LockOutlined, ShopOutlined, FileTextOutlined, UnorderedListOutlined, CheckCircleOutlined, SyncOutlined, SafetyCertificateOutlined, EyeOutlined, SendOutlined, PrinterOutlined } from '@ant-design/icons';
+import { API_URL } from '../config';
+import dayjs from 'dayjs';
+import useMobile from '../hooks/useMobile';
+import { getGoogleDriveImageUrl } from '../utils/googleDrive';
+
+const { Title, Text } = Typography;
+
+const PortalSupplierDashboard: React.FC = () => {
+    const { uuid } = useParams();
+    const navigate = useNavigate();
+    const [data, setData] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [isPasswordCorrect, setIsPasswordCorrect] = useState(false);
+    const [passwordInput, setPasswordInput] = useState('');
+    const isMobile = useMobile();
+
+    // New states for Modals & Actions
+    const [actionLoading, setActionLoading] = useState(false);
+    const [nplModalOpen, setNplModalOpen] = useState(false);
+    const [nplData, setNplData] = useState([]);
+    const [nplLoading, setNplLoading] = useState(false);
+
+    const [qcModalOpen, setQcModalOpen] = useState(false);
+    const [qcForm] = Form.useForm();
+    const [selectedItemForQc, setSelectedItemForQc] = useState<any>(null);
+
+    // --- NPL / PXK State ---
+    const [pxkModalOpen, setPxkModalOpen] = useState(false);
+    const [selectedPxks, setSelectedPxks] = useState<any[]>([]);
+
+    const fetchPortalData = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/purchasing/supplier-portal/${uuid}`);
+            setData(res.data);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchPortalData();
+    }, [uuid]);
+
+    if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" tip="Đang tải dữ liệu..." /></div>;
+    if (!data) return <Result status="404" title="404" subTitle="Không tìm thấy dữ liệu hoặc đường dẫn không hợp lệ." />;
+
+    if (!isPasswordCorrect) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f4f7f6' }}>
+                <Modal
+                    title={<span style={{ fontWeight: 700 }}><LockOutlined /> Mật Khẩu Truy Cập NCC</span>}
+                    open={true}
+                    closable={false}
+                    maskClosable={false}
+                    footer={[
+                        <Button key="submit" type="primary" onClick={() => {
+                            if (['erp4u', 'ERP4U', 'ERP4U'].includes(passwordInput.trim())) {
+                                setIsPasswordCorrect(true);
+                            } else {
+                                message.error('Mật khẩu không chính xác!');
+                            }
+                        }}>
+                            Xác nhận truy cập
+                        </Button>
+                    ]}
+                >
+                    <div style={{ marginBottom: 16 }}>
+                        Để bảo mật thông tin, vui lòng nhập mật khẩu để xem Dashboard Nhà Cung Cấp.
+                    </div>
+                    <Input.Password
+                        placeholder="Nhập mật khẩu (erp4u)..."
+                        value={passwordInput}
+                        onChange={(e) => setPasswordInput(e.target.value)}
+                        onPressEnter={() => {
+                            if (['erp4u', 'ERP4U', 'ERP4U'].includes(passwordInput.trim())) {
+                                setIsPasswordCorrect(true);
+                            } else {
+                                message.error('Mật khẩu không chính xác!');
+                            }
+                        }}
+                        autoFocus
+                    />
+                </Modal>
+            </div>
+        );
+    }
+
+    const { supplier, pos, qcLogs } = data;
+
+    // --- Actions ---
+    const handleConfirmPO = (poUuid: string) => {
+        Modal.confirm({
+            title: 'Xác nhận đơn hàng?',
+            content: 'Bạn xác nhận sẽ cung cấp / gia công đơn hàng này.',
+            okText: 'Xác nhận',
+            cancelText: 'Hủy',
+            onOk: async () => {
+                try {
+                    await axios.post(`${API_URL}/purchasing/portal/${poUuid}/action`, { action: 'CONFIRM' });
+                    message.success('Xác nhận thành công!');
+                    fetchPortalData();
+                } catch (e: any) {
+                    message.error(e?.response?.data?.message || 'Có lỗi xảy ra');
+                }
+            }
+        });
+    };
+
+    const handleViewNPL = async (poId: number) => {
+        setNplModalOpen(true);
+        setNplLoading(true);
+        try {
+            const res = await axios.get(`${API_URL}/purchasing/supplier-portal/${uuid}/outsourcing-materials/${poId}`);
+            setNplData(res.data || []);
+        } catch (e: any) {
+            message.error('Không thể tải danh sách NPL');
+            setNplData([]);
+        }
+        setNplLoading(false);
+    };
+
+    const openQcModal = (item: any) => {
+        setSelectedItemForQc(item);
+        qcForm.resetFields();
+        setQcModalOpen(true);
+    };
+
+    const handleQcSubmit = async (values: any) => {
+        try {
+            setActionLoading(true);
+            await axios.post(`${API_URL}/purchasing/portal/${selectedItemForQc.po_uuid}/action`, {
+                action: 'SUBMIT_QC',
+                item_id: selectedItemForQc.id,
+                ...values
+            });
+            message.success('Đã gửi yêu cầu QC thành công!');
+            setQcModalOpen(false);
+            fetchPortalData();
+        } catch (e: any) {
+            message.error(e?.response?.data?.message || 'Có lỗi xảy ra');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    // TABS 1: POs
+    const poColumns = [
+        { title: 'Mã Đơn', dataIndex: 'po_code', key: 'po_code', render: (text: string, record: any) => <a onClick={() => window.open(`/portal/po/${record.uuid}`, '_blank')}>{text}</a> },
+        { title: 'Ngày tạo', dataIndex: 'created_at', key: 'created_at', render: (val: any) => dayjs(val).format('DD/MM/YYYY HH:mm') },
+        { 
+            title: 'Trạng thái', dataIndex: 'status', key: 'status', 
+            render: (status: string) => {
+                let color = 'default';
+                if (status === 'CONFIRMED') color = 'blue';
+                if (status === 'ORDERED') color = 'cyan';
+                if (status === 'DELIVERED') color = 'green';
+                if (status === 'COMPLETED') color = 'success';
+                if (status === 'CANCELLED') color = 'red';
+                return <Tag color={color}>{status}</Tag>;
+            }
+        },
+        { 
+            title: 'Ngày giao hàng', dataIndex: 'expected_delivery_date', key: 'expected_delivery_date', 
+            render: (val: any) => val ? <b style={{color: '#1890ff'}}>{dayjs(val).format('DD/MM/YYYY')}</b> : '-',
+            filters: Array.from(new Set(pos.map((p: any) => p.expected_delivery_date ? dayjs(p.expected_delivery_date).format('DD/MM/YYYY') : null).filter(Boolean))).map((d: any) => ({ text: d, value: d })),
+            onFilter: (value: any, record: any) => record.expected_delivery_date ? dayjs(record.expected_delivery_date).format('DD/MM/YYYY') === value : false
+        },
+        { title: 'Tổng tiền', dataIndex: 'total_amount', key: 'total_amount', render: (val: any) => `${Number(val).toLocaleString()} đ` },
+        {
+            title: 'Thao tác', key: 'actions', render: (_: any, record: any) => (
+                <Space>
+                    {['DRAFT', 'SENT'].includes(record.status) && (
+                        <Button size="small" type="primary" onClick={() => handleConfirmPO(record.uuid)}>Xác nhận</Button>
+                    )}
+                    {record.type === 'OUTSOURCING' && (
+                        <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewNPL(record.id)} title="Xem NPL giao kèm">NPL</Button>
+                    )}
+                    <Dropdown
+                        menu={{
+                            items: [
+                                { key: '1', label: 'Xem chi tiết PO', onClick: () => window.open(`/portal/po/${record.uuid}`, '_blank') },
+                            ]
+                        }}
+                    >
+                        <Button size="small" icon={<PrinterOutlined />} onClick={() => window.open(`/portal/po/${record.uuid}`, '_blank')}>In / Xem</Button>
+                    </Dropdown>
+                </Space>
+            )
+        }
+    ];
+
+    const expandedRowRender = (record: any) => {
+        const columns = [
+            { title: 'Hình ảnh', width: 60, render: (_: any, r: any) => { const img = r.product?.image_url || r.material?.image_url; const finalImg = getGoogleDriveImageUrl(img, 'w100'); return finalImg ? <img src={finalImg} alt="img" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} /> : '-'; } },
+            { title: 'Sản phẩm/NPL', render: (_: any, r: any) => record.type === 'OUTSOURCING' ? r.product?.sku || r.material?.sku || '-' : r.product?.name || r.material?.name || r.description || '-' },
+            { title: 'Công đoạn', render: (_: any, r: any) => r.description ? r.description.replace(/^Gia công:\s*/i, '') : '-' },
+            { title: 'ĐVT', render: (_: any, r: any) => r.material?.unit || r.product?.unit || 'Cái' },
+            { title: 'Số lượng', dataIndex: 'quantity', render: (val: any) => Number(val).toLocaleString() }
+        ];
+        return <Table columns={columns} dataSource={record.items || []} pagination={false} size="small" rowKey="id" />;
+    };
+
+    // TABS 2: Items
+    const allItems = pos.filter((po: any) => po.type !== 'POOLED').flatMap((po: any) => (po.items || []).map((item: any) => ({ ...item, po_code: po.po_code, po_status: po.status, po_uuid: po.uuid, po_type: po.type, expected_delivery_date: po.expected_delivery_date })));
+    
+    // Tạo danh sách filter cho công đoạn
+    const uniqueSteps = Array.from(new Set(allItems.map((i: any) => i.description ? i.description.replace(/^Gia công:\s*/i, '').replace(/\s*\[.*?\]$/, '').trim() : '-').filter((v:any) => v !== '-')));
+
+    const itemColumns = [
+        { title: 'Mã Đơn (PO)', dataIndex: 'po_code', key: 'po_code', render: (text: string, record: any) => <a onClick={() => window.open(`/portal/po/${record.po_uuid}`, '_blank')}>{text}</a> },
+        { 
+            title: 'Ngày giao hàng', dataIndex: 'expected_delivery_date', key: 'expected_delivery_date', 
+            render: (val: any) => val ? <b style={{color: '#1890ff'}}>{dayjs(val).format('DD/MM/YYYY')}</b> : '-',
+            filters: Array.from(new Set(allItems.map((p: any) => p.expected_delivery_date ? dayjs(p.expected_delivery_date).format('DD/MM/YYYY') : null).filter(Boolean))).map((d: any) => ({ text: d, value: d })),
+            onFilter: (value: any, record: any) => record.expected_delivery_date ? dayjs(record.expected_delivery_date).format('DD/MM/YYYY') === value : false
+        },
+        { title: 'Hình ảnh', width: 60, render: (_: any, r: any) => { const img = r.product?.image_url || r.material?.image_url; const finalImg = getGoogleDriveImageUrl(img, 'w100'); return finalImg ? <img src={finalImg} alt="img" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} /> : '-'; } },
+        { 
+            title: 'Sản phẩm/NPL', key: 'product_name', render: (_: any, record: any) => {
+                const catName = record.product?.category_link?.outsourcing_category_name;
+                const sku = record.po_type === 'OUTSOURCING' ? record.product?.sku || record.material?.sku || '-' : record.product?.name || record.material?.name || record.description || 'Không rõ';
+                return (
+                    <div>
+                        {catName && <div style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>{catName}</div>}
+                        <div>{sku}</div>
+                    </div>
+                );
+            } 
+        },
+        { 
+            title: 'Kích thước', key: 'size', 
+            render: (_: any, record: any) => {
+                const size = record.product?.attributes?.size || record.product?.variant_attributes?.size;
+                return size ? <b>{size}</b> : '-';
+            }
+        },
+        { title: 'Mô tả sản xuất', width: 250, render: (_: any, record: any) => <div style={{ whiteSpace: 'normal', wordWrap: 'break-word', maxWidth: 250 }}>{record.product?.processing_description || '-'}</div> },
+        { 
+            title: 'Công đoạn', width: 150, 
+            filters: uniqueSteps.map((s: any) => ({ text: s, value: s })),
+            onFilter: (value: any, record: any) => {
+                const step = record.description ? record.description.replace(/^Gia công:\s*/i, '').replace(/\s*\[.*?\]$/, '').trim() : '-';
+                return step === value;
+            },
+            render: (_: any, record: any) => {
+                const step = record.description ? record.description.replace(/^Gia công:\s*/i, '').replace(/\s*\[.*?\]$/, '').trim() : '-';
+                return <div style={{ whiteSpace: 'normal', wordWrap: 'break-word', maxWidth: 150, fontWeight: 500, color: '#d46b08' }}>{step}</div>;
+            } 
+        },
+        { title: 'Số lượng', dataIndex: 'quantity', key: 'quantity', render: (val: any) => Number(val).toLocaleString() },
+        { title: 'Đơn giá', dataIndex: 'unit_price', key: 'unit_price', render: (val: any) => `${Number(val).toLocaleString()} đ` },
+        { title: 'Thành tiền', dataIndex: 'subtotal', key: 'subtotal', render: (val: any) => `${Number(val).toLocaleString()} đ` },
+        {
+            title: 'Hành động', key: 'action', render: (_: any, record: any) => (
+                <Space>
+                    <Button size="small" icon={<SendOutlined />} onClick={() => window.open(`/portal/po/${record.po_uuid}`, '_blank')} title="Báo cáo tiến độ PO">Báo cáo SX</Button>
+                    <Button size="small" type="dashed" icon={<SafetyCertificateOutlined />} onClick={() => openQcModal(record)} disabled={['DRAFT', 'CANCELLED'].includes(record.po_status)}>Kiểm QC</Button>
+                </Space>
+            )
+        }
+    ];
+
+    // TABS 3: Processing Status
+    const processingColumns = [
+        { title: 'Mã Đơn', dataIndex: 'po_code', key: 'po_code' },
+        { 
+            title: 'Tiến độ', key: 'progress', render: (_: any, record: any) => {
+                const info = record.outsourcing_delivery_info || {};
+                const updates = info.progress_updates || [];
+                const latest = updates.length > 0 ? updates[updates.length - 1] : null;
+                const totalCompleted = latest ? latest.completed_qty : 0;
+                // Calculate total PO quantity roughly
+                const totalPOQty = (record.items || []).reduce((sum: number, i: any) => sum + Number(i.quantity), 0);
+                const percent = totalPOQty > 0 ? Math.round((totalCompleted / totalPOQty) * 100) : 0;
+
+                return (
+                    <div style={{ width: 200 }}>
+                        <Progress percent={percent > 100 ? 100 : percent} size="small" />
+                        <div style={{ fontSize: 12, color: '#888' }}>
+                            {totalCompleted} / {totalPOQty} hoàn thành
+                        </div>
+                    </div>
+                );
+            }
+        },
+        { 
+            title: 'Cập nhật gần nhất', key: 'latest_update', render: (_: any, record: any) => {
+                const info = record.outsourcing_delivery_info || {};
+                const updates = info.progress_updates || [];
+                const latest = updates.length > 0 ? updates[updates.length - 1] : null;
+                if (!latest) return <Text type="secondary">Chưa cập nhật</Text>;
+                return (
+                    <div>
+                        <div style={{ fontSize: 12 }}>{dayjs(latest.timestamp).format('DD/MM/YYYY HH:mm')}</div>
+                        <div style={{ fontSize: 13, fontStyle: 'italic' }}>{latest.note}</div>
+                    </div>
+                );
+            }
+        }
+    ];
+
+    // TABS 4: QC Updates
+    const qcColumns = [
+        { title: 'Mã QC', dataIndex: 'code', key: 'code' },
+        { title: 'Ngày kiểm', dataIndex: 'inspection_date', key: 'inspection_date', render: (val: any) => val ? dayjs(val).format('DD/MM/YYYY') : '-' },
+        { 
+            title: 'Trạng thái', dataIndex: 'status', key: 'status',
+            render: (status: string) => {
+                let color = 'default';
+                if (status === 'PASSED') color = 'success';
+                if (status === 'FAILED') color = 'error';
+                if (status === 'CONDITIONAL') color = 'warning';
+                if (status === 'IN_PROGRESS') color = 'processing';
+                return <Tag color={color}>{status}</Tag>;
+            }
+        },
+        { title: 'SL Kiểm / Nhận', key: 'qty', render: (_: any, r: any) => `${r.inspected_quantity} / ${r.total_quantity}` },
+        { title: 'SL Đạt', dataIndex: 'passed_quantity', key: 'passed_quantity', render: (val: any) => <Text type="success" strong>{val}</Text> },
+        { title: 'SL Lỗi', dataIndex: 'defect_quantity', key: 'defect_quantity', render: (val: any) => val > 0 ? <Text type="danger" strong>{val}</Text> : val },
+        { title: 'Ghi chú', dataIndex: 'note', key: 'note' },
+    ];
+
+    return (
+        <div style={{ minHeight: '100vh', background: '#f0f2f5', padding: isMobile ? '10px' : '20px 40px' }}>
+            <Card style={{ marginBottom: 20, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <Row align="middle" justify="space-between">
+                    <Col>
+                        <Title level={isMobile ? 4 : 3} style={{ margin: 0, color: '#0050b3' }}>
+                            <ShopOutlined style={{ marginRight: 10 }} />
+                            {supplier.name} - Supplier Portal
+                        </Title>
+                        <Text type="secondary">Mã NCC: <b>{supplier.code}</b></Text>
+                    </Col>
+                    <Col>
+                        <Button type="primary" icon={<SyncOutlined />} onClick={fetchPortalData}>Làm mới</Button>
+                    </Col>
+                </Row>
+            </Card>
+
+            <Tabs 
+                defaultActiveKey="1" 
+                type="card"
+                items={[
+                    {
+                        key: '1',
+                        label: <span><FileTextOutlined /> Đơn Đặt Hàng</span>,
+                        children: (
+                            <Card style={{ borderRadius: 12 }}>
+                                <Table 
+                                    dataSource={pos} 
+                                    columns={poColumns} 
+                                    rowKey="id" 
+                                    scroll={{ x: 'max-content' }}
+                                    pagination={{ pageSize: 15 }}
+                                    expandable={{ expandedRowRender }}
+                                />
+                            </Card>
+                        )
+                    },
+                    {
+                        key: '2',
+                        label: <span><UnorderedListOutlined /> Danh Sách Items</span>,
+                        children: (
+                            <Card style={{ borderRadius: 12 }}>
+                                <Table 
+                                    dataSource={allItems} 
+                                    columns={itemColumns} 
+                                    rowKey="id" 
+                                    scroll={{ x: 'max-content' }}
+                                    pagination={{ pageSize: 20 }}
+                                />
+                            </Card>
+                        )
+                    },
+                    {
+                        key: '3',
+                        label: <span><SyncOutlined spin /> Trạng Thái Xử Lý</span>,
+                        children: (
+                            <Card style={{ borderRadius: 12 }}>
+                                <Table 
+                                    dataSource={pos.filter((p: any) => p.status !== 'DRAFT' && p.status !== 'CANCELLED')} 
+                                    columns={processingColumns} 
+                                    rowKey="id" 
+                                    scroll={{ x: 'max-content' }}
+                                    pagination={{ pageSize: 15 }}
+                                />
+                            </Card>
+                        )
+                    },
+                    {
+                        key: '4',
+                        label: <span><CheckCircleOutlined /> Lịch Sử QC (Kiểm Chất Lượng)</span>,
+                        children: (
+                            <Card style={{ borderRadius: 12 }}>
+                                <Table 
+                                    dataSource={qcLogs} 
+                                    columns={qcColumns} 
+                                    rowKey="id" 
+                                    scroll={{ x: 'max-content' }}
+                                    pagination={{ pageSize: 15 }}
+                                />
+                            </Card>
+                        )
+                    },
+                    {
+                        key: '5',
+                        label: <span><SafetyCertificateOutlined /> Đơn Hàng Đã Hoàn Thành</span>,
+                        children: (
+                            <Card style={{ borderRadius: 12 }}>
+                                <Table 
+                                    dataSource={pos.filter((p: any) => p.status === 'COMPLETED')} 
+                                    columns={poColumns} 
+                                    rowKey="id" 
+                                    scroll={{ x: 'max-content' }}
+                                    pagination={{ pageSize: 15 }}
+                                    expandable={{ expandedRowRender }}
+                                />
+                            </Card>
+                        )
+                    }
+                ]}
+            />
+
+            {/* Modal Xem NPL */}
+            <Modal
+                title="Danh sách NPL (Vật tư gia công)"
+                open={nplModalOpen}
+                onCancel={() => setNplModalOpen(false)}
+                footer={null}
+                width={800}
+            >
+                <Table
+                    dataSource={nplData}
+                    loading={nplLoading}
+                    rowKey="id"
+                    pagination={false}
+                    size="small"
+                    columns={[
+                        { title: 'NPL', render: (r: any) => r.name || r.code || r.material?.name || r.product?.name || r.description },
+                        { title: 'Mã PXK đã xuất', render: (r: any) => {
+                            if (!r.pxks || r.pxks.length === 0) return '-';
+                            return (
+                                <Space>
+                                    <span style={{ fontSize: 12, color: '#1890ff' }}>{r.pxks.map((p:any) => p.code).join(', ')}</span>
+                                    <Button size="small" type="text" icon={<EyeOutlined />} onClick={() => { setSelectedPxks(r.pxks); setPxkModalOpen(true); }} />
+                                </Space>
+                            );
+                        }},
+                        { title: 'Số lượng cần', dataIndex: 'quantity', render: (v: any) => Number(v).toLocaleString() },
+                        { title: 'Đã giao', dataIndex: 'delivered_quantity', render: (v: any) => <Text type="success"><b>{Number(v || 0).toLocaleString()}</b></Text> },
+                        { title: 'Đủ / Thiếu', render: (r: any) => {
+                            const diff = Number(r.delivered_quantity || 0) - Number(r.quantity || 0);
+                            return <Text type={diff >= 0 ? "success" : "danger"}>{diff > 0 ? '+' : ''}{diff.toLocaleString()}</Text>;
+                        }},
+                        { title: 'Đã sử dụng', dataIndex: 'used_quantity', render: (v: any) => <span style={{ color: '#fa8c16' }}>{Number(v || 0).toLocaleString()}</span> },
+                        { title: 'Còn lại sau SX', render: (r: any) => {
+                            const remain = Number(r.delivered_quantity || 0) - Number(r.used_quantity || 0);
+                            return <b>{remain.toLocaleString()}</b>;
+                        }}
+                    ]}
+                />
+            </Modal>
+
+            {/* Modal Chi tiết PXK */}
+            <Modal
+                title="Chi tiết các Phiếu Xuất Kho (PXK)"
+                open={pxkModalOpen}
+                onCancel={() => setPxkModalOpen(false)}
+                footer={null}
+                width={600}
+            >
+                <Table
+                    dataSource={selectedPxks}
+                    rowKey="code"
+                    pagination={false}
+                    size="small"
+                    columns={[
+                        { title: 'Mã PXK', dataIndex: 'code', render: (v: any) => <b style={{ color: '#1890ff' }}>{v}</b> },
+                        { title: 'Ngày xuất', dataIndex: 'date', render: (v: any) => dayjs(v).format('DD/MM/YYYY') },
+                        { title: 'Số lượng giao', dataIndex: 'qty', align: 'right', render: (v: any) => <b style={{ color: '#52c41a' }}>{Number(v).toLocaleString()}</b> }
+                    ]}
+                />
+            </Modal>
+
+            {/* Modal Nhập QC */}
+            <Modal
+                title="Kiểm tra chất lượng (QC) tự kiểm"
+                open={qcModalOpen}
+                onCancel={() => setQcModalOpen(false)}
+                onOk={() => qcForm.submit()}
+                confirmLoading={actionLoading}
+                okText="Gửi kết quả QC"
+            >
+                <Form form={qcForm} layout="vertical" onFinish={handleQcSubmit}>
+                    <Row gutter={16}>
+                        <Col span={8}>
+                            <Form.Item name="inspected_quantity" label="SL Kiểm tra" rules={[{ required: true }]}>
+                                <InputNumber min={1} style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="passed_quantity" label="SL Đạt" rules={[{ required: true }]}>
+                                <InputNumber min={0} style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={8}>
+                            <Form.Item name="defect_quantity" label="SL Lỗi">
+                                <InputNumber min={0} style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Form.Item name="note" label="Ghi chú / Đánh giá">
+                        <Input.TextArea rows={3} placeholder="Mô tả kết quả kiểm tra..." />
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+        </div>
+    );
+};
+
+export default PortalSupplierDashboard;
