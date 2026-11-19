@@ -39,7 +39,7 @@ web_running_revision() {
 schema_info() {
   local tables
   # shellcheck disable=SC2016
-  tables="$(dc exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "select count(*) from information_schema.tables where table_schema=\x27public\x27"' < /dev/null 2>/dev/null || true)"
+  tables="$(dc exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "select count(*) from pg_tables where schemaname = current_schema()"' < /dev/null 2>/dev/null || true)"
   echo "${tables:-không rõ} bảng (public schema)"
 }
 

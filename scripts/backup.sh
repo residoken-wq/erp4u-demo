@@ -19,6 +19,13 @@ KEEP_DAYS="${KEEP_DAYS:-7}"
 # shellcheck disable=SC2086
 dc() { docker compose -p "$PROJECT" $COMPOSE_FILES "$@"; }
 
+log() { echo "$(date '+%H:%M:%S') $*"; }
+
+if [ -z "$(dc ps -q --status running postgres 2>/dev/null)" ]; then
+  log "chưa có stack đang chạy – bỏ qua backup"
+  exit 0
+fi
+
 case "$BACKUP_ROOT" in
   /* ) [ "$BACKUP_ROOT" != "/" ] || { echo "BACKUP_ROOT must not be /" >&2; exit 1; } ;;
   * ) echo "BACKUP_ROOT must be an absolute path" >&2; exit 1 ;;
@@ -32,7 +39,7 @@ git rev-parse HEAD > "$DEST/commit.txt" 2>/dev/null || true
 docker inspect --format '{{index .RepoDigests 0}}' "${PROJECT}-backend-1" > "$DEST/image-digest.txt" 2>/dev/null || true
 
 trap 'dc start backend < /dev/null >/dev/null 2>&1 || true' EXIT
-dc stop backend < /dev/null
+dc stop backend < /dev/null >/dev/null 2>&1 || true
 # shellcheck disable=SC2016
 dc exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' < /dev/null > "$DEST/database.dump"
 dc run --rm --no-deps -T --entrypoint tar backend -C /app/uploads -czf - . < /dev/null > "$DEST/uploads.tar.gz"
