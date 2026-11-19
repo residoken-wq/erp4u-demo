@@ -24,7 +24,6 @@ import { Interview } from '../hr/entities/interview.entity';
 import { HrModule } from '../hr/hr.module';
 import { EmailService } from '../common/services/email.service';
 import { DesignsModule } from '../designs/designs.module';
-import { SchoolExperienceModule } from '../school-experience/school-experience.module';
 
 @Module({
     imports: [
@@ -38,8 +37,7 @@ import { SchoolExperienceModule } from '../school-experience/school-experience.m
         SalesModule,
         SystemModule, // <--- Import for SystemService
         HrModule, // <--- Import for HrService (if needed)
-        DesignsModule,
-        SchoolExperienceModule
+        DesignsModule
     ],
     controllers: [PublicController, PortalController],
     providers: [EmailService]

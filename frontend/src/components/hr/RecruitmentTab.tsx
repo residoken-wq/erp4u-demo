@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Tabs, Table, Button, Tag, Space, Modal, Form, Input, Select, DatePicker, Switch, message, Tooltip, Typography, Alert, Drawer, Divider, Card, Badge, Spin, Progress } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, SendOutlined, CalendarOutlined, LoadingOutlined } from '@ant-design/icons';
+import { Tabs, Table, Button, Tag, Space, Modal, Form, Input, Select, DatePicker, Switch, message, Tooltip, Typography, Alert, Drawer, Divider, Card, Badge, Spin, Progress, Popconfirm } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, SendOutlined, CalendarOutlined, LoadingOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
 import dayjs from 'dayjs';
 import RichTextEditor from '../common/RichTextEditor';
@@ -201,6 +201,31 @@ const RecruitmentTab: React.FC = () => {
             setCandidateDetail(res.data);
         } catch (e) {
             message.error('Lỗi khi tải chi tiết đánh giá');
+        }
+    };
+
+    const handleApproveInterview = async () => {
+        if (!candidateDetail?.id) return;
+        try {
+            await api.post(`/hr/recruitment/assessments/${candidateDetail.id}/approve-interview`);
+            message.success('Đã xác nhận mời phỏng vấn và gửi email cho ứng viên!');
+            setCandidateDetailVisible(false);
+            loadCandidates();
+            if (activeKey === 'interviews') loadInterviews();
+        } catch (e: any) {
+            message.error(e.response?.data?.message || 'Lỗi khi phê duyệt phỏng vấn');
+        }
+    };
+
+    const handleRejectAssessment = async () => {
+        if (!candidateDetail?.id) return;
+        try {
+            await api.post(`/hr/recruitment/assessments/${candidateDetail.id}/reject`);
+            message.success('Đã xác nhận từ chối và gửi email phản hồi cho ứng viên!');
+            setCandidateDetailVisible(false);
+            loadCandidates();
+        } catch (e: any) {
+            message.error(e.response?.data?.message || 'Lỗi khi từ chối ứng viên');
         }
     };
 
@@ -516,10 +541,53 @@ const RecruitmentTab: React.FC = () => {
                 {candidateDetail ? (
                     <>
                         {candidateDetail.ai_feedback && (
-                            <Card title="🤖 Đánh giá từ AI" size="small" style={{ marginBottom: 16, background: '#f8fafc' }}>
+                            <Card
+                                title={
+                                    <Space wrap>
+                                        <span>🤖 Đánh giá từ AI</span>
+                                        <Tag color="purple">Gợi ý của AI — cần HR xác nhận</Tag>
+                                    </Space>
+                                }
+                                extra={
+                                    <Space wrap>
+                                        <Popconfirm
+                                            title="Xác nhận mời phỏng vấn?"
+                                            description="Tạo lịch phỏng vấn và gửi email mời cho ứng viên."
+                                            onConfirm={handleApproveInterview}
+                                            okText="Xác nhận"
+                                            cancelText="Hủy"
+                                        >
+                                            <Button type="primary" size="small" icon={<CheckCircleOutlined />}>
+                                                Xác nhận & Mời PV
+                                            </Button>
+                                        </Popconfirm>
+                                        <Popconfirm
+                                            title="Xác nhận từ chối ứng viên?"
+                                            description="Cập nhật trạng thái Từ chối và gửi email thông báo cho ứng viên."
+                                            onConfirm={handleRejectAssessment}
+                                            okText="Từ chối"
+                                            cancelText="Hủy"
+                                            okButtonProps={{ danger: true }}
+                                        >
+                                            <Button danger size="small" icon={<CloseCircleOutlined />}>
+                                                Từ chối
+                                            </Button>
+                                        </Popconfirm>
+                                    </Space>
+                                }
+                                size="small"
+                                style={{ marginBottom: 16, background: '#f8fafc' }}
+                            >
+                                <Alert
+                                    message="Gợi ý của AI — cần HR xác nhận"
+                                    description="AI chỉ đóng vai trò phân tích bài làm và gợi ý đánh giá. Quyết định mời phỏng vấn hoặc từ chối ứng viên bắt buộc do nhân sự (HR) xem xét và phê duyệt."
+                                    type="info"
+                                    showIcon
+                                    style={{ marginBottom: 16 }}
+                                />
                                 <div className="grid grid-cols-2 gap-4 mb-4">
                                     <div>
-                                        <strong>Đề xuất: </strong> 
+                                        <strong>Đề xuất AI: </strong> 
                                         <Tag color={candidateDetail.ai_feedback.recommendation === 'HIRE' ? 'green' : (candidateDetail.ai_feedback.recommendation === 'REJECT' ? 'red' : 'orange')}>
                                             {candidateDetail.ai_feedback.recommendation}
                                         </Tag>
