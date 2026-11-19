@@ -6,6 +6,7 @@ import { CheckCircleOutlined, CloseCircleOutlined, SendOutlined, TruckOutlined, 
 import { API_URL } from '../config';
 import dayjs from 'dayjs';
 import { handlePrintPO } from '../utils/printPurchasingTemplate';
+import PackageLockedPage from './PackageLockedPage';
 
 import { Dropdown } from 'antd';
 
@@ -26,6 +27,7 @@ const PortalPurchasePage: React.FC = () => {
     const { uuid } = useParams();
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [lockedPackage, setLockedPackage] = useState<string | null>(null);
     const [isProgressOpen, setIsProgressOpen] = useState(false);
     const [isRejectOpen, setIsRejectOpen] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
@@ -37,7 +39,11 @@ const PortalPurchasePage: React.FC = () => {
         setLoading(true);
         axios.get(`${API_URL}/purchasing/portal/${uuid}`)
             .then(res => setData(res.data))
-            .catch(() => { })
+            .catch((e) => {
+                if (e?.response?.status === 402 && e?.response?.data?.code === 'PACKAGE_REQUIRED') {
+                    setLockedPackage(e.response.data.package || 'INVENTORY');
+                }
+            })
             .finally(() => setLoading(false));
 
         axios.get(`${API_URL}/system/company`)
@@ -114,6 +120,7 @@ const PortalPurchasePage: React.FC = () => {
     };
 
     if (loading) return <Spin size="large" style={{ margin: '100px auto', display: 'block' }} />;
+    if (lockedPackage) return <PackageLockedPage packageKey={lockedPackage} showHomeButton={false} />;
     if (!data) return <Result status="404" title="Không tìm thấy đơn hàng" subTitle="Link đã hết hạn hoặc đơn hàng không tồn tại." />;
 
     const sc = statusConfig[data.status] || statusConfig['DRAFT'];

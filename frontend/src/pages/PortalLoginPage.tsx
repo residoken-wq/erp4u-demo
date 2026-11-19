@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
+import { getPackageLabel } from '../config/packages';
 
 // Standalone Portal Login Page — NOT inside AdminLayout
 // Design follows erp4u-website CSS globals (Be Vietnam Pro, #23A7D3 primary, pill buttons)
@@ -26,7 +27,12 @@ const PortalLoginPage: React.FC = () => {
                 setStep('OTP');
             }
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+            if (err.response?.status === 402 && err.response?.data?.code === 'PACKAGE_REQUIRED') {
+                const pkgName = getPackageLabel(err.response?.data?.package);
+                setError(`Tính năng thuộc gói ${pkgName} chưa được kích hoạt. Liên hệ quản trị viên để nâng cấp.`);
+            } else {
+                setError(err.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+            }
         } finally {
             setLoading(false);
         }
@@ -50,7 +56,12 @@ const PortalLoginPage: React.FC = () => {
                 navigate(`/portal/${res.data.slug}`);
             }
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Mã OTP không hợp lệ hoặc đã hết hạn.');
+            if (err.response?.status === 402 && err.response?.data?.code === 'PACKAGE_REQUIRED') {
+                const pkgName = getPackageLabel(err.response?.data?.package);
+                setError(`Tính năng thuộc gói ${pkgName} chưa được kích hoạt. Liên hệ quản trị viên để nâng cấp.`);
+            } else {
+                setError(err.response?.data?.message || 'Mã OTP không hợp lệ hoặc đã hết hạn.');
+            }
         } finally {
             setLoading(false);
         }

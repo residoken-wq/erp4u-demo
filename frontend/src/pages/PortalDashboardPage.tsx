@@ -6,6 +6,7 @@ import PortalUserGuide from '../components/PortalUserGuide';
 import { getGoogleDriveImageUrl } from '../utils/googleDrive';
 import { Watermark, Modal } from 'antd';
 import PortalB2BCustomizer from '../components/b2b/PortalB2BCustomizer';
+import PackageLockedPage from './PackageLockedPage';
 
 // ============================================================
 // B2B PORTAL DASHBOARD
@@ -129,6 +130,7 @@ const PortalDashboardPage: React.FC = () => {
     const [data, setData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [lockedPackage, setLockedPackage] = useState<string | null>(null);
     const [reorderLoading, setReorderLoading] = useState<number | null>(null);
     const [reorderResult, setReorderResult] = useState<{ success: boolean; message: string } | null>(null);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -214,6 +216,10 @@ const PortalDashboardPage: React.FC = () => {
             if (err.response?.status === 401) {
                 sessionStorage.clear();
                 navigate('/portal/login');
+                return;
+            }
+            if (err.response?.status === 402 && err.response?.data?.code === 'PACKAGE_REQUIRED') {
+                setLockedPackage(err.response.data.package || 'SALES');
                 return;
             }
             setError(err.response?.data?.message || 'Lỗi tải dữ liệu');
@@ -376,6 +382,8 @@ const PortalDashboardPage: React.FC = () => {
             </div>
         </div>
     );
+
+    if (lockedPackage) return <PackageLockedPage packageKey={lockedPackage} showHomeButton={false} />;
 
     if (error || !data) return (
         <div style={{ ...S.wrapper, justifyContent: 'center', alignItems: 'center' }}>

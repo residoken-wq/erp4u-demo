@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import useMobile from '../hooks/useMobile'; // <--- Import Hook
 import { getVietQRBankCode } from '../utils/vietqr';
 import { formatInvoiceDate } from '../utils/dateUtils';
+import PackageLockedPage from './PackageLockedPage';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -67,6 +68,7 @@ const PortalQuotePage: React.FC = () => {
     const { uuid } = useParams();
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [lockedPackage, setLockedPackage] = useState<string | null>(null);
     const [commentText, setCommentText] = useState('');
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [previewVisible, setPreviewVisible] = useState(false);
@@ -111,7 +113,11 @@ const PortalQuotePage: React.FC = () => {
         try {
             const res = await axios.get(`${API_URL}/public/portal/quote/${uuid}`);
             setData(res.data);
-        } catch (e) { }
+        } catch (e: any) {
+            if (e?.response?.status === 402 && e?.response?.data?.code === 'PACKAGE_REQUIRED') {
+                setLockedPackage(e.response.data.package || 'SALES');
+            }
+        }
         finally { setLoading(false); }
     };
 
@@ -676,6 +682,7 @@ const PortalQuotePage: React.FC = () => {
 
 
     if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" tip="Đang tải dữ liệu..." /></div>;
+    if (lockedPackage) return <PackageLockedPage packageKey={lockedPackage} showHomeButton={false} />;
     if (!data) return <Result status="404" title="404" subTitle="Không tìm thấy dữ liệu hoặc đường dẫn không hợp lệ." />;
 
     if (!isPasswordCorrect) {

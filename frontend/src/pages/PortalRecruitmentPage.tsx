@@ -4,6 +4,7 @@ import { Spin, Card, Typography, Steps, Button, Form, Input, Alert, message, Res
 import { CheckCircleOutlined, SolutionOutlined, IdcardOutlined, SendOutlined } from '@ant-design/icons';
 import api from '../utils/api';
 import dayjs from 'dayjs';
+import PackageLockedPage from './PackageLockedPage';
 
 const { Title, Text, Paragraph } = Typography;
 const { Step } = Steps;
@@ -12,6 +13,7 @@ const PortalRecruitmentPage: React.FC = () => {
     const { token } = useParams<{ token: string }>();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<any>(null);
+    const [lockedPackage, setLockedPackage] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [form] = Form.useForm();
 
@@ -25,7 +27,11 @@ const PortalRecruitmentPage: React.FC = () => {
             const res = await api.get(`/public/recruitment/portal/${token}`);
             setData(res.data);
         } catch (e: any) {
-            setData({ error: true, message: e.response?.data?.message || 'Link không hợp lệ hoặc đã hết hạn.' });
+            if (e?.response?.status === 402 && e?.response?.data?.code === 'PACKAGE_REQUIRED') {
+                setLockedPackage(e.response.data.package || 'HR');
+            } else {
+                setData({ error: true, message: e.response?.data?.message || 'Link không hợp lệ hoặc đã hết hạn.' });
+            }
         }
         setLoading(false);
     };
@@ -52,6 +58,7 @@ const PortalRecruitmentPage: React.FC = () => {
     };
 
     if (loading) return <div style={{ textAlign: 'center', padding: 50 }}><Spin size="large" /></div>;
+    if (lockedPackage) return <PackageLockedPage packageKey={lockedPackage} showHomeButton={false} />;
 
     if (!data || data.error) {
         return (

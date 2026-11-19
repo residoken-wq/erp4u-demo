@@ -25,6 +25,8 @@
 | 🔒 **PII Database Encryption** | Column-level **AES-256-GCM** encryption for sensitive customer, contact, and employee records |
 | 🛡️ **Role-Based Access Control** | Granular CRUD permission matrix across all 10 core business modules |
 
+> 📦 **Modular Packages & Entitlements**: Xem danh sách gói tính năng, phụ thuộc module và cách cấu hình `ENTITLEMENTS_MODE` tại [docs/PACKAGES.md](docs/PACKAGES.md).
+
 ---
 
 ## 🚀 Quick Start (One Command Demo)

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,6 +14,7 @@ import { UsersService } from '../users/users.service';
 import { AiLearningService } from './ai-learning.service';
 import { AiKnowledgeService } from './ai-knowledge.service';
 import { DemoModeService } from '../common/services/demo-mode.service';
+import { UsageService } from '../common/packages/usage.service';
 
 @Injectable()
 export class AiService {
@@ -31,6 +32,7 @@ export class AiService {
         private aiLearningService: AiLearningService,
         private aiKnowledgeService: AiKnowledgeService,
         private readonly demoModeService: DemoModeService,
+        @Optional() private readonly usageService?: UsageService,
     ) {
     }
 
@@ -144,6 +146,7 @@ export class AiService {
             }
 
             const data = await response.json();
+            await this.usageService?.increment('ai_calls');
             // Parse prediction
             return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
         } catch (error) {
@@ -1597,6 +1600,8 @@ CRITICAL RULES & OPERATIONAL PRINCIPLES:
                 onChunk(`Lỗi AI API: ${data.error.message}`);
                 return;
             }
+
+            await this.usageService?.increment('ai_calls');
 
             const candidate = data.candidates?.[0];
             if (!candidate) {

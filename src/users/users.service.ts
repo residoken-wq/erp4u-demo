@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Inject, forwardRef, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -6,6 +6,7 @@ import { UserGroup } from './entities/user-group.entity';
 import { GroupPermission } from './entities/group-permission.entity';
 import { PermissionCacheService } from '../auth/permission-cache.service';
 import { DemoModeService } from '../common/services/demo-mode.service';
+import { UsageService } from '../common/packages/usage.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class UsersService {
     @Inject(forwardRef(() => PermissionCacheService))
     private permCacheService: PermissionCacheService,
     private readonly demoModeService: DemoModeService,
+    @Optional() private readonly usageService?: UsageService,
   ) {
   }
 
@@ -32,7 +34,9 @@ export class UsersService {
     // Hash password
     const hashedPassword = await bcrypt.hash(data.password, 10);
     const user = this.userRepo.create({ ...data, password: hashedPassword });
-    return this.userRepo.save(user);
+    const saved = await this.userRepo.save(user);
+    await this.usageService?.increment('users_created');
+    return saved;
   }
 
   async updateUser(id: number, data: any) {
