@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import axios from 'axios';
@@ -7,6 +7,8 @@ import { SystemConfig } from '../../system/system-config.entity';
 import { SalesDelivery } from '../../sales/sales-delivery.entity';
 import { SalesOrder } from '../../sales/sales-order.entity';
 import { DemoModeService } from '../../common/services/demo-mode.service';
+import { TenantConfigService } from '../../common/tenancy/tenant-config.service';
+import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../../common/tenancy/tenant-context';
 
 export interface LalamoveConfig {
     apiUrl: string;
@@ -259,6 +261,7 @@ export class LalamoveService {
         @InjectRepository(SalesOrder)
         private readonly orderRepo: Repository<SalesOrder>,
         private readonly demoModeService: DemoModeService,
+        @Optional() private readonly tenantConfigService?: TenantConfigService,
     ) {
     }
 
@@ -266,14 +269,20 @@ export class LalamoveService {
      * Lấy cấu hình Lalamove (ưu tiên bảng system_configs, fallback sang .env)
      */
     async getConfig(): Promise<LalamoveConfig> {
+        if (this.tenantConfigService) {
+            return this.getConfigFromTenantService();
+        }
         const configs = await this.configRepo.find();
         const configMap = new Map(configs.map(c => [c.key, c.value]));
 
-        const apiKey = (configMap.get('LALAMOVE_API_KEY') || process.env.LALAMOVE_API_KEY || '').trim();
-        const apiSecret = (configMap.get('LALAMOVE_API_SECRET') || process.env.LALAMOVE_API_SECRET || '').trim();
+        const isDefaultTenant =
+            TenantContext.current().tenantId === DEFAULT_TENANT_CONTEXT.tenantId;
+        const readLegacyEnv = (k: string) => (isDefaultTenant ? process.env[k] : undefined);
+        const apiKey = (configMap.get('LALAMOVE_API_KEY') || readLegacyEnv('LALAMOVE_API_KEY') || '').trim();
+        const apiSecret = (configMap.get('LALAMOVE_API_SECRET') || readLegacyEnv('LALAMOVE_API_SECRET') || '').trim();
 
-        const envSandbox = (process.env.LALAMOVE_SANDBOX || '').toLowerCase() === 'true' || 
-                           (process.env.LALAMOVE_ENVIRONMENT || '').toUpperCase() === 'SANDBOX';
+        const envSandbox = (readLegacyEnv('LALAMOVE_SANDBOX') || '').toLowerCase() === 'true' || 
+                           (readLegacyEnv('LALAMOVE_ENVIRONMENT') || '').toUpperCase() === 'SANDBOX';
         
         // Tự động suy đoán môi trường dựa trên tiền tố API Key nếu chưa từng được lưu trong DB
         const defaultSandbox = apiKey.startsWith('pk_prod_') ? false : (envSandbox || true);
@@ -285,18 +294,78 @@ export class LalamoveService {
             ? 'https://rest.sandbox.lalamove.com' 
             : 'https://rest.lalamove.com';
 
-        const rawApiUrl = configMap.get('LALAMOVE_API_URL') || process.env.LALAMOVE_API_URL || defaultUrl;
+        const rawApiUrl = configMap.get('LALAMOVE_API_URL') || readLegacyEnv('LALAMOVE_API_URL') || defaultUrl;
         const apiUrl = rawApiUrl.replace(/\/v3\/?$/, '').replace(/\/+$/, '');
-        const market = configMap.get('LALAMOVE_MARKET') || process.env.LALAMOVE_MARKET || 'VN';
+        const market = configMap.get('LALAMOVE_MARKET') || readLegacyEnv('LALAMOVE_MARKET') || 'VN';
 
         // Thông tin điểm lấy hàng mặc định (Kho ERP4U)
         const defaultPickAddress = configMap.get('LALAMOVE_DEFAULT_PICK_ADDRESS') || 
-                                   process.env.LALAMOVE_DEFAULT_PICK_ADDRESS || 
+                                   readLegacyEnv('LALAMOVE_DEFAULT_PICK_ADDRESS') || 
                                    'Kho ERP4U, Tân Thới Nhất, Quận 12, TP. Hồ Chí Minh';
-        const defaultPickLat = Number(configMap.get('LALAMOVE_DEFAULT_PICK_LAT') || process.env.LALAMOVE_DEFAULT_PICK_LAT || 10.8230989);
-        const defaultPickLng = Number(configMap.get('LALAMOVE_DEFAULT_PICK_LNG') || process.env.LALAMOVE_DEFAULT_PICK_LNG || 106.6296638);
-        const defaultSenderName = configMap.get('LALAMOVE_DEFAULT_SENDER_NAME') || process.env.LALAMOVE_DEFAULT_SENDER_NAME || 'Kho ERP4U';
-        const defaultSenderPhone = configMap.get('LALAMOVE_DEFAULT_SENDER_PHONE') || process.env.LALAMOVE_DEFAULT_SENDER_PHONE || '+84901234567';
+        const defaultPickLat = Number(configMap.get('LALAMOVE_DEFAULT_PICK_LAT') || readLegacyEnv('LALAMOVE_DEFAULT_PICK_LAT') || 10.8230989);
+        const defaultPickLng = Number(configMap.get('LALAMOVE_DEFAULT_PICK_LNG') || readLegacyEnv('LALAMOVE_DEFAULT_PICK_LNG') || 106.6296638);
+        const defaultSenderName = configMap.get('LALAMOVE_DEFAULT_SENDER_NAME') || readLegacyEnv('LALAMOVE_DEFAULT_SENDER_NAME') || 'Kho ERP4U';
+        const defaultSenderPhone = configMap.get('LALAMOVE_DEFAULT_SENDER_PHONE') || readLegacyEnv('LALAMOVE_DEFAULT_SENDER_PHONE') || '+84901234567';
+
+        return {
+            apiUrl,
+            apiKey,
+            apiSecret,
+            market,
+            isSandbox,
+            defaultPickAddress,
+            defaultPickLat,
+            defaultPickLng,
+            defaultSenderName,
+            defaultSenderPhone,
+        };
+    }
+
+    private async getConfigFromTenantService(): Promise<LalamoveConfig> {
+        const cfg = await this.tenantConfigService!.getMany([
+            'LALAMOVE_API_KEY',
+            'LALAMOVE_API_SECRET',
+            'LALAMOVE_SANDBOX',
+            'LALAMOVE_ENVIRONMENT',
+            'LALAMOVE_API_URL',
+            'LALAMOVE_MARKET',
+            'LALAMOVE_DEFAULT_PICK_ADDRESS',
+            'LALAMOVE_DEFAULT_PICK_LAT',
+            'LALAMOVE_DEFAULT_PICK_LNG',
+            'LALAMOVE_DEFAULT_SENDER_NAME',
+            'LALAMOVE_DEFAULT_SENDER_PHONE',
+        ]);
+        const apiKey = (cfg['LALAMOVE_API_KEY'] || '').trim();
+        const apiSecret = (cfg['LALAMOVE_API_SECRET'] || '').trim();
+        const envSandbox =
+            (cfg['LALAMOVE_SANDBOX'] || '').toLowerCase() === 'true' ||
+            (cfg['LALAMOVE_ENVIRONMENT'] || '').toUpperCase() === 'SANDBOX';
+        const defaultSandbox = apiKey.startsWith('pk_prod_')
+            ? false
+            : envSandbox || true;
+        const isSandbox =
+            cfg['LALAMOVE_SANDBOX'] !== undefined
+                ? cfg['LALAMOVE_SANDBOX'].toLowerCase() === 'true'
+                : defaultSandbox;
+        const defaultUrl = isSandbox
+            ? 'https://rest.sandbox.lalamove.com'
+            : 'https://rest.lalamove.com';
+        const rawApiUrl = cfg['LALAMOVE_API_URL'] || defaultUrl;
+        const apiUrl = rawApiUrl.replace(/\/v3\/?$/, '').replace(/\/+$/, '');
+        const market = cfg['LALAMOVE_MARKET'] || 'VN';
+        const defaultPickAddress =
+            cfg['LALAMOVE_DEFAULT_PICK_ADDRESS'] ||
+            'Kho ERP4U, Tân Thới Nhất, Quận 12, TP. Hồ Chí Minh';
+        const defaultPickLat = Number(
+            cfg['LALAMOVE_DEFAULT_PICK_LAT'] || 10.8230989,
+        );
+        const defaultPickLng = Number(
+            cfg['LALAMOVE_DEFAULT_PICK_LNG'] || 106.6296638,
+        );
+        const defaultSenderName =
+            cfg['LALAMOVE_DEFAULT_SENDER_NAME'] || 'Kho ERP4U';
+        const defaultSenderPhone =
+            cfg['LALAMOVE_DEFAULT_SENDER_PHONE'] || '+84901234567';
 
         return {
             apiUrl,
@@ -328,6 +397,10 @@ export class LalamoveService {
         defaultSenderPhone?: string;
     }) {
         const setConfigValue = async (key: string, value: string, description: string) => {
+            if (this.tenantConfigService) {
+                await this.tenantConfigService.set(key, value, { description });
+                return;
+            }
             let item = await this.configRepo.findOne({ where: { key } });
             if (!item) {
                 item = this.configRepo.create({ key, value, description });

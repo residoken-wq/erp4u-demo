@@ -1,4 +1,7 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
+import type { Readable } from 'stream';
 import * as XLSX from 'xlsx';
 import { MaterialsService } from '../materials/materials.service';
 import { ProductsService } from '../products/products.service';
@@ -12,6 +15,16 @@ import { ProductComponent } from '../products/product-component.entity';
 import { Customer, CustomerType } from '../customers/customer.entity';
 import { Supplier, SupplierType } from '../suppliers/supplier.entity';
 import { SystemConfig } from '../system/system-config.entity';
+import { FILE_STORAGE, FileStorage } from '../common/storage/file-storage.interface';
+import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../common/tenancy/tenant-context';
+
+async function streamToBuffer(stream: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
 
 @Injectable()
 export class UploadService {
@@ -25,6 +38,7 @@ export class UploadService {
     @InjectRepository(Customer) private customerRepo: Repository<Customer>,
     @InjectRepository(Supplier) private supplierRepo: Repository<Supplier>,
     @InjectRepository(SystemConfig) private configRepo: Repository<SystemConfig>,
+    @Inject(FILE_STORAGE) private readonly fileStorage: FileStorage,
   ) { }
 
   private removeDiacritics(str: string): string {
@@ -90,6 +104,27 @@ export class UploadService {
     return isNaN(parsed.getTime()) ? new Date() : parsed;
   }
 
+  async listFiles(source?: string) {
+    const items = (await this.fileStorage.list?.()) ?? [];
+    return items
+      .filter((item) => {
+        if (!/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i.test(item.name)) return false;
+        // CMS only sees its own files (which have no prefix) and not ERP files (which have 'erp_' prefix)
+        if (source === 'cms' && item.name.startsWith('erp_')) return false;
+        return true;
+      })
+      .map((item) => ({
+        name: item.name,
+        url: item.url,
+        size: item.size,
+        modified: item.modified,
+      }))
+      .sort(
+        (a, b) =>
+          new Date(b.modified).getTime() - new Date(a.modified).getTime(),
+      );
+  }
+
   // 0. UPLOAD IMAGE
   async uploadImage(file: Express.Multer.File, source?: string) {
     const prefix = source === 'erp' ? 'erp' : 'img';
@@ -102,16 +137,6 @@ export class UploadService {
   }
 
   private async saveFile(file: Express.Multer.File, prefix: string, compressImages = true) {
-    const fs = require('fs');
-    const path = require('path');
-
-    // Use project root 'uploads' directory for reliability
-    const uploadDir = path.join(process.cwd(), 'uploads');
-
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
     // Check if file is an image
     const ext = path.extname(file.originalname).toLowerCase();
     const isImage = ['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext);
@@ -170,22 +195,23 @@ export class UploadService {
     }
 
     let filename = `${safeName}${finalExt}`;
-    let filePath = path.join(uploadDir, filename);
 
-    // If file already exists, append timestamp to avoid overwrite
-    if (fs.existsSync(filePath)) {
+    // If file already exists in current tenant storage, append timestamp to avoid overwrite
+    if (this.fileStorage.exists && (await this.fileStorage.exists(filename))) {
       filename = `${safeName}_${Date.now()}${finalExt}`;
-      filePath = path.join(uploadDir, filename);
     }
 
-    // Save original to _originals/ directory (for watermark regeneration)
+    const meta = {
+      contentType: file.mimetype,
+      originalName: file.originalname,
+    };
+
+    // Save original to _originals/ (for watermark regeneration)
     if (isWatermarkable) {
-      const originalsDir = path.join(uploadDir, '_originals');
-      if (!fs.existsSync(originalsDir)) {
-        fs.mkdirSync(originalsDir, { recursive: true });
-      }
-      fs.writeFileSync(path.join(originalsDir, filename), buffer);
+      await this.fileStorage.put(`_originals/${filename}`, buffer, meta);
     }
+
+    let putResult: { key: string; url: string };
 
     // Apply watermark if enabled and image qualifies
     if (isWatermarkable) {
@@ -196,7 +222,7 @@ export class UploadService {
       } catch (err) {
         console.warn('General watermark failed, using original:', err.message);
       }
-      fs.writeFileSync(filePath, generalBuffer);
+      putResult = await this.fileStorage.put(filename, generalBuffer, meta);
 
       // 2. B2B watermark
       let b2bBuffer = buffer;
@@ -205,57 +231,28 @@ export class UploadService {
       } catch (err) {
         console.warn('B2B watermark failed, using original:', err.message);
       }
-      const b2bDir = path.join(uploadDir, '_b2b');
-      if (!fs.existsSync(b2bDir)) {
-        fs.mkdirSync(b2bDir, { recursive: true });
-      }
-      fs.writeFileSync(path.join(b2bDir, filename), b2bBuffer);
+      await this.fileStorage.put(`_b2b/${filename}`, b2bBuffer, meta);
     } else {
-      fs.writeFileSync(filePath, buffer);
+      putResult = await this.fileStorage.put(filename, buffer, meta);
     }
 
-    // Return backend API URL for serving
-    return { url: `/uploads/${filename}` };
+    return { url: putResult.url, key: putResult.key };
   }
 
   // Helper to serve file
   async serveFile(filename: string, res: any) {
-    const fs = require('fs');
-    const path = require('path');
-
     // Security: Prevent path traversal
     const safeName = path.basename(filename);
 
-    // Check 'uploads' at project root
-    const filePath = path.join(process.cwd(), 'uploads', safeName);
-
-    console.log(`Serving file: ${safeName} from ${filePath}`); // Debug log
-
-    if (fs.existsSync(filePath)) {
-      // Get file stats for Content-Length
-      const stat = fs.statSync(filePath);
-
-      // Explicitly set Content-Type based on extension
+    const stored = await this.fileStorage.get(safeName);
+    if (stored) {
       const ext = path.extname(safeName).toLowerCase();
-      const mimeTypes: Record<string, string> = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.webp': 'image/webp',
-        '.svg': 'image/svg+xml',
-        '.pdf': 'application/pdf',
-        '.doc': 'application/msword',
-        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        '.xls': 'application/vnd.ms-excel',
-        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      };
-
-      const contentType = mimeTypes[ext] || 'application/octet-stream';
       const isImage = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'].includes(ext);
 
-      res.set('Content-Type', contentType);
-      res.set('Content-Length', stat.size);
+      res.set('Content-Type', stored.contentType || 'application/octet-stream');
+      if (stored.size !== undefined) {
+        res.set('Content-Length', stored.size);
+      }
       res.set('Content-Disposition', isImage ? 'inline' : `attachment; filename="${safeName}"`);
       res.set('Cache-Control', 'public, max-age=86400'); // Cache 1 day
       res.set('Access-Control-Allow-Origin', '*'); // CORS - allow all origins
@@ -263,57 +260,52 @@ export class UploadService {
       res.set('Access-Control-Allow-Headers', '*');
       res.set('X-Content-Type-Options', 'nosniff'); // Security header
 
-      // Use stream for better proxy compatibility
-      const stream = fs.createReadStream(filePath);
-      return stream.pipe(res);
+      return stored.stream.pipe(res);
     }
 
-    // Fallback: Check 'frontend/public/uploads' (legacy/dev)
-    const fallbackPath = path.join(process.cwd(), 'frontend', 'public', 'uploads', safeName);
-    if (fs.existsSync(fallbackPath)) {
-      const stat = fs.statSync(fallbackPath);
-      const ext = path.extname(safeName).toLowerCase();
-      const mimeTypes: Record<string, string> = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.webp': 'image/webp',
-      };
-      const contentType = mimeTypes[ext] || 'application/octet-stream';
-      res.set('Content-Type', contentType);
-      res.set('Content-Length', stat.size);
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('X-Content-Type-Options', 'nosniff');
-      const stream = fs.createReadStream(fallbackPath);
-      return stream.pipe(res);
+    // Legacy fallback: Check 'frontend/public/uploads' ONLY for default tenant (single-tenant/dev)
+    if (TenantContext.current().tenantId === DEFAULT_TENANT_CONTEXT.tenantId) {
+      const fallbackPath = path.join(process.cwd(), 'frontend', 'public', 'uploads', safeName);
+      if (fs.existsSync(fallbackPath)) {
+        const stat = fs.statSync(fallbackPath);
+        const ext = path.extname(safeName).toLowerCase();
+        const mimeTypes: Record<string, string> = {
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.png': 'image/png',
+          '.gif': 'image/gif',
+          '.webp': 'image/webp',
+        };
+        const contentType = mimeTypes[ext] || 'application/octet-stream';
+        res.set('Content-Type', contentType);
+        res.set('Content-Length', stat.size);
+        res.set('Access-Control-Allow-Origin', '*');
+        res.set('X-Content-Type-Options', 'nosniff');
+        const stream = fs.createReadStream(fallbackPath);
+        return stream.pipe(res);
+      }
     }
 
-    console.error(`File not found: ${filePath}`);
     return res.status(404).send('File not found');
   }
 
   // Helper to delete file physically
   async deleteFile(filename: string) {
-    const fs = require('fs');
-    const path = require('path');
-
     // Security: Prevent path traversal
     const safeName = path.basename(filename);
 
-    // Check 'uploads' at project root
-    const filePath = path.join(process.cwd(), 'uploads', safeName);
-
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    const deleted = await this.fileStorage.delete(safeName);
+    if (deleted) {
       return { success: true, message: 'File deleted' };
     }
 
-    // Fallback: Check 'frontend/public/uploads' (legacy/dev)
-    const fallbackPath = path.join(process.cwd(), 'frontend', 'public', 'uploads', safeName);
-    if (fs.existsSync(fallbackPath)) {
-      fs.unlinkSync(fallbackPath);
-      return { success: true, message: 'File deleted (legacy path)' };
+    // Legacy fallback ONLY for default tenant
+    if (TenantContext.current().tenantId === DEFAULT_TENANT_CONTEXT.tenantId) {
+      const fallbackPath = path.join(process.cwd(), 'frontend', 'public', 'uploads', safeName);
+      if (fs.existsSync(fallbackPath)) {
+        fs.unlinkSync(fallbackPath);
+        return { success: true, message: 'File deleted (legacy path)' };
+      }
     }
 
     // File not found - still return success (idempotent delete)
@@ -348,15 +340,12 @@ export class UploadService {
     return { success: true };
   }
 
-  async setWatermarkImage(file: Express.Multer.File, configKey: string = 'watermark_config'): Promise<{ url: string }> {
-    const fs = require('fs');
-    const path = require('path');
-    const uploadDir = path.join(process.cwd(), 'uploads');
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
+  async setWatermarkImage(file: Express.Multer.File, configKey: string = 'watermark_config'): Promise<{ url: string; key: string }> {
     const filename = configKey === 'watermark_b2b_config' ? '_watermark_b2b.png' : '_watermark.png';
-    const filePath = path.join(uploadDir, filename);
-    fs.writeFileSync(filePath, file.buffer);
+    const putResult = await this.fileStorage.put(filename, file.buffer, {
+      contentType: file.mimetype || 'image/png',
+      originalName: file.originalname,
+    });
 
     // Update config with filename
     const config = await this.getWatermarkConfig(configKey);
@@ -364,19 +353,18 @@ export class UploadService {
     config.enabled = true;
     await this.saveWatermarkConfig(config, configKey);
 
-    return { url: `/uploads/${filename}` };
+    return { url: putResult.url, key: putResult.key };
   }
 
   private async applyWatermark(imageBuffer: Buffer, configKey: string = 'watermark_config'): Promise<Buffer> {
     const sharp = require('sharp');
-    const fs = require('fs');
-    const path = require('path');
 
     const config = await this.getWatermarkConfig(configKey);
     if (!config.enabled || !config.imageFile) return imageBuffer;
 
-    const watermarkPath = path.join(process.cwd(), 'uploads', config.imageFile);
-    if (!fs.existsSync(watermarkPath)) return imageBuffer;
+    const wmStored = await this.fileStorage.get(config.imageFile);
+    if (!wmStored) return imageBuffer;
+    const watermarkBuffer = await streamToBuffer(wmStored.stream);
 
     // Get image dimensions — skip small images
     const metadata = await sharp(imageBuffer).metadata();
@@ -389,7 +377,7 @@ export class UploadService {
     const opacity = Math.max(0.05, Math.min(1, config.opacity || 0.4));
 
     // Create semi-transparent watermark
-    const watermarkResized = await sharp(watermarkPath)
+    const watermarkResized = await sharp(watermarkBuffer)
       .resize(wmWidth, null, { fit: 'inside', withoutEnlargement: true })
       .toBuffer();
 
@@ -425,24 +413,17 @@ export class UploadService {
   }
 
   async serveOriginalFile(filename: string, res: any) {
-    const fs = require('fs');
-    const path = require('path');
     const safeName = path.basename(filename);
-    const originalPath = path.join(process.cwd(), 'uploads', '_originals', safeName);
+    const stored = await this.fileStorage.get(`_originals/${safeName}`);
 
-    if (fs.existsSync(originalPath)) {
-      const stat = fs.statSync(originalPath);
-      const ext = path.extname(safeName).toLowerCase();
-      const mimeTypes: Record<string, string> = {
-        '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
-        '.gif': 'image/gif', '.webp': 'image/webp',
-      };
-      res.set('Content-Type', mimeTypes[ext] || 'application/octet-stream');
-      res.set('Content-Length', stat.size);
+    if (stored) {
+      res.set('Content-Type', stored.contentType || 'application/octet-stream');
+      if (stored.size !== undefined) {
+        res.set('Content-Length', stored.size);
+      }
       res.set('Cache-Control', 'public, max-age=86400');
       res.set('Access-Control-Allow-Origin', '*');
-      const stream = fs.createReadStream(originalPath);
-      return stream.pipe(res);
+      return stored.stream.pipe(res);
     }
 
     // Fallback to regular file if no original
@@ -450,24 +431,17 @@ export class UploadService {
   }
 
   async serveB2BFile(filename: string, res: any) {
-    const fs = require('fs');
-    const path = require('path');
     const safeName = path.basename(filename);
-    const b2bPath = path.join(process.cwd(), 'uploads', '_b2b', safeName);
+    const stored = await this.fileStorage.get(`_b2b/${safeName}`);
 
-    if (fs.existsSync(b2bPath)) {
-      const stat = fs.statSync(b2bPath);
-      const ext = path.extname(safeName).toLowerCase();
-      const mimeTypes: Record<string, string> = {
-        '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
-        '.gif': 'image/gif', '.webp': 'image/webp',
-      };
-      res.set('Content-Type', mimeTypes[ext] || 'application/octet-stream');
-      res.set('Content-Length', stat.size);
+    if (stored) {
+      res.set('Content-Type', stored.contentType || 'application/octet-stream');
+      if (stored.size !== undefined) {
+        res.set('Content-Length', stored.size);
+      }
       res.set('Cache-Control', 'public, max-age=86400');
       res.set('Access-Control-Allow-Origin', '*');
-      const stream = fs.createReadStream(b2bPath);
-      return stream.pipe(res);
+      return stored.stream.pipe(res);
     }
 
     // Fallback to regular file if no B2B specific version exists
@@ -475,40 +449,47 @@ export class UploadService {
   }
 
   async regenerateAllWatermarks(): Promise<{ processed: number; skipped: number; errors: string[] }> {
-    const fs = require('fs');
-    const path = require('path');
     const sharp = require('sharp');
 
-    const originalsDir = path.join(process.cwd(), 'uploads', '_originals');
-    const uploadsDir = path.join(process.cwd(), 'uploads');
     const errors: string[] = [];
     let processed = 0;
     let skipped = 0;
 
-    // If no originals dir, copy current files to originals first
-    if (!fs.existsSync(originalsDir)) {
-      fs.mkdirSync(originalsDir, { recursive: true });
-      // Copy existing images to originals
-      const files = fs.readdirSync(uploadsDir).filter((f: string) =>
-        /\.(jpg|jpeg|png|webp)$/i.test(f) && !f.startsWith('_')
+    let originals = ((await this.fileStorage.list?.('_originals')) ?? []).filter(
+      (item) => /\.(jpg|jpeg|png|webp)$/i.test(item.name),
+    );
+
+    // If no originals exist yet, copy current images to _originals first
+    if (originals.length === 0) {
+      const files = ((await this.fileStorage.list?.()) ?? []).filter(
+        (item) =>
+          /\.(jpg|jpeg|png|webp)$/i.test(item.name) &&
+          !item.name.startsWith('_'),
       );
       for (const f of files) {
         try {
-          fs.copyFileSync(path.join(uploadsDir, f), path.join(originalsDir, f));
-        } catch (e) {
-          errors.push(`Copy failed: ${f} - ${e.message}`);
+          const existing = await this.fileStorage.get(f.name);
+          if (existing) {
+            const buf = await streamToBuffer(existing.stream);
+            await this.fileStorage.put(`_originals/${f.name}`, buf, {
+              contentType: existing.contentType,
+            });
+          }
+        } catch (e: any) {
+          errors.push(`Copy failed: ${f.name} - ${e.message}`);
         }
       }
+      originals = ((await this.fileStorage.list?.('_originals')) ?? []).filter(
+        (item) => /\.(jpg|jpeg|png|webp)$/i.test(item.name),
+      );
     }
 
-    // Process each original
-    const originals = fs.readdirSync(originalsDir).filter((f: string) =>
-      /\.(jpg|jpeg|png|webp)$/i.test(f)
-    );
-
-    for (const filename of originals) {
+    for (const item of originals) {
+      const filename = item.name;
       try {
-        const originalBuffer = fs.readFileSync(path.join(originalsDir, filename));
+        const origStored = await this.fileStorage.get(`_originals/${filename}`);
+        if (!origStored) continue;
+        const originalBuffer = await streamToBuffer(origStored.stream);
 
         // Check dimensions — skip small images
         const meta = await sharp(originalBuffer).metadata();
@@ -518,14 +499,16 @@ export class UploadService {
         }
 
         const generalWatermarked = await this.applyWatermark(originalBuffer, 'watermark_config');
-        fs.writeFileSync(path.join(uploadsDir, filename), generalWatermarked);
+        await this.fileStorage.put(filename, generalWatermarked, {
+          contentType: origStored.contentType,
+        });
 
         const b2bWatermarked = await this.applyWatermark(originalBuffer, 'watermark_b2b_config');
-        const b2bDir = path.join(uploadsDir, '_b2b');
-        if (!fs.existsSync(b2bDir)) fs.mkdirSync(b2bDir, { recursive: true });
-        fs.writeFileSync(path.join(b2bDir, filename), b2bWatermarked);
+        await this.fileStorage.put(`_b2b/${filename}`, b2bWatermarked, {
+          contentType: origStored.contentType,
+        });
         processed++;
-      } catch (e) {
+      } catch (e: any) {
         errors.push(`${filename}: ${e.message}`);
       }
     }

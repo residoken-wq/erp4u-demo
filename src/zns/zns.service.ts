@@ -14,6 +14,7 @@ import { ENTITLEMENT_PROVIDER, EntitlementProvider } from '../common/packages/en
 import { PackageKey } from '../common/packages/package.registry';
 import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../common/tenancy/tenant-context';
 import { TENANT_REGISTRY, TenantRegistry } from '../common/tenancy/tenant-registry.interface';
+import { TenantConfigService } from '../common/tenancy/tenant-config.service';
 
 @Injectable()
 export class ZaloZnsService {
@@ -36,6 +37,8 @@ export class ZaloZnsService {
     @Optional()
     @Inject(TENANT_REGISTRY)
     private readonly tenantRegistry?: TenantRegistry,
+    @Optional()
+    private readonly tenantConfigService?: TenantConfigService,
   ) {
   }
 
@@ -46,13 +49,42 @@ export class ZaloZnsService {
   async getConfig(): Promise<ZaloApiConfig> {
     let cfg = await this.configRepo.findOne({ where: { id: 1 } });
     if (!cfg) {
+      let appId = '';
+      let secretKey = '';
+      let oaId = '';
+      let accessToken = '';
+      let refreshToken = '';
+
+      if (this.tenantConfigService) {
+        const vals = await this.tenantConfigService.getMany([
+          'ZALO_APP_ID',
+          'ZALO_APP_SECRET',
+          'ZALO_OA_ID',
+          'ZALO_ACCESS_TOKEN',
+          'ZALO_REFRESH_TOKEN',
+        ]);
+        appId = vals['ZALO_APP_ID'] || '';
+        secretKey = vals['ZALO_APP_SECRET'] || '';
+        oaId = vals['ZALO_OA_ID'] || '';
+        accessToken = vals['ZALO_ACCESS_TOKEN'] || '';
+        refreshToken = vals['ZALO_REFRESH_TOKEN'] || '';
+      } else if (
+        TenantContext.current().tenantId === DEFAULT_TENANT_CONTEXT.tenantId
+      ) {
+        appId = process.env.ZALO_APP_ID || '';
+        secretKey = process.env.ZALO_APP_SECRET || '';
+        oaId = process.env.ZALO_OA_ID || '';
+        accessToken = process.env.ZALO_ACCESS_TOKEN || '';
+        refreshToken = process.env.ZALO_REFRESH_TOKEN || '';
+      }
+
       cfg = this.configRepo.create({
         id: 1,
-        app_id: process.env.ZALO_APP_ID || '',
-        secret_key: process.env.ZALO_APP_SECRET || '',
-        oa_id: process.env.ZALO_OA_ID || '',
-        access_token: process.env.ZALO_ACCESS_TOKEN || '',
-        refresh_token: process.env.ZALO_REFRESH_TOKEN || '',
+        app_id: appId,
+        secret_key: secretKey,
+        oa_id: oaId,
+        access_token: accessToken,
+        refresh_token: refreshToken,
         order_confirm_template_id: '632184',
         delivery_notice_template_id: '',
         auto_send_on_order_confirm: false,

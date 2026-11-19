@@ -1,10 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DemoModeService } from '../common/services/demo-mode.service';
+import { TenantConfigService } from '../common/tenancy/tenant-config.service';
+import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../common/tenancy/tenant-context';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const axios = require('axios');
 import * as crypto from 'crypto';
 
+interface ResolvedTikTokConfig {
+    appKey: string;
+    appSecret: string;
+    redirectUri: string;
+    authBaseUrl: string;
+    apiBaseUrl: string;
+}
 
 /**
  * TikTok Shop API Client
@@ -14,37 +23,57 @@ import * as crypto from 'crypto';
 @Injectable()
 export class TikTokApiClient {
     private readonly logger = new Logger(TikTokApiClient.name);
-    private readonly httpClient: any;
-    private readonly appKey: string;
-    private readonly appSecret: string;
-    private readonly redirectUri: string;
-    private readonly authBaseUrl: string;
 
     constructor(
         private configService: ConfigService,
         private readonly demoModeService: DemoModeService,
-    ) {
-        this.appKey = this.configService.get<string>('TIKTOK_APP_KEY', '');
-        this.appSecret = this.configService.get<string>('TIKTOK_APP_SECRET', '');
-        this.redirectUri = this.configService.get<string>(
-            'TIKTOK_REDIRECT_URI',
-            'https://localhost:3000/api/tiktok/auth/callback',
-        );
-        this.authBaseUrl = this.configService.get<string>(
-            'TIKTOK_AUTH_URL',
-            'https://auth.tiktok-shops.com',
-        );
+        @Optional() private readonly tenantConfigService?: TenantConfigService,
+    ) {}
 
-        const baseURL = this.configService.get<string>(
-            'TIKTOK_API_BASE_URL',
-            'https://open-api.tiktokglobalshop.com',
-        );
+    private async getClientConfig(): Promise<ResolvedTikTokConfig> {
+        if (this.tenantConfigService) {
+            const cfg = await this.tenantConfigService.getMany([
+                'TIKTOK_APP_KEY',
+                'TIKTOK_APP_SECRET',
+                'TIKTOK_REDIRECT_URI',
+                'TIKTOK_AUTH_URL',
+                'TIKTOK_API_BASE_URL',
+            ]);
+            return {
+                appKey: cfg['TIKTOK_APP_KEY'] || '',
+                appSecret: cfg['TIKTOK_APP_SECRET'] || '',
+                redirectUri:
+                    cfg['TIKTOK_REDIRECT_URI'] ||
+                    'https://localhost:3000/api/tiktok/auth/callback',
+                authBaseUrl:
+                    cfg['TIKTOK_AUTH_URL'] || 'https://auth.tiktok-shops.com',
+                apiBaseUrl:
+                    cfg['TIKTOK_API_BASE_URL'] ||
+                    'https://open-api.tiktokglobalshop.com',
+            };
+        }
 
-        this.httpClient = axios.create({
-            baseURL,
-            timeout: 30000,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        const isDefault =
+            TenantContext.current().tenantId === DEFAULT_TENANT_CONTEXT.tenantId;
+        const readEnv = (k: string, def: string) =>
+            isDefault ? this.configService.get<string>(k, def) : def;
+
+        return {
+            appKey: readEnv('TIKTOK_APP_KEY', ''),
+            appSecret: readEnv('TIKTOK_APP_SECRET', ''),
+            redirectUri: readEnv(
+                'TIKTOK_REDIRECT_URI',
+                'https://localhost:3000/api/tiktok/auth/callback',
+            ),
+            authBaseUrl: readEnv(
+                'TIKTOK_AUTH_URL',
+                'https://auth.tiktok-shops.com',
+            ),
+            apiBaseUrl: readEnv(
+                'TIKTOK_API_BASE_URL',
+                'https://open-api.tiktokglobalshop.com',
+            ),
+        };
     }
 
     // ===================== AUTH =====================
@@ -53,9 +82,10 @@ export class TikTokApiClient {
      * Generate the TikTok Shop authorization URL
      * User will be redirected here to grant permissions
      */
-    getAuthorizationUrl(state?: string): string {
+    async getAuthorizationUrl(state?: string): Promise<string> {
+        const cfg = await this.getClientConfig();
         const params = new URLSearchParams({
-            app_key: this.appKey,
+            app_key: cfg.appKey,
             state: state || crypto.randomUUID(),
         });
         return `https://services.tiktokshop.com/open/authorize?${params.toString()}`;
@@ -72,11 +102,12 @@ export class TikTokApiClient {
         open_id: string;
         seller_name: string;
     }> {
-        const url = `${this.authBaseUrl}/api/v2/token/get`;
+        const cfg = await this.getClientConfig();
+        const url = `${cfg.authBaseUrl}/api/v2/token/get`;
         const response = await axios.post(url, null, {
             params: {
-                app_key: this.appKey,
-                app_secret: this.appSecret,
+                app_key: cfg.appKey,
+                app_secret: cfg.appSecret,
                 auth_code: code,
                 grant_type: 'authorized_code',
             },
@@ -99,11 +130,12 @@ export class TikTokApiClient {
         access_token_expire_in: number;
         refresh_token_expire_in: number;
     }> {
-        const url = `${this.authBaseUrl}/api/v2/token/refresh`;
+        const cfg = await this.getClientConfig();
+        const url = `${cfg.authBaseUrl}/api/v2/token/refresh`;
         const response = await axios.post(url, null, {
             params: {
-                app_key: this.appKey,
-                app_secret: this.appSecret,
+                app_key: cfg.appKey,
+                app_secret: cfg.appSecret,
                 refresh_token: refreshToken,
                 grant_type: 'refresh_token',
             },
@@ -125,13 +157,18 @@ export class TikTokApiClient {
      * 2. Concatenate: app_secret + path + sorted_params + app_secret
      * 3. HMAC-SHA256 with app_secret
      */
-    private generateSign(path: string, params: Record<string, string>, body?: string): string {
+    private generateSign(
+        appSecret: string,
+        path: string,
+        params: Record<string, string>,
+        body?: string,
+    ): string {
         // Sort params by key, exclude 'sign' and 'access_token'
         const sortedKeys = Object.keys(params)
             .filter(k => k !== 'sign' && k !== 'access_token')
             .sort();
 
-        let baseString = this.appSecret + path;
+        let baseString = appSecret + path;
 
         for (const key of sortedKeys) {
             baseString += key + params[key];
@@ -142,10 +179,10 @@ export class TikTokApiClient {
             baseString += body;
         }
 
-        baseString += this.appSecret;
+        baseString += appSecret;
 
         return crypto
-            .createHmac('sha256', this.appSecret)
+            .createHmac('sha256', appSecret)
             .update(baseString)
             .digest('hex');
     }
@@ -161,9 +198,10 @@ export class TikTokApiClient {
         body?: any,
         shopCipher?: string,
     ): Promise<T> {
+        const cfg = await this.getClientConfig();
         const timestamp = Math.floor(Date.now() / 1000).toString();
         const params: Record<string, string> = {
-            app_key: this.appKey,
+            app_key: cfg.appKey,
             timestamp,
             ...queryParams,
         };
@@ -173,13 +211,16 @@ export class TikTokApiClient {
         }
 
         const bodyStr = body ? JSON.stringify(body) : undefined;
-        params.sign = this.generateSign(path, params, bodyStr);
+        params.sign = this.generateSign(cfg.appSecret, path, params, bodyStr);
 
         const config: any = {
+            baseURL: cfg.apiBaseUrl,
+            timeout: 30000,
             method,
             url: path,
             params,
             headers: {
+                'Content-Type': 'application/json',
                 'x-tts-access-token': accessToken,
             },
         };
@@ -189,7 +230,7 @@ export class TikTokApiClient {
         }
 
         try {
-            const response = await this.httpClient.request(config);
+            const response = await axios.request(config);
 
             if (response.data.code !== 0) {
                 this.logger.error(`TikTok API error [${path}]: ${JSON.stringify(response.data)}`);
@@ -381,9 +422,10 @@ export class TikTokApiClient {
     /**
      * Verify webhook signature from TikTok
      */
-    verifyWebhookSignature(body: string, signature: string): boolean {
+    async verifyWebhookSignature(body: string, signature: string): Promise<boolean> {
+        const cfg = await this.getClientConfig();
         const expectedSign = crypto
-            .createHmac('sha256', this.appSecret)
+            .createHmac('sha256', cfg.appSecret)
             .update(body)
             .digest('hex');
         return expectedSign === signature;

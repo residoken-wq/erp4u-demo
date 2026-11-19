@@ -15,6 +15,8 @@ import { AiLearningService } from './ai-learning.service';
 import { AiKnowledgeService } from './ai-knowledge.service';
 import { DemoModeService } from '../common/services/demo-mode.service';
 import { UsageService } from '../common/packages/usage.service';
+import { TenantConfigService } from '../common/tenancy/tenant-config.service';
+import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../common/tenancy/tenant-context';
 
 @Injectable()
 export class AiService {
@@ -33,20 +35,36 @@ export class AiService {
         private aiKnowledgeService: AiKnowledgeService,
         private readonly demoModeService: DemoModeService,
         @Optional() private readonly usageService?: UsageService,
+        @Optional() private readonly tenantConfigService?: TenantConfigService,
     ) {
     }
 
-    private selectedModel: string | null = null;
+    private selectedModelByTenant = new Map<string, string>();
 
-    // Conversation history: Map<userId, messages[]>
+    private async getGeminiApiKey(): Promise<string | undefined> {
+        if (this.tenantConfigService) {
+            return this.tenantConfigService.get('GEMINI_API_KEY');
+        }
+        if (TenantContext.current().tenantId === DEFAULT_TENANT_CONTEXT.tenantId) {
+            return this.configService.get<string>('GEMINI_API_KEY');
+        }
+        return undefined;
+    }
+
+    // Conversation history: Map<tenantId:userId, messages[]>
     private conversationHistory: Map<string, Array<{ role: string; content: string }>> = new Map();
     private readonly MAX_HISTORY = 10; // Keep last 10 messages
 
+    private getHistoryKey(userId: string): string {
+        return `${TenantContext.current().tenantId}:${userId}`;
+    }
+
     private getConversationHistory(userId: string): Array<{ role: string; content: string }> {
-        if (!this.conversationHistory.has(userId)) {
-            this.conversationHistory.set(userId, []);
+        const key = this.getHistoryKey(userId);
+        if (!this.conversationHistory.has(key)) {
+            this.conversationHistory.set(key, []);
         }
-        return this.conversationHistory.get(userId);
+        return this.conversationHistory.get(key);
     }
 
     private addToHistory(userId: string, role: string, content: string) {
@@ -60,7 +78,7 @@ export class AiService {
     }
 
     private clearHistory(userId: string) {
-        this.conversationHistory.delete(userId);
+        this.conversationHistory.delete(this.getHistoryKey(userId));
     }
 
     private formatNumber(num: number): string {
@@ -72,7 +90,9 @@ export class AiService {
     }
 
     private async getBestModel(apiKey: string): Promise<string> {
-        if (this.selectedModel) return this.selectedModel;
+        const tenantId = TenantContext.current().tenantId;
+        const cached = this.selectedModelByTenant.get(tenantId);
+        if (cached) return cached;
 
         try {
             const listUrl = `https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`;
@@ -94,8 +114,8 @@ export class AiService {
 
             if (preferred) {
                 console.log('DEBUG AI: Auto-selected model:', preferred.name);
-                this.selectedModel = preferred.name;
-                return this.selectedModel;
+                this.selectedModelByTenant.set(tenantId, preferred.name);
+                return preferred.name;
             }
         } catch (e) {
             console.error('DEBUG AI: Error listing models:', e);
@@ -105,7 +125,7 @@ export class AiService {
     }
 
     private async callGemini(prompt: string): Promise<string> {
-        let apiKey = this.configService.get<string>('GEMINI_API_KEY');
+        let apiKey = await this.getGeminiApiKey();
         if (!apiKey) {
             if (this.demoModeService.isDemoMode()) {
                 if (prompt.includes('json') || prompt.includes('JSON') || prompt.includes('score')) {
@@ -140,7 +160,7 @@ export class AiService {
             if (!response.ok) {
                 const err = await response.text();
                 if (response.status === 404) {
-                    this.selectedModel = null;
+                    this.selectedModelByTenant.delete(TenantContext.current().tenantId);
                 }
                 throw new Error(`Gemini API Error (${modelName}): ${response.status} - ${err}`);
             }
@@ -163,7 +183,7 @@ export class AiService {
     async chat(body: any) {
         const { message, userId = 'default' } = body; // Default userId if not provided
 
-        const apiKey = this.configService.get<string>('GEMINI_API_KEY');
+        const apiKey = await this.getGeminiApiKey();
 
         if (!apiKey) {
             if (this.demoModeService.isDemoMode()) {
@@ -1340,7 +1360,7 @@ You MUST return ONLY a valid JSON object in this structure:
         onStatus?: (status: string) => void,
         onPermissionRequest?: (permission: any) => void
     ) {
-        let apiKey = this.configService.get<string>('GEMINI_API_KEY');
+        let apiKey = await this.getGeminiApiKey();
         if (!apiKey) {
             if (this.demoModeService.isDemoMode()) {
                 onChunk("Đây là câu trả lời thử nghiệm của trợ lý AI (Chế độ Demo).");

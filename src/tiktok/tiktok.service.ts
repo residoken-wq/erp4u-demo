@@ -72,7 +72,7 @@ export class TikTokService {
 
     // ===================== AUTH =====================
 
-    getAuthorizationUrl(state?: string): string {
+    async getAuthorizationUrl(state?: string): Promise<string> {
         return this.apiClient.getAuthorizationUrl(state);
     }
 

@@ -20,8 +20,13 @@ import { LlmBudgetService } from './llm/llm-budget.service';
 import { ChatAttachmentService } from './attachments/chat-attachment.service';
 import { ChatbotAuditService } from './audit/chatbot-audit.service';
 import { FakeProvider } from './llm/fake.provider';
-import { GeminiProvider } from './llm/gemini.provider';
-import { LLM_PROVIDER } from './llm/llm-provider';
+import { GeminiProvider, resolveTenantGeminiKey } from './llm/gemini.provider';
+import {
+  LLM_PROVIDER,
+  LlmGenerateRequest,
+  LlmGenerateResult,
+  LlmProvider,
+} from './llm/llm-provider';
 
 import { PublicChatController } from './controllers/public-chat.controller';
 import { ChatbotAdminConfigController } from './controllers/chatbot-admin-config.controller';
@@ -38,8 +43,61 @@ import { ChatbotOutboxService } from './outbox/chatbot-outbox.service';
 
 import { TurnOrchestratorService } from './conversation/turn-orchestrator.service';
 import { RuleUnderstanderService } from './conversation/rule-understander.service';
-import { resolveGeminiKey } from './llm/gemini.provider';
 import { UsageService } from '../common/packages/usage.service';
+import { TenantConfigService } from '../common/tenancy/tenant-config.service';
+import { TenantContext } from '../common/tenancy/tenant-context';
+
+class TenantAwareLlmProvider implements LlmProvider {
+  private readonly logger = new Logger('ChatbotModule');
+  private readonly activeProviderNameByTenant = new Map<
+    string,
+    'fake' | 'gemini'
+  >();
+
+  constructor(
+    private readonly fakeProvider: FakeProvider,
+    private readonly geminiProvider: GeminiProvider,
+    private readonly tenantConfigService: TenantConfigService,
+  ) {}
+
+  get name(): 'fake' | 'gemini' {
+    const tenantId = TenantContext.current().tenantId;
+    return this.activeProviderNameByTenant.get(tenantId) || 'fake';
+  }
+
+  private async resolveDelegate(): Promise<LlmProvider> {
+    const tenantId = TenantContext.current().tenantId;
+    const providerName = (
+      (await this.tenantConfigService.get('CHATBOT_LLM_PROVIDER')) || 'fake'
+    ).toLowerCase();
+
+    if (providerName === 'gemini') {
+      const resolved = await resolveTenantGeminiKey(this.tenantConfigService);
+      if (resolved.key) {
+        this.activeProviderNameByTenant.set(tenantId, 'gemini');
+        return this.geminiProvider;
+      }
+      this.logger.warn(
+        `CHATBOT_LLM_PROVIDER is gemini for tenant "${tenantId}" but no API key is configured. Falling back to FakeProvider.`,
+      );
+    }
+
+    this.activeProviderNameByTenant.set(tenantId, 'fake');
+    return this.fakeProvider;
+  }
+
+  async getModel(): Promise<string> {
+    const delegate = await this.resolveDelegate();
+    return delegate.getModel();
+  }
+
+  async generateJson<T>(
+    req: LlmGenerateRequest,
+  ): Promise<LlmGenerateResult<T>> {
+    const delegate = await this.resolveDelegate();
+    return delegate.generateJson<T>(req);
+  }
+}
 
 @Module({
   imports: [
@@ -86,22 +144,27 @@ import { UsageService } from '../common/packages/usage.service';
     GeminiProvider,
     {
       provide: LLM_PROVIDER,
-      useFactory: (configService: ChatbotConfigService, usageService: UsageService) => {
-        const providerName = (process.env.CHATBOT_LLM_PROVIDER || 'fake').toLowerCase();
-        const resolved = resolveGeminiKey();
-        const model = process.env.CHATBOT_LLM_MODEL;
-        if (providerName === 'gemini') {
-          if (!resolved.key) {
-            new Logger('ChatbotModule').warn(
-              'CHATBOT_LLM_PROVIDER is gemini but no API key is configured. Falling back to FakeProvider.',
-            );
-            return new FakeProvider();
-          }
-          return new GeminiProvider(configService, resolved.key, model, undefined, usageService);
-        }
-        return new FakeProvider();
+      useFactory: (
+        configService: ChatbotConfigService,
+        usageService: UsageService,
+        tenantConfigService: TenantConfigService,
+      ) => {
+        const fakeProvider = new FakeProvider();
+        const geminiProvider = new GeminiProvider(
+          configService,
+          undefined,
+          undefined,
+          undefined,
+          usageService,
+          tenantConfigService,
+        );
+        return new TenantAwareLlmProvider(
+          fakeProvider,
+          geminiProvider,
+          tenantConfigService,
+        );
       },
-      inject: [ChatbotConfigService, UsageService],
+      inject: [ChatbotConfigService, UsageService, TenantConfigService],
     },
   ],
   exports: [
@@ -118,4 +181,3 @@ import { UsageService } from '../common/packages/usage.service';
   ],
 })
 export class ChatbotModule {}
-
