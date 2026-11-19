@@ -4,6 +4,8 @@ import { Repository, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ENTITLEMENT_PROVIDER, EntitlementProvider } from '../common/packages/entitlement-provider.interface';
 import { PackageKey } from '../common/packages/package.registry';
+import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../common/tenancy/tenant-context';
+import { TENANT_REGISTRY, TenantRegistry } from '../common/tenancy/tenant-registry.interface';
 import { SalesOrder, SalesOrderStatus, VatInvoiceRecord } from './sales-order.entity';
 import { SalesOrderItem, BookingStatus } from './sales-order-item.entity';
 import { ProductSample } from './product-sample.entity';
@@ -94,6 +96,9 @@ export class SalesService {
         @Optional()
         @Inject(ENTITLEMENT_PROVIDER)
         private readonly entitlementProvider?: EntitlementProvider,
+        @Optional()
+        @Inject(TENANT_REGISTRY)
+        private readonly tenantRegistry?: TenantRegistry,
     ) { }
 
 
@@ -1240,45 +1245,57 @@ export class SalesService {
     // --- CRON JOB: AUTO EXPIRE BOOKINGS ---
     @Cron(CronExpression.EVERY_HOUR)
     async checkExpiredBookings() {
-        if (this.entitlementProvider && !(await this.entitlementProvider.isEnabled(PackageKey.SALES))) {
-            this.logger.debug('Package SALES is not enabled, skipping checkExpiredBookings cron');
-            return;
-        }
-        const now = new Date();
-        const expiredItems = await this.itemRepo.find({
-            where: {
-                booking_status: BookingStatus.TEMPORARY,
-                booking_expires_at: LessThan(now)
-            },
-            relations: ['product']
-        });
+        const tenants = this.tenantRegistry
+            ? await this.tenantRegistry.list()
+            : [DEFAULT_TENANT_CONTEXT];
 
-        if (expiredItems.length === 0) return;
-
-        for (const item of expiredItems) {
-            const product = item.product;
-            if (product) {
-                if (product.product_type === 'COMBO') {
-                    const components = await this.productsService.getComboComponents(product.sku);
-                    for (const comp of components) {
-                        const child = comp.child_product;
-                        const returnQty = Number(item.booked_quantity) * Number(comp.quantity);
-                        child.booking_stock = Math.max(0, Number(child.booking_stock || 0) - returnQty);
-                        await this.productsService.update(child.id, { booking_stock: child.booking_stock });
-                    }
-                } else {
-                    product.booking_stock = Math.max(0, Number(product.booking_stock || 0) - Number(item.booked_quantity));
-                    await this.productsService.update(product.id, { booking_stock: product.booking_stock });
+        for (const tenant of tenants) {
+            await TenantContext.run(tenant, async () => {
+                if (this.entitlementProvider && !(await this.entitlementProvider.isEnabled(PackageKey.SALES))) {
+                    this.logger.debug(`Package SALES is not enabled for tenant ${tenant.tenantId}, skipping checkExpiredBookings cron`);
+                    return;
                 }
-            }
+                try {
+                    const now = new Date();
+                    const expiredItems = await this.itemRepo.find({
+                        where: {
+                            booking_status: BookingStatus.TEMPORARY,
+                            booking_expires_at: LessThan(now)
+                        },
+                        relations: ['product']
+                    });
 
-            item.booking_status = BookingStatus.EXPIRED;
-            item.booked_quantity = 0;
-            item.booking_expires_at = null;
-            await this.itemRepo.save(item);
+                    if (expiredItems.length === 0) return;
+
+                    for (const item of expiredItems) {
+                        const product = item.product;
+                        if (product) {
+                            if (product.product_type === 'COMBO') {
+                                const components = await this.productsService.getComboComponents(product.sku);
+                                for (const comp of components) {
+                                    const child = comp.child_product;
+                                    const returnQty = Number(item.booked_quantity) * Number(comp.quantity);
+                                    child.booking_stock = Math.max(0, Number(child.booking_stock || 0) - returnQty);
+                                    await this.productsService.update(child.id, { booking_stock: child.booking_stock });
+                                }
+                            } else {
+                                product.booking_stock = Math.max(0, Number(product.booking_stock || 0) - Number(item.booked_quantity));
+                                await this.productsService.update(product.id, { booking_stock: product.booking_stock });
+                            }
+                        }
+
+                        item.booking_status = BookingStatus.EXPIRED;
+                        item.booked_quantity = 0;
+                        item.booking_expires_at = null;
+                        await this.itemRepo.save(item);
+                    }
+
+                    this.logger.log(`[tenant=${tenant.tenantId}] Expired ${expiredItems.length} temporary bookings.`);
+                } catch (err: any) {
+                    this.logger.error(`[tenant=${tenant.tenantId}] checkExpiredBookings failed: ${err?.message}`);
+                }
+            });
         }
-        
-        this.logger.log(`Expired ${expiredItems.length} temporary bookings.`);
     }
 
     // --- DELIVERY EMAIL ---

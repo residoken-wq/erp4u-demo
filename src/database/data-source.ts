@@ -3,6 +3,7 @@ import { DataSource, DataSourceOptions } from 'typeorm';
 import { ENTITIES } from './entities';
 
 export interface DbEnvConfig {
+  NODE_ENV?: string;
   DATABASE_URL?: string;
   POSTGRES_URL?: string;
   DB_HOST?: string;
@@ -19,6 +20,23 @@ export function buildDataSourceOptions(
   overrides: Partial<DataSourceOptions> = {},
 ): DataSourceOptions {
   const dbUrl = env.DATABASE_URL || env.POSTGRES_URL || undefined;
+  const rawNodeEnv =
+    'NODE_ENV' in env ? env.NODE_ENV : process.env.NODE_ENV;
+  const nodeEnv = String(rawNodeEnv ?? '')
+    .trim()
+    .toLowerCase();
+  const dbPassword = env.DB_PASSWORD;
+
+  if (
+    nodeEnv === 'production' &&
+    !dbUrl &&
+    (!dbPassword || String(dbPassword).trim() === '')
+  ) {
+    throw new Error(
+      'DB_PASSWORD is required when NODE_ENV=production and DATABASE_URL is not set.',
+    );
+  }
+
   const rawPort = env.DB_PORT;
   const port =
     typeof rawPort === 'number'
@@ -33,7 +51,7 @@ export function buildDataSourceOptions(
     host: env.DB_HOST || 'localhost',
     port,
     username: env.DB_USERNAME || 'erp4u_user',
-    password: env.DB_PASSWORD || 'erp4u_password',
+    password: dbPassword || 'erp4u_password',
     database: env.DB_DATABASE || 'erp4u_db',
     ssl:
       dbUrl && dbUrl.includes('sslmode=require')

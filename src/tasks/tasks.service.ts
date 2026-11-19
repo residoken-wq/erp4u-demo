@@ -1,10 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, IsNull } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Task } from './task.entity';
 import { TaskTimeLog } from './task-time-log.entity';
 import { Notification } from '../notifications/notification.entity';
+import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../common/tenancy/tenant-context';
+import { TENANT_REGISTRY, TenantRegistry } from '../common/tenancy/tenant-registry.interface';
 
 @Injectable()
 export class TasksService {
@@ -14,6 +16,9 @@ export class TasksService {
         @InjectRepository(Task) private taskRepo: Repository<Task>,
         @InjectRepository(Notification) private notiRepo: Repository<Notification>,
         @InjectRepository(TaskTimeLog) private timeLogRepo: Repository<TaskTimeLog>,
+        @Optional()
+        @Inject(TENANT_REGISTRY)
+        private readonly tenantRegistry?: TenantRegistry,
     ) { }
 
     async findAll(filters?: { assignee_id?: number; status_not?: string; limit?: number }) {
@@ -164,36 +169,48 @@ export class TasksService {
     // Chạy mỗi phút để kiểm tra deadline
     @Cron(CronExpression.EVERY_MINUTE)
     async checkDeadlines() {
-        // Tìm các task chưa xong, chưa nhắc, và deadline sắp đến (hoặc đã qua)
-        // Logic: Deadline < (Hiện tại + 30 phút)
-        const now = new Date();
-        const remindTime = new Date(now.getTime() + 30 * 60000); // 30 phút tới
+        const tenants = this.tenantRegistry
+            ? await this.tenantRegistry.list()
+            : [DEFAULT_TENANT_CONTEXT];
 
-        const tasks = await this.taskRepo.find({
-            where: {
-                status: LessThan('DONE') as any, // Chưa xong (giả sử trạng thái sort đc, hoặc dùng In([...]))
-                is_reminded: false,
-                due_date: LessThan(remindTime)
-            },
-            relations: ['assignee']
-        });
+        for (const tenant of tenants) {
+            await TenantContext.run(tenant, async () => {
+                try {
+                    // Tìm các task chưa xong, chưa nhắc, và deadline sắp đến (hoặc đã qua)
+                    // Logic: Deadline < (Hiện tại + 30 phút)
+                    const now = new Date();
+                    const remindTime = new Date(now.getTime() + 30 * 60000); // 30 phút tới
 
-        for (const task of tasks) {
-            if (task.assignee) {
-                // Tạo thông báo
-                await this.notiRepo.save({
-                    title: '⏰ Nhắc nhở công việc',
-                    message: `Công việc "${task.title}" sắp đến hạn hoặc đã quá hạn!`,
-                    type: 'WARNING',
-                    user_id: task.assignee.id,
-                    link: `/tasks?task=${task.id}&highlight=task-${task.id}`,
-                    is_read: false
-                });
+                    const tasks = await this.taskRepo.find({
+                        where: {
+                            status: LessThan('DONE') as any, // Chưa xong (giả sử trạng thái sort đc, hoặc dùng In([...]))
+                            is_reminded: false,
+                            due_date: LessThan(remindTime)
+                        },
+                        relations: ['assignee']
+                    });
 
-                // Đánh dấu đã nhắc để không spam
-                await this.taskRepo.update(task.id, { is_reminded: true });
-                this.logger.log(`Reminded User ${task.assignee.id} about Task ${task.id}`);
-            }
+                    for (const task of tasks) {
+                        if (task.assignee) {
+                            // Tạo thông báo
+                            await this.notiRepo.save({
+                                title: '⏰ Nhắc nhở công việc',
+                                message: `Công việc "${task.title}" sắp đến hạn hoặc đã quá hạn!`,
+                                type: 'WARNING',
+                                user_id: task.assignee.id,
+                                link: `/tasks?task=${task.id}&highlight=task-${task.id}`,
+                                is_read: false
+                            });
+
+                            // Đánh dấu đã nhắc để không spam
+                            await this.taskRepo.update(task.id, { is_reminded: true });
+                            this.logger.log(`[tenant=${tenant.tenantId}] Reminded User ${task.assignee.id} about Task ${task.id}`);
+                        }
+                    }
+                } catch (err: any) {
+                    this.logger.error(`[tenant=${tenant.tenantId}] checkDeadlines failed: ${err?.message}`);
+                }
+            });
         }
     }
 }

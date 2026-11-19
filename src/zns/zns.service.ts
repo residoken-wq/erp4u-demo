@@ -12,6 +12,8 @@ import { SalesDelivery } from '../sales/sales-delivery.entity';
 import { DemoModeService } from '../common/services/demo-mode.service';
 import { ENTITLEMENT_PROVIDER, EntitlementProvider } from '../common/packages/entitlement-provider.interface';
 import { PackageKey } from '../common/packages/package.registry';
+import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../common/tenancy/tenant-context';
+import { TENANT_REGISTRY, TenantRegistry } from '../common/tenancy/tenant-registry.interface';
 
 @Injectable()
 export class ZaloZnsService {
@@ -31,6 +33,9 @@ export class ZaloZnsService {
     @Optional()
     @Inject(ENTITLEMENT_PROVIDER)
     private readonly entitlementProvider?: EntitlementProvider,
+    @Optional()
+    @Inject(TENANT_REGISTRY)
+    private readonly tenantRegistry?: TenantRegistry,
   ) {
   }
 
@@ -173,24 +178,31 @@ export class ZaloZnsService {
    */
   @Cron('0 */4 * * *')
   async handleTokenAutoRefreshCron() {
-    if (this.entitlementProvider && !(await this.entitlementProvider.isEnabled(PackageKey.MARKETING))) {
-      this.logger.debug('Package MARKETING is not enabled, skipping ZNS token refresh cron');
-      return;
-    }
-    try {
-      const cfg = await this.getConfig();
-      if (!cfg.is_active || !cfg.refresh_token || !cfg.secret_key) return;
+    const tenants = this.tenantRegistry
+      ? await this.tenantRegistry.list()
+      : [DEFAULT_TENANT_CONTEXT];
+    for (const tenant of tenants) {
+      await TenantContext.run(tenant, async () => {
+        if (this.entitlementProvider && !(await this.entitlementProvider.isEnabled(PackageKey.MARKETING))) {
+          this.logger.debug(`Package MARKETING is not enabled for tenant ${tenant.tenantId}, skipping ZNS token refresh cron`);
+          return;
+        }
+        try {
+          const cfg = await this.getConfig();
+          if (!cfg.is_active || !cfg.refresh_token || !cfg.secret_key) return;
 
-      const now = Date.now();
-      const expiresAt = cfg.access_token_expires_at ? new Date(cfg.access_token_expires_at).getTime() : 0;
-      const hoursRemaining = (expiresAt - now) / (1000 * 3600);
+          const now = Date.now();
+          const expiresAt = cfg.access_token_expires_at ? new Date(cfg.access_token_expires_at).getTime() : 0;
+          const hoursRemaining = (expiresAt - now) / (1000 * 3600);
 
-      if (hoursRemaining < 8) {
-        this.logger.log(`[Zalo ZNS Cron] Token chỉ còn ${Math.round(hoursRemaining * 10) / 10} giờ, kích hoạt làm mới tự động...`);
-        await this.refreshAccessToken();
-      }
-    } catch (e: any) {
-      this.logger.error(`[Zalo ZNS Cron] Lỗi Cron làm mới Token: ${e.message}`);
+          if (hoursRemaining < 8) {
+            this.logger.log(`[Zalo ZNS Cron][tenant=${tenant.tenantId}] Token chỉ còn ${Math.round(hoursRemaining * 10) / 10} giờ, kích hoạt làm mới tự động...`);
+            await this.refreshAccessToken();
+          }
+        } catch (e: any) {
+          this.logger.error(`[Zalo ZNS Cron][tenant=${tenant.tenantId}] Lỗi Cron làm mới Token: ${e.message}`);
+        }
+      });
     }
   }
 
