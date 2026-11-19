@@ -384,6 +384,28 @@ export class HrController {
         return this.hrService.evaluateAssessment(+id);
     }
 
+    @Post(['recruitment/assessments/:id/approve-interview', 'assessments/:id/approve-interview'])
+    @RequirePermission('HR', 'can_update')
+    @Perm('HR', 'update')
+    approveInterview(
+        @Param('id') id: string,
+        @Request() req: any,
+        @Body() body?: any
+    ) {
+        return this.hrService.approveInterview(+id, req.user, body);
+    }
+
+    @Post(['recruitment/assessments/:id/reject', 'assessments/:id/reject'])
+    @RequirePermission('HR', 'can_update')
+    @Perm('HR', 'update')
+    rejectAssessment(
+        @Param('id') id: string,
+        @Request() req: any,
+        @Body() body?: any
+    ) {
+        return this.hrService.rejectAssessment(+id, req.user, body?.reason);
+    }
+
     @Get('recruitment/interviews')
     @RequirePermission('HR', 'can_view')
     findInterviews(@Query('candidate_id') candidateId?: string) {

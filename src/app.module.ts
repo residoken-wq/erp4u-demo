@@ -41,8 +41,6 @@ import { ZaloApiConfig } from './zns/entities/zalo-api-config.entity';
 import { ZnsMessageLog } from './zns/entities/zns-message-log.entity';
 
 import { AnalyticsModule } from './analytics/analytics.module';
-import { SchoolExperienceModule } from './school-experience/school-experience.module';
-import { SchoolExperienceRevision } from './school-experience/entities/school-experience-revision.entity';
 import { ChatbotModule } from './chatbot/chatbot.module';
 import { CHATBOT_ENTITIES } from './chatbot/entities';
 
@@ -195,7 +193,7 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const dbUrl = configService.get<string>('DATABASE_URL') || configService.get<string>('POSTGRES_URL') || configService.get<string>('POSTGRES_PRISMA_URL') || configService.get<string>('PRISMA_DATABASE_URL');
+        const dbUrl = configService.get<string>('DATABASE_URL') || configService.get<string>('POSTGRES_URL');
         return {
           type: 'postgres',
           url: dbUrl,
@@ -245,8 +243,6 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
             CustomerLogo, PrintDesign, PrintSample, DesignOrder, DesignOrderItem,
             // TikTok
             TikTokMessage, TikTokComment, TikTokConversation,
-            // School Experience (Instruction 10)
-            SchoolExperienceRevision,
             // Zalo ZNS
             ZaloApiConfig,
             ZnsMessageLog,
@@ -275,7 +271,6 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
     DesignsModule, // Printing & Embroidery Design Module
     TikTokModule, // TikTok Shop inbox & comments integration
     ShippingModule, // Shipping & GHTK carrier integration
-    SchoolExperienceModule, // ERP4U-360 School Experience CMS & revisions
     ZnsModule, // Zalo ZNS Integration module
     ChatbotModule, // Trợ lý AI website module (P0)
     TypeOrmModule.forFeature([User]), // Needed for ActivityInterceptor

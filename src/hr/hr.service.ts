@@ -16,6 +16,8 @@ import { Interview, InterviewStatus } from './entities/interview.entity';
 import { ReviewQuestion } from './entities/review-question.entity';
 import { ReviewCampaign, CampaignStatus } from './entities/review-campaign.entity';
 import { EmployeeReview, ReviewStatus } from './entities/employee-review.entity';
+import { ActivityLog } from '../system/entities/activity-log.entity';
+import { ConfigService } from '@nestjs/config';
 import { AiService } from '../ai/ai.service';
 import { EmailService } from '../common/services/email.service';
 import { randomUUID } from 'crypto';
@@ -38,9 +40,16 @@ export class HrService implements OnModuleInit {
         @InjectRepository(ReviewQuestion) private reviewQuestionRepo: Repository<ReviewQuestion>,
         @InjectRepository(ReviewCampaign) private reviewCampaignRepo: Repository<ReviewCampaign>,
         @InjectRepository(EmployeeReview) private employeeReviewRepo: Repository<EmployeeReview>,
+        @InjectRepository(ActivityLog) private activityLogRepo: Repository<ActivityLog>,
+        private configService: ConfigService,
         private aiService: AiService,
         private emailService: EmailService,
     ) { }
+
+    private getCandidatePortalUrl(token: string): string {
+        const baseUrl = this.configService.get<string>('PUBLIC_APP_URL') || 'http://localhost:5173';
+        return `${baseUrl.replace(/\/+$/, '')}/portal/recruitment/${token}`;
+    }
 
     async onModuleInit() {
         // Auto-seed 360-degree review questions from parsed_questions.json if table is empty
@@ -526,7 +535,7 @@ export class HrService implements OnModuleInit {
         const saved = await this.candidateRepo.save(candidate);
 
         // Send email with portal link
-        const portalUrl = `https://localhost:3000/portal/recruitment/${saved.portal_token}`;
+        const portalUrl = this.getCandidatePortalUrl(saved.portal_token);
         const html = `
             <h2>Chào <span style="color:#0056b3">${saved.name}</span>,</h2>
             <p>Cảm ơn bạn đã ứng tuyển tại ERP4U.</p>
@@ -570,7 +579,7 @@ export class HrService implements OnModuleInit {
         // Notification email
         const candidate = await this.candidateRepo.findOne({ where: { id: candidateId }, relations: ['job_post'] });
         if (candidate) {
-            const portalUrl = `https://localhost:3000/portal/recruitment/${candidate.portal_token}`;
+            const portalUrl = this.getCandidatePortalUrl(candidate.portal_token);
             const html = `
                 <h2>Chào ${candidate.name},</h2>
                 <p>Nhân sự ERP4U vừa gửi cho bạn một bài đánh giá năng lực cho vị trí <strong>${candidate.job_post?.title || 'ứng tuyển'}</strong>.</p>
@@ -635,66 +644,127 @@ You MUST return ONLY a valid JSON object in this structure:
 
             const score = feedback?.score;
             if (score !== undefined) {
-                let updateData: Partial<Candidate> = {
+                // AI evaluation only stores score and marks as ASSESSED (pending HR review).
+                // AI NEVER autonomously schedules interviews or rejects candidates.
+                await this.candidateRepo.update(assessment.candidate_id, {
                     overall_score: score,
                     status: CandidateStatus.ASSESSED
-                };
-
-                // Feature 3: Auto-Schedule Interview when score >= 7
-                if (score >= 7) {
-                    const scheduledDate = new Date();
-                    scheduledDate.setDate(scheduledDate.getDate() + 3);
-                    scheduledDate.setHours(14, 0, 0, 0); // Default to 2:00 PM
-                    
-                    const interview = this.interviewRepo.create({
-                        candidate_id: assessment.candidate_id,
-                        scheduled_at: scheduledDate,
-                        location: 'Google Meet',
-                        hr_interviewer: 'HR Dept',
-                        result_status: InterviewStatus.PENDING
-                    });
-                    await this.interviewRepo.save(interview);
-
-                    updateData.status = CandidateStatus.INTERVIEW_SCHEDULED;
-                    
-                    // Notify candidate of the auto-scheduled interview
-                    const html = `
-                        <h2>Chúc mừng ${assessment.candidate.name},</h2>
-                        <p>Bài đánh giá của bạn (Điểm: ${score}/10) đã đạt yêu cầu!</p>
-                        <p>Chúng tôi đã tự động lên lịch phỏng vấn vào lúc <strong>${scheduledDate.toLocaleString('vi-VN')}</strong>.</p>
-                        <p>Vui lòng truy cập Portal Ứng Viên để xem chi tiết lịch hẹn phỏng vấn.</p>
-                        <a href="https://localhost:3000/portal/recruitment/${assessment.candidate.portal_token}" style="padding:10px 20px; background:#0056b3; color:white; text-decoration:none; border-radius:5px; display:inline-block; margin-top:10px;">Xem lịch phỏng vấn</a>
-                    `;
-                    await this.emailService.sendMail(assessment.candidate.email, '[ERP4U] Vượt qua bài test - Thư mời phỏng vấn', html);
-                } else {
-                    // Score < 7: Send rejection/feedback email
-                    const recommendation = feedback?.recommendation || 'REJECT';
-                    const pros = (feedback?.pros || []).map((p: string) => `<li>${p}</li>`).join('');
-                    const cons = (feedback?.cons || []).map((c: string) => `<li>${c}</li>`).join('');
-
-                    if (recommendation === 'REJECT') {
-                        updateData.status = CandidateStatus.REJECTED;
-                    }
-
-                    const html = `
-                        <h2>Chào ${assessment.candidate.name},</h2>
-                        <p>Cảm ơn bạn đã hoàn thành bài đánh giá năng lực tại ERP4U.</p>
-                        <p>Sau khi xem xét kỹ lưỡng, kết quả bài test của bạn (Điểm: <strong>${score}/10</strong>) ${recommendation === 'REJECT' ? 'chưa đạt yêu cầu cho vị trí này.' : 'được đánh giá ở mức <strong>Tiềm năng</strong>.'}</p>
-                        ${pros ? `<p><strong>Điểm mạnh:</strong></p><ul>${pros}</ul>` : ''}
-                        ${cons ? `<p><strong>Cần cải thiện:</strong></p><ul>${cons}</ul>` : ''}
-                        <p>${recommendation === 'REJECT' 
-                            ? 'Chúng tôi hy vọng sẽ có cơ hội hợp tác cùng bạn trong tương lai. ERP4U luôn chào đón bạn ứng tuyển lại các vị trí phù hợp khác.' 
-                            : 'Chúng tôi sẽ lưu hồ sơ của bạn và liên hệ nếu có vị trí phù hợp hơn.'}</p>
-                        <p style="color:#888; font-size:12px; margin-top:20px;">Trân trọng,<br/>Phòng Nhân sự — ERP4U</p>
-                    `;
-                    await this.emailService.sendMail(assessment.candidate.email, `[ERP4U] Phản hồi kết quả bài đánh giá`, html);
-                }
-
-                await this.candidateRepo.update(assessment.candidate_id, updateData);
+                });
             }
         }
         
         return assessment;
+    }
+
+    async approveInterview(assessmentId: number, user: any, scheduleData?: any) {
+        const assessment = await this.assessmentRepo.findOne({
+            where: { id: assessmentId },
+            relations: ['candidate', 'candidate.job_post']
+        });
+        if (!assessment) throw new NotFoundException('Assessment not found');
+        if (!assessment.candidate) throw new NotFoundException('Candidate not found for assessment');
+
+        const scheduledDate = scheduleData?.scheduled_at ? new Date(scheduleData.scheduled_at) : (() => {
+            const d = new Date();
+            d.setDate(d.getDate() + 3);
+            d.setHours(14, 0, 0, 0); // Default to 2:00 PM 3 days later
+            return d;
+        })();
+
+        const interview = this.interviewRepo.create({
+            candidate_id: assessment.candidate_id,
+            scheduled_at: scheduledDate,
+            location: scheduleData?.location || 'Google Meet',
+            meeting_link: scheduleData?.meeting_link || '',
+            hr_interviewer: scheduleData?.hr_interviewer || 'HR Dept',
+            result_status: InterviewStatus.PENDING
+        });
+        const savedInterview = await this.interviewRepo.save(interview);
+
+        await this.candidateRepo.update(assessment.candidate_id, {
+            status: CandidateStatus.INTERVIEW_SCHEDULED
+        });
+
+        // Notify candidate of the scheduled interview
+        const portalUrl = this.getCandidatePortalUrl(assessment.candidate.portal_token);
+        const score = assessment.candidate.overall_score ?? assessment.ai_feedback?.score ?? 0;
+        const html = `
+            <h2>Chúc mừng ${assessment.candidate.name},</h2>
+            <p>Bài đánh giá của bạn (Điểm: ${score}/10) đã đạt yêu cầu!</p>
+            <p>Chúng tôi đã lên lịch phỏng vấn vào lúc <strong>${scheduledDate.toLocaleString('vi-VN')}</strong>.</p>
+            <p>Vui lòng truy cập Portal Ứng Viên để xem chi tiết lịch hẹn phỏng vấn.</p>
+            <a href="${portalUrl}" style="padding:10px 20px; background:#0056b3; color:white; text-decoration:none; border-radius:5px; display:inline-block; margin-top:10px;">Xem lịch phỏng vấn</a>
+        `;
+        await this.emailService.sendMail(assessment.candidate.email, '[ERP4U] Vượt qua bài test - Thư mời phỏng vấn', html);
+
+        // Record ActivityLog with approver info
+        await this.activityLogRepo.save(this.activityLogRepo.create({
+            user_id: user?.id || user?.userId || null,
+            username: user?.username || 'system',
+            full_name: user?.full_name || '',
+            action: 'APPROVE_INTERVIEW',
+            module: 'HR',
+            entity_id: String(assessmentId),
+            description: `HR approved interview for candidate ${assessment.candidate.name} (Assessment #${assessmentId})`,
+            details: {
+                assessment_id: assessmentId,
+                candidate_id: assessment.candidate_id,
+                candidate_name: assessment.candidate.name,
+                interview_id: savedInterview.id,
+                scheduled_at: scheduledDate
+            }
+        }));
+
+        return { success: true, interview: savedInterview };
+    }
+
+    async rejectAssessment(assessmentId: number, user: any, reason?: string) {
+        const assessment = await this.assessmentRepo.findOne({
+            where: { id: assessmentId },
+            relations: ['candidate', 'candidate.job_post']
+        });
+        if (!assessment) throw new NotFoundException('Assessment not found');
+        if (!assessment.candidate) throw new NotFoundException('Candidate not found for assessment');
+
+        await this.candidateRepo.update(assessment.candidate_id, {
+            status: CandidateStatus.REJECTED
+        });
+
+        const feedback = assessment.ai_feedback;
+        const score = assessment.candidate.overall_score ?? feedback?.score ?? 0;
+        const pros = (feedback?.pros || []).map((p: string) => `<li>${p}</li>`).join('');
+        const cons = (feedback?.cons || []).map((c: string) => `<li>${c}</li>`).join('');
+
+        const html = `
+            <h2>Chào ${assessment.candidate.name},</h2>
+            <p>Cảm ơn bạn đã hoàn thành bài đánh giá năng lực tại ERP4U.</p>
+            <p>Sau khi xem xét kỹ lưỡng, kết quả bài test của bạn (Điểm: <strong>${score}/10</strong>) chưa đạt yêu cầu cho vị trí này.</p>
+            ${pros ? `<p><strong>Điểm mạnh:</strong></p><ul>${pros}</ul>` : ''}
+            ${cons ? `<p><strong>Cần cải thiện:</strong></p><ul>${cons}</ul>` : ''}
+            <p>Chúng tôi hy vọng sẽ có cơ hội hợp tác cùng bạn trong tương lai. ERP4U luôn chào đón bạn ứng tuyển lại các vị trí phù hợp khác.</p>
+            <p style="color:#888; font-size:12px; margin-top:20px;">Trân trọng,<br/>Phòng Nhân sự — ERP4U</p>
+        `;
+        await this.emailService.sendMail(assessment.candidate.email, `[ERP4U] Phản hồi kết quả bài đánh giá`, html);
+
+        // Record ActivityLog with rejecter info
+        await this.activityLogRepo.save(this.activityLogRepo.create({
+            user_id: user?.id || user?.userId || null,
+            username: user?.username || 'system',
+            full_name: user?.full_name || '',
+            action: 'REJECT_CANDIDATE',
+            module: 'HR',
+            entity_id: String(assessmentId),
+            description: `HR rejected candidate ${assessment.candidate.name} after assessment #${assessmentId}`,
+            details: {
+                assessment_id: assessmentId,
+                candidate_id: assessment.candidate_id,
+                candidate_name: assessment.candidate.name,
+                score,
+                reason
+            }
+        }));
+
+        return { success: true, candidate_id: assessment.candidate_id, status: CandidateStatus.REJECTED };
     }
 
     async generateAIQuestions(candidateId: number) {
@@ -725,11 +795,12 @@ You MUST return ONLY a valid JSON object in this structure:
         // Notify candidate of the manually scheduled interview
         const candidate = await this.candidateRepo.findOne({ where: { id: data.candidate_id } });
         if (candidate) {
+            const portalUrl = this.getCandidatePortalUrl(candidate.portal_token);
             const html = `
                 <h2>Chào ${candidate.name},</h2>
                 <p>Nhân sự ERP4U vừa lên lịch phỏng vấn cho bạn.</p>
                 <p>Vui lòng đăng nhập vào Portal Ứng Viên để xem chi tiết lịch phỏng vấn và địa điểm / meeting link.</p>
-                <a href="https://localhost:3000/portal/recruitment/${candidate.portal_token}" style="padding:10px 20px; background:#0056b3; color:white; text-decoration:none; border-radius:5px; display:inline-block; margin-top:10px;">Chi tiết lịch phỏng vấn</a>
+                <a href="${portalUrl}" style="padding:10px 20px; background:#0056b3; color:white; text-decoration:none; border-radius:5px; display:inline-block; margin-top:10px;">Chi tiết lịch phỏng vấn</a>
             `;
             await this.emailService.sendMail(candidate.email, '[ERP4U] Thư mời phỏng vấn & Lịch hẹn', html);
         }
