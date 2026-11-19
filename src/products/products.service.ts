@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject, forwardRef, BadRequestException, ConflictException, OnModuleInit } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, Optional, forwardRef, BadRequestException, ConflictException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial, In } from 'typeorm';
 import { Product } from './product.entity';
@@ -7,13 +7,17 @@ import { ProductComponent } from './product-component.entity';
 import { ProductRouting } from './product-routing.entity';
 import { ProductLogistics } from './product-logistics.entity';
 import { ProductPattern } from './product-pattern.entity';
-import { ProductWebsiteConfig } from './entities/product-website-config.entity';
 import { ProductPackingSpec } from './entities/product-packing-spec.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { SupplierMaterial } from '../suppliers/supplier-material.entity';
 import { CategoriesService } from '../categories/categories.service';
 import { Category } from '../categories/category.entity';
 import { CreateVariantDto } from './dto/create-variant.dto';
+
+interface WebsiteProductConfigBridge {
+    getProductWebsiteConfig(productId: number): Promise<{ customization_config?: any } | null>;
+    saveProductWebsiteConfig(productId: number, config: any): Promise<any>;
+}
 
 @Injectable()
 export class ProductsService implements OnModuleInit {
@@ -26,9 +30,9 @@ export class ProductsService implements OnModuleInit {
         @InjectRepository(ProductPattern) private patternRepo: Repository<ProductPattern>,
         @InjectRepository(Supplier) private supplierRepo: Repository<Supplier>,
         @InjectRepository(SupplierMaterial) private priceRepo: Repository<SupplierMaterial>,
-        @InjectRepository(ProductWebsiteConfig) private websiteConfigRepo: Repository<ProductWebsiteConfig>,
         @InjectRepository(ProductPackingSpec) private packingSpecRepo: Repository<ProductPackingSpec>,
         @Inject(forwardRef(() => CategoriesService)) private categoriesService: CategoriesService,
+        @Optional() @Inject('WEBSITE_SERVICE') private websiteService?: WebsiteProductConfigBridge,
     ) { }
 
     async onModuleInit() {
@@ -171,11 +175,13 @@ export class ProductsService implements OnModuleInit {
         const product = await this.productRepo.findOne({ where: { id }, relations: ['category_link'] });
         if (product) {
             await this.populateComboDescriptions([product]);
-            try {
-                const config = await this.websiteConfigRepo.findOne({ where: { product_id: product.id } });
-                if (config) (product as any).customization_config = config.customization_config;
-            } catch {
-                // Table might not exist yet, ignore
+            if (this.websiteService) {
+                try {
+                    const config = await this.websiteService.getProductWebsiteConfig(product.id);
+                    if (config) (product as any).customization_config = config.customization_config;
+                } catch {
+                    // Table might not exist yet, ignore
+                }
             }
         }
         return product;
@@ -185,11 +191,13 @@ export class ProductsService implements OnModuleInit {
         const product = await this.productRepo.findOne({ where: { sku }, relations: ['category_link'] });
         if (product) {
             await this.populateComboDescriptions([product]);
-            try {
-                const config = await this.websiteConfigRepo.findOne({ where: { product_id: product.id } });
-                if (config) (product as any).customization_config = config.customization_config;
-            } catch {
-                // Table might not exist yet, ignore
+            if (this.websiteService) {
+                try {
+                    const config = await this.websiteService.getProductWebsiteConfig(product.id);
+                    if (config) (product as any).customization_config = config.customization_config;
+                } catch {
+                    // Table might not exist yet, ignore
+                }
             }
         }
         return product;
@@ -334,25 +342,14 @@ export class ProductsService implements OnModuleInit {
     // --------------------
 
     async getWebsiteConfig(productId: number) {
-        return this.websiteConfigRepo.findOne({ where: { product_id: productId } });
+        return this.websiteService?.getProductWebsiteConfig(productId) ?? null;
     }
 
     async saveWebsiteConfig(productId: number, config: any) {
-        try {
-            let entry = await this.websiteConfigRepo.findOne({ where: { product_id: productId } });
-            if (!entry) {
-                entry = this.websiteConfigRepo.create({
-                    product_id: productId,
-                    customization_config: config
-                });
-            } else {
-                entry.customization_config = config;
-            }
-            return await this.websiteConfigRepo.save(entry);
-        } catch (error) {
-            console.error('Error in saveWebsiteConfig:', error);
-            throw error;
+        if (!this.websiteService) {
+            throw new NotFoundException('Website module is not available');
         }
+        return this.websiteService.saveProductWebsiteConfig(productId, config);
     }
 
     async getProductBOM(sku: string): Promise<BOM[]> {

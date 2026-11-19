@@ -25,6 +25,8 @@ describe('Frontend Entitlements Store & Package Config (P6b)', () => {
     expect(ROUTE_PACKAGES['/planning']).toBe(FrontendPackageKey.PRODUCTION);
     expect(ROUTE_PACKAGES['/sales']).toBe(FrontendPackageKey.SALES);
     expect(ROUTE_PACKAGES['/designs']).toBe(FrontendPackageKey.DESIGN);
+    expect(ROUTE_PACKAGES['/website-products']).toBe(FrontendPackageKey.WEBSITE);
+    expect(getPackageLabel(FrontendPackageKey.WEBSITE)).toBe('Website & CMS');
   });
 
   it('returns false for PRODUCTION when API returns PRODUCTION disabled', async () => {

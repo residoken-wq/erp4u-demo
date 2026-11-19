@@ -27,20 +27,18 @@ Các vi phạm tồn đọng trước khi áp dụng ranh giới được ghi nh
 
 ## 3. Thống kê vi phạm baseline hiện tại theo cặp gói
 
-Tổng số hiện tại: **118** lệnh import vi phạm trên **56** file (23 cặp gói).
+Tổng số hiện tại: **108** lệnh import vi phạm trên **55** file (22 cặp gói; giảm từ 118 sau khi tách gói `WEBSITE` ở P8a — `WEBSITE` có **0** vi phạm).
 
 | Gói nguồn (A) | Gói đích (B) | Số import vi phạm |
 |---|---|---:|
 | `PRODUCTION` | `INVENTORY` | 16 |
 | `CORE` | `INVENTORY` | 15 |
-| `MARKETING` | `SALES` | 11 |
 | `CORE` | `PRODUCTION` | 10 |
 | `INVENTORY` | `SALES` | 10 |
+| `MARKETING` | `SALES` | 9 |
+| `CORE` | `SALES` | 8 |
 | `PRODUCTION` | `SALES` | 7 |
-| `CORE` | `MARKETING` | 6 |
-| `CORE` | `SALES` | 6 |
 | `FINANCE` | `SALES` | 5 |
-| `MARKETING` | `HR` | 5 |
 | `INVENTORY` | `FINANCE` | 3 |
 | `INVENTORY` | `PRODUCTION` | 3 |
 | `PROJECTS` | `SALES` | 3 |
@@ -52,9 +50,10 @@ Tổng số hiện tại: **118** lệnh import vi phạm trên **56** file (23 
 | `PROJECTS` | `FINANCE` | 2 |
 | `PROJECTS` | `INVENTORY` | 2 |
 | `SALES` | `FINANCE` | 2 |
+| `CORE` | `HR` | 1 |
 | `DESIGN` | `SALES` | 1 |
 | `SALES` | `PRODUCTION` | 1 |
-| **Tổng cộng** | | **118** |
+| **Tổng cộng** | | **108** |
 
 ## 4. Cách thêm module mới đúng chuẩn
 

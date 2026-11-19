@@ -24,14 +24,13 @@ import { ProjectsModule } from './projects/projects.module';
 import { DiscussionsModule } from './discussions/discussions.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SystemModule } from './system/system.module';
-import { BlogsModule } from './blogs/blogs.module';
+import { WebsiteModule } from './website/website.module';
 import { PublicModule } from './public/public.module';
 import { HrModule } from './hr/hr.module';
 import { EncryptionModule } from './common/encryption/encryption.module';
 import { SocialModule } from './social/social.module';
 import { MarketingModule } from './marketing/marketing.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
-import { WebsiteProjectsModule } from './website-projects/website-projects.module';
 import { QCModule } from './qc/qc.module';
 import { DesignsModule } from './designs/designs.module';
 import { TikTokModule } from './tiktok/tiktok.module';
@@ -83,12 +82,11 @@ import { buildDataSourceOptions } from './database/data-source';
     TasksModule, ProjectsModule, DiscussionsModule, NotificationsModule, SystemModule,
     UploadModule, SuppliersModule, CustomersModule, PlanningModule,
     ProcessesModule, CategoriesModule, AiModule,
-    BlogsModule, PublicModule, HrModule,
+    WebsiteModule, PublicModule, HrModule,
     EncryptionModule, // Column-level PII encryption
     SocialModule, // Social integration (Facebook, Shopee, TikTok)
     MarketingModule, // Marketing campaigns, segments, automation
     AnnouncementsModule, // Announcements for employees
-    WebsiteProjectsModule,
     AnalyticsModule, // Website Analytics tracking
     QCModule, // Quality Control module
     DesignsModule, // Printing & Embroidery Design Module

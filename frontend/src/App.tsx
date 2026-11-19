@@ -214,7 +214,7 @@ const AppShell: React.FC<AppShellProps> = ({
         }
 
         // CMS Website
-        if (hasPerm('PRODUCT')) {
+        if (hasPerm('PRODUCT') && isRouteEnabled('/website-products')) {
             items.push(getItem('CMS Website', 'sub_cms', <GlobalOutlined />, [
                 getItem(<Link to="/website-products">Sản phẩm (Bán online)</Link>, 'web_prod'),
             ]));

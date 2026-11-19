@@ -7,7 +7,7 @@ import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('website-projects')
-@RequiresPackage(PackageKey.MARKETING)
+@RequiresPackage(PackageKey.WEBSITE)
 export class WebsiteProjectsController {
     constructor(private readonly service: WebsiteProjectsService) { }
 
