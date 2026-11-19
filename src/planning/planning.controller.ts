@@ -5,8 +5,11 @@ import { PfoDemandService } from './pfo-demand.service';
 import { PfoBomEngineService } from './pfo-bom-engine.service';
 import { PfoSourcingService } from './pfo-sourcing.service';
 import { PfoExecutionService } from './pfo-execution.service';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('planning')
+@RequiresPackage(PackageKey.PRODUCTION)
 export class PlanningController {
   constructor(
     private readonly planningSvc: PlanningService,

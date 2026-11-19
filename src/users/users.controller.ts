@@ -2,8 +2,10 @@ import { AuthOnly, Perm } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from './users.service';
+import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('users')
+@CorePackage()
 @UseGuards(JwtAuthGuard)
 export class UsersController {
     constructor(private readonly service: UsersService) { }

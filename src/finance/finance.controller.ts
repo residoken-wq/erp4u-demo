@@ -3,8 +3,11 @@ import { FinanceService } from './finance.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermission, Perm } from '../auth/permissions.decorator';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('finance')
+@RequiresPackage(PackageKey.FINANCE)
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class FinanceController {
   constructor(private readonly s: FinanceService) { }

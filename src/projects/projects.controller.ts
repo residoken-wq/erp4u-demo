@@ -2,8 +2,11 @@ import { AuthOnly } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ProjectsService } from './projects.service';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('projects')
+@RequiresPackage(PackageKey.PROJECTS)
 @UseGuards(JwtAuthGuard)
 export class ProjectsController {
     constructor(private readonly service: ProjectsService) { }

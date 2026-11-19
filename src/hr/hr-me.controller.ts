@@ -14,8 +14,11 @@ import { HrService } from './hr.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthOnly } from '../auth/permissions.decorator';
 import { LeaveStatus, LeaveType } from './entities/leave-request.entity';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('hr/me')
+@RequiresPackage(PackageKey.HR)
 @UseGuards(JwtAuthGuard)
 export class HrMeController {
   constructor(private readonly hrService: HrService) {}

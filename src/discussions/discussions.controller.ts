@@ -1,8 +1,11 @@
 import { AuthOnly } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { DiscussionsService } from './discussions.service';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('discussions')
+@RequiresPackage(PackageKey.PROJECTS)
 export class DiscussionsController {
     constructor(private readonly service: DiscussionsService) { }
 

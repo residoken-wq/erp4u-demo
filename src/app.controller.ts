@@ -1,8 +1,10 @@
 import { Public } from './auth/public.decorator';
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { CorePackage } from './common/packages/requires-package.decorator';
 
 @Controller()
+@CorePackage()
 export class AppController {
     constructor(private readonly dataSource: DataSource) {}
 

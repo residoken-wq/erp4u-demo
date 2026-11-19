@@ -1,8 +1,10 @@
 import { Controller, Get, Post, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('notifications')
+@CorePackage()
 @UseGuards(JwtAuthGuard) // <--- SECURE ENDPOINT
 export class NotificationsController {
     constructor(private readonly service: NotificationsService) { }

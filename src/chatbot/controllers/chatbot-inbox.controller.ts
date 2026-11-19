@@ -26,10 +26,13 @@ import { ChatbotOutbox } from '../entities/chatbot-outbox.entity';
 import { ChatbotAuditEvent } from '../entities/chatbot-audit-event.entity';
 import { Customer } from '../../customers/customer.entity';
 import { ChatbotOutboxService } from '../outbox/chatbot-outbox.service';
+import { RequiresPackage } from '../../common/packages/requires-package.decorator';
+import { PackageKey } from '../../common/packages/package.registry';
 
 const STATUS_PROGRESSION = ['received', 'assigned', 'contacted', 'quoted', 'closed'];
 
 @Controller('chatbot/admin/inbox')
+@RequiresPackage(PackageKey.AI)
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ChatbotInboxController {
   constructor(

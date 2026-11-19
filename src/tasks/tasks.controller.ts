@@ -1,8 +1,10 @@
 import { AuthOnly } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { TasksService } from './tasks.service';
+import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('tasks')
+@CorePackage()
 export class TasksController {
   constructor(private readonly s: TasksService) { }
 

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Cron } from '@nestjs/schedule';
@@ -7,6 +7,8 @@ import { ChatbotConfigService } from '../config/chatbot-config.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { EmailService } from '../../common/services/email.service';
 import { User } from '../../users/entities/user.entity';
+import { ENTITLEMENT_PROVIDER, EntitlementProvider } from '../../common/packages/entitlement-provider.interface';
+import { PackageKey } from '../../common/packages/package.registry';
 
 const BACKOFF_MINS = [1, 2, 5, 10, 30, 60, 120, 240];
 
@@ -23,10 +25,17 @@ export class ChatbotOutboxService {
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
     private readonly dataSource: DataSource,
+    @Optional()
+    @Inject(ENTITLEMENT_PROVIDER)
+    private readonly entitlementProvider?: EntitlementProvider,
   ) {}
 
   @Cron('*/1 * * * *')
   async handleCron() {
+    if (this.entitlementProvider && !(await this.entitlementProvider.isEnabled(PackageKey.AI))) {
+      this.logger.debug('Package AI is not enabled, skipping chatbot outbox cron');
+      return;
+    }
     try {
       await this.run();
     } catch (err: any) {

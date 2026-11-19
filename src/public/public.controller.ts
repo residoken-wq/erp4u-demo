@@ -19,12 +19,11 @@ import { HrService } from '../hr/hr.service';
 import { JobPostStatus } from '../hr/entities/job-post.entity';
 import { DesignsService } from '../designs/designs.service';
 import { DemoModeService } from '../common/services/demo-mode.service';
-import { Optional } from '@nestjs/common';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('public')
 export class PublicController {
-    private readonly demoModeService: DemoModeService;
-
     constructor(
         @InjectRepository(Product)
         private readonly productRepo: Repository<Product>,
@@ -48,9 +47,8 @@ export class PublicController {
         private readonly systemService: SystemService,
         private readonly hrService: HrService,
         private readonly designsService: DesignsService,
-        @Optional() demoModeService?: DemoModeService
+        private readonly demoModeService: DemoModeService,
     ) {
-        this.demoModeService = demoModeService || new DemoModeService({ get: (k: string) => process.env[k] } as any);
     }
 
     @Public()
@@ -69,18 +67,21 @@ export class PublicController {
     // ========================================
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Get('home-config')
     async getHomeConfig() {
         return this.systemService.getHomeConfig();
     }
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Get('about-config')
     async getAboutConfig() {
         return this.systemService.getAboutConfig();
     }
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Get('settings')
     async getSettings(
         @Headers('origin') origin?: string,
@@ -227,6 +228,7 @@ export class PublicController {
     // ... (settings code)
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Get('products/:sku')
     async getProductBySku(@Param('sku') sku: string) {
         const product = await this.productRepo.findOne({
@@ -266,6 +268,7 @@ export class PublicController {
     // ========================================
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Get('categories')
     async getCategories() {
         // Only return categories that have at least one product visible on website
@@ -290,6 +293,7 @@ export class PublicController {
     // ========================================
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Get('blogs')
     async getBlogs(@Query('limit') limit?: number) {
         const query = this.blogRepo.createQueryBuilder('b')
@@ -315,6 +319,7 @@ export class PublicController {
     }
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Get('blogs/:slug')
     async getBlogBySlug(@Param('slug') slug: string) {
         const blog = await this.blogRepo.findOne({
@@ -356,6 +361,7 @@ export class PublicController {
     // ========================================
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Post('leads')
     async createLead(@Body() body: {
         company_name: string;
@@ -403,6 +409,7 @@ export class PublicController {
     // ========================================
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Post('orders')
     async createOrder(@Body() body: {
         customer_name: string;
@@ -482,6 +489,7 @@ export class PublicController {
     // ========================================
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Get('products')
     async getProducts(
         @Query('page') page = 1,
@@ -562,6 +570,7 @@ export class PublicController {
     // ========================================
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Get('policies')
     async getPolicies() {
         // Return all active policies (for website sidebar/footer)
@@ -598,6 +607,7 @@ export class PublicController {
     }
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Get('policies/:slug')
     async getPolicy(@Param('slug') slug: string) {
         const policy = await this.policyRepo.findOne({
@@ -612,6 +622,7 @@ export class PublicController {
     }
 
     @Perm('CMS', 'update')
+    @RequiresPackage(PackageKey.MARKETING)
     @Put('policies/:slug')
     async updatePolicy(@Param('slug') slug: string, @Body() data: any) {
         // Upsert policy
@@ -644,6 +655,7 @@ export class PublicController {
     // ========================================
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Get('wizard/config')
     async getWizardConfig() {
         try {
@@ -667,6 +679,7 @@ export class PublicController {
     }
 
     @Perm('CMS', 'update')
+    @RequiresPackage(PackageKey.MARKETING)
     @Put('wizard/config')
     async updateWizardConfig(@Body() data: WizardConfigData) {
         try {
@@ -692,6 +705,7 @@ export class PublicController {
     // ========================================
 
     @Public()
+    @RequiresPackage(PackageKey.HR)
     @Get('recruitment/jobs')
     async getPublicJobs() {
         // Return only published & show_on_website jobs
@@ -700,6 +714,7 @@ export class PublicController {
     }
 
     @Public()
+    @RequiresPackage(PackageKey.HR)
     @Get('recruitment/jobs/:slug')
     async getJobBySlug(@Param('slug') slug: string) {
         const job = await this.hrService.findJobBySlug(slug);
@@ -710,6 +725,7 @@ export class PublicController {
     }
 
     @Public()
+    @RequiresPackage(PackageKey.HR)
     @Post('recruitment/apply')
     async applyJob(@Body() data: any) {
         // data contains job_post_id, name, email, phone, cv_url, etc.
@@ -725,6 +741,7 @@ export class PublicController {
     }
 
     @Public()
+    @RequiresPackage(PackageKey.HR)
     @Get('recruitment/portal/:token')
     async getCandidatePortal(@Param('token') token: string) {
         const candidate = await this.hrService.getCandidateByToken(token);
@@ -742,12 +759,14 @@ export class PublicController {
     }
 
     @Public()
+    @RequiresPackage(PackageKey.HR)
     @Post('recruitment/portal/:token/submit-assessment')
     async submitPortalAssessment(@Param('token') token: string, @Body() body: any) {
         return this.hrService.submitAssessment(token, body.answers);
     }
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Post('wizard/submit')
     async submitWizardLead(@Body() body: {
         customer_name: string;
@@ -826,6 +845,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
     // ========================================
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Get('projects')
     async getWebsiteProjects() {
         const projects = await this.websiteProjectRepo.find({
@@ -836,6 +856,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
     }
 
     @Public()
+    @RequiresPackage(PackageKey.MARKETING)
     @Get('projects/:slug')
     async getWebsiteProject(@Param('slug') slug: string) {
         const project = await this.websiteProjectRepo.findOne({
@@ -848,6 +869,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
     }
 
     @Perm('CMS', 'create')
+    @RequiresPackage(PackageKey.MARKETING)
     @Post('projects')
     async createWebsiteProject(@Body() body: any) {
         const project = this.websiteProjectRepo.create(body);
@@ -855,6 +877,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
     }
 
     @Perm('CMS', 'update')
+    @RequiresPackage(PackageKey.MARKETING)
     @Put('projects/:id')
     async updateWebsiteProject(@Param('id') id: number, @Body() body: any) {
         await this.websiteProjectRepo.update(id, body);
@@ -862,6 +885,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
     }
 
     @Perm('CMS', 'delete')
+    @RequiresPackage(PackageKey.MARKETING)
     @Delete('projects/:id')
     async deleteWebsiteProject(@Param('id') id: number) {
         await this.websiteProjectRepo.delete(id);
@@ -874,6 +898,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
     // ========================================
 
     @Public()
+    @RequiresPackage(PackageKey.SALES)
     @Get('portal/quote/:uuid')
     async getPortalQuote(@Param('uuid') uuid: string, @Req() req: any) {
         let quote: any = await this.salesService.getQuoteByUuid(uuid);
@@ -979,6 +1004,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
     }
 
     @Public()
+    @RequiresPackage(PackageKey.SALES)
     @Post('portal/quote/:uuid/action')
     async portalQuoteAction(@Param('uuid') uuid: string, @Body() body: any, @Req() req: any) {
         const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -999,6 +1025,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
     }
 
     @Public()
+    @RequiresPackage(PackageKey.SALES)
     @Post('portal/quote/:orderId/comment')
     portalAddComment(@Param('orderId') orderId: number, @Body() body: any) {
         return this.salesService.addComment(
@@ -1012,6 +1039,7 @@ ${body.render_image ? '\n[Có hình render đính kèm]' : ''}
     }
 
     @Public()
+    @RequiresPackage(PackageKey.SALES)
     @Delete('portal/quote/comment/:commentId')
     portalDeleteComment(@Param('commentId') commentId: number, @Body() body: any) {
         return this.salesService.softDeleteComment(Number(commentId), body?.deletedBy || 'Khách hàng');

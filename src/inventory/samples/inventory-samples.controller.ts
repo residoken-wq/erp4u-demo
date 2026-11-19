@@ -2,8 +2,11 @@ import { Perm } from '../../auth/permissions.decorator';
 import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
 import { InventorySamplesService } from './inventory-samples.service';
 import { SampleTransactionType } from './sample-transaction.entity';
+import { RequiresPackage } from '../../common/packages/requires-package.decorator';
+import { PackageKey } from '../../common/packages/package.registry';
 
 @Controller('inventory/samples')
+@RequiresPackage(PackageKey.INVENTORY)
 export class InventorySamplesController {
     constructor(private readonly samplesService: InventorySamplesService) {}
 

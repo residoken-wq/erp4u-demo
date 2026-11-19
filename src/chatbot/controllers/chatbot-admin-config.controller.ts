@@ -15,8 +15,11 @@ import { DataSource } from 'typeorm';
 import { SystemConfig } from '../../system/system-config.entity';
 import { LLM_PROVIDER, LlmProvider } from '../llm/llm-provider';
 import { Inject } from '@nestjs/common';
+import { RequiresPackage } from '../../common/packages/requires-package.decorator';
+import { PackageKey } from '../../common/packages/package.registry';
 
 @Controller('chatbot/admin')
+@RequiresPackage(PackageKey.AI)
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ChatbotAdminConfigController {
   constructor(

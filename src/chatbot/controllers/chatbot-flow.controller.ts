@@ -3,6 +3,8 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/permissions.guard';
 import { RequirePermission, Perm } from '../../auth/permissions.decorator';
 import { ChatbotFlowService } from '../flow/chatbot-flow.service';
+import { RequiresPackage } from '../../common/packages/requires-package.decorator';
+import { PackageKey } from '../../common/packages/package.registry';
 
 const uid = (req: any): number | null => {
   const v = Number(req.user?.id ?? req.user?.userId);
@@ -10,6 +12,7 @@ const uid = (req: any): number | null => {
 };
 
 @Controller('chatbot/admin/flows')
+@RequiresPackage(PackageKey.AI)
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ChatbotFlowController {
   constructor(private readonly flowService: ChatbotFlowService) {}

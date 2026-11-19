@@ -17,8 +17,11 @@ import { PermissionsGuard } from '../../auth/permissions.guard';
 import { RequirePermission, Perm } from '../../auth/permissions.decorator';
 import { ChatbotKbService } from '../kb/chatbot-kb.service';
 import { ChatbotToolsService } from '../tools/chatbot-tools.service';
+import { RequiresPackage } from '../../common/packages/requires-package.decorator';
+import { PackageKey } from '../../common/packages/package.registry';
 
 @Controller('chatbot/admin/kb')
+@RequiresPackage(PackageKey.AI)
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ChatbotKbController {
   constructor(

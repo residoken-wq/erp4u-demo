@@ -2,8 +2,11 @@ import { Perm } from '../auth/permissions.decorator';
 import { Public } from '../auth/public.decorator';
 import { Controller, Post, Get, Put, Delete, Body, Param, Query, ParseIntPipe } from '@nestjs/common';
 import { PurchasingService } from './purchasing.service';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('purchasing')
+@RequiresPackage(PackageKey.INVENTORY)
 export class PurchasingController {
   constructor(private readonly s: PurchasingService) { }
 

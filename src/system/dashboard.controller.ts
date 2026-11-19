@@ -6,8 +6,10 @@ import { SalesOrder, SalesOrderStatus } from '../sales/sales-order.entity';
 import { InventoryStock } from '../inventory/inventory-stock.entity';
 import { GoodsReceipt, GoodsReceiptStatus } from '../inventory/entities/goods-receipt.entity';
 import { PurchaseOrder, POStatus } from '../purchasing/entities/purchase-order.entity';
+import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('system/dashboard')
+@CorePackage()
 export class DashboardController {
     constructor(
         @InjectRepository(SalesOrder) private orderRepo: Repository<SalesOrder>,

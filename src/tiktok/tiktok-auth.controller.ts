@@ -3,8 +3,11 @@ import { Public } from '../auth/public.decorator';
 import { Controller, Get, Query, Res } from '@nestjs/common';
 import { TikTokService } from './tiktok.service';
 import { Response } from 'express';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('tiktok/auth')
+@RequiresPackage(PackageKey.MARKETING)
 export class TikTokAuthController {
     constructor(private readonly tiktokService: TikTokService) { }
 

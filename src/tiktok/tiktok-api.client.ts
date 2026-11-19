@@ -1,4 +1,4 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DemoModeService } from '../common/services/demo-mode.service';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -14,7 +14,6 @@ import * as crypto from 'crypto';
 @Injectable()
 export class TikTokApiClient {
     private readonly logger = new Logger(TikTokApiClient.name);
-    private readonly demoModeService: DemoModeService;
     private readonly httpClient: any;
     private readonly appKey: string;
     private readonly appSecret: string;
@@ -23,9 +22,8 @@ export class TikTokApiClient {
 
     constructor(
         private configService: ConfigService,
-        @Optional() demoModeService?: DemoModeService
+        private readonly demoModeService: DemoModeService,
     ) {
-        this.demoModeService = demoModeService || new DemoModeService(configService);
         this.appKey = this.configService.get<string>('TIKTOK_APP_KEY', '');
         this.appSecret = this.configService.get<string>('TIKTOK_APP_SECRET', '');
         this.redirectUri = this.configService.get<string>(

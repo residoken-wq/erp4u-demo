@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -17,8 +17,6 @@ import { DemoModeService } from '../common/services/demo-mode.service';
 
 @Injectable()
 export class AiService {
-    private readonly demoModeService: DemoModeService;
-
     constructor(
         @InjectRepository(AiMessage) private aiMessageRepo: Repository<AiMessage>,
         private configService: ConfigService,
@@ -32,9 +30,8 @@ export class AiService {
         private usersService: UsersService,
         private aiLearningService: AiLearningService,
         private aiKnowledgeService: AiKnowledgeService,
-        @Optional() demoModeService?: DemoModeService,
+        private readonly demoModeService: DemoModeService,
     ) {
-        this.demoModeService = demoModeService || new DemoModeService(configService);
     }
 
     private selectedModel: string | null = null;

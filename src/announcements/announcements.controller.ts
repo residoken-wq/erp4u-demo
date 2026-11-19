@@ -3,8 +3,10 @@ import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Requ
 import { AnnouncementsService } from './announcements.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AnnouncementType } from './announcement.entity';
+import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('announcements')
+@CorePackage()
 @UseGuards(JwtAuthGuard)
 export class AnnouncementsController {
     constructor(private readonly service: AnnouncementsService) { }

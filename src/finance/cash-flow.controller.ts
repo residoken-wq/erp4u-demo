@@ -2,8 +2,11 @@ import { Perm } from '../auth/permissions.decorator';
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { CashFlowService } from './cash-flow.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('finance/cash-flow')
+@RequiresPackage(PackageKey.FINANCE)
 @UseGuards(JwtAuthGuard)
 export class CashFlowController {
     constructor(private readonly cashFlowService: CashFlowService) { }

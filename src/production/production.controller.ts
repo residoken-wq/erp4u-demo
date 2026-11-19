@@ -1,8 +1,11 @@
 import { Perm } from '../auth/permissions.decorator';
 import { Controller, Post, Get, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ProductionService } from './production.service';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('production')
+@RequiresPackage(PackageKey.PRODUCTION)
 export class ProductionController {
   constructor(private readonly productionService: ProductionService) {}
 

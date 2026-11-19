@@ -1,8 +1,11 @@
 import { AuthOnly, Perm } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
 import { ProcessesService } from './processes.service';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('processes')
+@RequiresPackage(PackageKey.PRODUCTION)
 export class ProcessesController {
   constructor(private readonly s: ProcessesService) {}
 
