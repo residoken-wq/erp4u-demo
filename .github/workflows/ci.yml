@@ -1,36 +1,158 @@
-name: ERP4U CI
+name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build-and-lint:
-    runs-on: ubuntu-latest
+  verify:
+    name: Verify (Lint, Test, Build)
+    runs-on: ubuntu-24.04
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Use Node.js 20.x
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20.x
-        cache: 'npm'
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
 
-    - name: Install Backend Dependencies
-      run: npm ci --legacy-peer-deps
+      - name: Install Backend Dependencies
+        run: npm ci --legacy-peer-deps
 
-    - name: Backend Build Check
-      run: npm run build
+      - name: Run Backend Lint
+        run: npm run lint
+        continue-on-error: true
 
-    - name: Install Frontend Dependencies
-      run: |
-        cd frontend
-        npm ci
+      - name: Run Backend Unit Tests
+        run: npm test
 
-    - name: Frontend Build Check
-      run: |
-        cd frontend
-        npm run build
+      - name: Run Backend Build
+        run: npm run build
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Frontend Build
+        run: |
+          cd frontend
+          npm run build
+
+  image:
+    name: Build & Push Docker Images
+    needs: [verify]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata (API runtime)
+        id: meta-api
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/residoken-wq/erp4u-demo-api
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=latest,enable=${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+            type=sha,prefix=sha-,format=short
+
+      - name: Build and push Docker image (API runtime)
+        id: build-api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: production
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract Docker metadata (API tools)
+        id: meta-tools
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/residoken-wq/erp4u-demo-api
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=tools-latest,enable=${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+            type=sha,prefix=tools-sha-,format=short
+
+      - name: Build and push Docker image (API tools)
+        id: build-tools
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: build
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta-tools.outputs.tags }}
+          labels: ${{ steps.meta-tools.outputs.labels }}
+          cache-from: type=gha
+
+      - name: Extract Docker metadata (Web frontend)
+        id: meta-web
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/residoken-wq/erp4u-demo-web
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=latest,enable=${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+            type=sha,prefix=sha-,format=short
+
+      - name: Build and push Docker image (Web frontend)
+        id: build-web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          target: production
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Write image digest to job summary
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          echo "### Docker Images Published to GHCR" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Runtime Image**: \`ghcr.io/residoken-wq/erp4u-demo-api\`" >> $GITHUB_STEP_SUMMARY
+          echo "  - **Digest**: \`${{ steps.build-api.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Tools Image**: \`ghcr.io/residoken-wq/erp4u-demo-api\` (target: \`build\`)" >> $GITHUB_STEP_SUMMARY
+          echo "  - **Digest**: \`${{ steps.build-tools.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web Frontend Image**: \`ghcr.io/residoken-wq/erp4u-demo-web\`" >> $GITHUB_STEP_SUMMARY
+          echo "  - **Digest**: \`${{ steps.build-web.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY

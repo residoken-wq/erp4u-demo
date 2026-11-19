@@ -1,3 +1,4 @@
+# CẢNH BÁO: File này chỉ dùng local dev / demo nội bộ, chứa thông tin mặc định. Production dùng docker-compose.prod.yml.
 version: '3.8'
 
 services:

@@ -18,6 +18,9 @@ async function bootstrap() {
       logger: ['error', 'warn', 'log', 'debug'],
     });
 
+    // Trust reverse proxy (Nginx / NPM) for X-Forwarded-* headers
+    app.set('trust proxy', 1);
+
     // Create uploads folder if not exists
     const uploadDir = join(process.cwd(), 'uploads');
     if (!fs.existsSync(uploadDir)) {
