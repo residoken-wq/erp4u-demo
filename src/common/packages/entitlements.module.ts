@@ -64,7 +64,6 @@ let hasWarnedEntitlementsMode = false;
     ENTITLEMENT_PROVIDER,
     AllEnabledProvider,
     DbEntitlementProvider,
-    EntitlementGuard,
     UsageService,
     TypeOrmModule,
   ],
