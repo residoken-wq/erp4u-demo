@@ -89,27 +89,22 @@ jobs:
           npm ci --legacy-peer-deps
           npm run build
 
-      - name: Ensure PostgreSQL client tools
-        run: |
-          if ! command -v pg_dump >/dev/null 2>&1 || ! command -v psql >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y postgresql-client
-          fi
-          pg_dump --version
-
       - name: Verify Schema Parity (synchronize vs migrations)
         run: |
-          psql -h 127.0.0.1 -p 5432 -U erp4u_ci -d erp4u_ci -c "CREATE DATABASE sync_db;"
-          psql -h 127.0.0.1 -p 5432 -U erp4u_ci -d erp4u_ci -c "CREATE DATABASE mig_db;"
+          PG_EXEC="docker run --rm --network host -e PGPASSWORD=${PGPASSWORD} postgres:15"
+          $PG_EXEC pg_dump --version
+
+          $PG_EXEC psql -h 127.0.0.1 -p 5432 -U erp4u_ci -d erp4u_ci -c "CREATE DATABASE sync_db;"
+          $PG_EXEC psql -h 127.0.0.1 -p 5432 -U erp4u_ci -d erp4u_ci -c "CREATE DATABASE mig_db;"
 
           DB_DATABASE=sync_db npx ts-node scripts/ci/schema-sync.ts
           DB_DATABASE=mig_db npm run migration:run
 
-          pg_dump -h 127.0.0.1 -p 5432 -U erp4u_ci --schema-only --no-owner --no-privileges \
+          $PG_EXEC pg_dump -h 127.0.0.1 -p 5432 -U erp4u_ci --schema-only --no-owner --no-privileges \
             -T public.migrations -T public.migrations_id_seq sync_db \
             | grep -Ev '^\\(un)?restrict\b' > /tmp/sync_schema.sql
 
-          pg_dump -h 127.0.0.1 -p 5432 -U erp4u_ci --schema-only --no-owner --no-privileges \
+          $PG_EXEC pg_dump -h 127.0.0.1 -p 5432 -U erp4u_ci --schema-only --no-owner --no-privileges \
             -T public.migrations -T public.migrations_id_seq mig_db \
             | grep -Ev '^\\(un)?restrict\b' > /tmp/mig_schema.sql
 
