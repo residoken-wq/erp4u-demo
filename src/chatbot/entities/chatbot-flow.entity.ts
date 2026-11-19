@@ -19,7 +19,7 @@ export class ChatbotFlow {
   @Column({ type: 'int', default: 0 })
   priority: number;
 
-  @Column({ type: 'jsonb', default: () => `'{"nodes":[],"edges":[]}'::jsonb` })
+  @Column({ type: 'jsonb', default: () => `'{"edges": [], "nodes": []}'` })
   draft_graph: any;
 
   @Column({ type: 'jsonb', nullable: true })

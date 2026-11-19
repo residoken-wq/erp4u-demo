@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Nightly reset of the demo environment:
 # 1. Quick backup
-# 2. Reset database and re-seed demo data & permissions via tools container (seed:reset)
-# 3. Clean up user-uploaded files while preserving seed media (if any)
-# 4. Restart backend & verify health
+# 2. Recreate clean database (drop & create)
+# 3. Start backend so TypeORM auto-migrations (DB_AUTO_MIGRATE) initialize schema, then wait healthy
+# 4. Seed demo data & permissions via tools container (seed:reset) and check uploads
+# 5. Restart backend & verify health
 #
 # Crontab (02:30 every day):
 #   30 2 * * * cd /opt/erp4u-demo && ./scripts/reset-demo.sh >> /var/log/erp4u-reset-demo.log 2>&1
@@ -46,19 +47,26 @@ wait_healthy() {
 
 log "=== BẮT ĐẦU RESET DEMO ==="
 
-log "1/4 Tạo bản backup trước khi reset"
+log "1/5 Tạo bản backup trước khi reset"
 ./scripts/backup.sh
 
-log "2/4 Khôi phục dữ liệu demo qua container seed (seed:reset)"
-./scripts/deploy.sh seed --yes
+log "2/5 Dừng backend và dựng lại cơ sở dữ liệu rỗng"
+dc stop backend < /dev/null
+# shellcheck disable=SC2016
+dc exec -T postgres sh -c 'dropdb -U "$POSTGRES_USER" --if-exists --force "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"' < /dev/null
 
-log "3/4 Xử lý thư mục uploads"
+log "3/5 Khởi động backend để tự chạy TypeORM migrations (DB_AUTO_MIGRATE) và chờ healthy"
+dc up -d backend < /dev/null
+wait_healthy
+
+log "4/5 Nạp dữ liệu demo qua container seed (seed:reset) và xử lý thư mục uploads"
+./scripts/deploy.sh seed --yes
 # TODO: Hiện tại bộ dữ liệu seed không kèm ảnh tĩnh vào volume /app/uploads.
 # Khi có danh sách file ảnh seed trong tương lai, xác định qua manifest và chỉ xoá file người dùng tạo ra.
 # Để tránh mất dữ liệu do đoán mò, không thực hiện xoá tuỳ tiện ở đây.
 log "Uploads: Đã kiểm tra (chưa cấu hình xoá cưỡng chế uploads ngoài manifest)"
 
-log "4/4 Khởi động lại backend và chờ healthy"
+log "5/5 Khởi động lại backend sau seed và chờ healthy"
 dc restart backend < /dev/null
 wait_healthy
 

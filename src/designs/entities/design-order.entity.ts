@@ -32,7 +32,7 @@ export class DesignOrder {
     @Column({ unique: true })
     code: string;
 
-    @Column({ type: 'uuid', unique: true, default: () => 'gen_random_uuid()' })
+    @Column({ type: 'uuid', unique: true, generated: 'uuid' })
     uuid: string;
 
     // --- Thông tin trường/khách hàng ---

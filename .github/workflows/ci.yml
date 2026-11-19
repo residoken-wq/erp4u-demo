@@ -48,6 +48,86 @@ jobs:
           cd frontend
           npm run build
 
+  migrations:
+    name: Verify Migrations (Parity, Drift, Revert)
+    runs-on: ubuntu-24.04
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: erp4u_ci
+          POSTGRES_PASSWORD: erp4u_ci
+          POSTGRES_DB: erp4u_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U erp4u_ci -d erp4u_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=15
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_USERNAME: erp4u_ci
+      DB_PASSWORD: erp4u_ci
+      PGPASSWORD: erp4u_ci
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install Dependencies & Build
+        run: |
+          npm ci --legacy-peer-deps
+          npm run build
+
+      - name: Ensure PostgreSQL client tools
+        run: |
+          if ! command -v pg_dump >/dev/null 2>&1 || ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+          pg_dump --version
+
+      - name: Verify Schema Parity (synchronize vs migrations)
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U erp4u_ci -d erp4u_ci -c "CREATE DATABASE sync_db;"
+          psql -h 127.0.0.1 -p 5432 -U erp4u_ci -d erp4u_ci -c "CREATE DATABASE mig_db;"
+
+          DB_DATABASE=sync_db npx ts-node scripts/ci/schema-sync.ts
+          DB_DATABASE=mig_db npm run migration:run
+
+          pg_dump -h 127.0.0.1 -p 5432 -U erp4u_ci --schema-only --no-owner --no-privileges \
+            -T public.migrations -T public.migrations_id_seq sync_db \
+            | grep -Ev '^\\(un)?restrict\b' > /tmp/sync_schema.sql
+
+          pg_dump -h 127.0.0.1 -p 5432 -U erp4u_ci --schema-only --no-owner --no-privileges \
+            -T public.migrations -T public.migrations_id_seq mig_db \
+            | grep -Ev '^\\(un)?restrict\b' > /tmp/mig_schema.sql
+
+          diff -u /tmp/sync_schema.sql /tmp/mig_schema.sql
+
+      - name: Check for Missing Migrations (Drift Check)
+        env:
+          DB_DATABASE: mig_db
+        run: npm run migration:check
+
+      - name: Verify Migration Revert & Re-run
+        env:
+          DB_DATABASE: mig_db
+        run: |
+          npm run migration:revert
+          npm run migration:run
+          npm run migration:show
+
   image:
     name: Build & Push Docker Images
     needs: [verify]
