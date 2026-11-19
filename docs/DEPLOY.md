@@ -159,7 +159,7 @@ Quy trình thực hiện:
 ```bash
 ./scripts/deploy.sh status
 ```
-Hiển thị commit SHA của backend, web, origin/main, số bảng DB và mốc rollback khả dụng.
+Hiển thị commit SHA của backend, web, `origin/main`, tên migration mới nhất trong bảng `migrations` và mốc rollback khả dụng.
 
 ### 5.3. Quay lại phiên bản trước (Rollback)
 Nếu phiên bản mới phát sinh lỗi, thực hiện rollback:
@@ -168,7 +168,64 @@ Nếu phiên bản mới phát sinh lỗi, thực hiện rollback:
 ```
 Hệ thống sẽ kéo và chạy lại chính xác tag `sha-<commit>` trước đó được lưu trong `.deploy/previous`.
 
-> **Lưu ý về TypeORM Synchronize**: Hệ thống demo sử dụng `synchronize: true` để đồng bộ schema. Khi rollback về phiên bản cũ, bảng hoặc cột mới của bản sau có thể vẫn tồn tại trong DB. Nếu cần khôi phục trạng thái DB hoàn toàn, hãy sử dụng bản sao lưu từ bước 6.
+> **Lưu ý về Migrations khi Rollback**: Rollback chỉ quay lại image ứng dụng cũ và **không** tự động revert migration trong cơ sở dữ liệu. Vì vậy migration mới vẫn nằm trong DB khi bản cũ chạy lại — mọi migration mới cần thiết kế **tương thích ngược** (ví dụ: thêm cột nullable trước khi dùng, chưa vội `DROP COLUMN` ngay trong cùng phiên bản). Nếu cần quay về trạng thái schema/dữ liệu cũ hoàn toàn, hãy khôi phục từ bản sao lưu ở mục 6.
+
+### 5.4. Migrations (TypeORM)
+
+Hệ thống tắt hoàn toàn `synchronize` (`synchronize: false`) và quản lý thay đổi schema bằng TypeORM migrations (`src/database/migrations/`, bảng theo dõi `migrations`).
+
+#### Cơ chế tự chạy khi khởi động
+- Mặc định `DB_AUTO_MIGRATE=true` (khi không khai báo hoặc khác `false`): mỗi khi container `backend` khởi động, TypeORM tự động chạy mọi migration chưa áp dụng (`migrationsRun: true`) trước khi ứng dụng nhận request.
+
+#### Tắt tự chạy và chạy tay qua image tools
+Nếu muốn kiểm soát thời điểm chạy migration trước khi nâng cấp backend:
+1. Đặt `DB_AUTO_MIGRATE=false` trong file `.env`.
+2. Chạy migration thủ công bằng image tools (`seed` service trong profile `tools`):
+   ```bash
+   # Xem danh sách migration đã chạy / chờ chạy
+   docker compose -p erp4u-demo -f docker-compose.prod.yml --profile tools run --rm seed npm run migration:show
+
+   # Chạy các migration mới
+   docker compose -p erp4u-demo -f docker-compose.prod.yml --profile tools run --rm seed npm run migration:run
+
+   # Hoàn tác migration gần nhất (chỉ dùng khi đã kiểm tra ảnh hưởng dữ liệu)
+   docker compose -p erp4u-demo -f docker-compose.prod.yml --profile tools run --rm seed npm run migration:revert
+   ```
+   *(Với image runtime đã build sẵn `dist/`, lệnh tương đương là `npm run migration:run:prod`.)*
+
+#### Ảnh hưởng khi Rollback
+- Khi chạy `./scripts/deploy.sh rollback`, container `backend` chạy lại image cũ trong khi các migration của bản mới **vẫn tồn tại trong DB**.
+- Để rollback không làm sập bản cũ, các migration phải theo nguyên tắc **expand-and-contract (tương thích ngược)**: chỉ thêm bảng/cột nullable hoặc cột có `DEFAULT` ở bản mới; chỉ xoá/đổi tên cột cũ ở một đợt phát hành sau khi bản cũ không còn được rollback về nữa.
+
+#### Chuyển đổi DB demo có sẵn (trước đây do `synchronize: true` tạo)
+Với VPS demo đang có sẵn bảng do `synchronize: true` tạo (chưa có bảng `migrations`), nếu khởi động ngay bản mới, migration baseline sẽ báo lỗi vì các bảng đã tồn tại. Có 2 cách xử lý:
+
+1. **Cách khuyến nghị (dựng lại từ đầu — phù hợp môi trường demo)**:
+   Chạy script reset demo sau khi kéo image mới:
+   ```bash
+   ./scripts/reset-demo.sh
+   ```
+   Script sẽ tự sao lưu, xoá và tạo lại DB rỗng, khởi động backend để tự chạy toàn bộ migrations từ đầu (`DB_AUTO_MIGRATE`), rồi nạp lại dữ liệu demo (`seed:reset`).
+
+2. **Cách giữ nguyên dữ liệu hiện có (đánh dấu baseline đã chạy)**:
+   Tạo bảng `migrations` (nếu chưa có) và chèn sẵn bản ghi của baseline (`1795101604548-Baseline.ts` → tên class `Baseline1795101604548`, timestamp `1795101604548`) trước khi khởi động backend bản mới:
+   ```bash
+   docker compose -p erp4u-demo -f docker-compose.prod.yml exec -T postgres \
+     sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+   CREATE TABLE IF NOT EXISTS "migrations" (
+     "id" SERIAL NOT NULL,
+     "timestamp" bigint NOT NULL,
+     "name" character varying NOT NULL,
+     CONSTRAINT "PK_migrations" PRIMARY KEY ("id")
+   );
+   INSERT INTO "migrations" ("timestamp", "name")
+   SELECT 1795101604548, 'Baseline1795101604548'
+   WHERE NOT EXISTS (
+     SELECT 1 FROM "migrations" WHERE "name" = 'Baseline1795101604548'
+   );
+   SQL
+   ```
+   Sau bước này, khởi động lại backend (`./scripts/deploy.sh`) sẽ bỏ qua `Baseline1795101604548` và chỉ chạy các migration mới phát sinh về sau.
 
 ---
 

@@ -3,7 +3,7 @@
 #
 #   ./scripts/deploy.sh             backup -> remember running commit -> pull latest -> restart
 #   ./scripts/deploy.sh rollback    go back to the commit running before the last deploy
-#   ./scripts/deploy.sh status      show running commit, web commit, and DB schema info
+#   ./scripts/deploy.sh status      show running commit, web commit, and latest DB migration
 #   ./scripts/deploy.sh seed [-y]   run database reset and demo seed via tools container
 #
 # APP_TAG and TOOLS_TAG are passed on the command line (shell env beats .env in compose),
@@ -33,14 +33,12 @@ web_running_revision() {
     "$WEB_CONTAINER" 2>/dev/null | cut -c1-7
 }
 
-# In số bảng trong public schema (thay cho migration vì demo dùng TypeORM synchronize)
-# Lưu ý: Rollback với synchronize: true có thể xoá hoặc làm lệch cột mà bản cũ không biết.
-# Luôn chạy backup trước khi deploy (bước 1/5) và kiểm thử rollback trên staging trước khi tin tưởng.
-schema_info() {
-  local tables
+# In tên migration mới nhất trong bảng migrations (TypeORM)
+latest_migration() {
+  local mig
   # shellcheck disable=SC2016
-  tables="$(dc exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "select count(*) from pg_tables where schemaname = current_schema()"' < /dev/null 2>/dev/null || true)"
-  echo "${tables:-không rõ} bảng (public schema)"
+  mig="$(dc exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "select name from migrations order by id desc limit 1"' < /dev/null 2>/dev/null || true)"
+  echo "${mig:-chưa có migration}"
 }
 
 wait_healthy() {
@@ -105,7 +103,7 @@ show_status() {
   echo "Backend đang chạy : ${app_rev:-không rõ (container chưa chạy hoặc image chưa có nhãn)}"
   echo "Web đang chạy     : ${web_rev:-không rõ}"
   echo "origin/main       : $(git rev-parse --short=7 origin/main 2>/dev/null || echo '?') (lệch -> CI commit mới chưa xong hoặc đỏ)"
-  echo "Database schema   : $(schema_info)"
+  echo "Migration mới nhất: $(latest_migration)"
   [ -f "$STATE_DIR/previous" ] && echo "Bản trước (rollback): $(cat "$STATE_DIR/previous")"
   return 0
 }
@@ -190,8 +188,8 @@ cmd_rollback() {
   [[ "$prev" =~ ^[0-9a-f]{7}$ ]] || die "$STATE_DIR/previous không hợp lệ: $prev"
   now="$(running_revision)"
   log "Quay về sha-$prev (đang chạy: ${now:-?})"
-  log "Lưu ý: schema của bản mới vẫn còn trong DB (bản cũ có thể bỏ qua cột/bảng thừa)."
-  log "Nếu dữ liệu bị ảnh hưởng: khôi phục backup theo hướng dẫn trong docs/DEPLOY.md."
+  log "Lưu ý: migration của bản mới vẫn còn trong DB (không tự revert; migration cần tương thích ngược)."
+  log "Nếu dữ liệu hoặc schema bị ảnh hưởng: khôi phục backup theo hướng dẫn trong docs/DEPLOY.md."
   start_tag "sha-$prev" || die "bản sha-$prev cũng không lên – xem log ở trên."
   echo "$(date -Is) rollback ${now:-?} -> $prev" >> "$STATE_DIR/history.log"
   log "Đã quay về sha-$prev. Bản này chạy với APP_TAG truyền qua lệnh;"
