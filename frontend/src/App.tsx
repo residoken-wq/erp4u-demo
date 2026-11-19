@@ -1,6 +1,6 @@
 // ERP4U Frontend Application
 import React, { useState, useEffect, useMemo } from 'react';
-import { Layout, Menu, theme, Button, Avatar, Dropdown, Modal, Form, Input, message } from 'antd';
+import { Layout, Menu, theme, Button, Avatar, Dropdown, Modal, Form, Input, message, Alert } from 'antd';
 import type { MenuProps } from 'antd';
 import {
     DesktopOutlined, PieChartOutlined, TeamOutlined, ShopOutlined, DropboxOutlined, CloudUploadOutlined,
@@ -101,6 +101,17 @@ const App: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(!!(initialToken && initialUser));
     const [currentUser, setCurrentUser] = useState<any>(initialUser);
     const [permissions, setPermissions] = useState<any[]>(initialUser?.permissions || []);
+    const [isDemo, setIsDemo] = useState(false);
+
+    useEffect(() => {
+        api.get('/public/meta')
+            .then(res => {
+                if (res.data?.demo) {
+                    setIsDemo(true);
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     // --- CHANGE PASSWORD STATE ---
     const [isChangePassOpen, setIsChangePassOpen] = useState(false);
@@ -322,6 +333,15 @@ const App: React.FC = () => {
 
     return (
         <Router>
+            {isDemo && (
+                <Alert
+                    message="Bản demo — dữ liệu tự reset mỗi đêm"
+                    type="warning"
+                    banner
+                    closable={false}
+                    style={{ textAlign: 'center', fontWeight: 'bold' }}
+                />
+            )}
             <Routes>
                 <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/" />} />
                 <Route path="/portal/quote/:uuid" element={<PortalQuotePage />} />

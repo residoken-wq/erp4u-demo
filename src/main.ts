@@ -9,6 +9,8 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { isCorsOriginAllowed } from './common/utils/cors.util';
+export { isCorsOriginAllowed };
 
 async function bootstrap() {
   try {
@@ -42,10 +44,10 @@ async function bootstrap() {
 
     app.enableCors({
       origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*') || process.env.NODE_ENV !== 'production') {
+        if (isCorsOriginAllowed(origin, allowedOrigins, process.env.NODE_ENV)) {
           callback(null, true);
         } else {
-          callback(null, true);
+          callback(new Error('Not allowed by CORS'), false);
         }
       },
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
@@ -63,4 +65,7 @@ async function bootstrap() {
     process.exit(1);
   }
 }
-bootstrap();
+
+if (process.env.NODE_ENV !== 'test') {
+  bootstrap();
+}

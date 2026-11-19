@@ -26,6 +26,7 @@ import { ProjectsService } from '../projects/projects.service';
 import { Promotion } from './promotion.entity';
 import { EasyInvoiceService } from './easyinvoice.service';
 import { EmailService } from '../common/services/email.service';
+import { buildPortalQuoteUrl } from '../common/utils/url.util';
 // --- CHECKLIST TEMPLATES ---
 const CHECKLIST_TEMPLATES: Record<string, Array<{ code: string; name: string; sort: number }>> = {
     QUOTATION: [
@@ -1302,7 +1303,7 @@ export class SalesService {
             </tr>
         `).join('');
 
-        const portalLink = `https://erp4u.vn/portal/quote/${order.uuid}`; // Replace with actual domain from env if possible, or config
+        const portalLink = buildPortalQuoteUrl(order.uuid);
 
         const html = `
             <div style="font-family: Arial, sans-serif; color: #333;">

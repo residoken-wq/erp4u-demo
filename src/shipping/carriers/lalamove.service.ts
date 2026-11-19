@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import axios from 'axios';
@@ -6,6 +6,7 @@ import * as crypto from 'crypto';
 import { SystemConfig } from '../../system/system-config.entity';
 import { SalesDelivery } from '../../sales/sales-delivery.entity';
 import { SalesOrder } from '../../sales/sales-order.entity';
+import { DemoModeService } from '../../common/services/demo-mode.service';
 
 export interface LalamoveConfig {
     apiUrl: string;
@@ -250,6 +251,8 @@ export const normalizeLalamoveServiceType = (serviceType?: string): string => {
 export class LalamoveService {
     private readonly logger = new Logger(LalamoveService.name);
 
+    private readonly demoModeService: DemoModeService;
+
     constructor(
         @InjectRepository(SystemConfig)
         private readonly configRepo: Repository<SystemConfig>,
@@ -257,7 +260,10 @@ export class LalamoveService {
         private readonly deliveryRepo: Repository<SalesDelivery>,
         @InjectRepository(SalesOrder)
         private readonly orderRepo: Repository<SalesOrder>,
-    ) {}
+        @Optional() demoModeService?: DemoModeService,
+    ) {
+        this.demoModeService = demoModeService || new DemoModeService({ get: (k: string) => process.env[k] } as any);
+    }
 
     /**
      * Lấy cấu hình Lalamove (ưu tiên bảng system_configs, fallback sang .env)
@@ -692,8 +698,8 @@ export class LalamoveService {
 
         const serviceType = options.serviceType || 'VAN_500KG';
 
-        // 3. Nếu chưa cấu hình Key hoặc là Demo -> Tạo đơn mô phỏng
-        if (!config.apiKey || !config.apiSecret) {
+        // 3. Nếu Demo Mode hoặc chưa cấu hình Key -> Tạo đơn mô phỏng
+        if (this.demoModeService.guard('Lalamove', delivery.code || String(delivery.id)) || !config.apiKey || !config.apiSecret) {
             return this.createMockOrder(delivery, serviceType, pickAddress, dropAddress, senderPhone, recipientPhone);
         }
 
@@ -926,7 +932,7 @@ export class LalamoveService {
         const config = await this.getConfig();
         const orderId = delivery.tracking_code;
 
-        if (!config.apiKey || !config.apiSecret || orderId.startsWith('LLM_')) {
+        if (this.demoModeService.guard('Lalamove (priority-fee)', orderId) || !config.apiKey || !config.apiSecret || orderId.startsWith('LLM_')) {
             return { success: true, message: `[Demo] Đã thêm ${priorityFee.toLocaleString()}đ phí ưu tiên cho tài xế.` };
         }
 
@@ -960,7 +966,7 @@ export class LalamoveService {
         const config = await this.getConfig();
         const orderId = delivery.tracking_code;
 
-        if (!config.apiKey || !config.apiSecret || orderId.startsWith('LLM_')) {
+        if (this.demoModeService.guard('Lalamove (cancel)', orderId) || !config.apiKey || !config.apiSecret || orderId.startsWith('LLM_')) {
             delivery.shipping_status_text = 'CANCELED';
             if (delivery.shipping_metadata?.lalamove) {
                 delivery.shipping_metadata.lalamove.status = 'CANCELED';

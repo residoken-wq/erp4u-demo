@@ -1,10 +1,11 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import axios from 'axios';
 import { SystemConfig } from '../../system/system-config.entity';
 import { SalesDelivery } from '../../sales/sales-delivery.entity';
 import { SalesOrder } from '../../sales/sales-order.entity';
+import { DemoModeService } from '../../common/services/demo-mode.service';
 
 export interface GhtkConfig {
     apiUrl: string;
@@ -235,6 +236,7 @@ export function extractAddressString(val: any, fallback = ''): string {
 @Injectable()
 export class GhtkService {
     private readonly logger = new Logger(GhtkService.name);
+    private readonly demoModeService: DemoModeService;
 
     constructor(
         @InjectRepository(SystemConfig)
@@ -243,7 +245,10 @@ export class GhtkService {
         private readonly deliveryRepo: Repository<SalesDelivery>,
         @InjectRepository(SalesOrder)
         private readonly orderRepo: Repository<SalesOrder>,
-    ) {}
+        @Optional() demoModeService?: DemoModeService
+    ) {
+        this.demoModeService = demoModeService || new DemoModeService({ get: (k: string) => process.env[k] } as any);
+    }
 
     /**
      * Lấy cấu hình GHTK (ưu tiên bảng system_configs, fallback sang .env)
@@ -652,6 +657,30 @@ export class GhtkService {
             relations: ['sales_order', 'sales_order.items', 'sales_order.items.product', 'items'],
         });
         if (!delivery) throw new NotFoundException('Không tìm thấy phiếu xuất kho');
+
+        if (this.demoModeService.guard('GHTK', deliveryId)) {
+            const mockTracking = `DEMO-GHTK-${deliveryId}-${Date.now()}`;
+            delivery.tracking_code = mockTracking;
+            delivery.shipping_carrier = 'GHTK';
+            delivery.shipping_cost = 35000;
+            delivery.shipping_status_id = 1;
+            delivery.shipping_status_text = 'Chờ lấy hàng (Demo Mode)';
+            await this.deliveryRepo.save(delivery);
+            return {
+                success: true,
+                message: 'Tạo đơn GHTK thành công (demo mode)',
+                order: {
+                    tracking_id: mockTracking,
+                    label_id: mockTracking,
+                    fee: 35000,
+                    insurance_fee: 0,
+                    estimated_pick_time: 'Sau 1 ngày',
+                    estimated_deliver_time: 'Sau 3 ngày',
+                    status_id: 1,
+                },
+                demo: true,
+            };
+        }
 
         // Cho phép đẩy đè nếu mã hiện tại là mã Demo (GHTK-DEMO-...) hoặc bị hủy hoặc force = true
         const isDemoTracking = delivery.tracking_code?.startsWith('GHTK-DEMO');

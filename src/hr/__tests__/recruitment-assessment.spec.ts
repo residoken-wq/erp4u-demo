@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import { HrService } from '../hr.service';
 import { Assessment, AssessmentStatus } from '../entities/assessment.entity';
 import { Candidate, CandidateStatus } from '../entities/candidate.entity';
@@ -240,6 +241,23 @@ describe('Recruitment Assessment AI Evaluation & HR Manual Decision (Task P3a)',
             );
             expect(mockActivityLogRepo.save).toHaveBeenCalled();
         });
+
+        it('should throw ConflictException if candidate status is not ASSESSED', async () => {
+            const mockAssessment: Partial<Assessment> = {
+                id: 1,
+                candidate_id: 10,
+                candidate: {
+                    id: 10,
+                    status: CandidateStatus.INTERVIEW_SCHEDULED,
+                } as any,
+            };
+            mockAssessmentRepo.findOne.mockResolvedValue(mockAssessment);
+
+            const user = { id: 5, username: 'hr01', full_name: 'Nhân Sự HR 01' };
+            await expect(
+                service.approveInterview(1, user, { scheduled_at: new Date() })
+            ).rejects.toThrow(ConflictException);
+        });
     });
 
     describe('HR Manual Decision: rejectAssessment', () => {
@@ -295,6 +313,23 @@ describe('Recruitment Assessment AI Evaluation & HR Manual Decision (Task P3a)',
                 })
             );
             expect(mockActivityLogRepo.save).toHaveBeenCalled();
+        });
+
+        it('should throw ConflictException if candidate status is not ASSESSED', async () => {
+            const mockAssessment: Partial<Assessment> = {
+                id: 2,
+                candidate_id: 20,
+                candidate: {
+                    id: 20,
+                    status: CandidateStatus.REJECTED,
+                } as any,
+            };
+            mockAssessmentRepo.findOne.mockResolvedValue(mockAssessment);
+
+            const user = { id: 5, username: 'hr01', full_name: 'Nhân Sự HR 01' };
+            await expect(
+                service.rejectAssessment(2, user, 'Lý do từ chối')
+            ).rejects.toThrow(ConflictException);
         });
     });
 });

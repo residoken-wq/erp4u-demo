@@ -23,6 +23,7 @@ import { Assessment } from '../hr/entities/assessment.entity';
 import { Interview } from '../hr/entities/interview.entity';
 import { HrModule } from '../hr/hr.module';
 import { EmailService } from '../common/services/email.service';
+import { DemoModeService } from '../common/services/demo-mode.service';
 import { DesignsModule } from '../designs/designs.module';
 
 @Module({
@@ -40,6 +41,6 @@ import { DesignsModule } from '../designs/designs.module';
         DesignsModule
     ],
     controllers: [PublicController, PortalController],
-    providers: [EmailService]
+    providers: [EmailService, DemoModeService]
 })
 export class PublicModule { }
