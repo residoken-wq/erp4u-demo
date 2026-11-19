@@ -3,8 +3,11 @@ import { Controller, Post, Body, Req, Logger, HttpCode } from '@nestjs/common';
 import { TikTokService } from './tiktok.service';
 import { TikTokApiClient } from './tiktok-api.client';
 import { Request } from 'express';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('tiktok/webhook')
+@RequiresPackage(PackageKey.MARKETING)
 export class TikTokWebhookController {
     private readonly logger = new Logger(TikTokWebhookController.name);
 

@@ -4,8 +4,10 @@ import { CustomerType } from './customer.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermission, Perm } from '../auth/permissions.decorator';
+import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('customers')
+@CorePackage()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class CustomersController {
   constructor(private readonly s: CustomersService) { }

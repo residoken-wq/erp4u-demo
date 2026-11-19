@@ -1,8 +1,11 @@
 import { Perm } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Body, Param, Query, ParseIntPipe } from '@nestjs/common';
 import { TikTokService } from './tiktok.service';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('tiktok/inbox')
+@RequiresPackage(PackageKey.MARKETING)
 export class TikTokInboxController {
     constructor(private readonly tiktokService: TikTokService) { }
 

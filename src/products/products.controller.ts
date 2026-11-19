@@ -4,8 +4,10 @@ import { CreateVariantDto } from './dto/create-variant.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermission, AuthOnly, Perm } from '../auth/permissions.decorator';
+import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('products')
+@CorePackage()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ProductsController {
   constructor(private readonly service: ProductsService) { }

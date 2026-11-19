@@ -10,8 +10,11 @@ import { SalesDelivery } from '../sales/sales-delivery.entity';
 import { Transaction } from '../finance/transaction.entity';
 import { FinanceService } from '../finance/finance.service';
 import { Response } from 'express';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('shipping')
+@RequiresPackage(PackageKey.INVENTORY)
 export class ShippingController {
     constructor(
         private readonly ghtkService: GhtkService,

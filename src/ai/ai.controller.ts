@@ -6,8 +6,11 @@ import { AiLearningService } from './ai-learning.service';
 import { AiAnalyticsService } from './ai-analytics.service';
 import { AiProactiveService } from './ai-proactive.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('ai')
+@RequiresPackage(PackageKey.AI)
 @UseGuards(JwtAuthGuard)
 export class AiController {
     constructor(

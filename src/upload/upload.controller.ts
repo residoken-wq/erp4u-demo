@@ -13,10 +13,10 @@ import { ProductWebsiteConfig } from '../products/entities/product-website-confi
 import { BlogPost } from '../blogs/blog-post.entity';
 import { WebProject } from '../website-projects/entities/web-project.entity';
 import { SystemConfig } from '../system/system-config.entity';
-
-
+import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('upload')
+@CorePackage()
 export class UploadController {
   constructor(
     private readonly uploadService: UploadService,

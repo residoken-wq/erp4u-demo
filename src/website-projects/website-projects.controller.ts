@@ -3,8 +3,11 @@ import { Public } from '../auth/public.decorator';
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { WebsiteProjectsService } from './website-projects.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('website-projects')
+@RequiresPackage(PackageKey.MARKETING)
 export class WebsiteProjectsController {
     constructor(private readonly service: WebsiteProjectsService) { }
 

@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, Optional, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cron } from '@nestjs/schedule';
@@ -10,11 +10,12 @@ import { ZnsMessageLog } from './entities/zns-message-log.entity';
 import { SalesOrder } from '../sales/sales-order.entity';
 import { SalesDelivery } from '../sales/sales-delivery.entity';
 import { DemoModeService } from '../common/services/demo-mode.service';
+import { ENTITLEMENT_PROVIDER, EntitlementProvider } from '../common/packages/entitlement-provider.interface';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Injectable()
 export class ZaloZnsService {
   private readonly logger = new Logger(ZaloZnsService.name);
-  private readonly demoModeService: DemoModeService;
 
   constructor(
     @InjectRepository(ZaloApiConfig)
@@ -25,10 +26,12 @@ export class ZaloZnsService {
     private readonly orderRepo: Repository<SalesOrder>,
     @InjectRepository(SalesDelivery)
     private readonly deliveryRepo: Repository<SalesDelivery>,
-    @Optional() private readonly configService?: ConfigService,
-    @Optional() demoModeService?: DemoModeService,
+    @Optional() private readonly configService: ConfigService | undefined,
+    private readonly demoModeService: DemoModeService,
+    @Optional()
+    @Inject(ENTITLEMENT_PROVIDER)
+    private readonly entitlementProvider?: EntitlementProvider,
   ) {
-    this.demoModeService = demoModeService || new DemoModeService(configService || ({} as any));
   }
 
   // ==========================================
@@ -170,6 +173,10 @@ export class ZaloZnsService {
    */
   @Cron('0 */4 * * *')
   async handleTokenAutoRefreshCron() {
+    if (this.entitlementProvider && !(await this.entitlementProvider.isEnabled(PackageKey.MARKETING))) {
+      this.logger.debug('Package MARKETING is not enabled, skipping ZNS token refresh cron');
+      return;
+    }
     try {
       const cfg = await this.getConfig();
       if (!cfg.is_active || !cfg.refresh_token || !cfg.secret_key) return;

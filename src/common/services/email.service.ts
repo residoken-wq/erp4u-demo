@@ -1,4 +1,4 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import * as nodemailer from 'nodemailer';
@@ -7,14 +7,12 @@ import { DemoModeService } from './demo-mode.service';
 @Injectable()
 export class EmailService {
     private readonly logger = new Logger(EmailService.name);
-    private readonly demoModeService: DemoModeService;
 
     constructor(
         private configService: ConfigService,
         private dataSource: DataSource,
-        @Optional() demoModeService?: DemoModeService
+        private readonly demoModeService: DemoModeService,
     ) {
-        this.demoModeService = demoModeService || new DemoModeService(configService);
     }
 
     private async getSmtpConfig() {

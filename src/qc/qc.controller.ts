@@ -1,8 +1,11 @@
 import { Perm } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Delete, Param, Body, Query } from '@nestjs/common';
 import { QCService } from './qc.service';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('qc')
+@RequiresPackage(PackageKey.PRODUCTION)
 export class QCController {
   constructor(private readonly qcService: QCService) { }
 

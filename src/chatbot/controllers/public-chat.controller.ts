@@ -20,8 +20,11 @@ import { ChatbotConfigService } from '../config/chatbot-config.service';
 import { ChatRateLimiter } from '../security/chat-rate-limiter';
 import { hashIp } from '../security/pii';
 import { ChatbotConversationService } from '../conversation/chatbot-conversation.service';
+import { RequiresPackage } from '../../common/packages/requires-package.decorator';
+import { PackageKey } from '../../common/packages/package.registry';
 
 @Controller('public/chat')
+@RequiresPackage(PackageKey.AI)
 export class PublicChatController {
   constructor(
     private readonly configService: ChatbotConfigService,

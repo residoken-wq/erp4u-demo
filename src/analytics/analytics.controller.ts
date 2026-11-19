@@ -3,6 +3,8 @@ import { Public } from '../auth/public.decorator';
 import { Controller, Post, Get, Body, Req } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { Request } from 'express';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 function isPrivateOrLocalIp(ip?: string): boolean {
     if (!ip) return true;
@@ -21,6 +23,7 @@ function isPrivateOrLocalIp(ip?: string): boolean {
 }
 
 @Controller('public/analytics')
+@RequiresPackage(PackageKey.MARKETING)
 export class AnalyticsController {
     constructor(private readonly analyticsService: AnalyticsService) { }
 

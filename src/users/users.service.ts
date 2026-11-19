@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Inject, forwardRef, Optional } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -10,17 +10,14 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  private readonly demoModeService: DemoModeService;
-
   constructor(
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(UserGroup) private groupRepo: Repository<UserGroup>,
     @InjectRepository(GroupPermission) private permRepo: Repository<GroupPermission>,
     @Inject(forwardRef(() => PermissionCacheService))
     private permCacheService: PermissionCacheService,
-    @Optional() demoModeService?: DemoModeService,
+    private readonly demoModeService: DemoModeService,
   ) {
-    this.demoModeService = demoModeService || new DemoModeService({ get: (k: string) => process.env[k] } as any);
   }
 
   // --- USER MANAGEMENT ---

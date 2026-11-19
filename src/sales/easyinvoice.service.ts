@@ -1,4 +1,4 @@
-import { Injectable, Logger, Optional } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { SystemService } from '../system/system.service';
 import { SalesOrder } from './sales-order.entity';
@@ -66,14 +66,11 @@ function readNumberInVietnamese(number: number): string {
 export class EasyInvoiceService {
     private readonly logger = new Logger(EasyInvoiceService.name);
 
-    private readonly demoModeService: DemoModeService;
-
     constructor(
         private readonly httpService: HttpService,
         private readonly systemService: SystemService,
-        @Optional() demoModeService?: DemoModeService,
+        private readonly demoModeService: DemoModeService,
     ) {
-        this.demoModeService = demoModeService || new DemoModeService({ get: (k: string) => process.env[k] } as any);
     }
 
     private async getConfig() {

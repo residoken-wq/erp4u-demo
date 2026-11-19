@@ -1,9 +1,11 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { AgentApiService } from './agent-api.service';
 import { ApiKeyGuard } from '../auth/api-key.guard';
+import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @UseGuards(ApiKeyGuard)
 @Controller('api/v1/agent')
+@CorePackage()
 export class AgentApiController {
     constructor(private agentApiService: AgentApiService) {}
 

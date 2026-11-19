@@ -3,8 +3,11 @@ import { ZaloZnsService } from './zns.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermission } from '../auth/permissions.decorator';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('zns')
+@RequiresPackage(PackageKey.MARKETING)
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ZnsController {
   constructor(private readonly znsService: ZaloZnsService) {}

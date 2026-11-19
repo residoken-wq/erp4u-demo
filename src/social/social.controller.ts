@@ -4,8 +4,11 @@ import { SocialService } from './social.service';
 import { SocialChannel, SocialPlatform, ChannelStatus } from './entities/social-channel.entity';
 import { SocialOrder, SocialOrderStatus } from './entities/social-order.entity';
 import { SocialProductMapping } from './entities/social-product-mapping.entity';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('social')
+@RequiresPackage(PackageKey.MARKETING)
 export class SocialController {
     constructor(private readonly socialService: SocialService) { }
 

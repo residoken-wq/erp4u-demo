@@ -43,6 +43,9 @@ import { ZnsMessageLog } from './zns/entities/zns-message-log.entity';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ChatbotModule } from './chatbot/chatbot.module';
 import { CHATBOT_ENTITIES } from './chatbot/entities';
+import { CommonModule } from './common/common.module';
+import { EntitlementsModule } from './common/packages/entitlements.module';
+import { TenantEntitlement } from './common/packages/tenant-entitlement.entity';
 
 // Entities
 import { Product } from './products/product.entity';
@@ -248,13 +251,16 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
             ZnsMessageLog,
             // Chatbot (P0)
             ...CHATBOT_ENTITIES,
+            // Modular Package Entitlements (P6)
+            TenantEntitlement,
           ],
           synchronize: true, // Always sync demo database schema
           subscribers: [],
         };
       },
     }),
-    UsersModule, AuthModule,
+    CommonModule,
+    UsersModule, AuthModule, EntitlementsModule,
     ProductsModule, MaterialsModule, BomModule, SalesModule,
     InventoryModule, ProductionModule, PurchasingModule, FinanceModule,
     TasksModule, ProjectsModule, DiscussionsModule, NotificationsModule, SystemModule,

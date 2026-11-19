@@ -4,8 +4,10 @@ import { Controller, Post, Get, Body, Req, UseGuards, UnauthorizedException } fr
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { PERMISSION_MODULES, ACTION_COLUMN } from './permission-catalog';
+import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('auth')
+@CorePackage()
 export class AuthController {
   constructor(private authService: AuthService) {}
 

@@ -4,8 +4,11 @@ import { MarketingService } from './marketing.service';
 import { MarketingCampaign, CampaignStatus } from './entities/marketing-campaign.entity';
 import { CustomerSegment } from './entities/customer-segment.entity';
 import { AutomationWorkflow, WorkflowStatus } from './entities/automation-workflow.entity';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('marketing')
+@RequiresPackage(PackageKey.MARKETING)
 export class MarketingController {
     constructor(private readonly marketingService: MarketingService) { }
 

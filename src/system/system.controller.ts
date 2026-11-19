@@ -4,8 +4,10 @@ import { SystemService } from './system.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermission, Perm, AuthOnly } from '../auth/permissions.decorator';
+import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('system')
+@CorePackage()
 export class SystemController {
     constructor(private readonly s: SystemService) { }
 

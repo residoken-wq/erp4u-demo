@@ -2,8 +2,11 @@ import { Perm } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Body, Param, Query, ParseIntPipe } from '@nestjs/common';
 import { TikTokService } from './tiktok.service';
 import { CommentSentiment } from './entities/tiktok-comment.entity';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('tiktok/comments')
+@RequiresPackage(PackageKey.MARKETING)
 export class TikTokCommentController {
     constructor(private readonly tiktokService: TikTokService) { }
 

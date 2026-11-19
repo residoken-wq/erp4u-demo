@@ -11,6 +11,8 @@ import { EmailService } from '../common/services/email.service';
 import { SalesService } from '../sales/sales.service';
 import { SystemConfig } from '../system/system-config.entity';
 import * as crypto from 'crypto';
+import { RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('public/portal')
 export class PortalController {
@@ -68,6 +70,7 @@ export class PortalController {
     // 1. REQUEST OTP
     // ============================================================
     @Public()
+    @RequiresPackage(PackageKey.SALES)
     @Post('request-otp')
     async requestOtp(@Body() body: { email: string }) {
         const email = body.email?.trim()?.toLowerCase();
@@ -161,6 +164,7 @@ export class PortalController {
     // 2. VERIFY OTP
     // ============================================================
     @Public()
+    @RequiresPackage(PackageKey.SALES)
     @Post('verify-otp')
     async verifyOtp(@Body() body: { email: string; otp_code: string }) {
         const email = body.email?.trim()?.toLowerCase();
@@ -232,6 +236,7 @@ export class PortalController {
     // 3. DASHBOARD DATA
     // ============================================================
     @Public()
+    @RequiresPackage(PackageKey.SALES)
     @Get('dashboard/:slug')
     async getDashboard(
         @Param('slug') slug: string,
@@ -342,6 +347,7 @@ export class PortalController {
     // 4. REORDER (Create new Quotation from old order)
     // ============================================================
     @Public()
+    @RequiresPackage(PackageKey.SALES)
     @Post('reorder/:slug')
     async reorder(
         @Param('slug') slug: string,
@@ -418,6 +424,7 @@ export class PortalController {
     // 5. VALIDATE TOKEN (for frontend to check if session is valid)
     // ============================================================
     @Public()
+    @RequiresPackage(PackageKey.SALES)
     @Get('validate-token')
     async validateToken(@Headers('authorization') authHeader: string) {
         const session = await this.validateSession(authHeader);
@@ -437,6 +444,7 @@ export class PortalController {
     // 6. PROMOTION DETAIL (Products list for a promotion)
     // ============================================================
     @Public()
+    @RequiresPackage(PackageKey.SALES)
     @Get('promotion/:slug/:id')
     async getPromotionDetail(
         @Param('slug') slug: string,
@@ -464,6 +472,7 @@ export class PortalController {
     // 7. ORDER FROM PROMOTION
     // ============================================================
     @Public()
+    @RequiresPackage(PackageKey.SALES)
     @Post('promotion/:slug/:id/order')
     async orderFromPromotion(
         @Param('slug') slug: string,
@@ -547,6 +556,7 @@ export class PortalController {
     // 8. PRODUCT STATS (For customer to check their inventory/purchases)
     // ============================================================
     @Public()
+    @RequiresPackage(PackageKey.SALES)
     @Get('product-stats/:slug')
     async getProductStats(
         @Param('slug') slug: string,
@@ -612,6 +622,7 @@ export class PortalController {
     // 9. CUSTOM ORDER FROM PORTAL B2B
     // ============================================================
     @Public()
+    @RequiresPackage(PackageKey.SALES)
     @Post('custom-order/:slug')
     async createCustomOrder(
         @Param('slug') slug: string,

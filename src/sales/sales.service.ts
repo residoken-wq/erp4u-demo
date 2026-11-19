@@ -1,7 +1,9 @@
-import { Injectable, NotFoundException, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, BadRequestException, Optional, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { ENTITLEMENT_PROVIDER, EntitlementProvider } from '../common/packages/entitlement-provider.interface';
+import { PackageKey } from '../common/packages/package.registry';
 import { SalesOrder, SalesOrderStatus, VatInvoiceRecord } from './sales-order.entity';
 import { SalesOrderItem, BookingStatus } from './sales-order-item.entity';
 import { ProductSample } from './product-sample.entity';
@@ -89,6 +91,9 @@ export class SalesService {
         @InjectRepository(Promotion) private promotionRepo: Repository<Promotion>,
         private easyInvoiceService: EasyInvoiceService,
         private emailService: EmailService,
+        @Optional()
+        @Inject(ENTITLEMENT_PROVIDER)
+        private readonly entitlementProvider?: EntitlementProvider,
     ) { }
 
 
@@ -1235,6 +1240,10 @@ export class SalesService {
     // --- CRON JOB: AUTO EXPIRE BOOKINGS ---
     @Cron(CronExpression.EVERY_HOUR)
     async checkExpiredBookings() {
+        if (this.entitlementProvider && !(await this.entitlementProvider.isEnabled(PackageKey.SALES))) {
+            this.logger.debug('Package SALES is not enabled, skipping checkExpiredBookings cron');
+            return;
+        }
         const now = new Date();
         const expiredItems = await this.itemRepo.find({
             where: {

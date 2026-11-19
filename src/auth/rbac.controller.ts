@@ -4,8 +4,10 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { SuperAdminGuard } from './super-admin.guard';
 import { RbacModeService } from './rbac-mode.service';
 import { RbacAccessLogService } from './rbac-access-log.service';
+import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('auth/rbac')
+@CorePackage()
 @UseGuards(JwtAuthGuard, SuperAdminGuard)
 export class RbacController {
   constructor(

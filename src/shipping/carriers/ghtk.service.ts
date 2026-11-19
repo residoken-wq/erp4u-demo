@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import axios from 'axios';
@@ -236,8 +236,6 @@ export function extractAddressString(val: any, fallback = ''): string {
 @Injectable()
 export class GhtkService {
     private readonly logger = new Logger(GhtkService.name);
-    private readonly demoModeService: DemoModeService;
-
     constructor(
         @InjectRepository(SystemConfig)
         private readonly configRepo: Repository<SystemConfig>,
@@ -245,9 +243,8 @@ export class GhtkService {
         private readonly deliveryRepo: Repository<SalesDelivery>,
         @InjectRepository(SalesOrder)
         private readonly orderRepo: Repository<SalesOrder>,
-        @Optional() demoModeService?: DemoModeService
+        private readonly demoModeService: DemoModeService,
     ) {
-        this.demoModeService = demoModeService || new DemoModeService({ get: (k: string) => process.env[k] } as any);
     }
 
     /**

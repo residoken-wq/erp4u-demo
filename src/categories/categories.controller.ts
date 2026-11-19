@@ -1,8 +1,10 @@
 import { AuthOnly, Perm } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
+import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('categories')
+@CorePackage()
 export class CategoriesController {
   constructor(private readonly s: CategoriesService) {}
 
