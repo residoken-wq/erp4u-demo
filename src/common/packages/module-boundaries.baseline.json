@@ -1,0 +1,232 @@
+{
+  "src/bom/bom.entity.ts": [
+    "../materials/material.entity"
+  ],
+  "src/customers/customer.entity.ts": [
+    "../sales/sales-order.entity"
+  ],
+  "src/customers/customers.module.ts": [
+    "../finance/transaction.entity",
+    "../public/entities/portal-session.entity"
+  ],
+  "src/customers/customers.service.ts": [
+    "../finance/transaction.entity",
+    "../planning/pfo.entity",
+    "../public/entities/portal-session.entity",
+    "../sales/sales-comment.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/designs/entities/design-order.entity.ts": [
+    "../../purchasing/entities/purchase-order.entity",
+    "../../sales/sales-order.entity"
+  ],
+  "src/designs/entities/print-sample.entity.ts": [
+    "../../purchasing/entities/purchase-order.entity"
+  ],
+  "src/finance/cash-flow.service.ts": [
+    "../purchasing/entities/purchase-order.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/finance/finance.module.ts": [
+    "../purchasing/entities/purchase-order.entity",
+    "../sales/sales-delivery.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/finance/finance.service.ts": [
+    "../sales/sales-delivery.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/inventory/inventory.module.ts": [
+    "../sales/sales-delivery.entity"
+  ],
+  "src/inventory/inventory.service.ts": [
+    "../sales/sales-delivery.entity",
+    "../sales/sales-order-item.entity"
+  ],
+  "src/marketing/marketing.module.ts": [
+    "../sales/sales-order.entity"
+  ],
+  "src/marketing/marketing.service.ts": [
+    "../sales/sales-order.entity"
+  ],
+  "src/planning/gantt.service.ts": [
+    "../purchasing/entities/purchase-order.entity"
+  ],
+  "src/planning/pfo-bom-engine.service.ts": [
+    "../materials/material.entity"
+  ],
+  "src/planning/pfo-demand.service.ts": [
+    "../sales/sales-order-item.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/planning/pfo-sourcing.service.ts": [
+    "../inventory/entities/goods-issue-item.entity",
+    "../inventory/entities/goods-issue.entity",
+    "../purchasing/entities/purchase-order-item.entity",
+    "../purchasing/entities/purchase-order.entity"
+  ],
+  "src/planning/pfo.entity.ts": [
+    "../sales/sales-order.entity"
+  ],
+  "src/planning/planning.module.ts": [
+    "../inventory/entities/goods-issue-item.entity",
+    "../inventory/entities/goods-issue.entity",
+    "../inventory/entities/supplier-stock.entity",
+    "../materials/material.entity",
+    "../purchasing/entities/purchase-order-item.entity",
+    "../purchasing/entities/purchase-order.entity",
+    "../sales/sales-order-item.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/planning/planning.service.ts": [
+    "../purchasing/entities/purchase-order-item.entity",
+    "../purchasing/entities/purchase-order.entity",
+    "../sales/sales-order-item.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/products/product-routing.entity.ts": [
+    "../processes/process.entity"
+  ],
+  "src/products/products.module.ts": [
+    "../bom/bom.entity"
+  ],
+  "src/products/products.service.ts": [
+    "../bom/bom.entity"
+  ],
+  "src/projects/entities/project.entity.ts": [
+    "../../sales/sales-order.entity"
+  ],
+  "src/projects/projects.module.ts": [
+    "../finance/transaction.entity",
+    "../purchasing/entities/purchase-order.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/projects/projects.service.ts": [
+    "../finance/transaction.entity",
+    "../purchasing/entities/purchase-order.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/public/portal.controller.ts": [
+    "../sales/sales-order.entity"
+  ],
+  "src/public/public.controller.ts": [
+    "../hr/entities/job-post.entity"
+  ],
+  "src/public/public.module.ts": [
+    "../hr/entities/assessment.entity",
+    "../hr/entities/candidate.entity",
+    "../hr/entities/interview.entity",
+    "../hr/entities/job-post.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/purchasing/entities/purchase-order-item.entity.ts": [
+    "../../designs/entities/design-order.entity",
+    "../../designs/entities/print-design.entity"
+  ],
+  "src/purchasing/entities/purchase-order.entity.ts": [
+    "../../planning/pfo.entity"
+  ],
+  "src/purchasing/purchasing.module.ts": [
+    "../planning/pfo.entity"
+  ],
+  "src/purchasing/purchasing.service.ts": [
+    "../finance/transaction.entity",
+    "../planning/pfo.entity"
+  ],
+  "src/qc/quality-inspection.entity.ts": [
+    "../purchasing/entities/purchase-order.entity"
+  ],
+  "src/sales/sales-order.entity.ts": [
+    "../planning/pfo.entity"
+  ],
+  "src/sales/sales.module.ts": [
+    "../finance/transaction.entity"
+  ],
+  "src/sales/sales.service.ts": [
+    "../finance/transaction.entity"
+  ],
+  "src/shipping/carriers/ghtk.service.ts": [
+    "../../sales/sales-delivery.entity",
+    "../../sales/sales-order.entity"
+  ],
+  "src/shipping/carriers/lalamove.service.ts": [
+    "../../sales/sales-delivery.entity",
+    "../../sales/sales-order.entity"
+  ],
+  "src/shipping/shipping.controller.ts": [
+    "../finance/transaction.entity",
+    "../sales/sales-delivery.entity"
+  ],
+  "src/shipping/shipping.module.ts": [
+    "../finance/transaction.entity",
+    "../sales/sales-delivery.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/social/entities/social-order.entity.ts": [
+    "../../sales/sales-order.entity"
+  ],
+  "src/social/social.module.ts": [
+    "../sales/sales-order.entity"
+  ],
+  "src/social/social.service.ts": [
+    "../sales/sales-order.entity"
+  ],
+  "src/suppliers/supplier-material.entity.ts": [
+    "../materials/material.entity",
+    "../processes/process.entity"
+  ],
+  "src/suppliers/suppliers.module.ts": [
+    "../materials/material.entity",
+    "../processes/process.entity",
+    "../purchasing/entities/purchase-order.entity"
+  ],
+  "src/suppliers/suppliers.service.ts": [
+    "../materials/material.entity",
+    "../purchasing/entities/purchase-order.entity"
+  ],
+  "src/system/agent-api.service.ts": [
+    "../inventory/inventory-stock.entity",
+    "../materials/material.entity",
+    "../planning/pfo.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/system/dashboard.controller.ts": [
+    "../inventory/entities/goods-receipt.entity",
+    "../inventory/inventory-stock.entity",
+    "../purchasing/entities/purchase-order.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/system/system.module.ts": [
+    "../inventory/entities/goods-receipt.entity",
+    "../inventory/inventory-stock.entity",
+    "../materials/material.entity",
+    "../planning/pfo.entity",
+    "../purchasing/entities/purchase-order.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/tasks/task.entity.ts": [
+    "../projects/entities/milestone.entity",
+    "../projects/entities/project.entity"
+  ],
+  "src/upload/upload.controller.ts": [
+    "../blogs/blog-post.entity",
+    "../website-projects/entities/web-project.entity"
+  ],
+  "src/upload/upload.module.ts": [
+    "../blogs/blog-post.entity",
+    "../bom/bom.entity",
+    "../website-projects/entities/web-project.entity"
+  ],
+  "src/upload/upload.service.ts": [
+    "../bom/bom.entity",
+    "../materials/material.entity"
+  ],
+  "src/zns/zns.module.ts": [
+    "../sales/sales-delivery.entity",
+    "../sales/sales-order.entity"
+  ],
+  "src/zns/zns.service.ts": [
+    "../sales/sales-delivery.entity",
+    "../sales/sales-order.entity"
+  ]
+}

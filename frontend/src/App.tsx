@@ -12,6 +12,9 @@ import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-ro
 import { Drawer } from 'antd'; // <--- Import Drawer
 import useMobile from './hooks/useMobile'; // <--- Import Hook
 import api from './utils/api';
+import { PackageKey, getRoutePackage } from './config/packages';
+import { EntitlementsProvider, useEntitlements, resetEntitlementsCache } from './hooks/useEntitlements';
+import PackageLockedPage from './pages/PackageLockedPage';
 
 // Import Components
 import HeaderNotifications from './components/HeaderNotifications';
@@ -89,19 +92,31 @@ function getItem(label: React.ReactNode, key: React.Key, icon?: React.ReactNode,
     return { key, icon, children, label } as MenuItem;
 }
 
-const App: React.FC = () => {
+interface AppShellProps {
+    isAuthenticated: boolean;
+    setIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>>;
+    currentUser: any;
+    setCurrentUser: React.Dispatch<React.SetStateAction<any>>;
+    permissions: any[];
+    setPermissions: React.Dispatch<React.SetStateAction<any[]>>;
+}
+
+const AppShell: React.FC<AppShellProps> = ({
+    isAuthenticated,
+    setIsAuthenticated,
+    currentUser,
+    setCurrentUser,
+    permissions,
+    setPermissions,
+}) => {
     const [collapsed, setCollapsed] = useState(false);
     const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken();
-
-    // Initialize state synchronously to prevent route redirects on first render
-    const initialToken = localStorage.getItem('token');
-    const initialUserStr = localStorage.getItem('user');
-    const initialUser = initialUserStr ? JSON.parse(initialUserStr) : null;
-
-    const [isAuthenticated, setIsAuthenticated] = useState(!!(initialToken && initialUser));
-    const [currentUser, setCurrentUser] = useState<any>(initialUser);
-    const [permissions, setPermissions] = useState<any[]>(initialUser?.permissions || []);
+    const { isEnabled } = useEntitlements();
     const [isDemo, setIsDemo] = useState(false);
+
+    const isRouteEnabled = (path: string) => isEnabled(getRoutePackage(path));
+    const renderRoute = (path: string, element: React.ReactElement) =>
+        isRouteEnabled(path) ? element : <PackageLockedPage packageKey={getRoutePackage(path)} />;
 
     useEffect(() => {
         api.get('/public/meta')
@@ -169,6 +184,7 @@ const App: React.FC = () => {
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        resetEntitlementsCache();
         setIsAuthenticated(false);
         window.location.href = '/login';
     };
@@ -211,61 +227,69 @@ const App: React.FC = () => {
 
         // 4. Kho hàng & NCC
         if (hasPerm('INVENTORY')) {
-            items.push(getItem('Kho hàng & NCC', 'sub1', <DropboxOutlined />, [
-                getItem(<Link to="/materials">Nguyên liệu</Link>, '3'),
-                getItem(<Link to="/suppliers">Nhà cung cấp (NPL)</Link>, 'supp'),
-                getItem(<Link to="/manufacturers">Nhà gia công</Link>, 'manu'),
-                getItem(<Link to="/inventory">Nhập xuất kho</Link>, '4'),
-                getItem(<Link to="/inventory/samples">Kho hàng mẫu</Link>, 'inv_samples'),
-                getItem(<Link to="/inventory/deliveries">Giao nhận</Link>, 'inv_deliveries'),
-            ]));
+            const invChildren: MenuItem[] = [];
+            if (isRouteEnabled('/materials')) invChildren.push(getItem(<Link to="/materials">Nguyên liệu</Link>, '3'));
+            if (isRouteEnabled('/suppliers')) invChildren.push(getItem(<Link to="/suppliers">Nhà cung cấp (NPL)</Link>, 'supp'));
+            if (isRouteEnabled('/manufacturers')) invChildren.push(getItem(<Link to="/manufacturers">Nhà gia công</Link>, 'manu'));
+            if (isRouteEnabled('/inventory')) invChildren.push(getItem(<Link to="/inventory">Nhập xuất kho</Link>, '4'));
+            if (isRouteEnabled('/inventory/samples')) invChildren.push(getItem(<Link to="/inventory/samples">Kho hàng mẫu</Link>, 'inv_samples'));
+            if (isRouteEnabled('/inventory/deliveries')) invChildren.push(getItem(<Link to="/inventory/deliveries">Giao nhận</Link>, 'inv_deliveries'));
+            if (invChildren.length > 0) {
+                items.push(getItem('Kho hàng & NCC', 'sub1', <DropboxOutlined />, invChildren));
+            }
         }
 
         // 5. Bán hàng (CRM & Orders) --> CẬP NHẬT CẤU TRÚC MENU
         if (hasPerm('SALES')) {
-            items.push(getItem('Bán hàng (CRM)', 'sub2', <TeamOutlined />, [
-                getItem(<Link to="/sales">Leads & Báo giá</Link>, 'crm_lead'), // Đổi tên cho rõ
-                getItem(<Link to="/orders">Đơn Hàng (SO)</Link>, 'crm_order'), // <--- MỚI: Menu Đơn hàng
-                getItem(<Link to="/customers">Danh sách Khách hàng</Link>, 'cust'),
-                getItem(<Link to="/sales/pricelist">Bảng giá (Price List)</Link>, 'pl_page'),
-                getItem(<Link to="/sales/strategy">📊 Chiến lược Sales</Link>, 'sales_strategy'),
-                getItem(<Link to="/sales/bod">🏫 BOD Dashboard</Link>, 'sales_bod'),
-                getItem(<Link to="/sales/bod-follow-up">BOD Follow Up</Link>, 'bod_followup'),
-                getItem(<Link to="/sales/promotions">🎁 Khuyến mãi</Link>, 'promotions'),
-            ]));
+            const salesChildren: MenuItem[] = [];
+            if (isRouteEnabled('/sales')) salesChildren.push(getItem(<Link to="/sales">Leads & Báo giá</Link>, 'crm_lead')); // Đổi tên cho rõ
+            if (isRouteEnabled('/orders')) salesChildren.push(getItem(<Link to="/orders">Đơn Hàng (SO)</Link>, 'crm_order')); // <--- MỚI: Menu Đơn hàng
+            if (isRouteEnabled('/customers')) salesChildren.push(getItem(<Link to="/customers">Danh sách Khách hàng</Link>, 'cust'));
+            if (isRouteEnabled('/sales/pricelist')) salesChildren.push(getItem(<Link to="/sales/pricelist">Bảng giá (Price List)</Link>, 'pl_page'));
+            if (isRouteEnabled('/sales/strategy')) salesChildren.push(getItem(<Link to="/sales/strategy">📊 Chiến lược Sales</Link>, 'sales_strategy'));
+            if (isRouteEnabled('/sales/bod')) salesChildren.push(getItem(<Link to="/sales/bod">🏫 BOD Dashboard</Link>, 'sales_bod'));
+            if (isRouteEnabled('/sales/bod-follow-up')) salesChildren.push(getItem(<Link to="/sales/bod-follow-up">BOD Follow Up</Link>, 'bod_followup'));
+            if (isRouteEnabled('/sales/promotions')) salesChildren.push(getItem(<Link to="/sales/promotions">🎁 Khuyến mãi</Link>, 'promotions'));
+            if (salesChildren.length > 0) {
+                items.push(getItem('Bán hàng (CRM)', 'sub2', <TeamOutlined />, salesChildren));
+            }
         }
 
         // 6. Sản xuất (MRP) & Mua hàng
         const prodChildren: MenuItem[] = [];
-        if (hasPerm('PRODUCTION')) {
+        if (hasPerm('PRODUCTION') && isRouteEnabled('/planning')) {
             prodChildren.push(getItem(<Link to="/planning">Lập Kế Hoạch SX</Link>, 'plan'));
         }
-        if (hasPerm('PURCHASE')) {
+        if (hasPerm('PURCHASE') && isRouteEnabled('/purchasing')) {
             prodChildren.push(getItem(<Link to="/purchasing">Đơn Mua Hàng & GC</Link>, 'po_page'));
         }
-        if (hasPerm('PRODUCT') || hasPerm('PRODUCTION')) {
+        if ((hasPerm('PRODUCT') || hasPerm('PRODUCTION')) && isRouteEnabled('/print-production')) {
             prodChildren.push(getItem(<Link to="/print-production">Báo cáo Gia công In</Link>, 'print-production', <PrinterOutlined />));
+        }
+        if ((hasPerm('PRODUCT') || hasPerm('PRODUCTION')) && isRouteEnabled('/designs')) {
             prodChildren.push(getItem(<Link to="/designs">Thiết kế In ấn & Thêu</Link>, 'designs_page'));
         }
         if (hasPerm('PRODUCTION')) {
-            prodChildren.push(getItem(<Link to="/routes">Định nghĩa Quy trình</Link>, 'route'));
-            prodChildren.push(getItem(<Link to="/processes">DM Công Đoạn</Link>, 'proc_list'));
-            prodChildren.push(getItem(<Link to="/qc">🔬 Kiểm Tra Chất Lượng</Link>, 'qc_page'));
-            prodChildren.push(getItem(<Link to="/production-dashboard">📊 Dashboard Sản xuất</Link>, 'prod_dashboard'));
+            if (isRouteEnabled('/routes')) prodChildren.push(getItem(<Link to="/routes">Định nghĩa Quy trình</Link>, 'route'));
+            if (isRouteEnabled('/processes')) prodChildren.push(getItem(<Link to="/processes">DM Công Đoạn</Link>, 'proc_list'));
+            if (isRouteEnabled('/qc')) prodChildren.push(getItem(<Link to="/qc">🔬 Kiểm Tra Chất Lượng</Link>, 'qc_page'));
+            if (isRouteEnabled('/production-dashboard')) prodChildren.push(getItem(<Link to="/production-dashboard">📊 Dashboard Sản xuất</Link>, 'prod_dashboard'));
         }
         if (prodChildren.length > 0) {
             items.push(getItem('Sản xuất (MRP)', '9', <DesktopOutlined />, prodChildren));
         }
 
         // 7. Tài chính
-        if (hasPerm('FINANCE')) {
+        if (hasPerm('FINANCE') && isRouteEnabled('/finance')) {
             items.push(getItem(<Link to="/finance">Tài chính (Thu/Chi)</Link>, 'finance', <BankOutlined />));
         }
 
         // 8. Công việc & Hướng dẫn
         if (isAuthenticated) {
             items.push(getItem(<Link to="/workspace">Công việc chung</Link>, '/workspace', <CalendarOutlined />)); // <--- Unified Menu
-            items.push(getItem(<Link to="/projects">Quản lý Dự án</Link>, '/projects', <FolderOutlined />));
+            if (isRouteEnabled('/projects')) {
+                items.push(getItem(<Link to="/projects">Quản lý Dự án</Link>, '/projects', <FolderOutlined />));
+            }
             items.push(getItem(<Link to="/help">Hướng dẫn sử dụng</Link>, '/help', <QuestionCircleOutlined />));
             if (currentUser?.username === 'admin') {
                 items.push(getItem(<Link to="/docs">Dev Docs (Technical)</Link>, '/docs', <CodeOutlined />));
@@ -274,12 +298,12 @@ const App: React.FC = () => {
         }
 
         // HR - Chỉ hiện cho user có quyền HR
-        if (hasPerm('HR')) {
+        if (hasPerm('HR') && isRouteEnabled('/hr')) {
             items.push(getItem(<Link to="/hr">Nhân sự (HR)</Link>, '/hr', <IdcardOutlined />));
         }
 
         // Chatbot (Trợ lý AI) - Chỉ hiện cho user có quyền CHATBOT
-        if (hasPerm('CHATBOT')) {
+        if (hasPerm('CHATBOT') && isRouteEnabled('/chatbot/inbox')) {
             items.push(getItem('Trợ lý AI', 'sub_chatbot', <MessageOutlined />, [
                 getItem(<Link to="/chatbot/inbox">Hộp thư hội thoại</Link>, 'cb_inbox'),
                 getItem(<Link to="/chatbot/requests">Yêu cầu tư vấn</Link>, 'cb_requests'),
@@ -288,11 +312,15 @@ const App: React.FC = () => {
 
         // SOCIAL & MARKETING
         if (hasPerm('MARKETING')) {
-            items.push(getItem('Kênh Bán Hàng Social', 'sub_social', <FacebookOutlined />, [
-                getItem(<Link to="/social/channels">Quản lý Kênh</Link>, 'social_channels'),
-                getItem(<Link to="/social/orders">Đơn hàng từ Sàn</Link>, 'social_orders'),
-            ]));
-            items.push(getItem(<Link to="/marketing">Marketing</Link>, 'marketing', <RocketOutlined />));
+            const socialChildren: MenuItem[] = [];
+            if (isRouteEnabled('/social/channels')) socialChildren.push(getItem(<Link to="/social/channels">Quản lý Kênh</Link>, 'social_channels'));
+            if (isRouteEnabled('/social/orders')) socialChildren.push(getItem(<Link to="/social/orders">Đơn hàng từ Sàn</Link>, 'social_orders'));
+            if (socialChildren.length > 0) {
+                items.push(getItem('Kênh Bán Hàng Social', 'sub_social', <FacebookOutlined />, socialChildren));
+            }
+            if (isRouteEnabled('/marketing')) {
+                items.push(getItem(<Link to="/marketing">Marketing</Link>, 'marketing', <RocketOutlined />));
+            }
         }
 
         // 9. Hệ thống
@@ -308,7 +336,9 @@ const App: React.FC = () => {
             }
             if (hasPerm('USERS')) {
                 systemChildren.push(getItem(<Link to="/system/logs">Nhật ký hoạt động</Link>, 'sys_logs'));
-                systemChildren.push(getItem(<Link to="/ai-dashboard">AI Dashboard</Link>, 'ai_dash', <RobotOutlined />));
+                if (isRouteEnabled('/ai-dashboard')) {
+                    systemChildren.push(getItem(<Link to="/ai-dashboard">AI Dashboard</Link>, 'ai_dash', <RobotOutlined />));
+                }
             }
 
             if (currentUser?.username === 'admin') {
@@ -321,7 +351,7 @@ const App: React.FC = () => {
         }
 
         return items;
-    }, [permissions, currentUser, isAuthenticated]);
+    }, [permissions, currentUser, isAuthenticated, isEnabled]);
 
     const userMenu = (
         <Menu items={[
@@ -407,118 +437,118 @@ const App: React.FC = () => {
                                         <AnnouncementBanner />
                                         <React.Suspense fallback={<LoadingDisplay />}>
                                             <Routes>
-                                                <Route path="/" element={<DashboardPage />} />
+                                                <Route path="/" element={renderRoute('/', <DashboardPage />)} />
 
-                                                {(hasPerm('PRODUCT') || hasPerm('INVENTORY') || hasPerm('SALES')) && <Route path="/upload" element={<UploadPage />} />}
+                                                {(hasPerm('PRODUCT') || hasPerm('INVENTORY') || hasPerm('SALES')) && <Route path="/upload" element={renderRoute('/upload', <UploadPage />)} />}
 
                                                 {hasPerm('PRODUCT') && (
                                                     <>
-                                                        <Route path="/products" element={<ProductsPage />} />
-                                                        <Route path="/combos" element={<CombosPage />} />
-                                                        <Route path="/categories" element={<CategoriesPage />} />
-                                                        <Route path="/packing-specs" element={<PackingSpecsPage />} />
-                                                        <Route path="/website-products" element={<WebsiteProductsPage />} />
+                                                        <Route path="/products" element={renderRoute('/products', <ProductsPage />)} />
+                                                        <Route path="/combos" element={renderRoute('/combos', <CombosPage />)} />
+                                                        <Route path="/categories" element={renderRoute('/categories', <CategoriesPage />)} />
+                                                        <Route path="/packing-specs" element={renderRoute('/packing-specs', <PackingSpecsPage />)} />
+                                                        <Route path="/website-products" element={renderRoute('/website-products', <WebsiteProductsPage />)} />
                                                     </>
                                                 )}
 
                                                 {hasPerm('INVENTORY') && (
                                                     <>
-                                                        <Route path="/materials" element={<MaterialsPage />} />
-                                                        <Route path="/suppliers" element={<SuppliersPage />} />
-                                                        <Route path="/manufacturers" element={<ManufacturersPage />} />
-                                                        <Route path="/inventory" element={<InventoryPage />} />
-                                                        <Route path="/inventory/samples" element={<SampleInventoryPage />} />
-                                                        <Route path="/inventory/deliveries" element={<DeliveriesManagementPage />} />
+                                                        <Route path="/materials" element={renderRoute('/materials', <MaterialsPage />)} />
+                                                        <Route path="/suppliers" element={renderRoute('/suppliers', <SuppliersPage />)} />
+                                                        <Route path="/manufacturers" element={renderRoute('/manufacturers', <ManufacturersPage />)} />
+                                                        <Route path="/inventory" element={renderRoute('/inventory', <InventoryPage />)} />
+                                                        <Route path="/inventory/samples" element={renderRoute('/inventory/samples', <SampleInventoryPage />)} />
+                                                        <Route path="/inventory/deliveries" element={renderRoute('/inventory/deliveries', <DeliveriesManagementPage />)} />
                                                     </>
                                                 )}
 
                                                 {hasPerm('SALES') && (
                                                     <>
-                                                        <Route path="/sales" element={<CrmPage />} /> {/* CRM Page */}
-                                                        <Route path="/sales/pos" element={<PosPage />} /> {/* <--- MỚI: Route POS */}
-                                                        <Route path="/sales/strategy" element={<SalesStrategyDashboard />} />
-                                                        <Route path="/sales/bod" element={<BodDashboard />} />
-                                                        <Route path="/sales/bod-follow-up" element={<BodFollowUpPage />} />
-                                                        <Route path="/orders" element={<SalesPage />} /> {/* <--- MỚI: Route cho trang Đơn hàng */}
-                                                        <Route path="/customers" element={<CustomersPage />} />
-                                                        <Route path="/sales/pricelist" element={<PriceListsPage />} />
-                                                        <Route path="/sales/promotions" element={<PromotionPage />} />
+                                                        <Route path="/sales" element={renderRoute('/sales', <CrmPage />)} /> {/* CRM Page */}
+                                                        <Route path="/sales/pos" element={renderRoute('/sales/pos', <PosPage />)} /> {/* <--- MỚI: Route POS */}
+                                                        <Route path="/sales/strategy" element={renderRoute('/sales/strategy', <SalesStrategyDashboard />)} />
+                                                        <Route path="/sales/bod" element={renderRoute('/sales/bod', <BodDashboard />)} />
+                                                        <Route path="/sales/bod-follow-up" element={renderRoute('/sales/bod-follow-up', <BodFollowUpPage />)} />
+                                                        <Route path="/orders" element={renderRoute('/orders', <SalesPage />)} /> {/* <--- MỚI: Route cho trang Đơn hàng */}
+                                                        <Route path="/customers" element={renderRoute('/customers', <CustomersPage />)} />
+                                                        <Route path="/sales/pricelist" element={renderRoute('/sales/pricelist', <PriceListsPage />)} />
+                                                        <Route path="/sales/promotions" element={renderRoute('/sales/promotions', <PromotionPage />)} />
                                                     </>
                                                 )}
 
                                                 {hasPerm('PURCHASE') && (
-                                                    <Route path="/purchasing" element={<PurchasingPage />} />
+                                                    <Route path="/purchasing" element={renderRoute('/purchasing', <PurchasingPage />)} />
                                                 )}
 
                                                 {(hasPerm('PRODUCT') || hasPerm('PRODUCTION')) && (
                                                     <>
-                                                        <Route path="/designs" element={<DesignManagementPage />} />
-                                                        <Route path="/print-production" element={<PrintReportDashboard />} />
+                                                        <Route path="/designs" element={renderRoute('/designs', <DesignManagementPage />)} />
+                                                        <Route path="/print-production" element={renderRoute('/print-production', <PrintReportDashboard />)} />
                                                     </>
                                                 )}
 
                                                 {hasPerm('PRODUCTION') && (
                                                     <>
-                                                        <Route path="/planning" element={<PlanningPage />} />
-                                                        <Route path="/routes" element={<ProductionRoutePage />} />
-                                                        <Route path="/processes" element={<ProcessesPage />} />
-                                                        <Route path="/qc" element={<QCPage />} />
-                                                        <Route path="/production-dashboard" element={<ProductionDashboardPage />} />
+                                                        <Route path="/planning" element={renderRoute('/planning', <PlanningPage />)} />
+                                                        <Route path="/routes" element={renderRoute('/routes', <ProductionRoutePage />)} />
+                                                        <Route path="/processes" element={renderRoute('/processes', <ProcessesPage />)} />
+                                                        <Route path="/qc" element={renderRoute('/qc', <QCPage />)} />
+                                                        <Route path="/production-dashboard" element={renderRoute('/production-dashboard', <ProductionDashboardPage />)} />
                                                     </>
                                                 )}
 
                                                 {hasPerm('FINANCE') && (
-                                                    <Route path="/finance" element={<FinancePage />} />
+                                                    <Route path="/finance" element={renderRoute('/finance', <FinancePage />)} />
                                                 )}
 
-                                                <Route path="/workspace" element={<WorkSpacePage />} />
-                                                <Route path="/workspace/discussions/:id" element={<DiscussionDetailPage />} />
-                                                <Route path="/projects" element={<ProjectsPage />} />
-                                                <Route path="/projects/:id" element={<ProjectDetailPage />} />
-                                                <Route path="/help" element={<HelpPage />} />
+                                                <Route path="/workspace" element={renderRoute('/workspace', <WorkSpacePage />)} />
+                                                <Route path="/workspace/discussions/:id" element={renderRoute('/workspace/discussions/:id', <DiscussionDetailPage />)} />
+                                                <Route path="/projects" element={renderRoute('/projects', <ProjectsPage />)} />
+                                                <Route path="/projects/:id" element={renderRoute('/projects/:id', <ProjectDetailPage />)} />
+                                                <Route path="/help" element={renderRoute('/help', <HelpPage />)} />
                                                 {currentUser?.username === 'admin' && (
-                                                    <Route path="/docs" element={<DocsPage />} />
+                                                    <Route path="/docs" element={renderRoute('/docs', <DocsPage />)} />
                                                 )}
-                                                <Route path="/profile" element={<ProfilePage />} />
+                                                <Route path="/profile" element={renderRoute('/profile', <ProfilePage />)} />
 
                                                 {hasPerm('HR') && (
-                                                    <Route path="/hr" element={<HRPage />} />
+                                                    <Route path="/hr" element={renderRoute('/hr', <HRPage />)} />
                                                 )}
 
                                                 {/* CHATBOT ROUTES */}
                                                 {hasPerm('CHATBOT') && (
                                                     <>
-                                                        <Route path="/chatbot/inbox" element={<ChatbotInboxPage />} />
-                                                        <Route path="/chatbot/inbox/:id" element={<ChatbotInboxPage />} />
-                                                        <Route path="/chatbot/requests" element={<ChatbotRequestsPage />} />
-                                                        <Route path="/chatbot/requests/:id" element={<ChatbotRequestsPage />} />
+                                                        <Route path="/chatbot/inbox" element={renderRoute('/chatbot/inbox', <ChatbotInboxPage />)} />
+                                                        <Route path="/chatbot/inbox/:id" element={renderRoute('/chatbot/inbox/:id', <ChatbotInboxPage />)} />
+                                                        <Route path="/chatbot/requests" element={renderRoute('/chatbot/requests', <ChatbotRequestsPage />)} />
+                                                        <Route path="/chatbot/requests/:id" element={renderRoute('/chatbot/requests/:id', <ChatbotRequestsPage />)} />
                                                     </>
                                                 )}
 
                                                 {/* SOCIAL & MARKETING ROUTES */}
                                                 {hasPerm('MARKETING') && (
                                                     <>
-                                                        <Route path="/social/channels" element={<SocialChannelsPage />} />
-                                                        <Route path="/social/orders" element={<SocialOrdersPage />} />
-                                                        <Route path="/marketing" element={<MarketingPage />} />
+                                                        <Route path="/social/channels" element={renderRoute('/social/channels', <SocialChannelsPage />)} />
+                                                        <Route path="/social/orders" element={renderRoute('/social/orders', <SocialOrdersPage />)} />
+                                                        <Route path="/marketing" element={renderRoute('/marketing', <MarketingPage />)} />
                                                     </>
                                                 )}
 
                                                 {hasPerm('USERS') && (
                                                     <>
-                                                        <Route path="/users" element={<UsersPage />} />
-                                                        <Route path="/users/groups" element={<UserGroupsPage />} />
-                                                        <Route path="/announcements" element={<AnnouncementsPage />} />
-                                                        <Route path="/system/logs" element={<ActivityLogPage />} /> {/* <--- Activity Log Route */}
-                                                        <Route path="/ai-dashboard" element={<AiDashboardPage />} />
+                                                        <Route path="/users" element={renderRoute('/users', <UsersPage />)} />
+                                                        <Route path="/users/groups" element={renderRoute('/users/groups', <UserGroupsPage />)} />
+                                                        <Route path="/announcements" element={renderRoute('/announcements', <AnnouncementsPage />)} />
+                                                        <Route path="/system/logs" element={renderRoute('/system/logs', <ActivityLogPage />)} /> {/* <--- Activity Log Route */}
+                                                        <Route path="/ai-dashboard" element={renderRoute('/ai-dashboard', <AiDashboardPage />)} />
                                                         {currentUser?.username === 'admin' && (
-                                                            <Route path="/system/rbac" element={<RbacLogPage />} />
+                                                            <Route path="/system/rbac" element={renderRoute('/system/rbac', <RbacLogPage />)} />
                                                         )}
                                                     </>
                                                 )}
 
                                                 {hasPerm('SYSTEM') && (
-                                                    <Route path="/system/settings" element={<SystemSettingsPage />} />
+                                                    <Route path="/system/settings" element={renderRoute('/system/settings', <SystemSettingsPage />)} />
                                                 )}
 
                                                 <Route path="*" element={<h2>Không tìm thấy trang hoặc bạn không có quyền truy cập.</h2>} />
@@ -527,7 +557,7 @@ const App: React.FC = () => {
                                     </div>
                                 </Content>
                                 <Footer style={{ textAlign: 'center' }}>ERP4U ©2025 Created by AI</Footer>
-                                <AiChatWidget /> {/* <--- Insert AI Widget */}
+                                {isEnabled(PackageKey.AI) && <AiChatWidget />} {/* <--- Insert AI Widget */}
                             </Layout>
                         </Layout>
                     ) : (
@@ -554,4 +584,31 @@ const App: React.FC = () => {
         </Router>
     );
 };
+
+const App: React.FC = () => {
+    // Initialize state synchronously to prevent route redirects on first render
+    const initialToken = localStorage.getItem('token');
+    const initialUserStr = localStorage.getItem('user');
+    const initialUser = initialUserStr ? JSON.parse(initialUserStr) : null;
+
+    const [isAuthenticated, setIsAuthenticated] = useState(!!(initialToken && initialUser));
+    const [currentUser, setCurrentUser] = useState<any>(initialUser);
+    const [permissions, setPermissions] = useState<any[]>(initialUser?.permissions || []);
+
+    const isPublicPortal = typeof window !== 'undefined' && window.location.pathname.startsWith('/portal/');
+
+    return (
+        <EntitlementsProvider enabled={isAuthenticated && !isPublicPortal}>
+            <AppShell
+                isAuthenticated={isAuthenticated}
+                setIsAuthenticated={setIsAuthenticated}
+                currentUser={currentUser}
+                setCurrentUser={setCurrentUser}
+                permissions={permissions}
+                setPermissions={setPermissions}
+            />
+        </EntitlementsProvider>
+    );
+};
+
 export default App;

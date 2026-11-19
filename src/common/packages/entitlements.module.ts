@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { TenantEntitlement } from './tenant-entitlement.entity';
+import { UsageCounter } from './usage-counter.entity';
+import { UsageService } from './usage.service';
 import { ENTITLEMENT_PROVIDER } from './entitlement-provider.interface';
 import { AllEnabledProvider } from './all-enabled.provider';
 import { DbEntitlementProvider } from './db-entitlement.provider';
@@ -13,11 +15,12 @@ let hasWarnedEntitlementsMode = false;
 
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([TenantEntitlement])],
+  imports: [TypeOrmModule.forFeature([TenantEntitlement, UsageCounter])],
   controllers: [MeEntitlementsController],
   providers: [
     AllEnabledProvider,
     DbEntitlementProvider,
+    UsageService,
     {
       provide: ENTITLEMENT_PROVIDER,
       useFactory: (
@@ -62,6 +65,7 @@ let hasWarnedEntitlementsMode = false;
     AllEnabledProvider,
     DbEntitlementProvider,
     EntitlementGuard,
+    UsageService,
     TypeOrmModule,
   ],
 })

@@ -7,6 +7,7 @@ import { API_URL } from '../config';
 import dayjs from 'dayjs';
 import useMobile from '../hooks/useMobile';
 import { getGoogleDriveImageUrl } from '../utils/googleDrive';
+import PackageLockedPage from './PackageLockedPage';
 
 const { Title, Text } = Typography;
 
@@ -15,6 +16,7 @@ const PortalSupplierDashboard: React.FC = () => {
     const navigate = useNavigate();
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [lockedPackage, setLockedPackage] = useState<string | null>(null);
     const [isPasswordCorrect, setIsPasswordCorrect] = useState(false);
     const [passwordInput, setPasswordInput] = useState('');
     const isMobile = useMobile();
@@ -37,7 +39,10 @@ const PortalSupplierDashboard: React.FC = () => {
         try {
             const res = await axios.get(`${API_URL}/purchasing/supplier-portal/${uuid}`);
             setData(res.data);
-        } catch (e) {
+        } catch (e: any) {
+            if (e?.response?.status === 402 && e?.response?.data?.code === 'PACKAGE_REQUIRED') {
+                setLockedPackage(e.response.data.package || 'INVENTORY');
+            }
             console.error(e);
         } finally {
             setLoading(false);
@@ -49,6 +54,7 @@ const PortalSupplierDashboard: React.FC = () => {
     }, [uuid]);
 
     if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><Spin size="large" tip="Đang tải dữ liệu..." /></div>;
+    if (lockedPackage) return <PackageLockedPage packageKey={lockedPackage} showHomeButton={false} />;
     if (!data) return <Result status="404" title="404" subTitle="Không tìm thấy dữ liệu hoặc đường dẫn không hợp lệ." />;
 
     if (!isPasswordCorrect) {

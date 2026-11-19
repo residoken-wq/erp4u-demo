@@ -8,6 +8,7 @@ import {
   LlmUnavailableError,
 } from './llm-provider';
 import { ChatbotConfigService } from '../config/chatbot-config.service';
+import { UsageService } from '../../common/packages/usage.service';
 
 export function resolveGeminiKey(): { key: string; source: 'CHATBOT_LLM_API_KEY' | 'GEMINI_API_KEY' | 'none' } {
   if (process.env.CHATBOT_LLM_API_KEY) {
@@ -36,12 +37,14 @@ export class GeminiProvider implements LlmProvider {
   private lastRetryAfterS = 0;
 
   private readonly configService?: ChatbotConfigService;
+  private readonly usageService?: UsageService;
 
   constructor(
     @Optional() arg1?: ChatbotConfigService | string,
     @Optional() @Inject('GEMINI_API_KEY') arg2?: string,
     @Optional() @Inject('GEMINI_MODEL') arg3?: string | typeof fetch,
     @Optional() @Inject('GEMINI_FETCH') arg4?: typeof fetch | ChatbotConfigService,
+    @Optional() usageService?: UsageService,
   ) {
     const resolved = resolveGeminiKey();
     if (typeof arg1 === 'string') {
@@ -55,6 +58,7 @@ export class GeminiProvider implements LlmProvider {
       this.configuredModel = typeof arg3 === 'string' ? arg3 : (process.env.CHATBOT_LLM_MODEL || '');
       this.fetchFn = typeof arg4 === 'function' ? arg4 : globalThis.fetch;
     }
+    this.usageService = usageService;
   }
 
   async getModel(): Promise<string> {
@@ -288,6 +292,8 @@ export class GeminiProvider implements LlmProvider {
 
       const latencyMs = Date.now() - startTime;
       const usageMetadata = jsonResponse.usageMetadata;
+
+      await this.usageService?.increment('ai_calls');
 
       return {
         data: parsedData,

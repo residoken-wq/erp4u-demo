@@ -46,6 +46,7 @@ import { CHATBOT_ENTITIES } from './chatbot/entities';
 import { CommonModule } from './common/common.module';
 import { EntitlementsModule } from './common/packages/entitlements.module';
 import { TenantEntitlement } from './common/packages/tenant-entitlement.entity';
+import { UsageCounter } from './common/packages/usage-counter.entity';
 
 // Entities
 import { Product } from './products/product.entity';
@@ -253,6 +254,7 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
             ...CHATBOT_ENTITIES,
             // Modular Package Entitlements (P6)
             TenantEntitlement,
+            UsageCounter,
           ],
           synchronize: true, // Always sync demo database schema
           subscribers: [],

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_URL } from '../config';
+import { getPackageLabel } from '../config/packages';
 
 const api = axios.create({
     baseURL: API_URL,
@@ -29,6 +30,12 @@ api.interceptors.response.use(
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/login';
+        }
+        if (error.response?.status === 402 && error.response?.data?.code === 'PACKAGE_REQUIRED') {
+            const pkgLabel = getPackageLabel(error.response?.data?.package);
+            import('antd').then(({ message }) =>
+                message.warning(`Tính năng thuộc gói ${pkgLabel} chưa được kích hoạt. Liên hệ quản trị viên để nâng cấp.`)
+            );
         }
         if (error.response?.status === 403) {
             // Permission denied - show server message
