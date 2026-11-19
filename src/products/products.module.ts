@@ -10,7 +10,6 @@ import { ProductComponent } from './product-component.entity';
 import { ProductRouting } from './product-routing.entity';
 import { ProductLogistics } from './product-logistics.entity';
 import { ProductPattern } from './product-pattern.entity';
-import { ProductWebsiteConfig } from './entities/product-website-config.entity';
 import { ProductPackingSpec } from './entities/product-packing-spec.entity';
 
 import { Supplier } from '../suppliers/supplier.entity';
@@ -27,7 +26,6 @@ import { AuthModule } from '../auth/auth.module';
       ProductRouting,
       ProductLogistics,
       ProductPattern,
-      ProductWebsiteConfig,
       ProductPackingSpec,
       Supplier,
       SupplierMaterial

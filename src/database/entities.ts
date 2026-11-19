@@ -81,11 +81,11 @@ import { SystemConfig } from '../system/system-config.entity';
 import { ApiToken } from '../system/entities/api-token.entity';
 import { ContractTemplate } from '../system/contract-template.entity';
 import { EmailTemplate } from '../system/email-template.entity';
-import { BlogPost } from '../blogs/blog-post.entity';
+import { BlogPost } from '../website/entities/blog-post.entity';
 import { ActivityLog } from '../system/entities/activity-log.entity';
-import { ProductWebsiteConfig } from '../products/entities/product-website-config.entity';
-import { WebsitePolicy } from '../public/entities/website-policy.entity';
-import { WizardConfig } from '../public/entities/wizard-config.entity';
+import { ProductWebsiteConfig } from '../website/entities/product-website-config.entity';
+import { WebsitePolicy } from '../website/entities/website-policy.entity';
+import { WizardConfig } from '../website/entities/wizard-config.entity';
 import { PortalOtp } from '../public/entities/portal-otp.entity';
 import { PortalSession } from '../public/entities/portal-session.entity';
 import { Promotion } from '../sales/promotion.entity';
@@ -126,7 +126,7 @@ import { TikTokConversation } from '../tiktok/entities/tiktok-conversation.entit
 
 import { Announcement } from '../announcements/announcement.entity';
 import { AnnouncementRead } from '../announcements/announcement-read.entity';
-import { WebProject } from '../website-projects/entities/web-project.entity';
+import { WebProject } from '../website/entities/web-project.entity';
 import { AnalyticsVisitor } from '../analytics/analytics-visitor.entity';
 
 import { ZaloApiConfig } from '../zns/entities/zalo-api-config.entity';

@@ -8,7 +8,7 @@ ERP4U được tổ chức theo kiến trúc **Modular Monolith + Entitlement**:
 
 | Mã gói (`PackageKey`) | Tên gói | Chức năng chính | Module backend | Phụ thuộc |
 |---|---|---|---|---|
-| `CORE` | Cơ bản (Core) | Đăng nhập, phân quyền RBAC, người dùng, cấu hình hệ thống, danh mục sản phẩm/khách hàng/NCC, thông báo, công việc chung, tải tệp | `auth`, `users`, `system`, `common`, `categories`, `customers`, `suppliers`, `products`, `notifications`, `announcements`, `tasks`, `upload`, `utils` | *(Bắt buộc — luôn bật)* |
+| `CORE` | Cơ bản (Core) | Đăng nhập, phân quyền RBAC, người dùng, cấu hình hệ thống, danh mục sản phẩm/khách hàng/NCC, thông báo, công việc chung, tải tệp, cổng public nền tảng (`meta`, `proxy-image`) | `auth`, `users`, `system`, `common`, `categories`, `customers`, `suppliers`, `products`, `notifications`, `announcements`, `tasks`, `upload`, `utils`, `public` | *(Bắt buộc — luôn bật)* |
 | `SALES` | Bán hàng & CRM | Quản lý Lead, báo giá, đơn hàng (SO), bảng giá, khuyến mãi, POS, giao hàng bán ra, cổng báo giá khách hàng | `sales` | `CORE` |
 | `INVENTORY` | Kho & Mua hàng | Tồn kho, nhập/xuất kho, kho hàng mẫu, nguyên phụ liệu, đơn mua hàng (PO), đối tác gia công, vận chuyển | `inventory`, `purchasing`, `materials`, `shipping` | `CORE` |
 | `PRODUCTION` | Sản xuất | Định mức nguyên vật liệu (BOM), công đoạn & quy trình, lập kế hoạch sản xuất (MRP/PFO), lệnh sản xuất, kiểm tra chất lượng (QC) | `bom`, `processes`, `planning`, `production`, `qc` | `INVENTORY` |
@@ -16,10 +16,13 @@ ERP4U được tổ chức theo kiến trúc **Modular Monolith + Entitlement**:
 | `FINANCE` | Tài chính | Thu/chi, phân loại giao dịch, báo cáo dòng tiền, theo dõi công nợ | `finance` | `CORE` |
 | `HR` | Nhân sự | Hồ sơ nhân viên, ca làm việc, chấm công, nghỉ phép, bảng lương, tuyển dụng, đánh giá nhân sự | `hr` | `CORE` |
 | `PROJECTS` | Dự án | Quản lý dự án, cột mốc (milestone), thảo luận nội bộ theo dự án | `projects`, `discussions` | `CORE` |
-| `MARKETING` | Marketing & Omnichannel | Chiến dịch marketing, phân khúc khách hàng, kênh bán hàng Social/TikTok, Zalo ZNS, bài viết/blog, website & thống kê truy cập | `marketing`, `social`, `tiktok`, `zns`, `blogs`, `website-projects`, `analytics`, `public` | `SALES` |
+| `MARKETING` | Marketing & Omnichannel | Chiến dịch marketing, phân khúc khách hàng, kênh bán hàng Social/TikTok, Zalo ZNS, thống kê truy cập (analytics) | `marketing`, `social`, `tiktok`, `zns`, `analytics` | `SALES` |
+| `WEBSITE` | Website & CMS *(premium — sẽ có trên ERP4U Cloud)* | Cửa hàng & sản phẩm bán online (`/website-products`), bài viết/blog, dự án tiêu biểu, chính sách website, cấu hình trang chủ/giới thiệu/cài đặt, wizard tự thiết kế, nhận lead & đơn hàng từ website | `website` | `SALES` |
 | `AI` | AI Assistant | Trợ lý AI gợi ý nghiệp vụ (không tự quyết định thay con người), hộp thư & kịch bản Chatbot AI | `ai`, `chatbot` | `CORE` |
 
-> **Lưu ý về phụ thuộc gói:** Khi một gói phụ thuộc vào gói khác (ví dụ `PRODUCTION` phụ thuộc `INVENTORY`, `DESIGN` và `MARKETING` phụ thuộc `SALES`), gói phụ thuộc chỉ hoạt động hiệu quả khi gói nền tảng cũng đang được kích hoạt. Nếu gói nền tảng bị tắt hoặc hết hạn, hệ thống tự động coi gói phụ thuộc là chưa kích hoạt.
+> **Lưu ý về phụ thuộc gói:** Khi một gói phụ thuộc vào gói khác (ví dụ `PRODUCTION` phụ thuộc `INVENTORY`, `DESIGN`, `MARKETING` và `WEBSITE` phụ thuộc `SALES`), gói phụ thuộc chỉ hoạt động hiệu quả khi gói nền tảng cũng đang được kích hoạt. Nếu gói nền tảng bị tắt hoặc hết hạn, hệ thống tự động coi gói phụ thuộc là chưa kích hoạt.
+>
+> **Gói premium:** `WEBSITE` là gói **premium — sẽ có trên ERP4U Cloud** (toàn bộ code backend được gom độc lập trong `src/website/`). Các cổng khách hàng (`/portal/*`), cổng báo giá (`/api/public/portal/quote/*`) thuộc `SALES` và cổng tuyển dụng (`/api/public/recruitment/*`) thuộc `HR` vẫn hoạt động độc lập khi tắt `WEBSITE`.
 
 ---
 

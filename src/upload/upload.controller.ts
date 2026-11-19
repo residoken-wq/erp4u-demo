@@ -1,5 +1,5 @@
 import { Perm, AnyPerm, AuthOnly } from '../auth/permissions.decorator';
-import { Controller, Post, Get, Delete, Param, Res, Body, UseInterceptors, UploadedFile, BadRequestException, Query } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Res, Body, UseInterceptors, UploadedFile, BadRequestException, Query, Inject, Optional } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
 import { Response } from 'express';
@@ -9,11 +9,16 @@ import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from '../products/product.entity';
-import { ProductWebsiteConfig } from '../products/entities/product-website-config.entity';
-import { BlogPost } from '../blogs/blog-post.entity';
-import { WebProject } from '../website-projects/entities/web-project.entity';
 import { SystemConfig } from '../system/system-config.entity';
 import { CorePackage } from '../common/packages/requires-package.decorator';
+
+interface WebsiteMediaUsageBridge {
+  getMediaUsageSources(): Promise<{
+    productConfigs: Array<{ product_id: number; customization_config: any }>;
+    blogs: Array<{ id: number; title: string; featured_image: string; content: string; content_blocks: any }>;
+    projects: Array<{ id: number; title: string; image_url: string; content: string; content_blocks: any }>;
+  }>;
+}
 
 @Controller('upload')
 @CorePackage()
@@ -21,10 +26,8 @@ export class UploadController {
   constructor(
     private readonly uploadService: UploadService,
     @InjectRepository(Product) private productRepo: Repository<Product>,
-    @InjectRepository(ProductWebsiteConfig) private pwcRepo: Repository<ProductWebsiteConfig>,
-    @InjectRepository(BlogPost) private blogRepo: Repository<BlogPost>,
-    @InjectRepository(WebProject) private projectRepo: Repository<WebProject>,
     @InjectRepository(SystemConfig) private configRepo: Repository<SystemConfig>,
+    @Optional() @Inject('WEBSITE_SERVICE') private websiteService?: WebsiteMediaUsageBridge,
   ) { }
 
   @Perm('CMS', 'view')
@@ -98,40 +101,39 @@ export class UploadController {
         scanText(p.customer_description, 'Sản phẩm (mô tả)', p.id, `${p.sku} - ${p.name}`);
       }
 
-      // 2. Product Website Configs: customization_config (gallery_images, colors, base_image, etc.)
-      const configs = await this.pwcRepo.find();
-      for (const c of configs) {
-        const cfg = c.customization_config;
-        if (!cfg) continue;
-        const product = products.find(p => p.id === c.product_id);
-        const label = product ? `${product.sku} - ${product.name}` : `Product #${c.product_id}`;
-        scanText(JSON.stringify(cfg), 'Sản phẩm (cấu hình)', c.product_id, label);
-      }
+      // 2-4. Website sources (Product Website Configs, Blog Posts, Web Projects) via WebsiteModule export
+      if (this.websiteService) {
+        const { productConfigs: configs, blogs, projects } = await this.websiteService.getMediaUsageSources();
 
-      // 3. Blog Posts: featured_image + content + content_blocks
-      const blogs = await this.blogRepo.find({ select: ['id', 'title', 'featured_image', 'content', 'content_blocks'] });
-      for (const b of blogs) {
-        if (b.featured_image) {
-            const found = scanText(b.featured_image, 'Bài viết', b.id, b.title);
-            if (!found && !b.featured_image.startsWith('{') && !b.featured_image.startsWith('[')) {
-                addUsage(b.featured_image, 'Bài viết', b.id, b.title);
-            }
+        for (const c of configs) {
+          const cfg = c.customization_config;
+          if (!cfg) continue;
+          const product = products.find(p => p.id === c.product_id);
+          const label = product ? `${product.sku} - ${product.name}` : `Product #${c.product_id}`;
+          scanText(JSON.stringify(cfg), 'Sản phẩm (cấu hình)', c.product_id, label);
         }
-        scanText(b.content, 'Bài viết (nội dung)', b.id, b.title);
-        if (b.content_blocks) scanText(JSON.stringify(b.content_blocks), 'Bài viết (blocks)', b.id, b.title);
-      }
 
-      // 4. Web Projects: image_url + content + content_blocks
-      const projects = await this.projectRepo.find({ select: ['id', 'title', 'image_url', 'content', 'content_blocks'] });
-      for (const p of projects) {
-        if (p.image_url) {
-            const found = scanText(p.image_url, 'Dự án', p.id, p.title);
-            if (!found && !p.image_url.startsWith('{') && !p.image_url.startsWith('[')) {
-                addUsage(p.image_url, 'Dự án', p.id, p.title);
-            }
+        for (const b of blogs) {
+          if (b.featured_image) {
+              const found = scanText(b.featured_image, 'Bài viết', b.id, b.title);
+              if (!found && !b.featured_image.startsWith('{') && !b.featured_image.startsWith('[')) {
+                  addUsage(b.featured_image, 'Bài viết', b.id, b.title);
+              }
+          }
+          scanText(b.content, 'Bài viết (nội dung)', b.id, b.title);
+          if (b.content_blocks) scanText(JSON.stringify(b.content_blocks), 'Bài viết (blocks)', b.id, b.title);
         }
-        scanText(p.content, 'Dự án (nội dung)', p.id, p.title);
-        if (p.content_blocks) scanText(JSON.stringify(p.content_blocks), 'Dự án (blocks)', p.id, p.title);
+
+        for (const p of projects) {
+          if (p.image_url) {
+              const found = scanText(p.image_url, 'Dự án', p.id, p.title);
+              if (!found && !p.image_url.startsWith('{') && !p.image_url.startsWith('[')) {
+                  addUsage(p.image_url, 'Dự án', p.id, p.title);
+              }
+          }
+          scanText(p.content, 'Dự án (nội dung)', p.id, p.title);
+          if (p.content_blocks) scanText(JSON.stringify(p.content_blocks), 'Dự án (blocks)', p.id, p.title);
+        }
       }
 
       // 5. System Configs: value field (home config, about config, settings, etc.)

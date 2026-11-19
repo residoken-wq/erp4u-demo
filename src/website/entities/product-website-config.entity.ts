@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryColumn, OneToOne, JoinColumn } from 'typeorm';
-import { Product } from '../product.entity';
+import { Product } from '../../products/product.entity';
 
 @Entity('product_website_config')
 export class ProductWebsiteConfig {

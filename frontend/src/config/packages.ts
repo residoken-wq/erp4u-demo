@@ -8,6 +8,7 @@ export enum PackageKey {
   HR = 'HR',
   PROJECTS = 'PROJECTS',
   MARKETING = 'MARKETING',
+  WEBSITE = 'WEBSITE',
   AI = 'AI',
 }
 
@@ -21,6 +22,7 @@ export const PACKAGE_LABELS: Record<PackageKey, string> = {
   [PackageKey.HR]: 'Nhân sự',
   [PackageKey.PROJECTS]: 'Dự án',
   [PackageKey.MARKETING]: 'Marketing & Omnichannel',
+  [PackageKey.WEBSITE]: 'Website & CMS',
   [PackageKey.AI]: 'AI Assistant',
 };
 
@@ -41,7 +43,6 @@ export const ROUTE_PACKAGES: Record<string, PackageKey> = {
   '/combos': PackageKey.CORE,
   '/categories': PackageKey.CORE,
   '/packing-specs': PackageKey.CORE,
-  '/website-products': PackageKey.CORE,
   '/suppliers': PackageKey.CORE,
   '/customers': PackageKey.CORE,
   '/workspace': PackageKey.CORE,
@@ -99,6 +100,9 @@ export const ROUTE_PACKAGES: Record<string, PackageKey> = {
   '/social/channels': PackageKey.MARKETING,
   '/social/orders': PackageKey.MARKETING,
   '/marketing': PackageKey.MARKETING,
+
+  // WEBSITE
+  '/website-products': PackageKey.WEBSITE,
 
   // AI
   '/chatbot/inbox': PackageKey.AI,

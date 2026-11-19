@@ -4,7 +4,8 @@ import { CreateVariantDto } from './dto/create-variant.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermission, AuthOnly, Perm } from '../auth/permissions.decorator';
-import { CorePackage } from '../common/packages/requires-package.decorator';
+import { CorePackage, RequiresPackage } from '../common/packages/requires-package.decorator';
+import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('products')
 @CorePackage()
@@ -78,8 +79,10 @@ export class ProductsController {
 
   // --- API WEBSITE CONFIG ---
   @Perm('PRODUCT', 'view')
+  @RequiresPackage(PackageKey.WEBSITE)
   @Get(':id/website-config') getWebsiteConfig(@Param('id') id: number) { return this.service.getWebsiteConfig(Number(id)); }
   @Perm('PRODUCT', 'update')
+  @RequiresPackage(PackageKey.WEBSITE)
   @Post(':id/website-config') saveWebsiteConfig(@Param('id') id: number, @Body() b: any) { return this.service.saveWebsiteConfig(Number(id), b); }
   // --------------------------
 

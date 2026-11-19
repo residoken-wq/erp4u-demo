@@ -6,13 +6,11 @@
     "../sales/sales-order.entity"
   ],
   "src/customers/customers.module.ts": [
-    "../finance/transaction.entity",
-    "../public/entities/portal-session.entity"
+    "../finance/transaction.entity"
   ],
   "src/customers/customers.service.ts": [
     "../finance/transaction.entity",
     "../planning/pfo.entity",
-    "../public/entities/portal-session.entity",
     "../sales/sales-comment.entity",
     "../sales/sales-order.entity"
   ],
@@ -113,10 +111,6 @@
     "../hr/entities/job-post.entity"
   ],
   "src/public/public.module.ts": [
-    "../hr/entities/assessment.entity",
-    "../hr/entities/candidate.entity",
-    "../hr/entities/interview.entity",
-    "../hr/entities/job-post.entity",
     "../sales/sales-order.entity"
   ],
   "src/purchasing/entities/purchase-order-item.entity.ts": [
@@ -208,14 +202,8 @@
     "../projects/entities/milestone.entity",
     "../projects/entities/project.entity"
   ],
-  "src/upload/upload.controller.ts": [
-    "../blogs/blog-post.entity",
-    "../website-projects/entities/web-project.entity"
-  ],
   "src/upload/upload.module.ts": [
-    "../blogs/blog-post.entity",
-    "../bom/bom.entity",
-    "../website-projects/entities/web-project.entity"
+    "../bom/bom.entity"
   ],
   "src/upload/upload.service.ts": [
     "../bom/bom.entity",

@@ -8,6 +8,7 @@ export enum PackageKey {
   HR = 'HR',
   PROJECTS = 'PROJECTS',
   MARKETING = 'MARKETING',
+  WEBSITE = 'WEBSITE',
   AI = 'AI',
 }
 
@@ -16,6 +17,7 @@ export enum PackageKey {
  * - PRODUCTION => INVENTORY
  * - DESIGN => SALES
  * - MARKETING => SALES
+ * - WEBSITE => SALES
  */
 export const PACKAGE_DEPENDENCIES: Record<PackageKey, PackageKey[]> = {
   [PackageKey.CORE]: [],
@@ -27,11 +29,12 @@ export const PACKAGE_DEPENDENCIES: Record<PackageKey, PackageKey[]> = {
   [PackageKey.HR]: [],
   [PackageKey.PROJECTS]: [],
   [PackageKey.MARKETING]: [PackageKey.SALES],
+  [PackageKey.WEBSITE]: [PackageKey.SALES],
   [PackageKey.AI]: [],
 };
 
 /**
- * Mapping of packages to backend modules (as specified in P6 architecture plan)
+ * Mapping of packages to backend modules (as specified in P6/P8 architecture plan)
  */
 export const PACKAGE_MODULES: Record<PackageKey, string[]> = {
   [PackageKey.CORE]: [
@@ -48,6 +51,7 @@ export const PACKAGE_MODULES: Record<PackageKey, string[]> = {
     'tasks',
     'upload',
     'utils',
+    'public',
   ],
   [PackageKey.SALES]: ['sales'],
   [PackageKey.INVENTORY]: ['inventory', 'purchasing', 'materials', 'shipping'],
@@ -61,10 +65,8 @@ export const PACKAGE_MODULES: Record<PackageKey, string[]> = {
     'social',
     'tiktok',
     'zns',
-    'blogs',
-    'website-projects',
     'analytics',
-    'public',
   ],
+  [PackageKey.WEBSITE]: ['website'],
   [PackageKey.AI]: ['ai', 'chatbot'],
 };

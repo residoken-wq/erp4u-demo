@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { BlogPost, BlogStatus } from './blog-post.entity';
+import { BlogPost, BlogStatus } from './entities/blog-post.entity';
 import { generateSlug } from '../utils/slug.util';
 import { SystemService } from '../system/system.service';
 

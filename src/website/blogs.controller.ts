@@ -1,11 +1,11 @@
 import { Perm } from '../auth/permissions.decorator';
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
 import { BlogsService } from './blogs.service';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('blogs')
-@RequiresPackage(PackageKey.MARKETING)
+@RequiresPackage(PackageKey.WEBSITE)
 export class BlogsController {
     constructor(private readonly service: BlogsService) { }
 
