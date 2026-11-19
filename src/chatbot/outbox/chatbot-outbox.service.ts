@@ -9,6 +9,8 @@ import { EmailService } from '../../common/services/email.service';
 import { User } from '../../users/entities/user.entity';
 import { ENTITLEMENT_PROVIDER, EntitlementProvider } from '../../common/packages/entitlement-provider.interface';
 import { PackageKey } from '../../common/packages/package.registry';
+import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../../common/tenancy/tenant-context';
+import { TENANT_REGISTRY, TenantRegistry } from '../../common/tenancy/tenant-registry.interface';
 
 const BACKOFF_MINS = [1, 2, 5, 10, 30, 60, 120, 240];
 
@@ -28,18 +30,28 @@ export class ChatbotOutboxService {
     @Optional()
     @Inject(ENTITLEMENT_PROVIDER)
     private readonly entitlementProvider?: EntitlementProvider,
+    @Optional()
+    @Inject(TENANT_REGISTRY)
+    private readonly tenantRegistry?: TenantRegistry,
   ) {}
 
   @Cron('*/1 * * * *')
   async handleCron() {
-    if (this.entitlementProvider && !(await this.entitlementProvider.isEnabled(PackageKey.AI))) {
-      this.logger.debug('Package AI is not enabled, skipping chatbot outbox cron');
-      return;
-    }
-    try {
-      await this.run();
-    } catch (err: any) {
-      this.logger.error(`Outbox cron failed: ${err?.message}`);
+    const tenants = this.tenantRegistry
+      ? await this.tenantRegistry.list()
+      : [DEFAULT_TENANT_CONTEXT];
+    for (const tenant of tenants) {
+      await TenantContext.run(tenant, async () => {
+        if (this.entitlementProvider && !(await this.entitlementProvider.isEnabled(PackageKey.AI))) {
+          this.logger.debug(`Package AI is not enabled for tenant ${tenant.tenantId}, skipping chatbot outbox cron`);
+          return;
+        }
+        try {
+          await this.run();
+        } catch (err: any) {
+          this.logger.error(`Outbox cron failed for tenant ${tenant.tenantId}: ${err?.message}`);
+        }
+      });
     }
   }
 

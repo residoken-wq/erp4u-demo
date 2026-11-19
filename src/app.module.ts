@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { DataSource } from 'typeorm';
 
 // Modules
 import { ProductsModule } from './products/products.module';
@@ -40,6 +41,8 @@ import { ZnsModule } from './zns/zns.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ChatbotModule } from './chatbot/chatbot.module';
 import { CommonModule } from './common/common.module';
+import { TenancyModule } from './common/tenancy/tenancy.module';
+import { installTenantConnectionHook } from './common/tenancy/tenant-connection.hook';
 import { EntitlementsModule } from './common/packages/entitlements.module';
 import { AiModule } from './ai/ai.module';
 
@@ -59,6 +62,7 @@ import { buildDataSourceOptions } from './database/data-source';
       useFactory: (configService: ConfigService) =>
         buildDataSourceOptions(
           {
+            NODE_ENV: configService.get<string>('NODE_ENV'),
             DATABASE_URL: configService.get<string>('DATABASE_URL'),
             POSTGRES_URL: configService.get<string>('POSTGRES_URL'),
             DB_HOST: configService.get<string>('DB_HOST'),
@@ -74,7 +78,16 @@ import { buildDataSourceOptions } from './database/data-source';
               configService.get<string>('DB_AUTO_MIGRATE') !== 'false',
           },
         ),
+      dataSourceFactory: async (options) => {
+        if (!options) {
+          throw new Error('Invalid TypeORM DataSource options');
+        }
+        const dataSource = await new DataSource(options).initialize();
+        installTenantConnectionHook(dataSource);
+        return dataSource;
+      },
     }),
+    TenancyModule,
     CommonModule,
     UsersModule, AuthModule, EntitlementsModule,
     ProductsModule, MaterialsModule, BomModule, SalesModule,

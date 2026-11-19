@@ -1,8 +1,10 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Optional, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cron } from '@nestjs/schedule';
 import { RbacAccessLog } from './entities/rbac-access-log.entity';
+import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../common/tenancy/tenant-context';
+import { TENANT_REGISTRY, TenantRegistry } from '../common/tenancy/tenant-registry.interface';
 
 @Injectable()
 export class RbacAccessLogService implements OnModuleInit {
@@ -11,6 +13,9 @@ export class RbacAccessLogService implements OnModuleInit {
   constructor(
     @InjectRepository(RbacAccessLog)
     private logRepo: Repository<RbacAccessLog>,
+    @Optional()
+    @Inject(TENANT_REGISTRY)
+    private readonly tenantRegistry?: TenantRegistry,
   ) {}
 
   async onModuleInit() {
@@ -94,17 +99,24 @@ export class RbacAccessLogService implements OnModuleInit {
 
   @Cron('0 3 * * *')
   async cleanOldLogs() {
-    try {
-      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-      await this.logRepo
-        .createQueryBuilder()
-        .delete()
-        .from(RbacAccessLog)
-        .where('created_at < :date', { date: ninetyDaysAgo })
-        .execute();
-      console.log('[RbacAccessLogService] Cleaned logs older than 90 days');
-    } catch (e) {
-      console.error('[RbacAccessLogService] Error cleaning old logs:', e);
+    const tenants = this.tenantRegistry
+      ? await this.tenantRegistry.list()
+      : [DEFAULT_TENANT_CONTEXT];
+    for (const tenant of tenants) {
+      await TenantContext.run(tenant, async () => {
+        try {
+          const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+          await this.logRepo
+            .createQueryBuilder()
+            .delete()
+            .from(RbacAccessLog)
+            .where('created_at < :date', { date: ninetyDaysAgo })
+            .execute();
+          console.log(`[RbacAccessLogService][tenant=${tenant.tenantId}] Cleaned logs older than 90 days`);
+        } catch (e) {
+          console.error(`[RbacAccessLogService][tenant=${tenant.tenantId}] Error cleaning old logs:`, e);
+        }
+      });
     }
   }
 

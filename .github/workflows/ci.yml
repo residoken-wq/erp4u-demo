@@ -123,6 +123,12 @@ jobs:
           npm run migration:run
           npm run migration:show
 
+      - name: Run Tenant Isolation Integration Tests
+        env:
+          DB_DATABASE: erp4u_ci
+          DB_AUTO_MIGRATE: 'false'
+        run: npm run test:int
+
       - name: Smoke boot
         env:
           DB_DATABASE: mig_db
