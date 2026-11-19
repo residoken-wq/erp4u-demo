@@ -549,31 +549,33 @@ const RecruitmentTab: React.FC = () => {
                                     </Space>
                                 }
                                 extra={
-                                    <Space wrap>
-                                        <Popconfirm
-                                            title="Xác nhận mời phỏng vấn?"
-                                            description="Tạo lịch phỏng vấn và gửi email mời cho ứng viên."
-                                            onConfirm={handleApproveInterview}
-                                            okText="Xác nhận"
-                                            cancelText="Hủy"
-                                        >
-                                            <Button type="primary" size="small" icon={<CheckCircleOutlined />}>
-                                                Xác nhận & Mời PV
-                                            </Button>
-                                        </Popconfirm>
-                                        <Popconfirm
-                                            title="Xác nhận từ chối ứng viên?"
-                                            description="Cập nhật trạng thái Từ chối và gửi email thông báo cho ứng viên."
-                                            onConfirm={handleRejectAssessment}
-                                            okText="Từ chối"
-                                            cancelText="Hủy"
-                                            okButtonProps={{ danger: true }}
-                                        >
-                                            <Button danger size="small" icon={<CloseCircleOutlined />}>
-                                                Từ chối
-                                            </Button>
-                                        </Popconfirm>
-                                    </Space>
+                                    (selectedCandidate?.status === 'ASSESSED' || candidateDetail?.candidate?.status === 'ASSESSED') ? (
+                                        <Space wrap>
+                                            <Popconfirm
+                                                title="Xác nhận mời phỏng vấn?"
+                                                description="Tạo lịch phỏng vấn và gửi email mời cho ứng viên."
+                                                onConfirm={handleApproveInterview}
+                                                okText="Xác nhận"
+                                                cancelText="Hủy"
+                                            >
+                                                <Button type="primary" size="small" icon={<CheckCircleOutlined />}>
+                                                    Xác nhận & Mời PV
+                                                </Button>
+                                            </Popconfirm>
+                                            <Popconfirm
+                                                title="Xác nhận từ chối ứng viên?"
+                                                description="Cập nhật trạng thái Từ chối và gửi email thông báo cho ứng viên."
+                                                onConfirm={handleRejectAssessment}
+                                                okText="Từ chối"
+                                                cancelText="Hủy"
+                                                okButtonProps={{ danger: true }}
+                                            >
+                                                <Button danger size="small" icon={<CloseCircleOutlined />}>
+                                                    Từ chối
+                                                </Button>
+                                            </Popconfirm>
+                                        </Space>
+                                    ) : null
                                 }
                                 size="small"
                                 style={{ marginBottom: 16, background: '#f8fafc' }}

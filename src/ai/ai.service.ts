@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,9 +13,12 @@ import { TasksService } from '../tasks/tasks.service';
 import { UsersService } from '../users/users.service';
 import { AiLearningService } from './ai-learning.service';
 import { AiKnowledgeService } from './ai-knowledge.service';
+import { DemoModeService } from '../common/services/demo-mode.service';
 
 @Injectable()
 export class AiService {
+    private readonly demoModeService: DemoModeService;
+
     constructor(
         @InjectRepository(AiMessage) private aiMessageRepo: Repository<AiMessage>,
         private configService: ConfigService,
@@ -29,7 +32,10 @@ export class AiService {
         private usersService: UsersService,
         private aiLearningService: AiLearningService,
         private aiKnowledgeService: AiKnowledgeService,
-    ) {}
+        @Optional() demoModeService?: DemoModeService,
+    ) {
+        this.demoModeService = demoModeService || new DemoModeService(configService);
+    }
 
     private selectedModel: string | null = null;
 
@@ -101,7 +107,21 @@ export class AiService {
 
     private async callGemini(prompt: string): Promise<string> {
         let apiKey = this.configService.get<string>('GEMINI_API_KEY');
-        if (!apiKey) throw new Error("GEMINI_API_KEY not set");
+        if (!apiKey) {
+            if (this.demoModeService.isDemoMode()) {
+                if (prompt.includes('json') || prompt.includes('JSON') || prompt.includes('score')) {
+                    return JSON.stringify({
+                        score: 8,
+                        pros: ["Ứng viên có kỹ năng phù hợp (demo)", "Kinh nghiệm thực tế tốt"],
+                        cons: ["Cần hoàn thiện thêm một số kỹ năng nâng cao"],
+                        recommendation: "Potential",
+                        summary: "Đánh giá sơ bộ trong chế độ Demo."
+                    });
+                }
+                return "Đây là câu trả lời thử nghiệm của trợ lý AI (Chế độ Demo).";
+            }
+            throw new Error("GEMINI_API_KEY not set");
+        }
         apiKey = apiKey.trim();
 
         const modelName = await this.getBestModel(apiKey);
@@ -144,11 +164,11 @@ export class AiService {
         const { message, userId = 'default' } = body; // Default userId if not provided
 
         const apiKey = this.configService.get<string>('GEMINI_API_KEY');
-        console.log('DEBUG AI: Checking Key...');
-        console.log('DEBUG AI: Key from ConfigService:', apiKey ? 'FOUND (Length: ' + apiKey.length + ')' : 'MISSING');
-        console.log('DEBUG AI: Process.env.GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'FOUND' : 'MISSING');
 
         if (!apiKey) {
+            if (this.demoModeService.isDemoMode()) {
+                return { text: "Đây là câu trả lời thử nghiệm của trợ lý AI (Chế độ Demo)." };
+            }
             return { text: "AI Service is not configured (Missing GEMINI_API_KEY)." };
         }
 
@@ -1322,6 +1342,10 @@ You MUST return ONLY a valid JSON object in this structure:
     ) {
         let apiKey = this.configService.get<string>('GEMINI_API_KEY');
         if (!apiKey) {
+            if (this.demoModeService.isDemoMode()) {
+                onChunk("Đây là câu trả lời thử nghiệm của trợ lý AI (Chế độ Demo).");
+                return;
+            }
             onChunk("AI Service is not configured (Missing GEMINI_API_KEY).");
             return;
         }

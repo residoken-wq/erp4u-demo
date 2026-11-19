@@ -1,16 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import * as nodemailer from 'nodemailer';
+import { DemoModeService } from './demo-mode.service';
 
 @Injectable()
 export class EmailService {
     private readonly logger = new Logger(EmailService.name);
+    private readonly demoModeService: DemoModeService;
 
     constructor(
         private configService: ConfigService,
-        private dataSource: DataSource
-    ) {}
+        private dataSource: DataSource,
+        @Optional() demoModeService?: DemoModeService
+    ) {
+        this.demoModeService = demoModeService || new DemoModeService(configService);
+    }
 
     private async getSmtpConfig() {
         try {
@@ -54,6 +59,9 @@ export class EmailService {
     }
 
     async testConnection(to: string): Promise<{ success: boolean; message: string }> {
+        if (this.demoModeService.guard('EMAIL', '[REDACTED]')) {
+            return { success: true, message: '[DEMO_MODE] Đã giả lập gửi email test thành công!' };
+        }
         const dbConfig = await this.getSmtpConfig();
         let fromEmail = dbConfig['SMTP_FROM_EMAIL'] || this.configService.get<string>('SMTP_FROM') || 'noreply@example.com';
         let fromName = dbConfig['SMTP_FROM_NAME'] || 'ERP4U';
@@ -79,6 +87,9 @@ export class EmailService {
     }
 
     async sendMail(to: string, subject: string, html: string, attachments?: any[], cc?: string, fromOverride?: string): Promise<boolean> {
+        if (this.demoModeService.guard('EMAIL', '[REDACTED]')) {
+            return true;
+        }
         const dbConfig = await this.getSmtpConfig();
         
         let fromEmail = fromOverride || dbConfig['SMTP_FROM_EMAIL'] || this.configService.get<string>('SMTP_FROM') || 'noreply@example.com';

@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { SystemService } from '../system/system.service';
 import { SalesOrder } from './sales-order.entity';
 import * as crypto from 'crypto';
 import { firstValueFrom } from 'rxjs';
+import { DemoModeService } from '../common/services/demo-mode.service';
 
 function readNumberInVietnamese(number: number): string {
     const digits = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
@@ -65,10 +66,15 @@ function readNumberInVietnamese(number: number): string {
 export class EasyInvoiceService {
     private readonly logger = new Logger(EasyInvoiceService.name);
 
+    private readonly demoModeService: DemoModeService;
+
     constructor(
         private readonly httpService: HttpService,
-        private readonly systemService: SystemService
-    ) {}
+        private readonly systemService: SystemService,
+        @Optional() demoModeService?: DemoModeService,
+    ) {
+        this.demoModeService = demoModeService || new DemoModeService({ get: (k: string) => process.env[k] } as any);
+    }
 
     private async getConfig() {
         const config = await this.systemService.getEasyInvoiceConfig();
@@ -257,6 +263,24 @@ export class EasyInvoiceService {
 
     // 1. Tạo hóa đơn nháp (API V.1)
     async createDraftInvoice(order: SalesOrder, customItems?: any[], ikey?: string) {
+        if (this.demoModeService.guard('EasyInvoice', order.code || ikey || 'DRAFT')) {
+            const { totalAmount, totalVatAmount, grandTotal, items, ikey: invoiceIkey } = this.buildInvoiceXml(order, customItems, ikey);
+            return {
+                apiResult: {
+                    Ikey: invoiceIkey,
+                    Pattern: '1/001',
+                    Serial: 'C26TAA',
+                    No: '0000001',
+                    demo: true,
+                },
+                totalAmount,
+                vatAmount: totalVatAmount,
+                grandTotal,
+                items,
+                ikey: invoiceIkey,
+            };
+        }
+
         const config = await this.getConfig();
         const { xml, totalAmount, totalVatAmount, grandTotal, items, ikey: invoiceIkey } = this.buildInvoiceXml(order, customItems, ikey);
         
@@ -319,6 +343,10 @@ export class EasyInvoiceService {
 
     // Xóa hóa đơn chưa ký số (API V.7)
     async removeDraftInvoice(ikey: string, pattern?: string, serial?: string) {
+        if (this.demoModeService.guard('EasyInvoice (remove)', ikey)) {
+            return { Status: 2, Message: 'Xóa hóa đơn nháp thành công (chế độ demo)' };
+        }
+
         const config = await this.getConfig();
         const payload = {
             Ikey: ikey,
@@ -367,6 +395,10 @@ export class EasyInvoiceService {
     
     // 4. Gửi email (API V.28)
     async sendEmailNotice(ikey: string, email: string) {
+        if (this.demoModeService.guard('EasyInvoice (email)', email)) {
+            return { Status: 2, Message: 'Đã gửi email thông báo (chế độ demo)' };
+        }
+
         const payload = {
             IkeyEmail: {
                 [ikey]: email

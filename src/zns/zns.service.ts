@@ -1,17 +1,20 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cron } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as dayjs from 'dayjs';
 import { ZaloApiConfig } from './entities/zalo-api-config.entity';
 import { ZnsMessageLog } from './entities/zns-message-log.entity';
 import { SalesOrder } from '../sales/sales-order.entity';
 import { SalesDelivery } from '../sales/sales-delivery.entity';
+import { DemoModeService } from '../common/services/demo-mode.service';
 
 @Injectable()
 export class ZaloZnsService {
   private readonly logger = new Logger(ZaloZnsService.name);
+  private readonly demoModeService: DemoModeService;
 
   constructor(
     @InjectRepository(ZaloApiConfig)
@@ -22,7 +25,11 @@ export class ZaloZnsService {
     private readonly orderRepo: Repository<SalesOrder>,
     @InjectRepository(SalesDelivery)
     private readonly deliveryRepo: Repository<SalesDelivery>,
-  ) {}
+    @Optional() private readonly configService?: ConfigService,
+    @Optional() demoModeService?: DemoModeService,
+  ) {
+    this.demoModeService = demoModeService || new DemoModeService(configService || ({} as any));
+  }
 
   // ==========================================
   // 1. CẤU HÌNH & XÁC THỰC OAUTH 2.0
@@ -242,6 +249,18 @@ export class ZaloZnsService {
     trackingId?: string,
     isRetry = false,
   ): Promise<any> {
+    if (this.demoModeService.guard('ZNS', trackingId || 'customer')) {
+      return {
+        error: 0,
+        message: 'Success (Demo Mode)',
+        data: {
+          msg_id: `DEMO-ZNS-${Date.now()}`,
+          sent_time: Date.now(),
+        },
+        demo: true,
+      };
+    }
+
     const token = await this.getValidAccessToken();
     const payload = {
       phone,

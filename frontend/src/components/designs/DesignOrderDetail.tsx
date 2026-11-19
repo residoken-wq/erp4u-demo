@@ -164,7 +164,7 @@ const DesignOrderDetail: React.FC<DesignOrderDetailProps> = ({ orderId, onStatus
             <Modal title="Tạo Link Gửi Khách Duyệt Mẫu" open={isDemoModalVisible} onCancel={() => setIsDemoModalVisible(false)} onOk={() => setIsDemoModalVisible(false)}>
                 <p>Hệ thống hỗ trợ gửi link duyệt mẫu qua Portal.</p>
                 <div style={{ padding: 16, background: '#f0f2f5', borderRadius: 4, wordBreak: 'break-all' }}>
-                    <Text copyable>https://erp4u.vn/portal/quotes/{order.sales_order_id || 'preview'}</Text>
+                    <Text copyable>{`${window.location.origin}/portal/quotes/${order.sales_order_id || 'preview'}`}</Text>
                 </div>
                 <p style={{ marginTop: 16 }}>Gửi link này cho khách hàng qua Zalo hoặc Email để họ xem và phản hồi trực tiếp trên hệ thống.</p>
             </Modal>

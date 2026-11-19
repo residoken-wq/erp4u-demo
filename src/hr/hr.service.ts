@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, OnModuleInit } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Employee } from './entities/employee.entity';
@@ -561,6 +561,7 @@ export class HrService implements OnModuleInit {
     async getAssessmentByCandidate(candidateId: number) {
         return this.assessmentRepo.findOne({
             where: { candidate_id: candidateId },
+            relations: ['candidate'],
             order: { created_at: 'DESC' }
         });
     }
@@ -663,6 +664,9 @@ You MUST return ONLY a valid JSON object in this structure:
         });
         if (!assessment) throw new NotFoundException('Assessment not found');
         if (!assessment.candidate) throw new NotFoundException('Candidate not found for assessment');
+        if (assessment.candidate.status !== CandidateStatus.ASSESSED) {
+            throw new ConflictException(`Ứng viên không ở trạng thái chờ duyệt đánh giá (ASSESSED) (hiện tại: ${assessment.candidate.status})`);
+        }
 
         const scheduledDate = scheduleData?.scheduled_at ? new Date(scheduleData.scheduled_at) : (() => {
             const d = new Date();
@@ -725,6 +729,9 @@ You MUST return ONLY a valid JSON object in this structure:
         });
         if (!assessment) throw new NotFoundException('Assessment not found');
         if (!assessment.candidate) throw new NotFoundException('Candidate not found for assessment');
+        if (assessment.candidate.status !== CandidateStatus.ASSESSED) {
+            throw new ConflictException(`Ứng viên không ở trạng thái chờ duyệt đánh giá (ASSESSED) (hiện tại: ${assessment.candidate.status})`);
+        }
 
         await this.candidateRepo.update(assessment.candidate_id, {
             status: CandidateStatus.REJECTED

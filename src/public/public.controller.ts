@@ -18,9 +18,13 @@ import { WebProject } from '../website-projects/entities/web-project.entity';
 import { HrService } from '../hr/hr.service';
 import { JobPostStatus } from '../hr/entities/job-post.entity';
 import { DesignsService } from '../designs/designs.service';
+import { DemoModeService } from '../common/services/demo-mode.service';
+import { Optional } from '@nestjs/common';
 
 @Controller('public')
 export class PublicController {
+    private readonly demoModeService: DemoModeService;
+
     constructor(
         @InjectRepository(Product)
         private readonly productRepo: Repository<Product>,
@@ -43,8 +47,20 @@ export class PublicController {
         private readonly salesService: SalesService,
         private readonly systemService: SystemService,
         private readonly hrService: HrService,
-        private readonly designsService: DesignsService
-    ) { }
+        private readonly designsService: DesignsService,
+        @Optional() demoModeService?: DemoModeService
+    ) {
+        this.demoModeService = demoModeService || new DemoModeService({ get: (k: string) => process.env[k] } as any);
+    }
+
+    @Public()
+    @Get('meta')
+    async getMeta() {
+        return {
+            demo: this.demoModeService.isDemoMode(),
+            version: '1.0.0',
+        };
+    }
 
     // ... (settings code)
 

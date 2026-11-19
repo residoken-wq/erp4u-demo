@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DemoModeService } from '../common/services/demo-mode.service';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const axios = require('axios');
 import * as crypto from 'crypto';
@@ -13,13 +14,18 @@ import * as crypto from 'crypto';
 @Injectable()
 export class TikTokApiClient {
     private readonly logger = new Logger(TikTokApiClient.name);
+    private readonly demoModeService: DemoModeService;
     private readonly httpClient: any;
     private readonly appKey: string;
     private readonly appSecret: string;
     private readonly redirectUri: string;
     private readonly authBaseUrl: string;
 
-    constructor(private configService: ConfigService) {
+    constructor(
+        private configService: ConfigService,
+        @Optional() demoModeService?: DemoModeService
+    ) {
+        this.demoModeService = demoModeService || new DemoModeService(configService);
         this.appKey = this.configService.get<string>('TIKTOK_APP_KEY', '');
         this.appSecret = this.configService.get<string>('TIKTOK_APP_SECRET', '');
         this.redirectUri = this.configService.get<string>(
@@ -277,6 +283,13 @@ export class TikTokApiClient {
         content: string,
         shopCipher?: string,
     ): Promise<any> {
+        if (this.demoModeService.guard('TIKTOK', conversationId)) {
+            return {
+                message_id: `DEMO-TIKTOK-${Date.now()}`,
+                create_time: Date.now(),
+                demo: true,
+            };
+        }
         return this.signedRequest(
             'POST',
             `/customer_service/202309/conversations/${conversationId}/messages`,
@@ -338,6 +351,14 @@ export class TikTokApiClient {
         commentId: string,
         text: string,
     ): Promise<any> {
+        if (this.demoModeService.guard('TIKTOK', commentId)) {
+            return {
+                comment_id: `DEMO-CMT-${Date.now()}`,
+                text,
+                create_time: Date.now(),
+                demo: true,
+            };
+        }
         const url = 'https://open.tiktokapis.com/v2/video/comment/reply/';
         const response = await axios.post(
             url,

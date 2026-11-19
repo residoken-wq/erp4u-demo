@@ -1,21 +1,27 @@
-import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Inject, forwardRef, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { UserGroup } from './entities/user-group.entity';
 import { GroupPermission } from './entities/group-permission.entity';
 import { PermissionCacheService } from '../auth/permission-cache.service';
+import { DemoModeService } from '../common/services/demo-mode.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
+  private readonly demoModeService: DemoModeService;
+
   constructor(
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(UserGroup) private groupRepo: Repository<UserGroup>,
     @InjectRepository(GroupPermission) private permRepo: Repository<GroupPermission>,
     @Inject(forwardRef(() => PermissionCacheService))
     private permCacheService: PermissionCacheService,
-  ) { }
+    @Optional() demoModeService?: DemoModeService,
+  ) {
+    this.demoModeService = demoModeService || new DemoModeService({ get: (k: string) => process.env[k] } as any);
+  }
 
   // --- USER MANAGEMENT ---
   async getAllUsers() {
@@ -33,17 +39,35 @@ export class UsersService {
   }
 
   async updateUser(id: number, data: any) {
+    const user = await this.userRepo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+
+    if (this.demoModeService.isDemoMode() && this.demoModeService.isDemoUser(user.username)) {
+      if (data.password || data.group_id !== undefined || data.groupId !== undefined || data.group !== undefined) {
+        throw new ForbiddenException('Không được phép trên bản demo');
+      }
+    }
+
     await this.userRepo.update(id, data);
     return this.userRepo.findOne({ where: { id }, relations: ['group'] });
   }
 
   async deleteUser(id: number) {
+    const user = await this.userRepo.findOne({ where: { id } });
+    if (!user) return;
+    if (this.demoModeService.isDemoMode() && this.demoModeService.isDemoUser(user.username)) {
+      throw new ForbiddenException('Không được phép trên bản demo');
+    }
     return this.userRepo.delete(id);
   }
 
   async changePassword(id: number, newPass: string) {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
+
+    if (this.demoModeService.isDemoMode() && this.demoModeService.isDemoUser(user.username)) {
+      throw new ForbiddenException('Không được phép trên bản demo');
+    }
 
     user.password = await bcrypt.hash(newPass, 10);
     return this.userRepo.save(user);
