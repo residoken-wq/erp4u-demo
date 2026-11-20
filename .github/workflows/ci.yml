@@ -186,6 +186,26 @@ jobs:
             wait "${APP_PID}" 2>/dev/null || true
           done
 
+          echo "=== Fail-fast check: missing JWT_SECRET in production must exit != 0 within 30s ==="
+          FAIL_FAST_LOG="/tmp/fail-fast-smoke.log"
+          set +e
+          (
+            unset JWT_SECRET
+            export NODE_ENV=production
+            export DB_DATABASE=mig_db
+            export DB_AUTO_MIGRATE=false
+            export ENCRYPTION_KEY="ci-dummy-encryption-key-0123456789abcdef0123456789abcdef"
+            timeout 30s node dist/main.js >"${FAIL_FAST_LOG}" 2>&1
+          )
+          FAIL_EXIT=$?
+          set -e
+          if [ "${FAIL_EXIT}" -eq 0 ] || [ "${FAIL_EXIT}" -eq 124 ]; then
+            echo "Expected exit != 0 (and not 124 timeout) when JWT_SECRET is missing, got ${FAIL_EXIT}"
+            cat "${FAIL_FAST_LOG}" || true
+            exit 1
+          fi
+          echo "PASS Fail-fast check: process exited with code ${FAIL_EXIT}"
+
   image:
     name: Build & Push Docker Images
     needs: [verify]

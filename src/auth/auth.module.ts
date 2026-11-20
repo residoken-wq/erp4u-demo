@@ -20,14 +20,17 @@ import { User } from '../users/entities/user.entity';
 import { UserGroup } from '../users/entities/user-group.entity';
 import { SystemConfig } from '../system/system-config.entity';
 import { RbacAccessLog } from './entities/rbac-access-log.entity';
+import { getJwtSecret } from '../common/security/secrets';
 
 @Module({
   imports: [
     forwardRef(() => UsersModule),
     PassportModule,
-    JwtModule.register({
-      secret: 'ERP4U_SECRET_KEY',
-      signOptions: { expiresIn: '1d' }, // Token hết hạn sau 1 ngày
+    JwtModule.registerAsync({
+      useFactory: () => ({
+        secret: getJwtSecret(),
+        signOptions: { expiresIn: '1d' }, // Token hết hạn sau 1 ngày
+      }),
     }),
     TypeOrmModule.forFeature([GroupPermission, User, UserGroup, SystemConfig, RbacAccessLog]),
   ],
@@ -50,6 +53,7 @@ import { RbacAccessLog } from './entities/rbac-access-log.entity';
     AuthService,
     JwtStrategy,
     PassportModule,
+    JwtModule,
     PermissionsGuard,
     SuperAdminGuard,
     RbacModeService,

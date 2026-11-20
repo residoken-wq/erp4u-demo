@@ -1,5 +1,6 @@
 import { ValueTransformer } from 'typeorm';
 import * as crypto from 'crypto';
+import { getEncryptionKey } from '../security/secrets';
 
 /**
  * AES-256-GCM Column-Level Encryption Transformer
@@ -8,12 +9,18 @@ import * as crypto from 'crypto';
  */
 export class EncryptionTransformer implements ValueTransformer {
   private algorithm: crypto.CipherGCMTypes = 'aes-256-gcm';
-  private key: Buffer;
+  private key: Buffer | null = null;
 
   constructor() {
-    const rawKey = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-    // Ensure key is 32 bytes
-    this.key = crypto.createHash('sha256').update(String(rawKey)).digest();
+    // Key is lazily initialized on first encrypt/decrypt to avoid throwing on module import
+  }
+
+  private getKey(): Buffer {
+    if (!this.key) {
+      const rawKey = getEncryptionKey();
+      this.key = crypto.createHash('sha256').update(String(rawKey)).digest();
+    }
+    return this.key;
   }
 
   /**
@@ -26,7 +33,7 @@ export class EncryptionTransformer implements ValueTransformer {
 
     try {
       const iv = crypto.randomBytes(12); // Recommended 96 bits for GCM
-      const cipher = crypto.createCipheriv(this.algorithm, this.key, iv);
+      const cipher = crypto.createCipheriv(this.algorithm, this.getKey(), iv);
       
       let encrypted = cipher.update(String(value), 'utf8', 'hex');
       encrypted += cipher.final('hex');
@@ -64,7 +71,7 @@ export class EncryptionTransformer implements ValueTransformer {
     try {
       const iv = Buffer.from(ivHex, 'hex');
       const authTag = Buffer.from(authTagHex, 'hex');
-      const decipher = crypto.createDecipheriv(this.algorithm, this.key, iv);
+      const decipher = crypto.createDecipheriv(this.algorithm, this.getKey(), iv);
       decipher.setAuthTag(authTag);
 
       let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');

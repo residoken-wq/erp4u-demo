@@ -1,22 +1,29 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
+import { getEncryptionKey } from '../security/secrets';
 
 @Injectable()
 export class EncryptionService {
   private readonly logger = new Logger(EncryptionService.name);
   private readonly algorithm = 'aes-256-gcm';
-  private readonly key: Buffer;
+  private key: Buffer | null = null;
 
   constructor() {
-    const rawKey = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-    this.key = crypto.createHash('sha256').update(String(rawKey)).digest();
     this.logger.log('🔒 Encryption service initialized (AES-256-GCM)');
+  }
+
+  private getKey(): Buffer {
+    if (!this.key) {
+      const rawKey = getEncryptionKey();
+      this.key = crypto.createHash('sha256').update(String(rawKey)).digest();
+    }
+    return this.key;
   }
 
   encrypt(plaintext: string): string {
     if (!plaintext) return plaintext;
     const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv(this.algorithm, this.key, iv);
+    const cipher = crypto.createCipheriv(this.algorithm, this.getKey(), iv);
     let encrypted = cipher.update(plaintext, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     const authTag = cipher.getAuthTag().toString('hex');
@@ -30,7 +37,7 @@ export class EncryptionService {
     try {
       const iv = Buffer.from(parts[0], 'hex');
       const authTag = Buffer.from(parts[1], 'hex');
-      const decipher = crypto.createDecipheriv(this.algorithm, this.key, iv);
+      const decipher = crypto.createDecipheriv(this.algorithm, this.getKey(), iv);
       decipher.setAuthTag(authTag);
       let decrypted = decipher.update(parts[2], 'hex', 'utf8');
       decrypted += decipher.final('utf8');
