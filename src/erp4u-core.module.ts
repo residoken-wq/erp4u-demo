@@ -2,11 +2,13 @@ import {
   DynamicModule,
   ForwardReference,
   Module,
+  OnModuleInit,
   Type,
 } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { validateSecurityConfig } from './common/security/secrets';
 
 // Core & Domain Modules
 import { ProductsModule } from './products/products.module';
@@ -112,7 +114,11 @@ const DEFAULT_DATA_SOURCE_FACTORY = async (
 };
 
 @Module({})
-export class Erp4uCoreModule {
+export class Erp4uCoreModule implements OnModuleInit {
+  onModuleInit() {
+    validateSecurityConfig();
+  }
+
   static forRoot(options: Erp4uCoreModuleOptions = {}): DynamicModule {
     const entities = options.extraEntities?.length
       ? [...ENTITIES, ...options.extraEntities]

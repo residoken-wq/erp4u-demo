@@ -10,10 +10,13 @@ import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { isCorsOriginAllowed } from './common/utils/cors.util';
+import { validateSecurityConfig } from './common/security/secrets';
 export { isCorsOriginAllowed };
 
 async function bootstrap() {
   try {
+    validateSecurityConfig();
+
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
       logger: ['error', 'warn', 'log', 'debug'],
     });
@@ -56,6 +59,8 @@ async function bootstrap() {
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
       credentials: true,
     });
+
+    validateSecurityConfig();
 
     const port = process.env.PORT || 3000;
     await app.listen(port, '0.0.0.0');
