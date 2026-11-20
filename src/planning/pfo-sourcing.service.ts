@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, Optional, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { ProductionFulfillmentOrder, PfoStatus } from './pfo.entity';
@@ -9,10 +9,12 @@ import { PfoMilestone, PfoMilestoneType } from './pfo-milestone.entity';
 import { Supplier } from '../suppliers/supplier.entity';
 import { GoodsIssue, GoodsIssueStatus, GoodsIssueType, GoodsIssueDeliveryMode } from '../inventory/entities/goods-issue.entity';
 import { GoodsIssueItem } from '../inventory/entities/goods-issue-item.entity';
-import { DesignsService } from '../designs/designs.service';
+import { DESIGN_ORDER_HOOKS, DesignOrderHooks } from '../common/extension-points';
 
 @Injectable()
 export class PfoSourcingService {
+    private readonly logger = new Logger(PfoSourcingService.name);
+
     constructor(
         @InjectRepository(ProductionFulfillmentOrder) private pfoRepo: Repository<ProductionFulfillmentOrder>,
         @InjectRepository(PurchaseOrder) private poRepo: Repository<PurchaseOrder>,
@@ -21,7 +23,7 @@ export class PfoSourcingService {
         @InjectRepository(PfoMilestone) private milestoneRepo: Repository<PfoMilestone>,
         @InjectRepository(GoodsIssue) private goodsIssueRepo: Repository<GoodsIssue>,
         @InjectRepository(GoodsIssueItem) private goodsIssueItemRepo: Repository<GoodsIssueItem>,
-        @Inject(forwardRef(() => DesignsService)) private designsService: DesignsService
+        @Optional() @Inject(DESIGN_ORDER_HOOKS) private designsService?: DesignOrderHooks
     ) { }
 
     /**
@@ -385,30 +387,34 @@ export class PfoSourcingService {
                     // --- MỚI: Tự động tạo Đơn thiết kế nếu là công đoạn In Ấn ---
                     const hasPrinting = msList.some(m => m.milestone_type === PfoMilestoneType.PRINTING);
                     if (hasPrinting) {
-                        try {
-                            const customerId = pfo.sales_order?.customer_id;
-                            const schoolName = pfo.sales_order?.customer?.name;
-                            const rawCategory = pfo.sales_order?.items?.[0]?.product?.category;
-                            const productType = typeof rawCategory === 'string' ? rawCategory : (rawCategory as any)?.name || 'Áo thun/Túi';
-                            
-                            const designOrder = await this.designsService.createDesignOrder({
-                                customer_id: customerId,
-                                school_name: schoolName,
-                                product_type: productType,
-                                quantity: pfo.quantity,
-                                sales_order_id: pfo.sales_order_id,
-                                purchase_order_id: gcPo.id,
-                                notes: 'Tự động tạo từ PO Gia công in của Lệnh SX ' + pfo.code
-                            });
+                        if (this.designsService) {
+                            try {
+                                const customerId = pfo.sales_order?.customer_id;
+                                const schoolName = pfo.sales_order?.customer?.name;
+                                const rawCategory = pfo.sales_order?.items?.[0]?.product?.category;
+                                const productType = typeof rawCategory === 'string' ? rawCategory : (rawCategory as any)?.name || 'Áo thun/Túi';
+                                
+                                const designOrder = await this.designsService.createDesignOrder({
+                                    customer_id: customerId,
+                                    school_name: schoolName,
+                                    product_type: productType,
+                                    quantity: pfo.quantity,
+                                    sales_order_id: pfo.sales_order_id,
+                                    purchase_order_id: gcPo.id,
+                                    notes: 'Tự động tạo từ PO Gia công in của Lệnh SX ' + pfo.code
+                                });
 
-                            if (designOrder) {
-                                for (const item of gcItems) {
-                                    item.design_order_id = (designOrder as any).id;
-                                    await this.poItemRepo.save(item);
+                                if (designOrder) {
+                                    for (const item of gcItems) {
+                                        item.design_order_id = (designOrder as any).id;
+                                        await this.poItemRepo.save(item);
+                                    }
                                 }
+                            } catch (err) {
+                                console.error('Error auto-creating design order:', err);
                             }
-                        } catch (err) {
-                            console.error('Error auto-creating design order:', err);
+                        } else {
+                            this.logger.debug('DesignOrderHooks not available, skipping design order creation');
                         }
                     }
 

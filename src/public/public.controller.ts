@@ -1,5 +1,5 @@
 import { Public } from '../auth/public.decorator';
-import { Controller, Get, Post, Delete, Body, Param, Query, HttpException, HttpStatus, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, HttpException, HttpStatus, Req, Res, Inject, Optional, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Response } from 'express';
@@ -8,20 +8,23 @@ import { SalesService } from '../sales/sales.service';
 import { SystemService } from '../system/system.service';
 import { HrService } from '../hr/hr.service';
 import { JobPostStatus } from '../hr/entities/job-post.entity';
-import { DesignsService } from '../designs/designs.service';
+import { DESIGN_ORDER_HOOKS, DesignOrderHooks } from '../common/extension-points';
 import { DemoModeService } from '../common/services/demo-mode.service';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
 
 @Controller('public')
 export class PublicController {
+    private readonly logger = new Logger(PublicController.name);
+
     constructor(
         @InjectRepository(SystemConfig)
         private readonly configRepo: Repository<SystemConfig>,
         private readonly salesService: SalesService,
         private readonly systemService: SystemService,
         private readonly hrService: HrService,
-        private readonly designsService: DesignsService,
+        @Optional() @Inject(DESIGN_ORDER_HOOKS)
+        private readonly designsService: DesignOrderHooks | undefined,
         private readonly demoModeService: DemoModeService,
     ) {
     }
@@ -113,6 +116,7 @@ export class PublicController {
 
         let isDesignOrder = false;
         if (!quote) {
+            if (!this.designsService) return null;
             // Check if it's a design order
             quote = await this.designsService.getDesignOrderByUuid(uuid);
             if (!quote) return null;
@@ -220,13 +224,15 @@ export class PublicController {
         const metadata = { ip, userAgent };
 
         // Check if design order
-        const designOrder = await this.designsService.getDesignOrderByUuid(uuid);
-        if (designOrder) {
-             if (body.action === 'ACCEPT') {
-                 return this.designsService.updateDesignOrderStatus(designOrder.id, 'DEMO_APPROVED');
-             } else if (body.action === 'REJECT') {
-                 return this.designsService.updateDesignOrderStatus(designOrder.id, 'DEMO_REJECTED');
-             }
+        if (this.designsService) {
+            const designOrder = await this.designsService.getDesignOrderByUuid(uuid);
+            if (designOrder) {
+                 if (body.action === 'ACCEPT') {
+                     return this.designsService.updateDesignOrderStatus(designOrder.id, 'DEMO_APPROVED');
+                 } else if (body.action === 'REJECT') {
+                     return this.designsService.updateDesignOrderStatus(designOrder.id, 'DEMO_REJECTED');
+                 }
+            }
         }
 
         return this.salesService.customerAction(uuid, body.action, metadata);

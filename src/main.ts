@@ -20,9 +20,11 @@ async function bootstrap() {
     await configureCoreApp(app);
 
     const port = process.env.PORT || 3000;
+    const includePremium = process.env.CORE_INCLUDE_PREMIUM !== 'false';
     await app.listen(port, '0.0.0.0');
     console.log('==============================================');
     console.log('🚀 ERP4U Backend API running on port ' + port);
+    console.log('📦 Premium Add-ons: ' + (includePremium ? 'ENABLED' : 'DISABLED'));
     console.log('📘 Swagger/API endpoint: http://localhost:' + port + '/api');
     console.log('==============================================');
   } catch (err) {

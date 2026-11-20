@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
@@ -17,7 +17,9 @@ import { InventoryModule } from '../inventory/inventory.module';
 import { PlanningModule } from '../planning/planning.module';
 import { TasksModule } from '../tasks/tasks.module';
 import { UsersModule } from '../users/users.module';
+import { AI_ASSISTANT_SERVICE } from '../common/extension-points';
 
+@Global()
 @Module({
     imports: [
         TypeOrmModule.forFeature([AiMessage, AiFeedback, AiLearnedExample]),
@@ -31,8 +33,25 @@ import { UsersModule } from '../users/users.module';
         UsersModule
     ],
     controllers: [AiController],
-    providers: [AiService, AiLearningService, AiKnowledgeService, AiAnalyticsService, AiProactiveService],
-    exports: [AiService, AiLearningService, AiKnowledgeService, AiAnalyticsService, AiProactiveService]
+    providers: [
+        AiService,
+        AiLearningService,
+        AiKnowledgeService,
+        AiAnalyticsService,
+        AiProactiveService,
+        {
+            provide: AI_ASSISTANT_SERVICE,
+            useExisting: AiService,
+        },
+    ],
+    exports: [
+        AiService,
+        AiLearningService,
+        AiKnowledgeService,
+        AiAnalyticsService,
+        AiProactiveService,
+        AI_ASSISTANT_SERVICE,
+    ]
 })
 export class AiModule { }
 

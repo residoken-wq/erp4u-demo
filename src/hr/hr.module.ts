@@ -19,7 +19,6 @@ import { ReviewQuestion } from './entities/review-question.entity';
 import { ReviewCampaign } from './entities/review-campaign.entity';
 import { EmployeeReview } from './entities/employee-review.entity';
 import { ActivityLog } from '../system/entities/activity-log.entity';
-import { AiModule } from '../ai/ai.module';
 import { EmailService } from '../common/services/email.service';
 import { AuthModule } from '../auth/auth.module';
 import { HrReviewQuestionsSeedService } from './hr-review-questions-seed.service';
@@ -44,7 +43,6 @@ import { HrReviewQuestionsSeedService } from './hr-review-questions-seed.service
             EmployeeReview,
             ActivityLog,
         ]),
-        AiModule,
         AuthModule,
     ],
     controllers: [HrController, HrMeController],

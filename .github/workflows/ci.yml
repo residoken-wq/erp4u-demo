@@ -186,6 +186,73 @@ jobs:
             wait "${APP_PID}" 2>/dev/null || true
           done
 
+      - name: Smoke boot (CORE_INCLUDE_PREMIUM=false)
+        env:
+          DB_DATABASE: mig_db
+          DB_AUTO_MIGRATE: 'true'
+          NODE_ENV: production
+          PORT: '3000'
+          JWT_SECRET: ci-dummy-jwt-secret-0123456789abcdef0123456789abcdef
+          ENCRYPTION_KEY: ci-dummy-encryption-key-0123456789abcdef0123456789abcdef
+          CORS_ORIGINS: http://localhost
+          CORE_INCLUDE_PREMIUM: 'false'
+        run: |
+          set -euo pipefail
+
+          echo "=== Smoke boot (CORE_INCLUDE_PREMIUM=false) ==="
+          LOG_FILE="/tmp/smoke-boot-no-premium.log"
+          node dist/main.js >"${LOG_FILE}" 2>&1 &
+          APP_PID=$!
+
+          READY=0
+          HEALTH_BODY=""
+          for _ in $(seq 1 90); do
+            if ! kill -0 "${APP_PID}" 2>/dev/null; then
+              echo "App process exited prematurely (CORE_INCLUDE_PREMIUM=false)"
+              break
+            fi
+            if HEALTH_BODY=$(curl -fsS http://127.0.0.1:3000/api/health 2>/dev/null); then
+              if [ "${HEALTH_BODY}" = '{"status":"ok"}' ]; then
+                READY=1
+                break
+              fi
+            fi
+            sleep 1
+          done
+
+          if [ "${READY}" -ne 1 ]; then
+            echo "Smoke boot failed for CORE_INCLUDE_PREMIUM=false (last health body: ${HEALTH_BODY})"
+            tail -n 100 "${LOG_FILE}" || true
+            kill "${APP_PID}" 2>/dev/null || true
+            wait "${APP_PID}" 2>/dev/null || true
+            exit 1
+          fi
+
+          META_CODE=$(curl -sS -o /tmp/meta.out -w '%{http_code}' http://127.0.0.1:3000/api/public/meta)
+          if [ "${META_CODE}" != "200" ]; then
+            echo "Expected /api/public/meta 200, got ${META_CODE} (CORE_INCLUDE_PREMIUM=false)"
+            cat /tmp/meta.out || true
+            tail -n 100 "${LOG_FILE}" || true
+            kill "${APP_PID}" 2>/dev/null || true
+            wait "${APP_PID}" 2>/dev/null || true
+            exit 1
+          fi
+
+          # Route from premium add-on must return 404 (AiController: /api/ai/pricing)
+          AI_CODE=$(curl -sS -o /tmp/ai.out -w '%{http_code}' -X POST http://127.0.0.1:3000/api/ai/pricing -H 'Content-Type: application/json' -d '{}')
+          if [ "${AI_CODE}" != "404" ]; then
+            echo "Expected /api/ai/pricing 404 when premium disabled, got ${AI_CODE}"
+            cat /tmp/ai.out || true
+            tail -n 100 "${LOG_FILE}" || true
+            kill "${APP_PID}" 2>/dev/null || true
+            wait "${APP_PID}" 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "PASS CORE_INCLUDE_PREMIUM=false: /api/health=${HEALTH_BODY}, /api/public/meta=${META_CODE}, /api/ai/pricing=${AI_CODE}"
+          kill "${APP_PID}" 2>/dev/null || true
+          wait "${APP_PID}" 2>/dev/null || true
+
           echo "=== Fail-fast check: missing JWT_SECRET in production must exit != 0 within 30s ==="
           FAIL_FAST_LOG="/tmp/fail-fast-smoke.log"
           set +e
