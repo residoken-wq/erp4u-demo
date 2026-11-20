@@ -14,6 +14,7 @@ import { PermAction } from './permission-catalog';
 import { RbacModeService, RbacMode } from './rbac-mode.service';
 import { RbacAccessLogService } from './rbac-access-log.service';
 import { PermissionCacheService } from './permission-cache.service';
+import { assertTokenTenant } from './token-tenant';
 
 @Injectable()
 export class RbacGuard implements CanActivate {
@@ -176,12 +177,16 @@ export class RbacGuard implements CanActivate {
 
     try {
       const payload = this.jwtService.verify(token);
+      assertTokenTenant(payload);
       return {
         id: payload.sub,
         username: payload.username,
         groupId: payload.group_id,
       };
-    } catch {
+    } catch (err) {
+      if (err instanceof UnauthorizedException) {
+        throw err;
+      }
       return null;
     }
   }

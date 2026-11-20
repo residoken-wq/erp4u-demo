@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { TenantContext } from '../common/tenancy/tenant-context';
 
 @Injectable()
 export class AuthService {
@@ -42,7 +43,14 @@ export class AuthService {
   }
 
   async login(user: any) {
-    const payload = { username: user.username, sub: user.id, group_id: user.group?.id, full_name: user.full_name };
+    const tid = TenantContext.current().tenantId;
+    const payload = {
+      username: user.username,
+      sub: user.id,
+      group_id: user.group?.id,
+      full_name: user.full_name,
+      tid,
+    };
 
     return {
       access_token: this.jwtService.sign(payload),
