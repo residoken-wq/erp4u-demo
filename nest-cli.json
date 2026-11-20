@@ -7,6 +7,14 @@
             {
                 "include": "firebase/firebase-service-account.json",
                 "outDir": "dist"
+            },
+            {
+                "include": "ai/knowledge/**/*",
+                "outDir": "dist"
+            },
+            {
+                "include": "hr/assets/**/*",
+                "outDir": "dist"
             }
         ],
         "watchAssets": true

@@ -1,0 +1,27 @@
+[
+  {
+    "content": "Nhân viên có thái độ hợp tác tích cực và hỗ trợ đồng nghiệp trong công việc không?",
+    "category": "Làm việc nhóm",
+    "type": "RATING"
+  },
+  {
+    "content": "Khả năng hoàn thành công việc đúng tiến độ và đạt yêu cầu chất lượng?",
+    "category": "Hiệu suất công việc",
+    "type": "RATING"
+  },
+  {
+    "content": "Nhân viên có chủ động đề xuất giải pháp cải tiến quy trình làm việc không?",
+    "category": "Sáng tạo & Đổi mới",
+    "type": "RATING"
+  },
+  {
+    "content": "Khả năng giao tiếp và truyền đạt thông tin rõ ràng với các bộ phận liên quan?",
+    "category": "Kỹ năng giao tiếp",
+    "type": "RATING"
+  },
+  {
+    "content": "Đóng góp nổi bật hoặc điểm cần cải thiện của nhân viên trong kỳ đánh giá?",
+    "category": "Ý kiến chung",
+    "type": "TEXT"
+  }
+]

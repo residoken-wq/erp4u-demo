@@ -1,21 +1,19 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { UserGroup } from '../users/entities/user-group.entity';
 import { GroupPermission } from '../users/entities/group-permission.entity';
 import { SystemConfig } from '../system/system-config.entity';
+import { TenantSeeder } from '../common/tenancy/tenant-seeder.interface';
 
 @Injectable()
-export class RbacSeedService implements OnModuleInit {
+export class RbacSeedService implements TenantSeeder {
+  readonly name = 'rbac-seed';
   private readonly logger = new Logger(RbacSeedService.name);
 
   constructor(private readonly dataSource: DataSource) {}
 
-  async onModuleInit() {
-    try {
-      await this.runSeed();
-    } catch (error) {
-      this.logger.error('Failed to run RBAC Seed V1', error);
-    }
+  async seed(): Promise<void> {
+    await this.runSeed();
   }
 
   async runSeed() {

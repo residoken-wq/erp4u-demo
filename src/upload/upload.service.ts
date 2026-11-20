@@ -17,6 +17,7 @@ import { Supplier, SupplierType } from '../suppliers/supplier.entity';
 import { SystemConfig } from '../system/system-config.entity';
 import { FILE_STORAGE, FileStorage } from '../common/storage/file-storage.interface';
 import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../common/tenancy/tenant-context';
+import { resolveCoreAsset } from '../common/utils/asset-path.util';
 
 async function streamToBuffer(stream: Readable): Promise<Buffer> {
   const chunks: Buffer[] = [];
@@ -265,7 +266,8 @@ export class UploadService {
 
     // Legacy fallback: Check 'frontend/public/uploads' ONLY for default tenant (single-tenant/dev)
     if (TenantContext.current().tenantId === DEFAULT_TENANT_CONTEXT.tenantId) {
-      const fallbackPath = path.join(process.cwd(), 'frontend', 'public', 'uploads', safeName);
+      const fallbackDir = resolveCoreAsset(path.join('frontend', 'public', 'uploads'), __dirname);
+      const fallbackPath = path.join(fallbackDir, safeName);
       if (fs.existsSync(fallbackPath)) {
         const stat = fs.statSync(fallbackPath);
         const ext = path.extname(safeName).toLowerCase();
@@ -301,7 +303,8 @@ export class UploadService {
 
     // Legacy fallback ONLY for default tenant
     if (TenantContext.current().tenantId === DEFAULT_TENANT_CONTEXT.tenantId) {
-      const fallbackPath = path.join(process.cwd(), 'frontend', 'public', 'uploads', safeName);
+      const fallbackDir = resolveCoreAsset(path.join('frontend', 'public', 'uploads'), __dirname);
+      const fallbackPath = path.join(fallbackDir, safeName);
       if (fs.existsSync(fallbackPath)) {
         fs.unlinkSync(fallbackPath);
         return { success: true, message: 'File deleted (legacy path)' };

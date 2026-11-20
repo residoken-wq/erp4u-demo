@@ -1,9 +1,10 @@
-import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { UserGroup } from '../../users/entities/user-group.entity';
 import { GroupPermission } from '../../users/entities/group-permission.entity';
 import { SystemConfig } from '../../system/system-config.entity';
 import { PermissionCacheService } from '../../auth/permission-cache.service';
+import { TenantSeeder } from '../../common/tenancy/tenant-seeder.interface';
 
 function formatFlags(flags: {
   can_view: boolean;
@@ -22,7 +23,8 @@ function formatFlags(flags: {
 }
 
 @Injectable()
-export class ChatbotSeedService implements OnModuleInit {
+export class ChatbotSeedService implements TenantSeeder {
+  readonly name = 'chatbot-seed';
   private readonly logger = new Logger(ChatbotSeedService.name);
 
   constructor(
@@ -31,12 +33,8 @@ export class ChatbotSeedService implements OnModuleInit {
     private readonly permCacheService?: PermissionCacheService,
   ) {}
 
-  async onModuleInit() {
-    try {
-      await this.runSeed();
-    } catch (err: any) {
-      this.logger.error(`Failed to run Chatbot Seed V1: ${err?.message}`);
-    }
+  async seed(): Promise<void> {
+    await this.runSeed();
   }
 
   async runSeed() {

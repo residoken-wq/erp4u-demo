@@ -518,8 +518,8 @@ export class HrController {
     @Post('review-questions-seed')
     async seedReviewQuestions() {
         const fs = require('fs');
-        const path = require('path');
-        const dataPath = path.join(process.cwd(), 'parsed_questions.json');
+        const { resolveCoreAsset } = require('../common/utils/asset-path.util');
+        const dataPath = resolveCoreAsset('parsed_questions.json', __dirname);
         if (fs.existsSync(dataPath)) {
             const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
             for (const item of data) {

@@ -22,6 +22,7 @@ import { ActivityLog } from '../system/entities/activity-log.entity';
 import { AiModule } from '../ai/ai.module';
 import { EmailService } from '../common/services/email.service';
 import { AuthModule } from '../auth/auth.module';
+import { HrReviewQuestionsSeedService } from './hr-review-questions-seed.service';
 
 @Module({
     imports: [
@@ -47,8 +48,8 @@ import { AuthModule } from '../auth/auth.module';
         AuthModule,
     ],
     controllers: [HrController, HrMeController],
-    providers: [HrService, EmailService],
-    exports: [HrService],
+    providers: [HrService, EmailService, HrReviewQuestionsSeedService],
+    exports: [HrService, HrReviewQuestionsSeedService],
 })
 export class HrModule { }
 
