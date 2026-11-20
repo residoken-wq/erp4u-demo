@@ -11,6 +11,7 @@ import { ENTITLEMENT_PROVIDER, EntitlementProvider } from '../../common/packages
 import { PackageKey } from '../../common/packages/package.registry';
 import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../../common/tenancy/tenant-context';
 import { TENANT_REGISTRY, TenantRegistry } from '../../common/tenancy/tenant-registry.interface';
+import { TenantConfigService } from '../../common/tenancy/tenant-config.service';
 
 const BACKOFF_MINS = [1, 2, 5, 10, 30, 60, 120, 240];
 
@@ -33,6 +34,8 @@ export class ChatbotOutboxService {
     @Optional()
     @Inject(TENANT_REGISTRY)
     private readonly tenantRegistry?: TenantRegistry,
+    @Optional()
+    private readonly tenantConfigService?: TenantConfigService,
   ) {}
 
   @Cron('*/1 * * * *')
@@ -129,7 +132,14 @@ export class ChatbotOutboxService {
           const code = row.payload?.code || row.ref_id || '';
           const type = row.payload?.type || 'quote';
           const summary = row.payload?.summary || '';
-          const erpBaseUrl = process.env.ERP_PUBLIC_URL || 'https://localhost:3000';
+          const erpBaseUrl =
+            (await this.tenantConfigService?.get('ERP_PUBLIC_URL', {
+              envKey: ['ERP_PUBLIC_URL', 'PUBLIC_APP_URL'],
+            })) ||
+            (TenantContext.current().tenantId === DEFAULT_TENANT_CONTEXT.tenantId
+              ? process.env.ERP_PUBLIC_URL || process.env.PUBLIC_APP_URL
+              : undefined) ||
+            'https://localhost:3000';
           const reqLink = `${erpBaseUrl}/chatbot/requests/${row.ref_id}`;
 
           const subject = `[${config.short_name}] Yêu cầu mới ${code} — ${type} — ${summary}`;

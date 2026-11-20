@@ -30,7 +30,7 @@ export class TikTokWebhookController {
         // Verify webhook signature (optional but recommended)
         if (signature) {
             const rawBody = JSON.stringify(body);
-            const isValid = this.apiClient.verifyWebhookSignature(rawBody, signature);
+            const isValid = await this.apiClient.verifyWebhookSignature(rawBody, signature);
             if (!isValid) {
                 this.logger.warn('Invalid webhook signature received');
                 return { code: 0, message: 'Invalid signature' };

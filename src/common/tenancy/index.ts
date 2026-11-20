@@ -3,6 +3,7 @@ export * from './tenant-resolver.interface';
 export * from './single-tenant.resolver';
 export * from './tenant-registry.interface';
 export * from './single-tenant.registry';
+export * from './tenant-config.service';
 export * from './tenant-context.middleware';
 export * from './tenant-connection.hook';
 export * from './tenancy.module';

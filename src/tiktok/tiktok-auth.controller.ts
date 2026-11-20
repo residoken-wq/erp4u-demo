@@ -18,8 +18,8 @@ export class TikTokAuthController {
      */
     @Perm('MARKETING', 'view')
     @Get('url')
-    getAuthUrl(@Query('state') state?: string) {
-        const url = this.tiktokService.getAuthorizationUrl(state);
+    async getAuthUrl(@Query('state') state?: string) {
+        const url = await this.tiktokService.getAuthorizationUrl(state);
         return { url };
     }
 

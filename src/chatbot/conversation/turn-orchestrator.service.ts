@@ -1,5 +1,6 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import { DataSource, EntityManager, Like } from 'typeorm';
+import { TenantConfigService } from '../../common/tenancy/tenant-config.service';
 import { ChatbotConversation } from '../entities/chatbot-conversation.entity';
 import { ChatbotMessage } from '../entities/chatbot-message.entity';
 import { ChatbotBrief } from '../entities/chatbot-brief.entity';
@@ -41,6 +42,7 @@ export class TurnOrchestratorService {
     private readonly ruleUnderstander: RuleUnderstanderService,
     @Inject(LLM_PROVIDER) private readonly llmProvider: LlmProvider,
     private readonly flowService: ChatbotFlowService,
+    @Optional() private readonly tenantConfigService?: TenantConfigService,
   ) {}
 
   async handleTurn(
@@ -125,7 +127,9 @@ export class TurnOrchestratorService {
 
     const config = await this.configService.get();
     const mode = config.llm?.mode || 'script_first';
-    const providerEnv = (process.env.CHATBOT_LLM_PROVIDER || '').toLowerCase();
+    const providerEnv = (
+      (await this.tenantConfigService?.get('CHATBOT_LLM_PROVIDER')) || ''
+    ).toLowerCase();
     const kbVersion = await this.toolsService.getKbVersion();
 
     // Load active brief

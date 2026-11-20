@@ -6,6 +6,7 @@ import { plainToInstance } from 'class-transformer';
 import { SystemConfig } from '../../system/system-config.entity';
 import { User } from '../../users/entities/user.entity';
 import { ChatbotAuditEvent } from '../entities/chatbot-audit-event.entity';
+import { TenantContext } from '../../common/tenancy/tenant-context';
 import { CHATBOT_DEFAULTS, ChatbotConfigType } from '../chatbot.defaults';
 import { ChatbotConfigDto } from './chatbot-config.dto';
 import { isWithinWorkingHours, parseTimeToMinutes } from './working-hours';
@@ -71,8 +72,10 @@ function deepMerge(target: any, source: any): any {
 @Injectable()
 export class ChatbotConfigService {
   private readonly logger = new Logger(ChatbotConfigService.name);
-  private cachedConfig: ChatbotConfigType | null = null;
-  private cacheExpiresAt = 0;
+  private readonly cacheByTenant = new Map<
+    string,
+    { config: ChatbotConfigType; expiresAt: number }
+  >();
   private readonly CACHE_TTL_MS = 30 * 1000;
 
   constructor(
@@ -83,15 +86,25 @@ export class ChatbotConfigService {
     private readonly dataSource: DataSource,
   ) {}
 
-  clearCache() {
-    this.cachedConfig = null;
-    this.cacheExpiresAt = 0;
+  clearCache(tenantId?: string) {
+    if (tenantId) {
+      this.cacheByTenant.delete(tenantId);
+      return;
+    }
+    const current = TenantContext.getStore()?.tenantId;
+    if (current) {
+      this.cacheByTenant.delete(current);
+    } else {
+      this.cacheByTenant.clear();
+    }
   }
 
   async get(): Promise<ChatbotConfigType> {
+    const tenantId = TenantContext.current().tenantId;
     const now = Date.now();
-    if (this.cachedConfig && now < this.cacheExpiresAt) {
-      return this.cachedConfig;
+    const cached = this.cacheByTenant.get(tenantId);
+    if (cached && now < cached.expiresAt) {
+      return cached.config;
     }
 
     let parsedConfig: any = null;
@@ -115,8 +128,10 @@ export class ChatbotConfigService {
     // Validate merged fields against defaults
     const validated = this.validateAndSanitize(merged);
 
-    this.cachedConfig = validated;
-    this.cacheExpiresAt = now + this.CACHE_TTL_MS;
+    this.cacheByTenant.set(tenantId, {
+      config: validated,
+      expiresAt: now + this.CACHE_TTL_MS,
+    });
     return validated;
   }
 

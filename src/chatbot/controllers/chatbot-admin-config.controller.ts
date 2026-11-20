@@ -14,9 +14,10 @@ import { LlmBudgetService } from '../llm/llm-budget.service';
 import { DataSource } from 'typeorm';
 import { SystemConfig } from '../../system/system-config.entity';
 import { LLM_PROVIDER, LlmProvider } from '../llm/llm-provider';
-import { Inject } from '@nestjs/common';
+import { Inject, Optional } from '@nestjs/common';
 import { RequiresPackage } from '../../common/packages/requires-package.decorator';
 import { PackageKey } from '../../common/packages/package.registry';
+import { TenantConfigService } from '../../common/tenancy/tenant-config.service';
 
 @Controller('chatbot/admin')
 @RequiresPackage(PackageKey.AI)
@@ -27,6 +28,7 @@ export class ChatbotAdminConfigController {
     private readonly budgetService: LlmBudgetService,
     private readonly dataSource: DataSource,
     @Inject(LLM_PROVIDER) private readonly llmProvider: LlmProvider,
+    @Optional() private readonly tenantConfigService?: TenantConfigService,
   ) {}
 
   @RequirePermission('SYSTEM', 'can_view')
@@ -48,11 +50,19 @@ export class ChatbotAdminConfigController {
   @Perm('SYSTEM', 'view')
   @Get('status')
   async getStatus() {
-    const provider = process.env.CHATBOT_LLM_PROVIDER || 'fake';
+    const tenantCfg = this.tenantConfigService
+      ? await this.tenantConfigService.getMany([
+          'CHATBOT_LLM_PROVIDER',
+          'CHATBOT_LLM_API_KEY',
+          'GEMINI_API_KEY',
+          'CHATBOT_LLM_MODEL',
+        ])
+      : {};
+    const provider = tenantCfg['CHATBOT_LLM_PROVIDER'] || 'fake';
     let keySource: 'CHATBOT_LLM_API_KEY' | 'GEMINI_API_KEY' | 'none' = 'none';
-    if (process.env.CHATBOT_LLM_API_KEY) {
+    if (tenantCfg['CHATBOT_LLM_API_KEY']) {
       keySource = 'CHATBOT_LLM_API_KEY';
-    } else if (process.env.GEMINI_API_KEY) {
+    } else if (tenantCfg['GEMINI_API_KEY']) {
       keySource = 'GEMINI_API_KEY';
     }
     const keyConfigured = keySource !== 'none';
@@ -60,7 +70,7 @@ export class ChatbotAdminConfigController {
     try {
       model = await this.llmProvider.getModel();
     } catch {
-      model = process.env.CHATBOT_LLM_MODEL || 'models/gemini-1.5-flash';
+      model = tenantCfg['CHATBOT_LLM_MODEL'] || 'models/gemini-1.5-flash';
     }
     const callsToday = await this.budgetService.getTodayCalls();
 

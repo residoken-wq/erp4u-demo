@@ -1,8 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import * as nodemailer from 'nodemailer';
 import { DemoModeService } from './demo-mode.service';
+import { TenantConfigService } from '../tenancy/tenant-config.service';
+import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../tenancy/tenant-context';
 
 @Injectable()
 export class EmailService {
@@ -12,10 +14,93 @@ export class EmailService {
         private configService: ConfigService,
         private dataSource: DataSource,
         private readonly demoModeService: DemoModeService,
+        @Optional() private readonly tenantConfigService?: TenantConfigService,
     ) {
     }
 
-    private async getSmtpConfig() {
+    async getResolvedSmtpConfig(): Promise<{
+        host?: string;
+        port?: number;
+        user?: string;
+        pass?: string;
+        fromName: string;
+        fromEmail: string;
+        secure: boolean;
+    }> {
+        let host: string | undefined;
+        let portRaw: string | undefined;
+        let user: string | undefined;
+        let pass: string | undefined;
+        let fromName: string | undefined;
+        let fromEmail: string | undefined;
+        let secureStr: string | undefined;
+
+        if (this.tenantConfigService) {
+            const cfg = await this.tenantConfigService.getMany(
+                [
+                    'SMTP_HOST',
+                    'SMTP_PORT',
+                    'SMTP_USER',
+                    'SMTP_PASS',
+                    'SMTP_FROM_NAME',
+                    'SMTP_FROM_EMAIL',
+                    'SMTP_SECURE',
+                ],
+                {
+                    envKeyMap: {
+                        SMTP_FROM_EMAIL: ['SMTP_FROM_EMAIL', 'SMTP_FROM'],
+                    },
+                },
+            );
+            host = cfg['SMTP_HOST'];
+            portRaw = cfg['SMTP_PORT'];
+            user = cfg['SMTP_USER'];
+            pass = cfg['SMTP_PASS'];
+            fromName = cfg['SMTP_FROM_NAME'];
+            fromEmail = cfg['SMTP_FROM_EMAIL'];
+            secureStr = cfg['SMTP_SECURE'];
+        } else {
+            const dbConfig = await this.getLegacyDbSmtpConfig();
+            const isDefaultTenant =
+                TenantContext.current().tenantId === DEFAULT_TENANT_CONTEXT.tenantId;
+            host =
+                dbConfig['SMTP_HOST'] ||
+                (isDefaultTenant ? this.configService.get<string>('SMTP_HOST') : undefined);
+            portRaw =
+                dbConfig['SMTP_PORT'] ||
+                (isDefaultTenant
+                    ? String(this.configService.get<number>('SMTP_PORT') || '')
+                    : undefined);
+            user =
+                dbConfig['SMTP_USER'] ||
+                (isDefaultTenant ? this.configService.get<string>('SMTP_USER') : undefined);
+            pass =
+                dbConfig['SMTP_PASS'] ||
+                (isDefaultTenant ? this.configService.get<string>('SMTP_PASS') : undefined);
+            fromName = dbConfig['SMTP_FROM_NAME'];
+            fromEmail =
+                dbConfig['SMTP_FROM_EMAIL'] ||
+                (isDefaultTenant ? this.configService.get<string>('SMTP_FROM') : undefined);
+            secureStr = dbConfig['SMTP_SECURE'];
+        }
+
+        const port = portRaw ? Number(portRaw) : undefined;
+        let secure = port === 465;
+        if (secureStr === 'true') secure = true;
+        if (secureStr === 'false') secure = false;
+
+        return {
+            host,
+            port: Number.isFinite(port) && (port as number) > 0 ? port : undefined,
+            user,
+            pass,
+            fromName: fromName || 'ERP4U',
+            fromEmail: fromEmail || 'noreply@example.com',
+            secure,
+        };
+    }
+
+    private async getLegacyDbSmtpConfig(): Promise<Record<string, string>> {
         try {
             const configs = await this.dataSource.query(`
                 SELECT key, value FROM system_configs 
@@ -30,29 +115,18 @@ export class EmailService {
         }
     }
 
-    private async createTransporter() {
-        const dbConfig = await this.getSmtpConfig();
-        
-        // Fallback to .env if DB is empty for host
-        const host = dbConfig['SMTP_HOST'] || this.configService.get<string>('SMTP_HOST');
-        const port = Number(dbConfig['SMTP_PORT']) || this.configService.get<number>('SMTP_PORT');
-        const user = dbConfig['SMTP_USER'] || this.configService.get<string>('SMTP_USER');
-        const pass = dbConfig['SMTP_PASS'] || this.configService.get<string>('SMTP_PASS');
-        const secureStr = dbConfig['SMTP_SECURE'];
-        
-        let secure = port === 465;
-        if (secureStr === 'true') secure = true;
-        if (secureStr === 'false') secure = false;
+    private async createTransporter(resolved?: Awaited<ReturnType<EmailService['getResolvedSmtpConfig']>>) {
+        const cfg = resolved ?? (await this.getResolvedSmtpConfig());
 
-        if (host && port && user && pass) {
+        if (cfg.host && cfg.port && cfg.user && cfg.pass) {
             return nodemailer.createTransport({
-                host,
-                port,
-                secure,
-                auth: { user, pass },
+                host: cfg.host,
+                port: cfg.port,
+                secure: cfg.secure,
+                auth: { user: cfg.user, pass: cfg.pass },
             });
         }
-        
+
         return null;
     }
 
@@ -60,12 +134,10 @@ export class EmailService {
         if (this.demoModeService.guard('EMAIL', '[REDACTED]')) {
             return { success: true, message: '[DEMO_MODE] Đã giả lập gửi email test thành công!' };
         }
-        const dbConfig = await this.getSmtpConfig();
-        let fromEmail = dbConfig['SMTP_FROM_EMAIL'] || this.configService.get<string>('SMTP_FROM') || 'noreply@example.com';
-        let fromName = dbConfig['SMTP_FROM_NAME'] || 'ERP4U';
-        const from = `"${fromName}" <${fromEmail}>`;
-        
-        const transporter = await this.createTransporter();
+        const cfg = await this.getResolvedSmtpConfig();
+        const from = `"${cfg.fromName}" <${cfg.fromEmail}>`;
+
+        const transporter = await this.createTransporter(cfg);
         if (!transporter) {
             return { success: false, message: 'Cấu hình SMTP chưa đầy đủ hoặc bị lỗi.' };
         }
@@ -88,13 +160,11 @@ export class EmailService {
         if (this.demoModeService.guard('EMAIL', '[REDACTED]')) {
             return true;
         }
-        const dbConfig = await this.getSmtpConfig();
-        
-        let fromEmail = fromOverride || dbConfig['SMTP_FROM_EMAIL'] || this.configService.get<string>('SMTP_FROM') || 'noreply@example.com';
-        let fromName = dbConfig['SMTP_FROM_NAME'] || 'ERP4U';
-        const from = `"${fromName}" <${fromEmail}>`;
-        
-        const transporter = await this.createTransporter();
+        const cfg = await this.getResolvedSmtpConfig();
+        const fromEmail = fromOverride || cfg.fromEmail;
+        const from = `"${cfg.fromName}" <${fromEmail}>`;
+
+        const transporter = await this.createTransporter(cfg);
 
         if (!transporter) {
             if (process.env.NODE_ENV === 'production') {
@@ -114,7 +184,7 @@ export class EmailService {
                 html,
                 attachments
             };
-            
+
             if (cc) {
                 mailOptions.cc = cc;
             }

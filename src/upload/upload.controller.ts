@@ -4,8 +4,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
 import { Response } from 'express';
 import { Public } from '../auth/public.decorator';
-import * as fs from 'fs';
-import * as path from 'path';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from '../products/product.entity';
@@ -33,26 +31,7 @@ export class UploadController {
   @Perm('CMS', 'view')
   @Get('list')
   async listFiles(@Query('source') source?: string) {
-    const uploadDir = path.join(process.cwd(), 'uploads');
-    if (!fs.existsSync(uploadDir)) return [];
-    const files = fs.readdirSync(uploadDir)
-      .filter(f => {
-        if (!/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i.test(f)) return false;
-        // CMS only sees its own files (which have no prefix) and not ERP files (which have 'erp_' prefix)
-        if (source === 'cms' && f.startsWith('erp_')) return false;
-        return true;
-      })
-      .map(f => {
-        const stat = fs.statSync(path.join(uploadDir, f));
-        return {
-          name: f,
-          url: `/uploads/${f}`,
-          size: stat.size,
-          modified: stat.mtime,
-        };
-      })
-      .sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime());
-    return files;
+    return this.uploadService.listFiles(source);
   }
 
   // --- IMAGE USAGE TRACKING ---

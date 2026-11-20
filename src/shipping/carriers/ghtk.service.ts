@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import axios from 'axios';
@@ -6,6 +6,8 @@ import { SystemConfig } from '../../system/system-config.entity';
 import { SalesDelivery } from '../../sales/sales-delivery.entity';
 import { SalesOrder } from '../../sales/sales-order.entity';
 import { DemoModeService } from '../../common/services/demo-mode.service';
+import { TenantConfigService } from '../../common/tenancy/tenant-config.service';
+import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../../common/tenancy/tenant-context';
 
 export interface GhtkConfig {
     apiUrl: string;
@@ -244,6 +246,7 @@ export class GhtkService {
         @InjectRepository(SalesOrder)
         private readonly orderRepo: Repository<SalesOrder>,
         private readonly demoModeService: DemoModeService,
+        @Optional() private readonly tenantConfigService?: TenantConfigService,
     ) {
     }
 
@@ -251,21 +254,64 @@ export class GhtkService {
      * Lấy cấu hình GHTK (ưu tiên bảng system_configs, fallback sang .env)
      */
     async getConfig(): Promise<GhtkConfig> {
+        if (this.tenantConfigService) {
+            return this.getConfigFromTenantService();
+        }
         const configs = await this.configRepo.find();
         const configMap = new Map(configs.map(c => [c.key, c.value]));
 
-        const envSandbox = (process.env.GHTK_SANDBOX || '').toLowerCase() === 'true' || (process.env.GHTK_ENVIRONMENT || '').toUpperCase() === 'STAGING';
+        const isDefaultTenant =
+            TenantContext.current().tenantId === DEFAULT_TENANT_CONTEXT.tenantId;
+        const readLegacyEnv = (k: string) => (isDefaultTenant ? process.env[k] : undefined);
+        const envSandbox = (readLegacyEnv('GHTK_SANDBOX') || '').toLowerCase() === 'true' || (readLegacyEnv('GHTK_ENVIRONMENT') || '').toUpperCase() === 'STAGING';
         const isSandbox = configMap.has('GHTK_SANDBOX')
             ? (configMap.get('GHTK_SANDBOX') || '').toLowerCase() === 'true'
             : envSandbox;
 
         const defaultUrl = isSandbox ? 'https://services-staging.ghtklab.com' : 'https://services.giaohangtietkiem.vn';
 
-        const apiUrl = configMap.get('GHTK_API_URL') || process.env.GHTK_API_URL || defaultUrl;
-        const token = configMap.get('GHTK_TOKEN') || configMap.get('GHTK_API_TOKEN') || process.env.GHTK_TOKEN || process.env.GHTK_API_TOKEN || '';
-        const partnerCode = configMap.get('GHTK_PARTNER_CODE') || configMap.get('GHTK_CLIENT_SOURCE') || process.env.GHTK_PARTNER_CODE || process.env.GHTK_CLIENT_SOURCE || '';
-        const defaultPickAddressId = configMap.get('GHTK_DEFAULT_PICK_ADDRESS_ID') || process.env.GHTK_DEFAULT_PICK_ADDRESS_ID || '';
-        const defaultPickOption = (configMap.get('GHTK_DEFAULT_PICK_OPTION') || process.env.GHTK_DEFAULT_PICK_OPTION || 'cod') as 'cod' | 'post';
+        const apiUrl = configMap.get('GHTK_API_URL') || readLegacyEnv('GHTK_API_URL') || defaultUrl;
+        const token = configMap.get('GHTK_TOKEN') || configMap.get('GHTK_API_TOKEN') || readLegacyEnv('GHTK_TOKEN') || readLegacyEnv('GHTK_API_TOKEN') || '';
+        const partnerCode = configMap.get('GHTK_PARTNER_CODE') || configMap.get('GHTK_CLIENT_SOURCE') || readLegacyEnv('GHTK_PARTNER_CODE') || readLegacyEnv('GHTK_CLIENT_SOURCE') || '';
+        const defaultPickAddressId = configMap.get('GHTK_DEFAULT_PICK_ADDRESS_ID') || readLegacyEnv('GHTK_DEFAULT_PICK_ADDRESS_ID') || '';
+        const defaultPickOption = (configMap.get('GHTK_DEFAULT_PICK_OPTION') || readLegacyEnv('GHTK_DEFAULT_PICK_OPTION') || 'cod') as 'cod' | 'post';
+
+        return {
+            apiUrl: apiUrl.replace(/\/+$/, ''),
+            token,
+            partnerCode,
+            isSandbox,
+            defaultPickAddressId,
+            defaultPickOption,
+        };
+    }
+
+    private async getConfigFromTenantService(): Promise<GhtkConfig> {
+        const cfg = await this.tenantConfigService!.getMany([
+            'GHTK_SANDBOX',
+            'GHTK_ENVIRONMENT',
+            'GHTK_API_URL',
+            'GHTK_TOKEN',
+            'GHTK_API_TOKEN',
+            'GHTK_PARTNER_CODE',
+            'GHTK_CLIENT_SOURCE',
+            'GHTK_DEFAULT_PICK_ADDRESS_ID',
+            'GHTK_DEFAULT_PICK_OPTION',
+        ]);
+        const isSandbox =
+            cfg['GHTK_SANDBOX'] !== undefined
+                ? cfg['GHTK_SANDBOX'].toLowerCase() === 'true'
+                : (cfg['GHTK_ENVIRONMENT'] || '').toUpperCase() === 'STAGING';
+        const defaultUrl = isSandbox
+            ? 'https://services-staging.ghtklab.com'
+            : 'https://services.giaohangtietkiem.vn';
+        const apiUrl = cfg['GHTK_API_URL'] || defaultUrl;
+        const token = cfg['GHTK_TOKEN'] || cfg['GHTK_API_TOKEN'] || '';
+        const partnerCode =
+            cfg['GHTK_PARTNER_CODE'] || cfg['GHTK_CLIENT_SOURCE'] || '';
+        const defaultPickAddressId = cfg['GHTK_DEFAULT_PICK_ADDRESS_ID'] || '';
+        const defaultPickOption = (cfg['GHTK_DEFAULT_PICK_OPTION'] ||
+            'cod') as 'cod' | 'post';
 
         return {
             apiUrl: apiUrl.replace(/\/+$/, ''),
@@ -289,6 +335,10 @@ export class GhtkService {
         defaultPickOption?: 'cod' | 'post';
     }) {
         const setConfigValue = async (key: string, value: string, description: string) => {
+            if (this.tenantConfigService) {
+                await this.tenantConfigService.set(key, value, { description });
+                return;
+            }
             let item = await this.configRepo.findOne({ where: { key } });
             if (!item) {
                 item = this.configRepo.create({ key, value, description });

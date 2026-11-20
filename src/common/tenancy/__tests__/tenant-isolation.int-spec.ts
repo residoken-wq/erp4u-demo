@@ -1,6 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import type { Request } from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../../../app.module';
@@ -10,10 +12,13 @@ import { RbacAccessLogService } from '../../../auth/rbac-access-log.service';
 import { RbacAccessLog } from '../../../auth/entities/rbac-access-log.entity';
 import { Customer, CustomerType } from '../../../customers/customer.entity';
 import { buildDataSourceOptions } from '../../../database/data-source';
+import { EmailService } from '../../../common/services/email.service';
+import { SystemConfig } from '../../../system/system-config.entity';
 import {
   DEFAULT_TENANT_CONTEXT,
   TenantContext,
 } from '../tenant-context';
+import { TenantConfigService, isEncryptedValue } from '../tenant-config.service';
 import { TENANT_REGISTRY, TenantRegistry } from '../tenant-registry.interface';
 import { TENANT_RESOLVER, TenantResolver } from '../tenant-resolver.interface';
 import { installTenantConnectionHook } from '../tenant-connection.hook';
@@ -50,6 +55,8 @@ describe('Multi-Tenant Schema Isolation (Integration)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
   let rbacAccessLogService: RbacAccessLogService;
+  let tenantConfigService: TenantConfigService;
+  let emailService: EmailService;
   let activeTenants: TenantContext[] = [TENANT_A, TENANT_B];
 
   const headerTenantResolver: TenantResolver = {
@@ -109,6 +116,8 @@ describe('Multi-Tenant Schema Isolation (Integration)', () => {
 
     dataSource = moduleRef.get(DataSource);
     rbacAccessLogService = moduleRef.get(RbacAccessLogService);
+    tenantConfigService = moduleRef.get(TenantConfigService);
+    emailService = moduleRef.get(EmailService);
   });
 
   afterAll(async () => {
@@ -120,6 +129,15 @@ describe('Multi-Tenant Schema Isolation (Integration)', () => {
       await adminDs.query(`DROP SCHEMA IF EXISTS "tenant_b" CASCADE`);
       await adminDs.destroy();
     }
+    // Clean up test tenant upload directories
+    await fs.promises.rm(path.join(process.cwd(), 'uploads', 'tenant_a'), {
+      recursive: true,
+      force: true,
+    });
+    await fs.promises.rm(path.join(process.cwd(), 'uploads', 'tenant_b'), {
+      recursive: true,
+      force: true,
+    });
   });
 
   it('isolates HTTP API CRUD across tenant_a and tenant_b via X-Test-Tenant header', async () => {
@@ -311,5 +329,107 @@ describe('Multi-Tenant Schema Isolation (Integration)', () => {
     );
     expect(routesAFinal).toEqual(['/api/demo-tenant-a/fresh']);
     expect(routesBFinal).toEqual(['/api/demo-tenant-b/fresh']);
+  });
+
+  it('isolates per-tenant SMTP configuration and encrypts secrets per schema without env bleed', async () => {
+    const prevSmtpHost = process.env.SMTP_HOST;
+    process.env.SMTP_HOST = 'smtp.global-env.example';
+
+    try {
+      await TenantContext.run(TENANT_A, async () => {
+        await tenantConfigService.set('SMTP_HOST', 'smtp.tenant-a.example');
+        await tenantConfigService.set('SMTP_PORT', '587');
+        await tenantConfigService.set('SMTP_USER', 'mailer-a@example.com');
+        await tenantConfigService.set('SMTP_PASS', 'demo-pass-a');
+      });
+
+      await TenantContext.run(TENANT_B, async () => {
+        await tenantConfigService.set('SMTP_HOST', 'smtp.tenant-b.example');
+        await tenantConfigService.set('SMTP_PORT', '465');
+        await tenantConfigService.set('SMTP_USER', 'mailer-b@example.com');
+        await tenantConfigService.set('SMTP_PASS', 'demo-pass-b');
+      });
+
+      const resolvedA = await TenantContext.run(TENANT_A, () =>
+        emailService.getResolvedSmtpConfig(),
+      );
+      const resolvedB = await TenantContext.run(TENANT_B, () =>
+        emailService.getResolvedSmtpConfig(),
+      );
+
+      expect(resolvedA.host).toBe('smtp.tenant-a.example');
+      expect(resolvedA.port).toBe(587);
+      expect(resolvedA.pass).toBe('demo-pass-a');
+
+      expect(resolvedB.host).toBe('smtp.tenant-b.example');
+      expect(resolvedB.port).toBe(465);
+      expect(resolvedB.pass).toBe('demo-pass-b');
+
+      // Verify raw SMTP_PASS stored in DB is encrypted (AES-256-GCM), not plaintext
+      const rawPassA = await TenantContext.run(TENANT_A, () =>
+        dataSource
+          .getRepository(SystemConfig)
+          .findOne({ where: { key: 'SMTP_PASS' } }),
+      );
+      expect(rawPassA?.value).toBeDefined();
+      expect(rawPassA?.value).not.toBe('demo-pass-a');
+      expect(isEncryptedValue(rawPassA?.value)).toBe(true);
+
+      // Verify non-default tenant does NOT fall back to process.env when a key is unset
+      const missingKeyInB = await TenantContext.run(TENANT_B, () =>
+        tenantConfigService.get('SMTP_FROM_EMAIL', {
+          envKey: ['SMTP_FROM_EMAIL', 'SMTP_FROM'],
+        }),
+      );
+      expect(missingKeyInB).toBeUndefined();
+    } finally {
+      if (prevSmtpHost === undefined) {
+        delete process.env.SMTP_HOST;
+      } else {
+        process.env.SMTP_HOST = prevSmtpHost;
+      }
+    }
+  });
+
+  it('prefixes uploaded files with tenant_a/ and prevents tenant_b from reading them', async () => {
+    const fileContent = Buffer.from('tenant-a-confidential-demo-payload', 'utf8');
+
+    const uploadRes = await request(app.getHttpServer())
+      .post('/api/upload/file')
+      .set('X-Test-Tenant', 'tenant_a')
+      .attach('file', fileContent, {
+        filename: 'isolation-test-doc.txt',
+        contentType: 'text/plain',
+      })
+      .expect(201);
+
+    expect(uploadRes.body.key).toMatch(/^tenant_a\/isolation-test-doc.*\.txt$/);
+    expect(uploadRes.body.url).toMatch(/^\/uploads\/tenant_a\/isolation-test-doc.*\.txt$/);
+
+    const filename = path.basename(uploadRes.body.key);
+
+    // Tenant A can read its own uploaded file
+    const readARes = await request(app.getHttpServer())
+      .get(`/api/upload/files/${filename}`)
+      .set('X-Test-Tenant', 'tenant_a')
+      .expect(200);
+    const bodyText =
+      readARes.text ??
+      (Buffer.isBuffer(readARes.body) ? readARes.body.toString('utf8') : '');
+    expect(bodyText).toBe('tenant-a-confidential-demo-payload');
+
+    // Tenant B CANNOT read Tenant A's file
+    await request(app.getHttpServer())
+      .get(`/api/upload/files/${filename}`)
+      .set('X-Test-Tenant', 'tenant_b')
+      .expect(404);
+
+    // Tenant B cannot see Tenant A's file in /api/upload/list
+    const listBRes = await request(app.getHttpServer())
+      .get('/api/upload/list')
+      .set('X-Test-Tenant', 'tenant_b')
+      .expect(200);
+    expect(Array.isArray(listBRes.body)).toBe(true);
+    expect(listBRes.body.some((item: any) => item.name === filename)).toBe(false);
   });
 });

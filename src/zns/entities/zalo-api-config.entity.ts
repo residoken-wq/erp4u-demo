@@ -1,4 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { EncryptionTransformer } from '../../common/encryption/encryption.transformer';
+
+const encryptionTransformer = new EncryptionTransformer();
 
 @Entity('zalo_api_configs')
 export class ZaloApiConfig {
@@ -8,16 +11,16 @@ export class ZaloApiConfig {
   @Column({ nullable: true })
   app_id: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, transformer: encryptionTransformer })
   secret_key: string;
 
   @Column({ nullable: true })
   oa_id: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'text', nullable: true, transformer: encryptionTransformer })
   access_token: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'text', nullable: true, transformer: encryptionTransformer })
   refresh_token: string;
 
   @Column({ type: 'int', nullable: true, default: 90000 })

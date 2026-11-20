@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SystemConfig } from './system-config.entity';
@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { EmailTemplate } from './email-template.entity';
 import { EmailService } from '../common/services/email.service';
+import { TenantConfigService } from '../common/tenancy/tenant-config.service';
 
 export const DEFAULT_SO_PROJECT_TEMPLATE = [
     {
@@ -103,15 +104,25 @@ export class SystemService {
         @InjectRepository(ActivityLog) private logRepo: Repository<ActivityLog>,
         @InjectRepository(ContractTemplate) private templateRepo: Repository<ContractTemplate>,
         @InjectRepository(EmailTemplate) private emailTemplateRepo: Repository<EmailTemplate>,
-        private emailService: EmailService
+        private emailService: EmailService,
+        @Optional() private readonly tenantConfigService?: TenantConfigService,
     ) { }
 
     async getValue(key: string): Promise<string | null> {
+        if (this.tenantConfigService) {
+            const val = await this.tenantConfigService.get(key, { fallbackToEnv: false });
+            return val ?? null;
+        }
         const config = await this.configRepo.findOne({ where: { key } });
         return config ? config.value : null;
     }
 
     async setValue(key: string, value: string, description?: string): Promise<SystemConfig> {
+        if (this.tenantConfigService) {
+            await this.tenantConfigService.set(key, value, { description });
+            const saved = await this.configRepo.findOne({ where: { key } });
+            return saved ?? this.configRepo.create({ key, value, description });
+        }
         let config = await this.configRepo.findOne({ where: { key } });
         if (!config) {
             config = this.configRepo.create({ key, value, description });
@@ -125,6 +136,14 @@ export class SystemService {
     // --- SMTP CONFIG HELPER ---
     async getSmtpConfig() {
         const keys = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM_NAME', 'SMTP_FROM_EMAIL', 'SMTP_SECURE'];
+        if (this.tenantConfigService) {
+            const values = await this.tenantConfigService.getMany(keys, { fallbackToEnv: false });
+            const result: Record<string, string> = {};
+            keys.forEach(k => {
+                result[k] = values[k] ?? '';
+            });
+            return result;
+        }
         const configs = await this.configRepo.findByIds(keys);
         const result: any = {};
         keys.forEach(k => {
@@ -198,6 +217,14 @@ export class SystemService {
     // --- EASYINVOICE CONFIG HELPER ---
     async getEasyInvoiceConfig() {
         const keys = ['EASYINVOICE_URL', 'EASYINVOICE_USERNAME', 'EASYINVOICE_PASSWORD', 'EASYINVOICE_TAX_CODE', 'EASYINVOICE_PATTERN', 'EASYINVOICE_SERIAL', 'EASYINVOICE_EMAIL_FROM', 'EASYINVOICE_EMAIL_CC'];
+        if (this.tenantConfigService) {
+            const values = await this.tenantConfigService.getMany(keys, { fallbackToEnv: false });
+            const result: Record<string, string> = {};
+            keys.forEach(k => {
+                result[k] = values[k] ?? '';
+            });
+            return result;
+        }
         const configs = await this.configRepo.findByIds(keys);
         const result: any = {};
         keys.forEach(k => {
