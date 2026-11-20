@@ -178,6 +178,8 @@ class TenantAwareLlmProvider implements LlmProvider {
     ChatbotToolsService,
     TurnOrchestratorService,
     LLM_PROVIDER,
+    ChatbotSeedService,
+    ChatbotKbSeedService,
   ],
 })
 export class ChatbotModule {}

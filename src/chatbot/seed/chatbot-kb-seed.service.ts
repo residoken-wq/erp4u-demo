@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { SystemConfig } from '../../system/system-config.entity';
 import { ChatbotSource } from '../entities/chatbot-source.entity';
@@ -6,9 +6,11 @@ import { ChatbotConflict } from '../entities/chatbot-conflict.entity';
 import { ChatbotKnowledgeItem } from '../entities/chatbot-knowledge-item.entity';
 import { ChatbotSchemaService } from '../schema/chatbot-schema.service';
 import { applyKbV2ConflictResolutions, applyKbV2ItemTriage } from './kb-v2-conflict-triage';
+import { TenantSeeder } from '../../common/tenancy/tenant-seeder.interface';
 
 @Injectable()
-export class ChatbotKbSeedService implements OnModuleInit {
+export class ChatbotKbSeedService implements TenantSeeder {
+  readonly name = 'chatbot-kb-seed';
   private readonly logger = new Logger(ChatbotKbSeedService.name);
 
   constructor(
@@ -16,16 +18,10 @@ export class ChatbotKbSeedService implements OnModuleInit {
     private readonly schemaService: ChatbotSchemaService,
   ) {}
 
-  async onModuleInit() {
-    // Seed failure must never block application startup (hotfix 2026-09-28: prod 502).
-    try {
-      await this.schemaService.initSchema();
-      await this.seed();
-      await this.cleanupV1Seed();
-      await this.triageKbV2();
-    } catch (err: any) {
-      this.logger.error(`Chatbot KB init skipped: ${err?.message}`);
-    }
+  async seed(): Promise<void> {
+    await this.seedKb();
+    await this.cleanupV1Seed();
+    await this.triageKbV2();
   }
 
   /** Owner-approved kb-v2 conflict triage (2026-09-29). Never throws. */
@@ -42,7 +38,7 @@ export class ChatbotKbSeedService implements OnModuleInit {
     }
   }
 
-  async seed() {
+  async seedKb() {
     const configRepo = this.dataSource.getRepository(SystemConfig);
     const existing = await configRepo.findOne({ where: { key: 'CHATBOT_KB_SEED_V1' } });
     if (existing) {

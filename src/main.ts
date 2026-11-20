@@ -1,5 +1,4 @@
 import * as crypto from 'crypto';
-import * as fs from 'fs';
 
 if (!global.crypto) {
   (global as any).crypto = crypto;
@@ -8,59 +7,17 @@ if (!global.crypto) {
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
 import { isCorsOriginAllowed } from './common/utils/cors.util';
-import { validateSecurityConfig } from './common/security/secrets';
+import { configureCoreApp } from './bootstrap/configure-app';
 export { isCorsOriginAllowed };
 
 async function bootstrap() {
   try {
-    validateSecurityConfig();
-
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
       logger: ['error', 'warn', 'log', 'debug'],
     });
 
-    // Trust reverse proxy (Nginx / NPM) for X-Forwarded-* headers
-    app.set('trust proxy', 1);
-
-    // Create uploads folder if not exists
-    const uploadDir = join(process.cwd(), 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    // Serve Static Assets (Uploads)
-    app.useStaticAssets(uploadDir, {
-      prefix: '/uploads',
-    });
-
-    // Increase body size limit
-    const bodyParser = await import('body-parser');
-    app.use(bodyParser.json({ limit: '50mb' }));
-    app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
-
-    // Global API prefix
-    app.setGlobalPrefix('api');
-
-    // Dynamic CORS for demo & local development
-    const allowedOrigins = process.env.CORS_ORIGINS
-      ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
-      : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'http://localhost:8080'];
-
-    app.enableCors({
-      origin: (origin, callback) => {
-        if (isCorsOriginAllowed(origin, allowedOrigins, process.env.NODE_ENV)) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'), false);
-        }
-      },
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-      credentials: true,
-    });
-
-    validateSecurityConfig();
+    await configureCoreApp(app);
 
     const port = process.env.PORT || 3000;
     await app.listen(port, '0.0.0.0');

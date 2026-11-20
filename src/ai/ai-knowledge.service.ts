@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import { resolveCoreAsset } from '../common/utils/asset-path.util';
 
 @Injectable()
 export class AiKnowledgeService {
@@ -13,7 +14,7 @@ export class AiKnowledgeService {
 
     private loadKnowledgeBase() {
         try {
-            const kbPath = path.join(__dirname, '..', '..', 'src', 'ai', 'knowledge');
+            const kbPath = resolveCoreAsset(path.join('src', 'ai', 'knowledge'), __dirname);
             if (fs.existsSync(kbPath)) {
                 const files = fs.readdirSync(kbPath);
                 let combinedText = "";

@@ -63,7 +63,13 @@ import { UserContextInterceptor } from './common/interceptors/user-context.inter
 import { AppController } from './app.controller';
 import { ENTITIES } from './database/entities';
 import { buildDataSourceOptions } from './database/data-source';
-import { ProviderOverride } from './common/utils/provider-override.util';
+import { TENANT_SEEDERS, TenantSeeder } from './common/tenancy/tenant-seeder.interface';
+import { TenantSeedRunner } from './common/tenancy/tenant-seed-runner.service';
+import { RbacSeedService } from './auth/rbac-seed.service';
+import { ChatbotKbSeedService } from './chatbot/seed/chatbot-kb-seed.service';
+import { ChatbotSeedService } from './chatbot/seed/chatbot-seed.service';
+import { HrReviewQuestionsSeedService } from './hr/hr-review-questions-seed.service';
+import { normalizeProviderOverride, ProviderOverride } from './common/utils/provider-override.util';
 
 export type Erp4uPluginModule =
   | Type<any>
@@ -100,6 +106,14 @@ export interface Erp4uCoreModuleOptions {
    * Optional custom TypeORM dataSourceFactory (default initializes PostgreSQL + tenant connection hook).
    */
   dataSourceFactory?: (options?: DataSourceOptions) => Promise<DataSource>;
+  /**
+   * Custom TENANT_SEEDERS provider override (default: core seeders array).
+   */
+  tenantSeeders?: ProviderOverride<TenantSeeder[]>;
+  /**
+   * Additional tenant seeders to append to the core seeders.
+   */
+  extraSeeders?: TenantSeeder[];
 }
 
 const DEFAULT_DATA_SOURCE_FACTORY = async (
@@ -214,7 +228,29 @@ export class Erp4uCoreModule implements OnModuleInit {
           provide: 'APP_INTERCEPTOR',
           useClass: ActivityInterceptor,
         },
+        options.tenantSeeders
+          ? normalizeProviderOverride(TENANT_SEEDERS, options.tenantSeeders)
+          : {
+              provide: TENANT_SEEDERS,
+              useFactory: (
+                rbac: RbacSeedService,
+                cbKb: ChatbotKbSeedService,
+                cb: ChatbotSeedService,
+                hr: HrReviewQuestionsSeedService,
+              ): TenantSeeder[] => {
+                const coreSeeders: TenantSeeder[] = [rbac, cbKb, cb, hr];
+                return [...coreSeeders, ...(options.extraSeeders || [])];
+              },
+              inject: [
+                RbacSeedService,
+                ChatbotKbSeedService,
+                ChatbotSeedService,
+                HrReviewQuestionsSeedService,
+              ],
+            },
+        TenantSeedRunner,
       ],
+      exports: [TenancyModule, TENANT_SEEDERS, TenantSeedRunner],
       controllers: [AppController],
     };
   }

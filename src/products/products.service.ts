@@ -13,6 +13,7 @@ import { SupplierMaterial } from '../suppliers/supplier-material.entity';
 import { CategoriesService } from '../categories/categories.service';
 import { Category } from '../categories/category.entity';
 import { CreateVariantDto } from './dto/create-variant.dto';
+import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../common/tenancy/tenant-context';
 
 interface WebsiteProductConfigBridge {
     getProductWebsiteConfig(productId: number): Promise<{ customization_config?: any } | null>;
@@ -37,53 +38,64 @@ export class ProductsService implements OnModuleInit {
 
     async onModuleInit() {
         try {
-            // Auto-create product_packing_specs table in production where synchronize is disabled
-            await this.productRepo.manager.query(`
-                CREATE TABLE IF NOT EXISTS product_packing_specs (
-                    id SERIAL PRIMARY KEY,
-                    category_id INTEGER,
-                    product_id INTEGER,
-                    category_ids JSONB DEFAULT '[]'::jsonb,
-                    product_ids JSONB DEFAULT '[]'::jsonb,
-                    name VARCHAR(150) NOT NULL,
-                    package_type VARCHAR(50) DEFAULT 'KIEN',
-                    quantity_per_package NUMERIC(10, 2) DEFAULT 1,
-                    length_cm NUMERIC(10, 2) NOT NULL,
-                    width_cm NUMERIC(10, 2) NOT NULL,
-                    height_cm NUMERIC(10, 2) NOT NULL,
-                    weight_gram NUMERIC(10, 2) DEFAULT 0,
-                    volumetric_weight_gram NUMERIC(10, 2) DEFAULT 0,
-                    note TEXT,
-                    is_default BOOLEAN DEFAULT false,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-            `);
+            await TenantContext.run(DEFAULT_TENANT_CONTEXT, async () => {
+                // Auto-create product_packing_specs table in production where synchronize is disabled
+                await this.productRepo.manager.query(`
+                    CREATE TABLE IF NOT EXISTS product_packing_specs (
+                        id SERIAL PRIMARY KEY,
+                        category_id INTEGER,
+                        product_id INTEGER,
+                        category_ids JSONB DEFAULT '[]'::jsonb,
+                        product_ids JSONB DEFAULT '[]'::jsonb,
+                        name VARCHAR(150) NOT NULL,
+                        package_type VARCHAR(50) DEFAULT 'KIEN',
+                        quantity_per_package NUMERIC(10, 2) DEFAULT 1,
+                        length_cm NUMERIC(10, 2) NOT NULL,
+                        width_cm NUMERIC(10, 2) NOT NULL,
+                        height_cm NUMERIC(10, 2) NOT NULL,
+                        weight_gram NUMERIC(10, 2) DEFAULT 0,
+                        volumetric_weight_gram NUMERIC(10, 2) DEFAULT 0,
+                        note TEXT,
+                        is_default BOOLEAN DEFAULT false,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                `);
 
-            // Ensure category_ids and product_ids exist if table was already created
-            await this.productRepo.manager.query(`
-                ALTER TABLE product_packing_specs ADD COLUMN IF NOT EXISTS category_ids JSONB DEFAULT '[]'::jsonb;
-                ALTER TABLE product_packing_specs ADD COLUMN IF NOT EXISTS product_ids JSONB DEFAULT '[]'::jsonb;
-                
-                UPDATE product_packing_specs 
-                SET category_ids = json_build_array(category_id) 
-                WHERE category_id IS NOT NULL AND (category_ids IS NULL OR category_ids = '[]'::jsonb);
+                // Ensure category_ids and product_ids exist if table was already created
+                await this.productRepo.manager.query(`
+                    ALTER TABLE product_packing_specs ADD COLUMN IF NOT EXISTS category_ids JSONB DEFAULT '[]'::jsonb;
+                    ALTER TABLE product_packing_specs ADD COLUMN IF NOT EXISTS product_ids JSONB DEFAULT '[]'::jsonb;
+                    
+                    UPDATE product_packing_specs 
+                    SET category_ids = json_build_array(category_id) 
+                    WHERE category_id IS NOT NULL AND (category_ids IS NULL OR category_ids = '[]'::jsonb);
 
-                UPDATE product_packing_specs 
-                SET product_ids = json_build_array(product_id) 
-                WHERE product_id IS NOT NULL AND (product_ids IS NULL OR product_ids = '[]'::jsonb);
-            `);
+                    UPDATE product_packing_specs 
+                    SET product_ids = json_build_array(product_id) 
+                    WHERE product_id IS NOT NULL AND (product_ids IS NULL OR product_ids = '[]'::jsonb);
+                `);
 
-            // Also ensure dimensions and packing spec columns exist on sales_deliveries in production
-            await this.productRepo.manager.query(`
-                ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_length NUMERIC(10, 2);
-                ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_width NUMERIC(10, 2);
-                ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_height NUMERIC(10, 2);
-                ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_count INTEGER DEFAULT 1;
-                ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS packing_spec_name VARCHAR(150);
-                ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS delivery_notice TEXT;
-                ALTER TABLE product_components ADD COLUMN IF NOT EXISTS include_in_cost BOOLEAN DEFAULT false;
-            `);
+                // Also ensure dimensions and packing spec columns exist on sales_deliveries in production if table exists
+                const [tableCheck] = await this.productRepo.manager.query(`
+                    SELECT to_regclass('sales_deliveries') AS reg_deliveries, to_regclass('product_components') AS reg_components;
+                `);
+                if (tableCheck?.reg_deliveries) {
+                    await this.productRepo.manager.query(`
+                        ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_length NUMERIC(10, 2);
+                        ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_width NUMERIC(10, 2);
+                        ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_height NUMERIC(10, 2);
+                        ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS package_count INTEGER DEFAULT 1;
+                        ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS packing_spec_name VARCHAR(150);
+                        ALTER TABLE sales_deliveries ADD COLUMN IF NOT EXISTS delivery_notice TEXT;
+                    `);
+                }
+                if (tableCheck?.reg_components) {
+                    await this.productRepo.manager.query(`
+                        ALTER TABLE product_components ADD COLUMN IF NOT EXISTS include_in_cost BOOLEAN DEFAULT false;
+                    `);
+                }
+            });
         } catch (e) {
             console.error('[ProductsService] Error initializing product_packing_specs table or delivery columns:', e);
         }

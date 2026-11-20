@@ -20,24 +20,26 @@ export class RbacAccessLogService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      await this.logRepo.manager.query(`
-        CREATE TABLE IF NOT EXISTS rbac_access_logs (
-          id BIGSERIAL PRIMARY KEY,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          mode VARCHAR(10) NOT NULL,
-          decision VARCHAR(20) NOT NULL,
-          method VARCHAR(8) NOT NULL,
-          route VARCHAR(255) NOT NULL,
-          required VARCHAR(255),
-          user_id INT,
-          username VARCHAR(100),
-          group_id INT,
-          ip VARCHAR(64),
-          user_agent VARCHAR(200)
-        );
-        CREATE INDEX IF NOT EXISTS idx_rbac_access_logs_created_at ON rbac_access_logs (created_at);
-        CREATE INDEX IF NOT EXISTS idx_rbac_access_logs_route_decision ON rbac_access_logs (route, decision);
-      `);
+      await TenantContext.run(DEFAULT_TENANT_CONTEXT, async () => {
+        await this.logRepo.manager.query(`
+          CREATE TABLE IF NOT EXISTS rbac_access_logs (
+            id BIGSERIAL PRIMARY KEY,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            mode VARCHAR(10) NOT NULL,
+            decision VARCHAR(20) NOT NULL,
+            method VARCHAR(8) NOT NULL,
+            route VARCHAR(255) NOT NULL,
+            required VARCHAR(255),
+            user_id INT,
+            username VARCHAR(100),
+            group_id INT,
+            ip VARCHAR(64),
+            user_agent VARCHAR(200)
+          );
+          CREATE INDEX IF NOT EXISTS idx_rbac_access_logs_created_at ON rbac_access_logs (created_at);
+          CREATE INDEX IF NOT EXISTS idx_rbac_access_logs_route_decision ON rbac_access_logs (route, decision);
+        `);
+      });
     } catch (e) {
       console.error('[RbacAccessLogService] DDL Migration error:', e);
     }

@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../../common/tenancy/tenant-context';
 
 @Injectable()
 export class ChatbotSchemaService implements OnModuleInit {
@@ -10,7 +11,9 @@ export class ChatbotSchemaService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      await this.initSchema();
+      await TenantContext.run(DEFAULT_TENANT_CONTEXT, async () => {
+        await this.initSchema();
+      });
     } catch (err: any) {
       this.logger.error(`Chatbot schema init failed: ${err?.message}`);
     }

@@ -23,7 +23,7 @@ import { EmailService } from '../common/services/email.service';
 import { randomUUID } from 'crypto';
 
 @Injectable()
-export class HrService implements OnModuleInit {
+export class HrService {
     constructor(
         @InjectRepository(Employee) private employeeRepo: Repository<Employee>,
         @InjectRepository(Attendance) private attendanceRepo: Repository<Attendance>,
@@ -49,32 +49,6 @@ export class HrService implements OnModuleInit {
     private getCandidatePortalUrl(token: string): string {
         const baseUrl = this.configService.get<string>('PUBLIC_APP_URL') || 'http://localhost:5173';
         return `${baseUrl.replace(/\/+$/, '')}/portal/recruitment/${token}`;
-    }
-
-    async onModuleInit() {
-        // Auto-seed 360-degree review questions from parsed_questions.json if table is empty
-        try {
-            const count = await this.reviewQuestionRepo.count();
-            if (count === 0) {
-                const fs = require('fs');
-                const path = require('path');
-                const dataPath = path.join(process.cwd(), 'parsed_questions.json');
-                if (fs.existsSync(dataPath)) {
-                    const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
-                    for (const item of data) {
-                        const q = this.reviewQuestionRepo.create({
-                            content: item.content,
-                            category: item.category,
-                            type: item.type as any
-                        });
-                        await this.reviewQuestionRepo.save(q);
-                    }
-                    console.log(`[HrModule] Seeded ${data.length} review questions successfully.`);
-                }
-            }
-        } catch (e) {
-            console.error('[HrModule] Error auto-seeding review questions:', e);
-        }
     }
 
     // ==================== WORK SHIFT ====================

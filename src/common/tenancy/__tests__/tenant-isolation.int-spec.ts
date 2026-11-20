@@ -432,4 +432,69 @@ describe('Multi-Tenant Schema Isolation (Integration)', () => {
     expect(Array.isArray(listBRes.body)).toBe(true);
     expect(listBRes.body.some((item: any) => item.name === filename)).toBe(false);
   });
+
+  it('boots app cleanly under TENANCY_STRICT=true with mock registry [tenant_a, tenant_b], seeds both schemas, and responds 200 on /api/health', async () => {
+    const prevStrict = process.env.TENANCY_STRICT;
+    const prevSeedOnBoot = process.env.SEED_ON_BOOT;
+    process.env.TENANCY_STRICT = 'true';
+    process.env.SEED_ON_BOOT = 'true';
+
+    // Clear system_configs in tenant_a and tenant_b to verify fresh seeding during boot
+    await adminDs.query(`DELETE FROM "tenant_a"."system_configs" WHERE "key" IN ('RBAC_SEED_V1', 'CHATBOT_SEED_V1')`);
+    await adminDs.query(`DELETE FROM "tenant_b"."system_configs" WHERE "key" IN ('RBAC_SEED_V1', 'CHATBOT_SEED_V1')`);
+
+    let strictApp: INestApplication | undefined;
+    try {
+      const strictModuleRef: TestingModule = await Test.createTestingModule({
+        imports: [AppModule],
+      })
+        .overrideProvider(TENANT_RESOLVER)
+        .useValue(headerTenantResolver)
+        .overrideProvider(TENANT_REGISTRY)
+        .useValue(testTenantRegistry)
+        .overrideGuard(JwtAuthGuard)
+        .useValue({ canActivate: () => true })
+        .overrideGuard(PermissionsGuard)
+        .useValue({ canActivate: () => true })
+        .compile();
+
+      strictApp = strictModuleRef.createNestApplication();
+      strictApp.setGlobalPrefix('api');
+
+      // Booting app triggers onApplicationBootstrap -> TenantSeedRunner under TENANCY_STRICT=true
+      await strictApp.init();
+
+      // 1. Verify seed ran in tenant_a schema
+      const configsA = await adminDs.query(
+        `SELECT "key" FROM "tenant_a"."system_configs" WHERE "key" IN ('RBAC_SEED_V1', 'CHATBOT_SEED_V1')`,
+      );
+      expect(configsA.length).toBeGreaterThanOrEqual(1);
+
+      // 2. Verify seed ran in tenant_b schema
+      const configsB = await adminDs.query(
+        `SELECT "key" FROM "tenant_b"."system_configs" WHERE "key" IN ('RBAC_SEED_V1', 'CHATBOT_SEED_V1')`,
+      );
+      expect(configsB.length).toBeGreaterThanOrEqual(1);
+
+      // 3. Verify /api/health returns 200 under strict mode (infrastructure context fallback)
+      const healthRes = await request(strictApp.getHttpServer())
+        .get('/api/health')
+        .expect(200);
+      expect(healthRes.body).toEqual({ status: 'ok' });
+    } finally {
+      if (strictApp) {
+        await strictApp.close();
+      }
+      if (prevStrict !== undefined) {
+        process.env.TENANCY_STRICT = prevStrict;
+      } else {
+        delete process.env.TENANCY_STRICT;
+      }
+      if (prevSeedOnBoot !== undefined) {
+        process.env.SEED_ON_BOOT = prevSeedOnBoot;
+      } else {
+        delete process.env.SEED_ON_BOOT;
+      }
+    }
+  });
 });
