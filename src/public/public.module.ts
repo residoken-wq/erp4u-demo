@@ -13,7 +13,6 @@ import { SalesOrder } from '../sales/sales-order.entity';
 import { HrModule } from '../hr/hr.module';
 import { EmailService } from '../common/services/email.service';
 import { DemoModeService } from '../common/services/demo-mode.service';
-import { DesignsModule } from '../designs/designs.module';
 
 @Module({
     imports: [
@@ -25,7 +24,6 @@ import { DesignsModule } from '../designs/designs.module';
         SalesModule,
         SystemModule,
         HrModule,
-        DesignsModule
     ],
     controllers: [PublicController, PortalController],
     providers: [EmailService, DemoModeService]

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException, OnModuleInit } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, OnModuleInit, Inject, Optional, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Employee } from './entities/employee.entity';
@@ -18,12 +18,14 @@ import { ReviewCampaign, CampaignStatus } from './entities/review-campaign.entit
 import { EmployeeReview, ReviewStatus } from './entities/employee-review.entity';
 import { ActivityLog } from '../system/entities/activity-log.entity';
 import { ConfigService } from '@nestjs/config';
-import { AiService } from '../ai/ai.service';
+import { AI_ASSISTANT_SERVICE, AiAssistantBridge } from '../common/extension-points';
 import { EmailService } from '../common/services/email.service';
 import { randomUUID } from 'crypto';
 
 @Injectable()
 export class HrService {
+    private readonly logger = new Logger(HrService.name);
+
     constructor(
         @InjectRepository(Employee) private employeeRepo: Repository<Employee>,
         @InjectRepository(Attendance) private attendanceRepo: Repository<Attendance>,
@@ -42,7 +44,7 @@ export class HrService {
         @InjectRepository(EmployeeReview) private employeeReviewRepo: Repository<EmployeeReview>,
         @InjectRepository(ActivityLog) private activityLogRepo: Repository<ActivityLog>,
         private configService: ConfigService,
-        private aiService: AiService,
+        @Optional() @Inject(AI_ASSISTANT_SERVICE) private aiService: AiAssistantBridge | undefined,
         private emailService: EmailService,
     ) { }
 
@@ -486,6 +488,10 @@ export class HrService {
     }
 
     async parseJDCompetencies(description: string) {
+        if (!this.aiService) {
+            this.logger.debug('AI service not available, skipping parseJDCompetencies');
+            return null;
+        }
         return this.aiService.parseJDCompetencies(description);
     }
 
@@ -609,6 +615,11 @@ You MUST return ONLY a valid JSON object in this structure:
   "duplication_flag": <boolean: true if answers appear highly suspicious, AI-generated, or copy-pasted>
 }
 `;
+
+        if (!this.aiService) {
+            this.logger.debug('AI service not available, skipping evaluateAssessment');
+            return;
+        }
 
         const feedback = await this.aiService.evaluateAssessment(prompt);
         
@@ -754,6 +765,11 @@ You MUST return ONLY a valid JSON object in this structure:
             relations: ['job_post']
         });
         if (!candidate) throw new NotFoundException('Candidate not found');
+
+        if (!this.aiService) {
+            this.logger.debug('AI service not available, returning empty questions');
+            return [];
+        }
 
         return this.aiService.generateRecruitmentQuestions(
             candidate.job_post?.description || '',
@@ -940,6 +956,12 @@ You MUST return ONLY a valid JSON object in this structure:
         
         OUTPUT FORMAT: Return ONLY a valid JSON object with the key "feedback_markdown" containing the markdown feedback.
         `;
+
+        if (!this.aiService) {
+            this.logger.debug('AI service not available, using default review feedback');
+            review.ai_feedback = "Đã ghi nhận kết quả đánh giá.";
+            return this.employeeReviewRepo.save(review);
+        }
 
         try {
             const result = await this.aiService.evaluateAssessment(prompt);

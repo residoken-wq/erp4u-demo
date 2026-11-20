@@ -132,7 +132,7 @@ import { AnalyticsVisitor } from '../analytics/analytics-visitor.entity';
 import { ZaloApiConfig } from '../zns/entities/zalo-api-config.entity';
 import { ZnsMessageLog } from '../zns/entities/zns-message-log.entity';
 
-export const ENTITIES = [
+export const CORE_ENTITIES = [
   Product, Material, BOM, ProductComponent, ProductRouting, ProductLogistics, ProductPattern, ProductPackingSpec,
   SalesOrder, SalesOrderItem, ProductSample, SalesDelivery, SalesDeliveryItem, SalesComment,
   SalesChecklist, SalesChecklistItem,
@@ -150,34 +150,36 @@ export const ENTITIES = [
   ProductionFulfillmentOrder, PfoMaterialRequirement, PfoMilestone, PfoQcRecord, Process, Category,
   User, UserGroup, GroupPermission, RbacAccessLog,
   SystemConfig, ActivityLog, ApiToken,
-  BlogPost,
   Employee, Attendance, LeaveRequest, LeaveEntitlement, AssetAssignment, Payslip, TrainingPlan, WorkShift,
   JobPost, Candidate, Assessment, Interview,
   ReviewQuestion, ReviewCampaign, EmployeeReview,
-  // Website Config & Templates
-  ProductWebsiteConfig, ContractTemplate, EmailTemplate, WebsitePolicy, WizardConfig,
-  // Social & Marketing
-  SocialChannel, SocialOrder, SocialProductMapping,
+  ContractTemplate, EmailTemplate,
   MarketingCampaign, CustomerSegment, AutomationWorkflow,
-  // Announcements
   Announcement, AnnouncementRead,
-  // Website
-  WebProject,
-  // Portal
   PortalOtp, PortalSession,
-  // Promotions
   Promotion,
   AnalyticsVisitor,
-  AiMessage,
-  CustomerLogo, PrintDesign, PrintSample, DesignOrder, DesignOrderItem,
-  // TikTok
-  TikTokMessage, TikTokComment, TikTokConversation,
-  // Zalo ZNS
-  ZaloApiConfig,
-  ZnsMessageLog,
-  // Chatbot (P0)
-  ...CHATBOT_ENTITIES,
-  // Modular Package Entitlements (P6)
   TenantEntitlement,
   UsageCounter,
+];
+
+/**
+ * Premium Add-on entities (Ai, Chatbot, TikTok, Social, Zns, Designs, Website).
+ * When includePremium: false, DataSource still registers all entities (including PREMIUM_ENTITIES)
+ * so that premium tables remain in the database schema to avoid destructive migration drops.
+ */
+export const PREMIUM_ENTITIES = [
+  AiMessage,
+  CustomerLogo, PrintDesign, PrintSample, DesignOrder, DesignOrderItem,
+  SocialChannel, SocialOrder, SocialProductMapping,
+  TikTokMessage, TikTokComment, TikTokConversation,
+  BlogPost, ProductWebsiteConfig, WebsitePolicy, WizardConfig, WebProject,
+  ZaloApiConfig,
+  ZnsMessageLog,
+  ...CHATBOT_ENTITIES,
+];
+
+export const ENTITIES = [
+  ...CORE_ENTITIES,
+  ...PREMIUM_ENTITIES,
 ];

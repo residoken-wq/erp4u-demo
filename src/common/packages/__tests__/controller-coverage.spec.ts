@@ -1,7 +1,11 @@
 import * as glob from 'glob';
 import * as path from 'path';
+import { ModulesContainer } from '@nestjs/core';
+import { Test, TestingModule } from '@nestjs/testing';
 import { REQUIRES_PACKAGE_KEY } from '../requires-package.decorator';
 import { PackageKey } from '../package.registry';
+import { Erp4uCoreModule } from '../../../erp4u-core.module';
+import { createMockDataSourceFactory } from '../../../__tests__/erp4u-core.module.spec';
 
 describe('Check 1: Controller Entitlement Coverage Spec', () => {
   const srcDir = path.resolve(__dirname, '../../..');
@@ -83,4 +87,62 @@ describe('Check 1: Controller Entitlement Coverage Spec', () => {
       }
     });
   }
+});
+
+describe('Check 2: Controller coverage when includePremium: false', () => {
+  const PREMIUM_CONTROLLERS = [
+    'AiController',
+    'ChatbotAdminConfigController',
+    'ChatbotFlowController',
+    'ChatbotInboxController',
+    'ChatbotKbController',
+    'PublicChatController',
+    'TikTokAuthController',
+    'TikTokCommentController',
+    'TikTokInboxController',
+    'TikTokWebhookController',
+    'SocialController',
+    'ZnsController',
+    'DesignsController',
+    'BlogsController',
+    'WebsiteProjectsController',
+    'WebsitePublicController',
+  ];
+
+  it('registers 0 add-on controllers when includePremium: false while retaining core controllers', async () => {
+    const moduleRef: TestingModule = await Test.createTestingModule({
+      imports: [
+        Erp4uCoreModule.forRoot({
+          includePremium: false,
+          dataSourceFactory: createMockDataSourceFactory(),
+        }),
+      ],
+    }).compile();
+
+    const modulesContainer = moduleRef.get(ModulesContainer);
+    const registeredControllerNames = new Set<string>();
+
+    for (const moduleInstance of modulesContainer.values()) {
+      for (const controllerWrapper of moduleInstance.controllers.values()) {
+        if (controllerWrapper.metatype) {
+          registeredControllerNames.add(controllerWrapper.metatype.name);
+        }
+      }
+    }
+
+    // Verify none of the add-on controllers are registered
+    for (const premiumCtrl of PREMIUM_CONTROLLERS) {
+      expect(registeredControllerNames.has(premiumCtrl)).toBe(false);
+    }
+
+    // Verify core controllers are still registered
+    expect(registeredControllerNames.has('AppController')).toBe(true);
+    expect(registeredControllerNames.has('SalesController')).toBe(true);
+    expect(registeredControllerNames.has('ProductsController')).toBe(true);
+    expect(registeredControllerNames.has('HrController')).toBe(true);
+    expect(registeredControllerNames.has('PublicController')).toBe(true);
+    expect(registeredControllerNames.has('PortalController')).toBe(true);
+
+    await moduleRef.close();
+  });
 });

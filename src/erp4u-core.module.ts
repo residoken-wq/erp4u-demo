@@ -79,6 +79,12 @@ export type Erp4uPluginModule =
 
 export interface Erp4uCoreModuleOptions {
   /**
+   * Whether to include premium add-on modules (ai, chatbot, tiktok, social, zns, designs, website).
+   * Default: true (or reads process.env.CORE_INCLUDE_PREMIUM !== 'false').
+   * If false, premium add-ons are omitted from the module imports.
+   */
+  includePremium?: boolean;
+  /**
    * Extra plugin modules (e.g. SaaS control plane, billing, premium add-ons in erp4u-cloud).
    */
   plugins?: Erp4uPluginModule[];
@@ -134,6 +140,21 @@ export class Erp4uCoreModule implements OnModuleInit {
   }
 
   static forRoot(options: Erp4uCoreModuleOptions = {}): DynamicModule {
+    const includePremium =
+      options.includePremium ?? (process.env.CORE_INCLUDE_PREMIUM !== 'false');
+
+    const premiumModules = includePremium
+      ? [
+          AiModule,
+          ChatbotModule,
+          TikTokModule,
+          SocialModule,
+          ZnsModule,
+          DesignsModule,
+          WebsiteModule,
+        ]
+      : [];
+
     const entities = options.extraEntities?.length
       ? [...ENTITIES, ...options.extraEntities]
       : ENTITIES;
@@ -202,20 +223,14 @@ export class Erp4uCoreModule implements OnModuleInit {
         PlanningModule,
         ProcessesModule,
         CategoriesModule,
-        AiModule,
-        WebsiteModule,
         PublicModule,
         HrModule,
-        SocialModule, // Social integration (Facebook, Shopee, TikTok)
         MarketingModule, // Marketing campaigns, segments, automation
         AnnouncementsModule, // Announcements for employees
         AnalyticsModule, // Website Analytics tracking
         QCModule, // Quality Control module
-        DesignsModule, // Printing & Embroidery Design Module
-        TikTokModule, // TikTok Shop inbox & comments integration
         ShippingModule, // Shipping & GHTK carrier integration
-        ZnsModule, // Zalo ZNS Integration module
-        ChatbotModule, // Trợ lý AI website module (P0)
+        ...premiumModules,
         TypeOrmModule.forFeature([User]), // Needed for ActivityInterceptor
         ...plugins,
       ],
@@ -234,18 +249,20 @@ export class Erp4uCoreModule implements OnModuleInit {
               provide: TENANT_SEEDERS,
               useFactory: (
                 rbac: RbacSeedService,
-                cbKb: ChatbotKbSeedService,
-                cb: ChatbotSeedService,
                 hr: HrReviewQuestionsSeedService,
+                cbKb?: ChatbotKbSeedService,
+                cb?: ChatbotSeedService,
               ): TenantSeeder[] => {
-                const coreSeeders: TenantSeeder[] = [rbac, cbKb, cb, hr];
+                const coreSeeders: TenantSeeder[] = [rbac, hr];
+                if (cbKb) coreSeeders.push(cbKb);
+                if (cb) coreSeeders.push(cb);
                 return [...coreSeeders, ...(options.extraSeeders || [])];
               },
               inject: [
                 RbacSeedService,
-                ChatbotKbSeedService,
-                ChatbotSeedService,
                 HrReviewQuestionsSeedService,
+                { token: ChatbotKbSeedService, optional: true },
+                { token: ChatbotSeedService, optional: true },
               ],
             },
         TenantSeedRunner,

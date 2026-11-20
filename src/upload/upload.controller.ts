@@ -9,14 +9,7 @@ import { Repository } from 'typeorm';
 import { Product } from '../products/product.entity';
 import { SystemConfig } from '../system/system-config.entity';
 import { CorePackage } from '../common/packages/requires-package.decorator';
-
-interface WebsiteMediaUsageBridge {
-  getMediaUsageSources(): Promise<{
-    productConfigs: Array<{ product_id: number; customization_config: any }>;
-    blogs: Array<{ id: number; title: string; featured_image: string; content: string; content_blocks: any }>;
-    projects: Array<{ id: number; title: string; image_url: string; content: string; content_blocks: any }>;
-  }>;
-}
+import { WEBSITE_SERVICE, WebsiteMediaUsageBridge } from '../common/extension-points';
 
 @Controller('upload')
 @CorePackage()
@@ -25,7 +18,7 @@ export class UploadController {
     private readonly uploadService: UploadService,
     @InjectRepository(Product) private productRepo: Repository<Product>,
     @InjectRepository(SystemConfig) private configRepo: Repository<SystemConfig>,
-    @Optional() @Inject('WEBSITE_SERVICE') private websiteService?: WebsiteMediaUsageBridge,
+    @Optional() @Inject(WEBSITE_SERVICE) private websiteService?: WebsiteMediaUsageBridge,
   ) { }
 
   @Perm('CMS', 'view')

@@ -14,11 +14,7 @@ import { CategoriesService } from '../categories/categories.service';
 import { Category } from '../categories/category.entity';
 import { CreateVariantDto } from './dto/create-variant.dto';
 import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../common/tenancy/tenant-context';
-
-interface WebsiteProductConfigBridge {
-    getProductWebsiteConfig(productId: number): Promise<{ customization_config?: any } | null>;
-    saveProductWebsiteConfig(productId: number, config: any): Promise<any>;
-}
+import { WEBSITE_SERVICE, WebsiteProductConfigBridge } from '../common/extension-points';
 
 @Injectable()
 export class ProductsService implements OnModuleInit {
@@ -33,7 +29,7 @@ export class ProductsService implements OnModuleInit {
         @InjectRepository(SupplierMaterial) private priceRepo: Repository<SupplierMaterial>,
         @InjectRepository(ProductPackingSpec) private packingSpecRepo: Repository<ProductPackingSpec>,
         @Inject(forwardRef(() => CategoriesService)) private categoriesService: CategoriesService,
-        @Optional() @Inject('WEBSITE_SERVICE') private websiteService?: WebsiteProductConfigBridge,
+        @Optional() @Inject(WEBSITE_SERVICE) private websiteService?: WebsiteProductConfigBridge,
     ) { }
 
     async onModuleInit() {
