@@ -12,9 +12,10 @@ import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-ro
 import { Drawer } from 'antd'; // <--- Import Drawer
 import useMobile from './hooks/useMobile'; // <--- Import Hook
 import api from './utils/api';
-import { PackageKey, getRoutePackage } from './config/packages';
+import { PackageKey, getRoutePackage, AddonKey, getRouteAddon } from './config/packages';
 import { EntitlementsProvider, useEntitlements, resetEntitlementsCache } from './hooks/useEntitlements';
 import PackageLockedPage from './pages/PackageLockedPage';
+import AddonUnavailablePage from './pages/AddonUnavailablePage';
 
 // Import Components
 import HeaderNotifications from './components/HeaderNotifications';
@@ -111,12 +112,17 @@ const AppShell: React.FC<AppShellProps> = ({
 }) => {
     const [collapsed, setCollapsed] = useState(false);
     const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken();
-    const { isEnabled } = useEntitlements();
+    const { isEnabled, isAddonInstalled } = useEntitlements();
     const [isDemo, setIsDemo] = useState(false);
 
     const isRouteEnabled = (path: string) => isEnabled(getRoutePackage(path));
-    const renderRoute = (path: string, element: React.ReactElement) =>
-        isRouteEnabled(path) ? element : <PackageLockedPage packageKey={getRoutePackage(path)} />;
+    const renderRoute = (path: string, element: React.ReactElement) => {
+        const routeAddon = getRouteAddon(path);
+        if (routeAddon && !isAddonInstalled(routeAddon)) {
+            return <AddonUnavailablePage addon={routeAddon} />;
+        }
+        return isRouteEnabled(path) ? element : <PackageLockedPage packageKey={getRoutePackage(path)} />;
+    };
 
     useEffect(() => {
         api.get('/public/meta')
@@ -198,6 +204,28 @@ const AppShell: React.FC<AppShellProps> = ({
     const menuItems = useMemo(() => {
         const items: MenuItem[] = [];
 
+        const cloudBadge = (
+            <span
+                style={{
+                    marginLeft: 6,
+                    fontSize: 10,
+                    padding: '1px 5px',
+                    borderRadius: 4,
+                    background: '#1890ff',
+                    color: '#fff',
+                    fontWeight: 'normal',
+                    display: 'inline-block',
+                    lineHeight: '14px',
+                }}
+            >
+                Cloud
+            </span>
+        );
+        const isAiInstalled = isAddonInstalled(AddonKey.AI);
+        const isOmniInstalled = isAddonInstalled(AddonKey.OMNICHANNEL);
+        const isDesignInstalled = isAddonInstalled(AddonKey.DESIGN);
+        const isWebsiteInstalled = isAddonInstalled(AddonKey.WEBSITE);
+
         // 1. Tổng quan
         if (hasPerm('DASHBOARD') || true) {
             items.push(getItem(<Link to="/">Tổng quan</Link>, '1', <PieChartOutlined />));
@@ -214,10 +242,18 @@ const AppShell: React.FC<AppShellProps> = ({
         }
 
         // CMS Website
-        if (hasPerm('PRODUCT') && isRouteEnabled('/website-products')) {
-            items.push(getItem('CMS Website', 'sub_cms', <GlobalOutlined />, [
-                getItem(<Link to="/website-products">Sản phẩm (Bán online)</Link>, 'web_prod'),
-            ]));
+        if (hasPerm('PRODUCT')) {
+            items.push(getItem(
+                <span>CMS Website {!isWebsiteInstalled && cloudBadge}</span>,
+                'sub_cms',
+                <GlobalOutlined />,
+                [
+                    getItem(
+                        <Link to="/website-products">Sản phẩm (Bán online) {!isWebsiteInstalled && cloudBadge}</Link>,
+                        'web_prod'
+                    ),
+                ]
+            ));
         }
 
         // 3. Nhập liệu
@@ -263,11 +299,20 @@ const AppShell: React.FC<AppShellProps> = ({
         if (hasPerm('PURCHASE') && isRouteEnabled('/purchasing')) {
             prodChildren.push(getItem(<Link to="/purchasing">Đơn Mua Hàng & GC</Link>, 'po_page'));
         }
-        if ((hasPerm('PRODUCT') || hasPerm('PRODUCTION')) && isRouteEnabled('/print-production')) {
-            prodChildren.push(getItem(<Link to="/print-production">Báo cáo Gia công In</Link>, 'print-production', <PrinterOutlined />));
-        }
-        if ((hasPerm('PRODUCT') || hasPerm('PRODUCTION')) && isRouteEnabled('/designs')) {
-            prodChildren.push(getItem(<Link to="/designs">Thiết kế In ấn & Thêu</Link>, 'designs_page'));
+        if (hasPerm('PRODUCT') || hasPerm('PRODUCTION')) {
+            prodChildren.push(
+                getItem(
+                    <Link to="/print-production">Báo cáo Gia công In {!isDesignInstalled && cloudBadge}</Link>,
+                    'print-production',
+                    <PrinterOutlined />
+                )
+            );
+            prodChildren.push(
+                getItem(
+                    <Link to="/designs">Thiết kế In ấn & Thêu {!isDesignInstalled && cloudBadge}</Link>,
+                    'designs_page'
+                )
+            );
         }
         if (hasPerm('PRODUCTION')) {
             if (isRouteEnabled('/routes')) prodChildren.push(getItem(<Link to="/routes">Định nghĩa Quy trình</Link>, 'route'));
@@ -303,24 +348,35 @@ const AppShell: React.FC<AppShellProps> = ({
         }
 
         // Chatbot (Trợ lý AI) - Chỉ hiện cho user có quyền CHATBOT
-        if (hasPerm('CHATBOT') && isRouteEnabled('/chatbot/inbox')) {
-            items.push(getItem('Trợ lý AI', 'sub_chatbot', <MessageOutlined />, [
-                getItem(<Link to="/chatbot/inbox">Hộp thư hội thoại</Link>, 'cb_inbox'),
-                getItem(<Link to="/chatbot/requests">Yêu cầu tư vấn</Link>, 'cb_requests'),
-            ]));
+        if (hasPerm('CHATBOT')) {
+            items.push(getItem(
+                <span>Trợ lý AI {!isAiInstalled && cloudBadge}</span>,
+                'sub_chatbot',
+                <MessageOutlined />,
+                [
+                    getItem(<Link to="/chatbot/inbox">Hộp thư hội thoại {!isAiInstalled && cloudBadge}</Link>, 'cb_inbox'),
+                    getItem(<Link to="/chatbot/requests">Yêu cầu tư vấn {!isAiInstalled && cloudBadge}</Link>, 'cb_requests'),
+                ]
+            ));
         }
 
         // SOCIAL & MARKETING
         if (hasPerm('MARKETING')) {
-            const socialChildren: MenuItem[] = [];
-            if (isRouteEnabled('/social/channels')) socialChildren.push(getItem(<Link to="/social/channels">Quản lý Kênh</Link>, 'social_channels'));
-            if (isRouteEnabled('/social/orders')) socialChildren.push(getItem(<Link to="/social/orders">Đơn hàng từ Sàn</Link>, 'social_orders'));
-            if (socialChildren.length > 0) {
-                items.push(getItem('Kênh Bán Hàng Social', 'sub_social', <FacebookOutlined />, socialChildren));
-            }
-            if (isRouteEnabled('/marketing')) {
-                items.push(getItem(<Link to="/marketing">Marketing</Link>, 'marketing', <RocketOutlined />));
-            }
+            const socialChildren: MenuItem[] = [
+                getItem(<Link to="/social/channels">Quản lý Kênh {!isOmniInstalled && cloudBadge}</Link>, 'social_channels'),
+                getItem(<Link to="/social/orders">Đơn hàng từ Sàn {!isOmniInstalled && cloudBadge}</Link>, 'social_orders'),
+            ];
+            items.push(getItem(
+                <span>Kênh Bán Hàng Social {!isOmniInstalled && cloudBadge}</span>,
+                'sub_social',
+                <FacebookOutlined />,
+                socialChildren
+            ));
+            items.push(getItem(
+                <Link to="/marketing">Marketing {!isOmniInstalled && cloudBadge}</Link>,
+                'marketing',
+                <RocketOutlined />
+            ));
         }
 
         // 9. Hệ thống
@@ -336,9 +392,13 @@ const AppShell: React.FC<AppShellProps> = ({
             }
             if (hasPerm('USERS')) {
                 systemChildren.push(getItem(<Link to="/system/logs">Nhật ký hoạt động</Link>, 'sys_logs'));
-                if (isRouteEnabled('/ai-dashboard')) {
-                    systemChildren.push(getItem(<Link to="/ai-dashboard">AI Dashboard</Link>, 'ai_dash', <RobotOutlined />));
-                }
+                systemChildren.push(
+                    getItem(
+                        <Link to="/ai-dashboard">AI Dashboard {!isAiInstalled && cloudBadge}</Link>,
+                        'ai_dash',
+                        <RobotOutlined />
+                    )
+                );
             }
 
             if (currentUser?.username === 'admin') {
@@ -351,7 +411,7 @@ const AppShell: React.FC<AppShellProps> = ({
         }
 
         return items;
-    }, [permissions, currentUser, isAuthenticated, isEnabled]);
+    }, [permissions, currentUser, isAuthenticated, isEnabled, isAddonInstalled]);
 
     const userMenu = (
         <Menu items={[

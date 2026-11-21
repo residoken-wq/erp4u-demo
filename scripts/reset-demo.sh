@@ -9,17 +9,54 @@
 # Crontab (02:30 every day):
 #   30 2 * * * cd /opt/erp4u-demo && ./scripts/reset-demo.sh >> /var/log/erp4u-reset-demo.log 2>&1
 set -euo pipefail
+trap 'echo "LỖI: dừng ở dòng $LINENO (lệnh: $BASH_COMMAND)" >&2' ERR
 
 PROJECT="${PROJECT:-erp4u-demo}"
 COMPOSE_FILES="${COMPOSE_FILES:--f docker-compose.prod.yml}"
 APP_CONTAINER="${PROJECT}-backend-1"
 WEB_CONTAINER="${PROJECT}-web-1"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-240}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2086
 dc() { docker compose -p "$PROJECT" $COMPOSE_FILES "$@"; }
 
 log() { echo "$(date '+%H:%M:%S') $*"; }
+
+run_backup() {
+  if [ -x "$SCRIPT_DIR/backup.sh" ]; then
+    "$SCRIPT_DIR/backup.sh"
+  elif [ -f "$SCRIPT_DIR/backup.sh" ]; then
+    bash "$SCRIPT_DIR/backup.sh"
+  elif [ -x "./scripts/backup.sh" ]; then
+    ./scripts/backup.sh
+  elif [ -f "./scripts/backup.sh" ]; then
+    bash ./scripts/backup.sh
+  else
+    echo "LỖI: không tìm thấy script backup.sh" >&2
+    exit 1
+  fi
+}
+
+run_seed() {
+  if [ -x "$SCRIPT_DIR/deploy.sh" ]; then
+    "$SCRIPT_DIR/deploy.sh" seed --yes
+  elif [ -f "$SCRIPT_DIR/deploy.sh" ]; then
+    bash "$SCRIPT_DIR/deploy.sh" seed --yes
+  elif [ -x "./scripts/deploy.sh" ]; then
+    ./scripts/deploy.sh seed --yes
+  elif [ -f "./scripts/deploy.sh" ]; then
+    bash ./scripts/deploy.sh seed --yes
+  else
+    echo "LỖI: không tìm thấy script deploy.sh" >&2
+    exit 1
+  fi
+}
+
+if [ -z "$(dc ps -q --status running postgres 2>/dev/null || true)" ]; then
+  echo "LỖI: chưa có stack, chạy ./scripts/deploy.sh trước" >&2
+  exit 1
+fi
 
 wait_healthy() {
   local waited=0 app_state web_state
@@ -48,7 +85,7 @@ wait_healthy() {
 log "=== BẮT ĐẦU RESET DEMO ==="
 
 log "1/5 Tạo bản backup trước khi reset"
-./scripts/backup.sh
+run_backup
 
 log "2/5 Dừng backend và dựng lại cơ sở dữ liệu rỗng"
 dc stop backend < /dev/null
@@ -60,10 +97,7 @@ dc up -d backend < /dev/null
 wait_healthy
 
 log "4/5 Nạp dữ liệu demo qua container seed (seed:reset) và xử lý thư mục uploads"
-./scripts/deploy.sh seed --yes
-# TODO: Hiện tại bộ dữ liệu seed không kèm ảnh tĩnh vào volume /app/uploads.
-# Khi có danh sách file ảnh seed trong tương lai, xác định qua manifest và chỉ xoá file người dùng tạo ra.
-# Để tránh mất dữ liệu do đoán mò, không thực hiện xoá tuỳ tiện ở đây.
+run_seed
 log "Uploads: Đã kiểm tra (chưa cấu hình xoá cưỡng chế uploads ngoài manifest)"
 
 log "5/5 Khởi động lại backend sau seed và chờ healthy"

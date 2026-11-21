@@ -13,6 +13,7 @@ import { AllEnabledProvider } from './all-enabled.provider';
 import { DbEntitlementProvider } from './db-entitlement.provider';
 import { EntitlementGuard } from './entitlement.guard';
 import { MeEntitlementsController } from './me-entitlements.controller';
+import { INSTALLED_ADDONS } from './installed-addons.token';
 import {
   normalizeProviderOverride,
   ProviderOverride,
@@ -59,6 +60,11 @@ const DEFAULT_ENTITLEMENT_PROVIDER: Provider = {
   inject: [ConfigService, AllEnabledProvider, DbEntitlementProvider],
 };
 
+const DEFAULT_INSTALLED_ADDONS_PROVIDER: Provider = {
+  provide: INSTALLED_ADDONS,
+  useValue: [],
+};
+
 @Global()
 @Module({
   imports: [TypeOrmModule.forFeature([TenantEntitlement, UsageCounter])],
@@ -68,6 +74,7 @@ const DEFAULT_ENTITLEMENT_PROVIDER: Provider = {
     DbEntitlementProvider,
     UsageService,
     DEFAULT_ENTITLEMENT_PROVIDER,
+    DEFAULT_INSTALLED_ADDONS_PROVIDER,
     {
       provide: APP_GUARD,
       useClass: EntitlementGuard,
@@ -75,6 +82,7 @@ const DEFAULT_ENTITLEMENT_PROVIDER: Provider = {
   ],
   exports: [
     ENTITLEMENT_PROVIDER,
+    INSTALLED_ADDONS,
     AllEnabledProvider,
     DbEntitlementProvider,
     UsageService,
@@ -100,6 +108,7 @@ export class EntitlementsModule {
         DbEntitlementProvider,
         UsageService,
         entitlementProvider,
+        DEFAULT_INSTALLED_ADDONS_PROVIDER,
         {
           provide: APP_GUARD,
           useClass: EntitlementGuard,
@@ -107,6 +116,7 @@ export class EntitlementsModule {
       ],
       exports: [
         ENTITLEMENT_PROVIDER,
+        INSTALLED_ADDONS,
         AllEnabledProvider,
         DbEntitlementProvider,
         UsageService,

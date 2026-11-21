@@ -25,15 +25,7 @@ import {
 import { LocalFileStorage } from '../common/storage/local-file-storage.service';
 import { UploadService } from '../upload/upload.service';
 import { MeEntitlementsController } from '../common/packages/me-entitlements.controller';
-import { AiModule } from '../ai/ai.module';
-import { ChatbotModule } from '../chatbot/chatbot.module';
-import { TikTokModule } from '../tiktok/tiktok.module';
-import { SocialModule } from '../social/social.module';
-import { ZnsModule } from '../zns/zns.module';
-import { DesignsModule } from '../designs/designs.module';
-import { WebsiteModule } from '../website/website.module';
-import { AiService } from '../ai/ai.service';
-import { DesignsService } from '../designs/designs.service';
+import { INSTALLED_ADDONS } from '../common/packages/installed-addons.token';
 import { ProductsService } from '../products/products.service';
 import { HrService } from '../hr/hr.service';
 
@@ -211,25 +203,10 @@ describe('Erp4uCoreModule.forRoot()', () => {
     await moduleRef.close();
   });
 
-  it('compiles with includePremium: false and does not contain add-on modules', async () => {
+  it('compiles in open-core with core modules and exports INSTALLED_ADDONS', async () => {
     const dynamicModule = Erp4uCoreModule.forRoot({
-      includePremium: false,
       dataSourceFactory: createMockDataSourceFactory(),
     });
-
-    const premiumModuleTypes = [
-      AiModule,
-      ChatbotModule,
-      TikTokModule,
-      SocialModule,
-      ZnsModule,
-      DesignsModule,
-      WebsiteModule,
-    ];
-
-    for (const mod of premiumModuleTypes) {
-      expect(dynamicModule.imports).not.toContain(mod);
-    }
 
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [dynamicModule],
@@ -237,39 +214,23 @@ describe('Erp4uCoreModule.forRoot()', () => {
 
     expect(moduleRef.get(ProductsService)).toBeDefined();
     expect(moduleRef.get(HrService)).toBeDefined();
-
-    expect(() => moduleRef.get(AiService)).toThrow();
-    expect(() => moduleRef.get(DesignsService)).toThrow();
+    expect(moduleRef.get(INSTALLED_ADDONS)).toBeDefined();
 
     await moduleRef.close();
   });
 
-  it('compiles with includePremium: true and contains all add-on modules', async () => {
+  it('handles deprecated includePremium: true gracefully (no crash, logs warning)', async () => {
     const dynamicModule = Erp4uCoreModule.forRoot({
       includePremium: true,
       dataSourceFactory: createMockDataSourceFactory(),
     });
 
-    const premiumModuleTypes = [
-      AiModule,
-      ChatbotModule,
-      TikTokModule,
-      SocialModule,
-      ZnsModule,
-      DesignsModule,
-      WebsiteModule,
-    ];
-
-    for (const mod of premiumModuleTypes) {
-      expect(dynamicModule.imports).toContain(mod);
-    }
-
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [dynamicModule],
     }).compile();
 
-    expect(moduleRef.get(AiService)).toBeDefined();
-    expect(moduleRef.get(DesignsService)).toBeDefined();
+    expect(moduleRef.get(ProductsService)).toBeDefined();
+    expect(moduleRef.get(HrService)).toBeDefined();
 
     await moduleRef.close();
   });

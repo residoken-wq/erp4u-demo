@@ -1,6 +1,7 @@
 import {
   DynamicModule,
   ForwardReference,
+  Logger,
   Module,
   OnModuleInit,
   Type,
@@ -32,20 +33,14 @@ import { ProjectsModule } from './projects/projects.module';
 import { DiscussionsModule } from './discussions/discussions.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SystemModule } from './system/system.module';
-import { WebsiteModule } from './website/website.module';
 import { PublicModule } from './public/public.module';
 import { HrModule } from './hr/hr.module';
 import { EncryptionModule } from './common/encryption/encryption.module';
-import { SocialModule } from './social/social.module';
 import { MarketingModule } from './marketing/marketing.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { QCModule } from './qc/qc.module';
-import { DesignsModule } from './designs/designs.module';
-import { TikTokModule } from './tiktok/tiktok.module';
 import { ShippingModule } from './shipping/shipping.module';
-import { ZnsModule } from './zns/zns.module';
 import { AnalyticsModule } from './analytics/analytics.module';
-import { ChatbotModule } from './chatbot/chatbot.module';
 import { CommonModule } from './common/common.module';
 import { TenancyModule } from './common/tenancy/tenancy.module';
 import { installTenantConnectionHook } from './common/tenancy/tenant-connection.hook';
@@ -55,7 +50,7 @@ import { StorageModule } from './common/storage/storage.module';
 import { FileStorage } from './common/storage/file-storage.interface';
 import { EntitlementsModule } from './common/packages/entitlements.module';
 import { EntitlementProvider } from './common/packages/entitlement-provider.interface';
-import { AiModule } from './ai/ai.module';
+import { INSTALLED_ADDONS } from './common/packages/installed-addons.token';
 
 import { User } from './users/entities/user.entity';
 import { ActivityInterceptor } from './common/interceptors/activity.interceptor';
@@ -66,10 +61,12 @@ import { buildDataSourceOptions } from './database/data-source';
 import { TENANT_SEEDERS, TenantSeeder } from './common/tenancy/tenant-seeder.interface';
 import { TenantSeedRunner } from './common/tenancy/tenant-seed-runner.service';
 import { RbacSeedService } from './auth/rbac-seed.service';
-import { ChatbotKbSeedService } from './chatbot/seed/chatbot-kb-seed.service';
-import { ChatbotSeedService } from './chatbot/seed/chatbot-seed.service';
 import { HrReviewQuestionsSeedService } from './hr/hr-review-questions-seed.service';
 import { normalizeProviderOverride, ProviderOverride } from './common/utils/provider-override.util';
+
+export { INSTALLED_ADDONS, InstalledAddonName } from './common/packages/installed-addons.token';
+
+let hasWarnedDeprecatedIncludePremium = false;
 
 export type Erp4uPluginModule =
   | Type<any>
@@ -79,9 +76,8 @@ export type Erp4uPluginModule =
 
 export interface Erp4uCoreModuleOptions {
   /**
-   * Whether to include premium add-on modules (ai, chatbot, tiktok, social, zns, designs, website).
-   * Default: true (or reads process.env.CORE_INCLUDE_PREMIUM !== 'false').
-   * If false, premium add-ons are omitted from the module imports.
+   * @deprecated In open-core, premium modules are hosted externally (e.g. erp4u-cloud).
+   * Retained for backward compatibility; logs a warning if true and has no effect.
    */
   includePremium?: boolean;
   /**
@@ -140,20 +136,12 @@ export class Erp4uCoreModule implements OnModuleInit {
   }
 
   static forRoot(options: Erp4uCoreModuleOptions = {}): DynamicModule {
-    const includePremium =
-      options.includePremium ?? (process.env.CORE_INCLUDE_PREMIUM !== 'false');
-
-    const premiumModules = includePremium
-      ? [
-          AiModule,
-          ChatbotModule,
-          TikTokModule,
-          SocialModule,
-          ZnsModule,
-          DesignsModule,
-          WebsiteModule,
-        ]
-      : [];
+    if (options.includePremium === true && !hasWarnedDeprecatedIncludePremium) {
+      new Logger('Erp4uCoreModule').warn(
+        'Erp4uCoreModule: option "includePremium" is deprecated and has no effect in open-core. Premium add-on modules are hosted externally.',
+      );
+      hasWarnedDeprecatedIncludePremium = true;
+    }
 
     const entities = options.extraEntities?.length
       ? [...ENTITIES, ...options.extraEntities]
@@ -230,7 +218,6 @@ export class Erp4uCoreModule implements OnModuleInit {
         AnalyticsModule, // Website Analytics tracking
         QCModule, // Quality Control module
         ShippingModule, // Shipping & GHTK carrier integration
-        ...premiumModules,
         TypeOrmModule.forFeature([User]), // Needed for ActivityInterceptor
         ...plugins,
       ],
@@ -250,24 +237,18 @@ export class Erp4uCoreModule implements OnModuleInit {
               useFactory: (
                 rbac: RbacSeedService,
                 hr: HrReviewQuestionsSeedService,
-                cbKb?: ChatbotKbSeedService,
-                cb?: ChatbotSeedService,
               ): TenantSeeder[] => {
                 const coreSeeders: TenantSeeder[] = [rbac, hr];
-                if (cbKb) coreSeeders.push(cbKb);
-                if (cb) coreSeeders.push(cb);
                 return [...coreSeeders, ...(options.extraSeeders || [])];
               },
               inject: [
                 RbacSeedService,
                 HrReviewQuestionsSeedService,
-                { token: ChatbotKbSeedService, optional: true },
-                { token: ChatbotSeedService, optional: true },
               ],
             },
         TenantSeedRunner,
       ],
-      exports: [TenancyModule, TENANT_SEEDERS, TenantSeedRunner],
+      exports: [TenancyModule, EntitlementsModule, TENANT_SEEDERS, TenantSeedRunner],
       controllers: [AppController],
     };
   }

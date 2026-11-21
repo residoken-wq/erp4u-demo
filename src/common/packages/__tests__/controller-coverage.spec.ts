@@ -18,7 +18,7 @@ describe('Check 1: Controller Entitlement Coverage Spec', () => {
   };
 
   it('found controller files to verify', () => {
-    expect(controllerFiles.length).toBeGreaterThan(40);
+    expect(controllerFiles.length).toBeGreaterThan(30);
   });
 
   for (const relPath of controllerFiles) {

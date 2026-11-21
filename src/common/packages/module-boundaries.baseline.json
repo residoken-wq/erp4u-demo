@@ -159,12 +159,6 @@
   "src/social/entities/social-order.entity.ts": [
     "../../sales/sales-order.entity"
   ],
-  "src/social/social.module.ts": [
-    "../sales/sales-order.entity"
-  ],
-  "src/social/social.service.ts": [
-    "../sales/sales-order.entity"
-  ],
   "src/suppliers/supplier-material.entity.ts": [
     "../materials/material.entity",
     "../processes/process.entity"
@@ -208,13 +202,5 @@
   "src/upload/upload.service.ts": [
     "../bom/bom.entity",
     "../materials/material.entity"
-  ],
-  "src/zns/zns.module.ts": [
-    "../sales/sales-delivery.entity",
-    "../sales/sales-order.entity"
-  ],
-  "src/zns/zns.service.ts": [
-    "../sales/sales-delivery.entity",
-    "../sales/sales-order.entity"
   ]
 }

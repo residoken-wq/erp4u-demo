@@ -1,4 +1,4 @@
-import { PackageKey } from '../config/packages';
+import { AddonKey, PackageKey } from '../config/packages';
 
 export type EntitlementsMode = 'all' | 'db';
 
@@ -11,6 +11,7 @@ export interface PackageEntitlementDto {
 export interface EntitlementsApiResponse {
   mode: EntitlementsMode;
   packages: PackageEntitlementDto[];
+  addons?: Record<string, boolean>;
 }
 
 export interface EntitlementsSnapshot {
@@ -20,7 +21,19 @@ export interface EntitlementsSnapshot {
    * null means fail-open (all enabled): used during initial load, mode='all', or on network/500 errors.
    */
   enabledMap: Record<string, boolean> | null;
+  /**
+   * Status of installed premium add-ons (AI, OMNICHANNEL, DESIGN, WEBSITE).
+   * Open-core returns all false; cloud plugins register installed addons.
+   */
+  addons: Record<string, boolean>;
 }
+
+export const DEFAULT_ADDONS: Record<string, boolean> = {
+  AI: false,
+  OMNICHANNEL: false,
+  DESIGN: false,
+  WEBSITE: false,
+};
 
 export type EntitlementsFetcher = () => Promise<{ data: EntitlementsApiResponse }>;
 
@@ -28,6 +41,7 @@ const DEFAULT_SNAPSHOT: EntitlementsSnapshot = {
   loaded: false,
   mode: 'all',
   enabledMap: null,
+  addons: DEFAULT_ADDONS,
 };
 
 let cachedSnapshot: EntitlementsSnapshot | null = null;
@@ -42,6 +56,12 @@ export function createIsEnabled(enabledMap: Record<string, boolean> | null): (pk
       return true;
     }
     return enabledMap[pkg] !== false;
+  };
+}
+
+export function createIsAddonInstalled(addons: Record<string, boolean>): (addon: AddonKey | string) => boolean {
+  return (addon: AddonKey | string): boolean => {
+    return Boolean(addons[addon]);
   };
 }
 
@@ -77,6 +97,7 @@ export async function loadEntitlementsOnce(fetcher: EntitlementsFetcher): Promis
           loaded: true,
           mode: 'all',
           enabledMap: null,
+          addons: DEFAULT_ADDONS,
         };
         cachedSnapshot = fallback;
         return fallback;
@@ -93,10 +114,16 @@ export async function loadEntitlementsOnce(fetcher: EntitlementsFetcher): Promis
         }
       }
 
+      const addons: Record<string, boolean> = {
+        ...DEFAULT_ADDONS,
+        ...(payload.addons || {}),
+      };
+
       const snapshot: EntitlementsSnapshot = {
         loaded: true,
         mode,
         enabledMap,
+        addons,
       };
       cachedSnapshot = snapshot;
       return snapshot;
@@ -107,6 +134,7 @@ export async function loadEntitlementsOnce(fetcher: EntitlementsFetcher): Promis
         loaded: true,
         mode: 'all',
         enabledMap: null,
+        addons: DEFAULT_ADDONS,
       };
       cachedSnapshot = failOpen;
       return failOpen;

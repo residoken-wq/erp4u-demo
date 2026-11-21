@@ -27,6 +27,10 @@
 
 > 📦 **Modular Packages & Entitlements**: Xem danh sách gói tính năng, phụ thuộc module và cách cấu hình `ENTITLEMENTS_MODE` tại [docs/PACKAGES.md](docs/PACKAGES.md).
 
+### ☁️ Open-Core & ERP4U Cloud Add-ons
+- **ERP4U Open-Core**: Bao gồm đầy đủ các phân hệ quản trị lõi cho sản xuất và doanh nghiệp vừa & nhỏ: Bán hàng & CRM, Kế hoạch & Điều độ Sản xuất (MRP/PFO), Quản lý Kho & Mua hàng, Nhân sự & Tiền lương, Tài chính & Dòng tiền, Quản lý Dự án, Hệ thống Thông báo thời gian thực và Mã hóa dữ liệu cá nhân AES-256-GCM.
+- **ERP4U Cloud Add-ons**: Các tiện ích mở rộng nâng cao gồm **AI Assistant & Chatbot (`AI`)**, **Omnichannel (`OMNICHANNEL`: TikTok, Facebook Social, Zalo ZNS)**, **Thiết kế in/thêu (`DESIGN`)**, và **Website/CMS (`WEBSITE`)** là các add-on chạy trên nền tảng [ERP4U Cloud](https://erp4u.conix.cloud). Bản open-core giữ nguyên schema thực thể (database entities) để tương thích migration và liên kết hệ sinh thái.
+
 ---
 
 ## 🚀 Quick Start (One Command Demo)

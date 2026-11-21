@@ -306,7 +306,7 @@ Trên trang quản lý DNS của domain `conix.cloud`:
 
 ```bash
 # Thêm rule chặn tất cả kết nối tới port 3201 ngoại trừ từ IP của VPS NPM
-sudo iptables -I DOCKER-USER -p tcp --dport 3201 ! -s <IP_VPS_NPM> -j DROP
+sudo iptables -I DOCKER-USER -p tcp -m conntrack --ctorigdstport 3201 --ctdir ORIGINAL ! -s <IP_VPS_NPM> -j DROP
 ```
 
 ### 9.2. Lưu rule iptables vĩnh viễn (Persistent)
@@ -319,9 +319,13 @@ sudo netfilter-persistent save
 ### 9.3. Kiểm tra kiểm chứng tường lửa
 1. **Từ máy tính bên ngoài (hoặc máy cá nhân)**:
    ```bash
+   # Kiểm tra bằng curl
    curl -I --connect-timeout 5 http://<IP_VPS_APP>:3201
+
+   # Hoặc kiểm tra bằng netcat (phải bị chặn / timeout)
+   nc -vz -w 5 <IP_VPS_APP> 3201
    ```
-   *Kết quả mong đợi*: Bị treo (Timeout) hoặc Connection Refused. Không truy cập được.
+   *Kết quả mong đợi*: Bị treo (Timeout) hoặc Connection Refused/Filtered. Không truy cập được.
 2. **Từ chính VPS NPM**:
    ```bash
    curl -I http://<IP_VPS_APP>:3201

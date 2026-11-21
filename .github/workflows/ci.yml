@@ -48,6 +48,19 @@ jobs:
           cd frontend
           npm run build
 
+      - name: ShellCheck deploy scripts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if command -v shellcheck >/dev/null 2>&1; then
+            shellcheck scripts/*.sh
+          else
+            npx --yes shellcheck scripts/*.sh
+          fi
+
+      - name: Test Deploy Scripts (Mock Docker)
+        run: bash test/deploy-scripts.test.sh
+
   migrations:
     name: Verify Migrations (Parity, Drift, Revert)
     runs-on: ubuntu-24.04

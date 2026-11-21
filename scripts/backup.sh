@@ -10,6 +10,7 @@
 # Backend is stopped for the few seconds of the copy so DB and files match;
 # it is restarted even when a step fails. Copy BACKUP_ROOT off the server regularly.
 set -euo pipefail
+trap 'echo "LỖI: dừng ở dòng $LINENO (lệnh: $BASH_COMMAND)" >&2' ERR
 
 PROJECT="${PROJECT:-erp4u-demo}"
 COMPOSE_FILES="${COMPOSE_FILES:--f docker-compose.prod.yml}"
@@ -21,7 +22,7 @@ dc() { docker compose -p "$PROJECT" $COMPOSE_FILES "$@"; }
 
 log() { echo "$(date '+%H:%M:%S') $*"; }
 
-if [ -z "$(dc ps -q --status running postgres 2>/dev/null)" ]; then
+if [ -z "$(dc ps -q --status running postgres 2>/dev/null || true)" ]; then
   log "chưa có stack đang chạy – bỏ qua backup"
   exit 0
 fi
@@ -31,9 +32,10 @@ case "$BACKUP_ROOT" in
   * ) echo "BACKUP_ROOT must be an absolute path" >&2; exit 1 ;;
 esac
 mkdir -p "$BACKUP_ROOT"
-chmod 700 "$BACKUP_ROOT"
+chmod 700 "$BACKUP_ROOT" 2>/dev/null || true
 DEST="$BACKUP_ROOT/$(date +%Y%m%d-%H%M%S)"
-mkdir -m 700 "$DEST"
+mkdir -p "$DEST"
+chmod 700 "$DEST" 2>/dev/null || true
 
 git rev-parse HEAD > "$DEST/commit.txt" 2>/dev/null || true
 docker inspect --format '{{index .RepoDigests 0}}' "${PROJECT}-backend-1" > "$DEST/image-digest.txt" 2>/dev/null || true
