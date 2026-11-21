@@ -27,7 +27,14 @@ const PortalLoginPage: React.FC = () => {
                 setStep('OTP');
             }
         } catch (err: any) {
-            if (err.response?.status === 402 && err.response?.data?.code === 'PACKAGE_REQUIRED') {
+            if (err.response?.status === 429) {
+                const retryAfter = err.response?.data?.retryAfter;
+                setError(
+                    retryAfter
+                        ? `Bạn đã gửi yêu cầu quá nhiều lần. Vui lòng thử lại sau ${retryAfter} giây.`
+                        : 'Bạn đã gửi yêu cầu quá nhiều lần. Vui lòng thử lại sau ít phút.'
+                );
+            } else if (err.response?.status === 402 && err.response?.data?.code === 'PACKAGE_REQUIRED') {
                 const pkgName = getPackageLabel(err.response?.data?.package);
                 setError(`Tính năng thuộc gói ${pkgName} chưa được kích hoạt. Liên hệ quản trị viên để nâng cấp.`);
             } else {
@@ -56,7 +63,14 @@ const PortalLoginPage: React.FC = () => {
                 navigate(`/portal/${res.data.slug}`);
             }
         } catch (err: any) {
-            if (err.response?.status === 402 && err.response?.data?.code === 'PACKAGE_REQUIRED') {
+            if (err.response?.status === 429) {
+                const retryAfter = err.response?.data?.retryAfter;
+                setError(
+                    retryAfter
+                        ? `Bạn đã thử quá số lần cho phép. Vui lòng thử lại sau ${retryAfter} giây.`
+                        : 'Bạn đã thử quá số lần cho phép. Vui lòng thử lại sau.'
+                );
+            } else if (err.response?.status === 402 && err.response?.data?.code === 'PACKAGE_REQUIRED') {
                 const pkgName = getPackageLabel(err.response?.data?.package);
                 setError(`Tính năng thuộc gói ${pkgName} chưa được kích hoạt. Liên hệ quản trị viên để nâng cấp.`);
             } else {

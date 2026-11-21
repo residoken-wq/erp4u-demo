@@ -98,7 +98,15 @@ const LoginPage: React.FC = () => {
       // Reload để App.tsx nhận diện trạng thái login
       window.location.href = '/';
     } catch (error: any) {
-      message.error(error.response?.data?.message || 'Đăng nhập thất bại');
+      if (error.response?.status === 429) {
+        const retryAfter = error.response?.data?.retryAfter;
+        const msg = retryAfter
+          ? `Bạn đã thử quá số lần cho phép. Vui lòng thử lại sau ${retryAfter} giây.`
+          : 'Bạn đã thử quá số lần cho phép. Vui lòng thử lại sau ít phút.';
+        message.error(msg);
+      } else {
+        message.error(error.response?.data?.message || 'Đăng nhập thất bại');
+      }
     }
     setLoading(false);
   };

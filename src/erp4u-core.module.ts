@@ -51,6 +51,7 @@ import { FileStorage } from './common/storage/file-storage.interface';
 import { EntitlementsModule } from './common/packages/entitlements.module';
 import { EntitlementProvider } from './common/packages/entitlement-provider.interface';
 import { INSTALLED_ADDONS } from './common/packages/installed-addons.token';
+import { RateLimitModule } from './common/security/rate-limit/rate-limit.module';
 
 import { User } from './users/entities/user.entity';
 import { ActivityInterceptor } from './common/interceptors/activity.interceptor';
@@ -179,6 +180,7 @@ export class Erp4uCoreModule implements OnModuleInit {
             options.dataSourceFactory ?? DEFAULT_DATA_SOURCE_FACTORY,
         }),
         EncryptionModule, // Column-level PII & tenant config encryption (must be available early)
+        RateLimitModule, // Rate limiting guard & memory store (P7c6a)
         TenancyModule.forRoot({
           tenantResolver: options.tenantResolver,
           tenantRegistry: options.tenantRegistry,

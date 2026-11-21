@@ -42,6 +42,17 @@ api.interceptors.response.use(
             const msg = error.response?.data?.message || 'Bạn không có quyền thực hiện thao tác này.';
             import('antd').then(({ message }) => message.error(msg));
         }
+        if (error.response?.status === 429) {
+            // Rate limited - display friendly notice
+            const isLogin = error.config?.url?.includes('/auth/login');
+            if (!isLogin) {
+                const retryAfter = error.response?.data?.retryAfter;
+                const msg = retryAfter
+                    ? `Bạn đã gửi yêu cầu quá nhiều lần. Vui lòng thử lại sau ${retryAfter} giây.`
+                    : (error.response?.data?.message || 'Quá nhiều yêu cầu, vui lòng thử lại sau.');
+                import('antd').then(({ message }) => message.error(msg));
+            }
+        }
         return Promise.reject(error);
     }
 );

@@ -27,7 +27,15 @@ const PortalRecruitmentPage: React.FC = () => {
             const res = await api.get(`/public/recruitment/portal/${token}`);
             setData(res.data);
         } catch (e: any) {
-            if (e?.response?.status === 402 && e?.response?.data?.code === 'PACKAGE_REQUIRED') {
+            if (e?.response?.status === 429) {
+                const retryAfter = e?.response?.data?.retryAfter;
+                setData({
+                    error: true,
+                    message: retryAfter
+                        ? `Bạn đã gửi yêu cầu quá nhiều lần. Vui lòng thử lại sau ${retryAfter} giây.`
+                        : 'Bạn đã gửi yêu cầu quá nhiều lần. Vui lòng thử lại sau ít phút.',
+                });
+            } else if (e?.response?.status === 402 && e?.response?.data?.code === 'PACKAGE_REQUIRED') {
                 setLockedPackage(e.response.data.package || 'HR');
             } else {
                 setData({ error: true, message: e.response?.data?.message || 'Link không hợp lệ hoặc đã hết hạn.' });
@@ -51,8 +59,17 @@ const PortalRecruitmentPage: React.FC = () => {
             await api.post(`/public/recruitment/portal/${token}/submit-assessment`, { answers });
             message.success('Đã nộp bài đánh giá thành công!');
             loadData();
-        } catch (e) {
-            message.error('Lỗi khi nộp bài đánh giá.');
+        } catch (e: any) {
+            if (e?.response?.status === 429) {
+                const retryAfter = e?.response?.data?.retryAfter;
+                message.error(
+                    retryAfter
+                        ? `Bạn đã gửi yêu cầu quá nhiều lần. Vui lòng thử lại sau ${retryAfter} giây.`
+                        : 'Bạn đã gửi yêu cầu quá nhiều lần. Vui lòng thử lại sau ít phút.',
+                );
+            } else {
+                message.error('Lỗi khi nộp bài đánh giá.');
+            }
         }
         setSubmitting(false);
     };
