@@ -1,12 +1,10 @@
 import { ForbiddenException } from '@nestjs/common';
 import { DemoModeService } from '../demo-mode.service';
 import { EmailService } from '../email.service';
-import { ZaloZnsService } from '../../../zns/zns.service';
 import { GhtkService } from '../../../shipping/carriers/ghtk.service';
 import { LalamoveService } from '../../../shipping/carriers/lalamove.service';
 import { EasyInvoiceService } from '../../../sales/easyinvoice.service';
 import { UsersService } from '../../../users/users.service';
-import { AiService } from '../../../ai/ai.service';
 import { isCorsOriginAllowed } from '../../utils/cors.util';
 import axios from 'axios';
 
@@ -39,16 +37,6 @@ describe('Task P3b: DEMO_MODE Hardening and Security Controls', () => {
             const result = await emailService.sendMail('target@example.com', 'Subject', '<p>Test</p>');
             expect(result).toBe(true);
             expect(mockTransport.sendMail).not.toHaveBeenCalled();
-        });
-
-        it('ZaloZnsService.sendZnsRaw skips HTTP API when DEMO_MODE=true', async () => {
-            const znsService = new ZaloZnsService(
-                {} as any, {} as any, {} as any, {} as any, {} as any, demoModeService
-            );
-            const result = await znsService.sendZnsRaw('0901234567', 'tpl-1', { name: 'Test' });
-            expect(result.demo).toBe(true);
-            expect(result.data.msg_id).toContain('DEMO-ZNS');
-            expect(mockedAxios.post).not.toHaveBeenCalled();
         });
 
         it('GhtkService.pushDeliveryToGhtk skips HTTP API and assigns mock tracking when DEMO_MODE=true', async () => {
@@ -240,41 +228,6 @@ describe('Task P3b: DEMO_MODE Hardening and Security Controls', () => {
             const updated = await usersService.updateUser(10, { group_id: 2 });
             expect(mockUserRepo.update).toHaveBeenCalledWith(10, { group_id: 2 });
             expect(updated?.group_id).toBe(2);
-        });
-    });
-
-    describe('AI Mock Response under DEMO_MODE=true without GEMINI_API_KEY', () => {
-        const demoConfig = {
-            get: (key: string) => {
-                if (key === 'DEMO_MODE') return 'true';
-                if (key === 'GEMINI_API_KEY') return null; // No key
-                return null;
-            },
-        } as any;
-        const demoModeService = new DemoModeService(demoConfig);
-
-        it('chat returns fixed mock reply without throwing 500', async () => {
-            const aiService = new AiService(
-                {} as any, demoConfig, {} as any, {} as any, {} as any,
-                {} as any, {} as any, {} as any, {} as any, {} as any,
-                {} as any, {} as any, demoModeService
-            );
-
-            const result = await aiService.chat({ message: 'Xin chào', userId: 'user-1' });
-            expect(result.text).toContain('Chế độ Demo');
-        });
-
-        it('evaluateAssessment returns valid mock JSON assessment without throwing 500', async () => {
-            const aiService = new AiService(
-                {} as any, demoConfig, {} as any, {} as any, {} as any,
-                {} as any, {} as any, {} as any, {} as any, {} as any,
-                {} as any, {} as any, demoModeService
-            );
-
-            const result = await aiService.evaluateAssessment('Prompt evaluate JSON score');
-            expect(result).toBeDefined();
-            expect(result.score).toBe(8);
-            expect(result.recommendation).toBe('Potential');
         });
     });
 

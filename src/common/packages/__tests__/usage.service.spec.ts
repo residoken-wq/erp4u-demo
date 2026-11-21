@@ -1,7 +1,5 @@
 import { UsageService } from '../usage.service';
 import { UsersService } from '../../../users/users.service';
-import { GeminiProvider } from '../../../chatbot/llm/gemini.provider';
-import { AiService } from '../../../ai/ai.service';
 
 describe('UsageService (P6b)', () => {
   it('increments same metric and period twice atomically to reach value 2', async () => {
@@ -69,69 +67,5 @@ describe('UsageService (P6b)', () => {
     expect(created.id).toBe(99);
     expect(mockUsageService.increment).toHaveBeenCalledTimes(1);
     expect(mockUsageService.increment).toHaveBeenCalledWith('users_created');
-  });
-
-  it('GeminiProvider increments ai_calls on real Gemini response', async () => {
-    const mockUsageService: any = { increment: jest.fn().mockResolvedValue(undefined) };
-    const mockFetch: any = jest.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        candidates: [
-          {
-            content: {
-              parts: [{ text: JSON.stringify({ reply: 'Xin chào' }) }],
-            },
-          },
-        ],
-      }),
-    });
-
-    const provider = new GeminiProvider(
-      undefined,
-      'test-api-key',
-      'gemini-1.5-flash',
-      mockFetch,
-      mockUsageService,
-    );
-
-    const res = await provider.generateJson({
-      system: 'sys',
-      messages: [{ role: 'user', text: 'Hi' }],
-      schemaName: 'test',
-      jsonSchema: {},
-      timeoutMs: 5000,
-    });
-
-    expect(res.data).toEqual({ reply: 'Xin chào' });
-    expect(mockUsageService.increment).toHaveBeenCalledTimes(1);
-    expect(mockUsageService.increment).toHaveBeenCalledWith('ai_calls');
-  });
-
-  it('AiService does NOT increment ai_calls in DEMO_MODE when returning canned response', async () => {
-    const mockUsageService: any = { increment: jest.fn().mockResolvedValue(undefined) };
-    const mockConfigService: any = { get: jest.fn().mockReturnValue(undefined) };
-    const mockDemoModeService: any = { isDemoMode: jest.fn().mockReturnValue(true) };
-
-    const aiService = new AiService(
-      {} as any,
-      mockConfigService,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      mockDemoModeService,
-      mockUsageService,
-    );
-
-    const res = await aiService.chat({ message: 'Xin chào' });
-    expect(res.text).toContain('Chế độ Demo');
-    expect(mockUsageService.increment).not.toHaveBeenCalled();
   });
 });

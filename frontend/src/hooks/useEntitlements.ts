@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import api from '../utils/api';
-import { PackageKey } from '../config/packages';
+import { AddonKey, PackageKey } from '../config/packages';
 import {
   createIsEnabled,
+  createIsAddonInstalled,
+  DEFAULT_ADDONS,
   EntitlementsMode,
   getCachedEntitlements,
   loadEntitlementsOnce,
@@ -13,6 +15,8 @@ export interface UseEntitlementsResult {
   loading: boolean;
   mode: EntitlementsMode;
   isEnabled: (pkg: PackageKey) => boolean;
+  isAddonInstalled: (addon: AddonKey | string) => boolean;
+  addons: Record<string, boolean>;
 }
 
 const EntitlementsContext = createContext<UseEntitlementsResult | null>(null);
@@ -29,6 +33,9 @@ export const EntitlementsProvider: React.FC<EntitlementsProviderProps> = ({ enab
   const [enabledMap, setEnabledMap] = useState<Record<string, boolean> | null>(
     initialCached?.enabledMap ?? null,
   );
+  const [addons, setAddons] = useState<Record<string, boolean>>(
+    initialCached?.addons ?? DEFAULT_ADDONS,
+  );
 
   useEffect(() => {
     if (!enabled) {
@@ -36,6 +43,7 @@ export const EntitlementsProvider: React.FC<EntitlementsProviderProps> = ({ enab
       setLoading(false);
       setMode('all');
       setEnabledMap(null);
+      setAddons(DEFAULT_ADDONS);
       return;
     }
 
@@ -43,6 +51,7 @@ export const EntitlementsProvider: React.FC<EntitlementsProviderProps> = ({ enab
     if (cached) {
       setMode(cached.mode);
       setEnabledMap(cached.enabledMap);
+      setAddons(cached.addons ?? DEFAULT_ADDONS);
       setLoading(false);
       return;
     }
@@ -53,6 +62,7 @@ export const EntitlementsProvider: React.FC<EntitlementsProviderProps> = ({ enab
       if (!active) return;
       setMode(snapshot.mode);
       setEnabledMap(snapshot.enabledMap);
+      setAddons(snapshot.addons ?? DEFAULT_ADDONS);
       setLoading(false);
     });
 
@@ -66,8 +76,10 @@ export const EntitlementsProvider: React.FC<EntitlementsProviderProps> = ({ enab
       loading,
       mode,
       isEnabled: createIsEnabled(enabledMap),
+      isAddonInstalled: createIsAddonInstalled(addons),
+      addons,
     }),
-    [loading, mode, enabledMap],
+    [loading, mode, enabledMap, addons],
   );
 
   return React.createElement(EntitlementsContext.Provider, { value }, children);
@@ -86,6 +98,9 @@ export function useEntitlements(): UseEntitlementsResult {
   const [enabledMap, setEnabledMap] = useState<Record<string, boolean> | null>(
     initialCached?.enabledMap ?? null,
   );
+  const [addons, setAddons] = useState<Record<string, boolean>>(
+    initialCached?.addons ?? DEFAULT_ADDONS,
+  );
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -98,6 +113,7 @@ export function useEntitlements(): UseEntitlementsResult {
       if (!active) return;
       setMode(snapshot.mode);
       setEnabledMap(snapshot.enabledMap);
+      setAddons(snapshot.addons ?? DEFAULT_ADDONS);
       setLoading(false);
     });
     return () => {
@@ -110,8 +126,10 @@ export function useEntitlements(): UseEntitlementsResult {
       loading,
       mode,
       isEnabled: createIsEnabled(enabledMap),
+      isAddonInstalled: createIsAddonInstalled(addons),
+      addons,
     }),
-    [loading, mode, enabledMap],
+    [loading, mode, enabledMap, addons],
   );
 }
 

@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './notification.entity';
 import { Subject, Observable } from 'rxjs';
+import { NOTIFICATION_CHANNELS, NotificationChannelBridge } from '../common/extension-points';
 
 export interface NotificationEvent {
   userId: number;
@@ -16,6 +17,9 @@ export class NotificationsService {
 
     constructor(
         @InjectRepository(Notification) private repo: Repository<Notification>,
+        @Optional()
+        @Inject(NOTIFICATION_CHANNELS)
+        private readonly notificationChannels?: NotificationChannelBridge | NotificationChannelBridge[],
     ) { }
 
     getStream(): Observable<NotificationEvent> {
@@ -45,6 +49,24 @@ export class NotificationsService {
             });
         } catch (error) {
             this.logger.warn('Failed to emit notification event', error);
+        }
+
+        // Optional dispatch to notification channels (e.g. ZNS in premium)
+        if (this.notificationChannels) {
+            try {
+                const channels = Array.isArray(this.notificationChannels)
+                    ? this.notificationChannels
+                    : [this.notificationChannels];
+                for (const ch of channels) {
+                    if (ch && typeof ch.send === 'function') {
+                        ch.send(notification).catch((err: any) =>
+                            this.logger.debug(`Channel ${ch.channel} send error: ${err.message}`),
+                        );
+                    }
+                }
+            } catch (err: any) {
+                this.logger.debug(`Notification channels dispatch skipped: ${err.message}`);
+            }
         }
 
         return notification;

@@ -48,6 +48,12 @@ jobs:
           cd frontend
           npm run build
 
+      - name: ShellCheck deploy scripts
+        run: npx --yes shellcheck scripts/*.sh
+
+      - name: Test Deploy Scripts (Mock Docker)
+        run: bash test/deploy-scripts.test.sh
+
   migrations:
     name: Verify Migrations (Parity, Drift, Revert)
     runs-on: ubuntu-24.04

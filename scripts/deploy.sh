@@ -9,6 +9,7 @@
 # APP_TAG and TOOLS_TAG are passed on the command line (shell env beats .env in compose),
 # so .env is never edited or read in this script.
 set -euo pipefail
+trap 'echo "LỖI: dừng ở dòng $LINENO (lệnh: $BASH_COMMAND)" >&2' ERR
 
 PROJECT="${PROJECT:-erp4u-demo}"
 COMPOSE_FILES="${COMPOSE_FILES:--f docker-compose.prod.yml}"
@@ -16,6 +17,7 @@ STATE_DIR="${STATE_DIR:-.deploy}"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-240}"
 APP_CONTAINER="${PROJECT}-backend-1"
 WEB_CONTAINER="${PROJECT}-web-1"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC2086
 dc() { docker compose -p "$PROJECT" $COMPOSE_FILES "$@"; }
@@ -23,18 +25,40 @@ dc() { docker compose -p "$PROJECT" $COMPOSE_FILES "$@"; }
 log() { echo "$(date '+%H:%M:%S') $*"; }
 die() { echo "LỖI: $*" >&2; exit 1; }
 
+is_postgres_running() {
+  [ -n "$(dc ps -q --status running postgres 2>/dev/null || true)" ]
+}
+
+run_backup() {
+  if [ -x "$SCRIPT_DIR/backup.sh" ]; then
+    "$SCRIPT_DIR/backup.sh"
+  elif [ -f "$SCRIPT_DIR/backup.sh" ]; then
+    bash "$SCRIPT_DIR/backup.sh"
+  elif [ -x "./scripts/backup.sh" ]; then
+    ./scripts/backup.sh
+  elif [ -f "./scripts/backup.sh" ]; then
+    bash ./scripts/backup.sh
+  else
+    die "không tìm thấy script backup.sh"
+  fi
+}
+
 running_revision() {
   docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' \
-    "$APP_CONTAINER" 2>/dev/null | cut -c1-7
+    "$APP_CONTAINER" 2>/dev/null | cut -c1-7 || true
 }
 
 web_running_revision() {
   docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' \
-    "$WEB_CONTAINER" 2>/dev/null | cut -c1-7
+    "$WEB_CONTAINER" 2>/dev/null | cut -c1-7 || true
 }
 
 # In tên migration mới nhất trong bảng migrations (TypeORM)
 latest_migration() {
+  if ! is_postgres_running; then
+    echo "chưa có stack (chưa có migration)"
+    return 0
+  fi
   local mig
   # shellcheck disable=SC2016
   mig="$(dc exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "select name from migrations order by id desc limit 1"' < /dev/null 2>/dev/null || true)"
@@ -109,6 +133,10 @@ show_status() {
 }
 
 cmd_seed() {
+  if ! is_postgres_running; then
+    die "chưa có stack, chạy ./scripts/deploy.sh trước"
+  fi
+
   local force=false
   for arg in "$@"; do
     case "$arg" in
@@ -139,18 +167,22 @@ cmd_seed() {
 }
 
 cmd_deploy() {
-  [ -z "$(git status --porcelain --untracked-files=no)" ] ||
-    die "thư mục có file đã sửa (git status). Xử lý xong rồi chạy lại – script không tự xoá thay đổi."
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    [ -z "$(git status --porcelain --untracked-files=no)" ] ||
+      die "thư mục có file đã sửa (git status). Xử lý xong rồi chạy lại – script không tự xoá thay đổi."
+  fi
 
   log "1/5 Backup DB + uploads"
-  ./scripts/backup.sh
+  run_backup
 
   log "2/5 Ghi lại bản đang chạy để rollback"
   mkdir -p "$STATE_DIR"
-  chmod 700 "$STATE_DIR"
+  chmod 700 "$STATE_DIR" 2>/dev/null || true
   local prev older=""
   prev="$(running_revision)"
-  [ -f "$STATE_DIR/previous" ] && older="$(cat "$STATE_DIR/previous")"
+  if [ -f "$STATE_DIR/previous" ]; then
+    older="$(cat "$STATE_DIR/previous")"
+  fi
   if [ -n "$prev" ]; then
     echo "$prev" > "$STATE_DIR/previous"
     log "bản đang chạy: $prev"
@@ -159,7 +191,11 @@ cmd_deploy() {
   fi
 
   log "3/5 Lấy file compose / script mới"
-  git pull --ff-only < /dev/null
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git pull --ff-only < /dev/null || log "CẢNH BÁO: git pull không thành công – tiếp tục với file hiện tại"
+  else
+    log "Không phát hiện git repository – bỏ qua git pull (cập nhật file compose/script từ máy dev qua scp)"
+  fi
 
   log "4/5 Kéo image latest và khởi động lại"
   if ! start_tag ""; then

@@ -1,108 +1,56 @@
-import { ChatbotOutboxService } from '../../../chatbot/outbox/chatbot-outbox.service';
-import { SalesService } from '../../../sales/sales.service';
-import { ZaloZnsService } from '../../../zns/zns.service';
 import { PackageKey } from '../package.registry';
+import { SalesService } from '../../../sales/sales.service';
 import { EntitlementProvider } from '../entitlement-provider.interface';
 
-describe('Check 4: Cron Entitlement Control Spec', () => {
-  let mockDisabledProvider: EntitlementProvider;
+describe('Cron Entitlements Guard', () => {
+  let mockDisabledProvider: jest.Mocked<EntitlementProvider>;
+  let mockItemRepo: any;
 
   beforeEach(() => {
     mockDisabledProvider = {
-      isEnabled: jest.fn().mockImplementation(async (pkg: PackageKey) => {
-        // PRODUCTION, AI, MARKETING, SALES are disabled
-        return false;
-      }),
+      isEnabled: jest.fn().mockResolvedValue(false),
       getLimits: jest.fn().mockResolvedValue(null),
       list: jest.fn().mockResolvedValue([]),
     };
-  });
 
-  it('ChatbotOutboxService (AI): skips execution when PackageKey.AI is disabled', async () => {
-    const mockTransaction = jest.fn();
-    const mockDataSource = {
-      transaction: mockTransaction,
-    } as any;
-
-    const outboxService = new ChatbotOutboxService(
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      mockDataSource,
-      mockDisabledProvider,
-    );
-
-    const runSpy = jest.spyOn(outboxService, 'run');
-
-    await outboxService.handleCron();
-
-    expect(mockDisabledProvider.isEnabled).toHaveBeenCalledWith(PackageKey.AI);
-    expect(runSpy).not.toHaveBeenCalled();
-    expect(mockTransaction).not.toHaveBeenCalled();
-  });
-
-  it('SalesService (SALES): skips checkExpiredBookings when PackageKey.SALES is disabled', async () => {
-    const mockItemRepo = {
-      find: jest.fn(),
+    mockItemRepo = {
+      find: jest.fn().mockResolvedValue([]),
     };
+  });
 
+  it('checkExpiredBookings exits early without querying itemRepo when SALES package is disabled', async () => {
     const salesService = new SalesService(
-      {} as any,
-      mockItemRepo as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      mockDisabledProvider,
+      {} as any, // orderRepo
+      mockItemRepo as any, // itemRepo
+      {} as any, // sampleRepo
+      {} as any, // deliveryRepo
+      {} as any, // commentRepo
+      {} as any, // checklistRepo
+      {} as any, // checklistItemRepo
+      {} as any, // systemService
+      {} as any, // transRepo
+      {} as any, // priceListRepo
+      {} as any, // priceListRuleRepo
+      {} as any, // userRepo
+      {} as any, // versionRepo
+      {} as any, // targetRepo
+      {} as any, // customerRepo
+      {} as any, // productsService
+      {} as any, // inventoryService
+      {} as any, // customersService
+      {} as any, // notificationsService
+      {} as any, // projectsService
+      {} as any, // promotionRepo
+      {} as any, // easyInvoiceService
+      {} as any, // emailService
+      mockDisabledProvider as any, // entitlementProvider
+      undefined, // tenantRegistry
     );
 
     await salesService.checkExpiredBookings();
 
     expect(mockDisabledProvider.isEnabled).toHaveBeenCalledWith(PackageKey.SALES);
     expect(mockItemRepo.find).not.toHaveBeenCalled();
-  });
-
-  it('ZaloZnsService (MARKETING): skips handleTokenAutoRefreshCron when PackageKey.MARKETING is disabled', async () => {
-    const mockConfigRepo = {
-      findOne: jest.fn(),
-    };
-
-    const znsService = new ZaloZnsService(
-      mockConfigRepo as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      {} as any,
-      mockDisabledProvider,
-    );
-
-    const getConfigSpy = jest.spyOn(znsService, 'getConfig');
-
-    await znsService.handleTokenAutoRefreshCron();
-
-    expect(mockDisabledProvider.isEnabled).toHaveBeenCalledWith(PackageKey.MARKETING);
-    expect(getConfigSpy).not.toHaveBeenCalled();
-    expect(mockConfigRepo.findOne).not.toHaveBeenCalled();
   });
 
   it('PRODUCTION/AI/MARKETING packages disabled check prevents cron jobs from executing', async () => {

@@ -12,17 +12,19 @@ ERP4U được tổ chức theo kiến trúc **Modular Monolith + Entitlement**:
 | `SALES` | Bán hàng & CRM | Quản lý Lead, báo giá, đơn hàng (SO), bảng giá, khuyến mãi, POS, giao hàng bán ra, cổng báo giá khách hàng | `sales` | `CORE` |
 | `INVENTORY` | Kho & Mua hàng | Tồn kho, nhập/xuất kho, kho hàng mẫu, nguyên phụ liệu, đơn mua hàng (PO), đối tác gia công, vận chuyển | `inventory`, `purchasing`, `materials`, `shipping` | `CORE` |
 | `PRODUCTION` | Sản xuất | Định mức nguyên vật liệu (BOM), công đoạn & quy trình, lập kế hoạch sản xuất (MRP/PFO), lệnh sản xuất, kiểm tra chất lượng (QC) | `bom`, `processes`, `planning`, `production`, `qc` | `INVENTORY` |
-| `DESIGN` | Thiết kế in/thêu | Quản lý logo khách hàng, thiết kế in ấn & thêu, mẫu in, đơn hàng thiết kế | `designs` | `SALES` |
 | `FINANCE` | Tài chính | Thu/chi, phân loại giao dịch, báo cáo dòng tiền, theo dõi công nợ | `finance` | `CORE` |
 | `HR` | Nhân sự | Hồ sơ nhân viên, ca làm việc, chấm công, nghỉ phép, bảng lương, tuyển dụng, đánh giá nhân sự | `hr` | `CORE` |
 | `PROJECTS` | Dự án | Quản lý dự án, cột mốc (milestone), thảo luận nội bộ theo dự án | `projects`, `discussions` | `CORE` |
-| `MARKETING` | Marketing & Omnichannel | Chiến dịch marketing, phân khúc khách hàng, kênh bán hàng Social/TikTok, Zalo ZNS, thống kê truy cập (analytics) | `marketing`, `social`, `tiktok`, `zns`, `analytics` | `SALES` |
-| `WEBSITE` | Website & CMS *(premium — sẽ có trên ERP4U Cloud)* | Cửa hàng & sản phẩm bán online (`/website-products`), bài viết/blog, dự án tiêu biểu, chính sách website, cấu hình trang chủ/giới thiệu/cài đặt, wizard tự thiết kế, nhận lead & đơn hàng từ website | `website` | `SALES` |
-| `AI` | AI Assistant | Trợ lý AI gợi ý nghiệp vụ (không tự quyết định thay con người), hộp thư & kịch bản Chatbot AI | `ai`, `chatbot` | `CORE` |
+| `DESIGN` | Thiết kế in/thêu *(Add-on ERP4U Cloud)* | Quản lý logo khách hàng, thiết kế in ấn & thêu, mẫu in, đơn hàng thiết kế | `designs` (Cloud) | `SALES` |
+| `MARKETING` | Marketing & Omnichannel *(Add-on ERP4U Cloud)* | Chiến dịch marketing, phân khúc khách hàng, kênh bán hàng Social/TikTok, Zalo ZNS, thống kê truy cập (analytics) | `marketing`, `social`, `tiktok`, `zns`, `analytics` (Cloud) | `SALES` |
+| `WEBSITE` | Website & CMS *(Add-on ERP4U Cloud)* | Cửa hàng & sản phẩm bán online (`/website-products`), bài viết/blog, dự án tiêu biểu, chính sách website, cấu hình trang chủ/giới thiệu/cài đặt, wizard tự thiết kế, nhận lead & đơn hàng từ website | `website` (Cloud) | `SALES` |
+| `AI` | AI Assistant *(Add-on ERP4U Cloud)* | Trợ lý AI gợi ý nghiệp vụ (không tự quyết định thay con người), hộp thư & kịch bản Chatbot AI | `ai`, `chatbot` (Cloud) | `CORE` |
 
-> **Lưu ý về phụ thuộc gói:** Khi một gói phụ thuộc vào gói khác (ví dụ `PRODUCTION` phụ thuộc `INVENTORY`, `DESIGN`, `MARKETING` và `WEBSITE` phụ thuộc `SALES`), gói phụ thuộc chỉ hoạt động hiệu quả khi gói nền tảng cũng đang được kích hoạt. Nếu gói nền tảng bị tắt hoặc hết hạn, hệ thống tự động coi gói phụ thuộc là chưa kích hoạt.
->
-> **Gói premium:** `WEBSITE` là gói **premium — sẽ có trên ERP4U Cloud** (toàn bộ code backend được gom độc lập trong `src/website/`). Các cổng khách hàng (`/portal/*`), cổng báo giá (`/api/public/portal/quote/*`) thuộc `SALES` và cổng tuyển dụng (`/api/public/recruitment/*`) thuộc `HR` vẫn hoạt động độc lập khi tắt `WEBSITE`.
+> **Lưu ý về gói mã nguồn mở (Open-Core) và Add-on ERP4U Cloud:**
+> - Bản open-core của ERP4U bao gồm toàn bộ các phân hệ quản trị lõi: `CORE`, `SALES`, `INVENTORY`, `PRODUCTION`, `FINANCE`, `HR`, `PROJECTS`.
+> - Các add-on: **AI Assistant & Chatbot (`AI`)**, **Omnichannel (`OMNICHANNEL`: TikTok, Social, ZNS)**, **Thiết kế in/thêu (`DESIGN`)**, và **Website/CMS (`WEBSITE`)** là các module mở rộng có trên [ERP4U Cloud](https://erp4u.conix.cloud).
+> - Trong repo open-core, các entity database của các add-on này được giữ lại đầy đủ để đảm bảo tính nhất quán schema (parity) và lịch sử migration; logic nghiệp vụ (controllers, services, handlers) được tách biệt và cung cấp qua hệ sinh thái ERP4U Cloud. Core thuần hỗ trợ fallback qua extension points mà không phát sinh lỗi 500 khi không có plugin add-on.
+> - Các cổng khách hàng (`/portal/*`), cổng báo giá (`/api/public/portal/quote/*`) thuộc `SALES` và cổng tuyển dụng (`/api/public/recruitment/*`) thuộc `HR` luôn hoạt động độc lập trong open-core mà không phụ thuộc add-on ngoài.
 
 ---
 

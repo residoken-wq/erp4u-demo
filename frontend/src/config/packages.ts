@@ -115,3 +115,55 @@ export const ROUTE_PACKAGES: Record<string, PackageKey> = {
 export function getRoutePackage(path: string): PackageKey {
   return ROUTE_PACKAGES[path] ?? PackageKey.CORE;
 }
+
+export enum AddonKey {
+  AI = 'AI',
+  OMNICHANNEL = 'OMNICHANNEL',
+  DESIGN = 'DESIGN',
+  WEBSITE = 'WEBSITE',
+}
+
+export const ADDON_LABELS: Record<AddonKey, string> = {
+  [AddonKey.AI]: 'AI Assistant & Chatbot',
+  [AddonKey.OMNICHANNEL]: 'Omnichannel (TikTok, Social, ZNS)',
+  [AddonKey.DESIGN]: 'Thiết kế in/thêu',
+  [AddonKey.WEBSITE]: 'Website & CMS',
+};
+
+export function getAddonLabel(addon?: string | null): string {
+  if (!addon) return 'mở rộng';
+  const upper = addon.toUpperCase() as AddonKey;
+  return ADDON_LABELS[upper] || addon;
+}
+
+/**
+ * Single source of truth mapping frontend routes to premium add-on key.
+ * If an add-on is not installed on the instance, AddonUnavailablePage is rendered.
+ */
+export const ROUTE_ADDONS: Record<string, AddonKey> = {
+  // AI
+  '/chatbot/inbox': AddonKey.AI,
+  '/chatbot/inbox/:id': AddonKey.AI,
+  '/chatbot/requests': AddonKey.AI,
+  '/chatbot/requests/:id': AddonKey.AI,
+  '/ai-dashboard': AddonKey.AI,
+
+  // OMNICHANNEL
+  '/social/channels': AddonKey.OMNICHANNEL,
+  '/social/orders': AddonKey.OMNICHANNEL,
+  '/marketing': AddonKey.OMNICHANNEL,
+
+  // DESIGN
+  '/designs': AddonKey.DESIGN,
+  '/print-production': AddonKey.DESIGN,
+
+  // WEBSITE
+  '/website-products': AddonKey.WEBSITE,
+};
+
+export function getRouteAddon(path: string): AddonKey | undefined {
+  if (ROUTE_ADDONS[path]) return ROUTE_ADDONS[path];
+  if (path.startsWith('/chatbot/inbox/')) return AddonKey.AI;
+  if (path.startsWith('/chatbot/requests/')) return AddonKey.AI;
+  return undefined;
+}
