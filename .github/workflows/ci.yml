@@ -49,7 +49,14 @@ jobs:
           npm run build
 
       - name: ShellCheck deploy scripts
-        run: npx --yes shellcheck scripts/*.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if command -v shellcheck >/dev/null 2>&1; then
+            shellcheck scripts/*.sh
+          else
+            npx --yes shellcheck scripts/*.sh
+          fi
 
       - name: Test Deploy Scripts (Mock Docker)
         run: bash test/deploy-scripts.test.sh
