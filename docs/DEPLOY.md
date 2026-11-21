@@ -84,7 +84,7 @@ Chỉnh sửa `.env` và thiết lập các biến bắt buộc:
 2. `JWT_SECRET`: Khóa ký JWT (bắt buộc ở production, ≥32 ký tự, tạo bằng `openssl rand -hex 32`).
 3. `ENCRYPTION_KEY`: Khóa mã hóa AES-256 dữ liệu nhạy cảm PII (bắt buộc ở production, ≥32 ký tự, tạo bằng `openssl rand -hex 32`).
 4. `DEMO_MODE=true`: Bật chế độ demo để cô lập và bảo vệ dữ liệu.
-5. `CORS_ORIGINS=https://erp4u-demo.conix.cloud`: Giới hạn origin được gọi API.
+5. `CORS_ORIGINS=https://erp4u-demo.conix.cloud`: Giới hạn origin được gọi API (SaaS hỗ trợ wildcard subdomain: `https://*.erp4u.conix.cloud`).
 6. `PUBLIC_APP_URL=https://erp4u-demo.conix.cloud`: URL truy cập công khai.
 
 > **Cảnh báo bảo mật**: `JWT_SECRET` và `ENCRYPTION_KEY` bắt buộc ở production, ≥32 ký tự, tạo bằng `openssl rand -hex 32`. Sau khi cập nhật, mọi phiên đăng nhập cũ hết hiệu lực — người dùng đăng nhập lại.
