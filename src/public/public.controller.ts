@@ -1,5 +1,5 @@
 import { Public } from '../auth/public.decorator';
-import { Controller, Get, Post, Delete, Body, Param, Query, HttpException, HttpStatus, Req, Res, Inject, Optional, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, HttpException, HttpStatus, Req, Res, Inject, Optional, Logger, UseGuards } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Response } from 'express';
@@ -12,6 +12,7 @@ import { DESIGN_ORDER_HOOKS, DesignOrderHooks } from '../common/extension-points
 import { DemoModeService } from '../common/services/demo-mode.service';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { RateLimit, RateLimitGuard } from '../common/security/rate-limit';
 
 @Controller('public')
 export class PublicController {
@@ -64,6 +65,12 @@ export class PublicController {
 
     @Public()
     @RequiresPackage(PackageKey.HR)
+    @UseGuards(RateLimitGuard)
+    @RateLimit({
+        prefix: 'recruitment:ip',
+        maxGetter: (s) => s.getRecruitmentIpMax(),
+        windowMsGetter: (s) => s.getRecruitmentIpWindowMs(),
+    })
     @Post('recruitment/apply')
     async applyJob(@Body() data: any) {
         // data contains job_post_id, name, email, phone, cv_url, etc.
@@ -80,6 +87,12 @@ export class PublicController {
 
     @Public()
     @RequiresPackage(PackageKey.HR)
+    @UseGuards(RateLimitGuard)
+    @RateLimit({
+        prefix: 'recruitment:ip',
+        maxGetter: (s) => s.getRecruitmentIpMax(),
+        windowMsGetter: (s) => s.getRecruitmentIpWindowMs(),
+    })
     @Get('recruitment/portal/:token')
     async getCandidatePortal(@Param('token') token: string) {
         const candidate = await this.hrService.getCandidateByToken(token);
@@ -98,6 +111,12 @@ export class PublicController {
 
     @Public()
     @RequiresPackage(PackageKey.HR)
+    @UseGuards(RateLimitGuard)
+    @RateLimit({
+        prefix: 'recruitment:ip',
+        maxGetter: (s) => s.getRecruitmentIpMax(),
+        windowMsGetter: (s) => s.getRecruitmentIpWindowMs(),
+    })
     @Post('recruitment/portal/:token/submit-assessment')
     async submitPortalAssessment(@Param('token') token: string, @Body() body: any) {
         return this.hrService.submitAssessment(token, body.answers);

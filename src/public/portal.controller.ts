@@ -1,5 +1,5 @@
 import { Public } from '../auth/public.decorator';
-import { Controller, Post, Get, Body, Param, HttpException, HttpStatus, Headers, Query } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, HttpException, HttpStatus, Headers, Query, Req } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { Customer } from '../customers/customer.entity';
@@ -13,6 +13,7 @@ import { SystemConfig } from '../system/system-config.entity';
 import * as crypto from 'crypto';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { RateLimitService } from '../common/security/rate-limit';
 
 @Controller('public/portal')
 export class PortalController {
@@ -31,6 +32,7 @@ export class PortalController {
         private readonly configRepo: Repository<SystemConfig>,
         private readonly emailService: EmailService,
         private readonly salesService: SalesService,
+        private readonly rateLimitService: RateLimitService,
     ) { }
 
     // ============================================================
@@ -72,7 +74,32 @@ export class PortalController {
     @Public()
     @RequiresPackage(PackageKey.SALES)
     @Post('request-otp')
-    async requestOtp(@Body() body: { email: string }) {
+    async requestOtp(
+        @Body() body: { email?: string; phone?: string; identifier?: string },
+        @Req() req: any
+    ) {
+        const rawIdentifier = body?.email || body?.phone || (body as any)?.identifier;
+        const identifier = this.rateLimitService.normalizeIdentifier(rawIdentifier);
+        const ip = this.rateLimitService.getClientIp(req);
+
+        // 1. IP rate limit: default 20 / 15 mins
+        const ipKey = this.rateLimitService.buildKey('portal_otp:ip', ip);
+        await this.rateLimitService.consume(
+            ipKey,
+            this.rateLimitService.getPortalOtpIpWindowMs(),
+            this.rateLimitService.getPortalOtpIpMax()
+        );
+
+        // 2. Identifier (phone/email) rate limit: default 5 / 15 mins
+        if (identifier) {
+            const idKey = this.rateLimitService.buildKey('portal_otp:id', identifier);
+            await this.rateLimitService.consume(
+                idKey,
+                this.rateLimitService.getPortalOtpIdentifierWindowMs(),
+                this.rateLimitService.getPortalOtpIdentifierMax()
+            );
+        }
+
         const email = body.email?.trim()?.toLowerCase();
         if (!email) {
             throw new HttpException('Email không được bỏ trống', HttpStatus.BAD_REQUEST);
@@ -174,28 +201,46 @@ export class PortalController {
             throw new HttpException('Email và mã OTP không được bỏ trống', HttpStatus.BAD_REQUEST);
         }
 
-        // Find valid OTP
+        // Find latest active OTP for this email
         try {
-            const otp = await this.otpRepo.findOne({
+            const activeOtp = await this.otpRepo.findOne({
                 where: {
                     email,
-                    otp_code: otpCode,
                     is_used: false,
                     expires_at: MoreThan(new Date()),
                 },
                 order: { created_at: 'DESC' }
             });
 
-            if (!otp) {
+            if (!activeOtp) {
+                throw new HttpException('Mã OTP không hợp lệ hoặc đã hết hạn', HttpStatus.UNAUTHORIZED);
+            }
+
+            // Check if OTP code matches
+            if (activeOtp.otp_code !== otpCode) {
+                const failKey = this.rateLimitService.buildKey('portal_otp_fail', String(activeOtp.id));
+                const maxFails = this.rateLimitService.getPortalOtpVerifyMax();
+                const record = await this.rateLimitService.recordFailure(failKey, 15 * 60 * 1000);
+
+                if (record.count >= maxFails) {
+                    // Invalidate OTP immediately upon reaching max failed attempts
+                    activeOtp.is_used = true;
+                    await this.otpRepo.save(activeOtp);
+                    throw new HttpException(
+                        'Mã OTP đã bị vô hiệu do nhập sai quá 5 lần. Vui lòng yêu cầu mã mới.',
+                        HttpStatus.UNAUTHORIZED,
+                    );
+                }
+
                 throw new HttpException('Mã OTP không hợp lệ hoặc đã hết hạn', HttpStatus.UNAUTHORIZED);
             }
 
             // Mark OTP as used
-            otp.is_used = true;
-            await this.otpRepo.save(otp);
+            activeOtp.is_used = true;
+            await this.otpRepo.save(activeOtp);
 
             // Find customer
-            const customer = await this.customerRepo.findOne({ where: { id: otp.customer_id } });
+            const customer = await this.customerRepo.findOne({ where: { id: activeOtp.customer_id } });
             if (!customer) {
                 throw new HttpException('Khách hàng không tồn tại', HttpStatus.NOT_FOUND);
             }
