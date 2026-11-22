@@ -1,89 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, Typography, message, Layout, Modal, Tag, Tooltip } from 'antd';
 import {
   UserOutlined,
   LockOutlined,
   LoginOutlined,
-  CrownOutlined,
-  ShopOutlined,
-  InboxOutlined,
-  AccountBookOutlined,
   TeamOutlined,
   CopyOutlined,
   RightOutlined
 } from '@ant-design/icons';
 import api from '../utils/api';
+import useDemoMode from '../hooks/useDemoMode';
+import type { DemoAccount } from '../demo/demoAccounts';
 
 const { Title, Text } = Typography;
-
-interface DemoAccount {
-  username: string;
-  password: string;
-  fullName: string;
-  roleTitle: string;
-  groupName: string;
-  color: string;
-  icon: React.ReactNode;
-  description: string;
-}
-
-const DEMO_ACCOUNTS: DemoAccount[] = [
-  {
-    username: 'admin',
-    password: 'admin123',
-    fullName: 'Quản Trị Viên (Admin)',
-    roleTitle: 'Ban Giám Đốc / Quản Trị Hệ Thống',
-    groupName: 'Admin',
-    color: '#722ed1',
-    icon: <CrownOutlined style={{ fontSize: 20, color: '#722ed1' }} />,
-    description: 'Toàn quyền cấu hình hệ thống, quản lý người dùng & phân quyền, duyệt báo cáo tổng quan.'
-  },
-  {
-    username: 'sales01',
-    password: 'demo123',
-    fullName: 'Nhân viên Demo 01',
-    roleTitle: 'Trưởng Nhóm Kinh Doanh (Sales Lead)',
-    groupName: 'Kinh Doanh',
-    color: '#1890ff',
-    icon: <ShopOutlined style={{ fontSize: 20, color: '#1890ff' }} />,
-    description: 'Bán hàng POS, quản lý khách hàng (CRM), tạo báo giá, theo dõi tiến độ đơn hàng (SO).'
-  },
-  {
-    username: 'warehouse01',
-    password: 'demo123',
-    fullName: 'Nhân viên Demo 02',
-    roleTitle: 'Thủ Kho (Warehouse Manager)',
-    groupName: 'Quản Lý Kho',
-    color: '#fa8c16',
-    icon: <InboxOutlined style={{ fontSize: 20, color: '#fa8c16' }} />,
-    description: 'Quản lý nguyên phụ liệu & thành phẩm, xuất/nhập kho, kiểm kê tồn kho, cảnh báo hết hàng.'
-  },
-  {
-    username: 'accountant01',
-    password: 'demo123',
-    fullName: 'Nhân viên Demo 03',
-    roleTitle: 'Kế Toán Trưởng (Chief Accountant)',
-    groupName: 'Kế Toán',
-    color: '#52c41a',
-    icon: <AccountBookOutlined style={{ fontSize: 20, color: '#52c41a' }} />,
-    description: 'Quản lý sổ quỹ thu chi, dòng tiền, theo dõi công nợ khách hàng và nhà cung cấp.'
-  },
-  {
-    username: 'hr01',
-    password: 'demo123',
-    fullName: 'Nhân viên Demo 04',
-    roleTitle: 'Trưởng Phòng Nhân Sự (HR Lead)',
-    groupName: 'Nhân Sự',
-    color: '#eb2f96',
-    icon: <TeamOutlined style={{ fontSize: 20, color: '#eb2f96' }} />,
-    description: 'Hồ sơ nhân viên, cơ cấu phòng ban, chấm công, tính lương và hợp đồng lao động.'
-  }
-];
 
 const LoginPage: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [demoModalOpen, setDemoModalOpen] = useState(false);
+  const [demoAccounts, setDemoAccounts] = useState<DemoAccount[]>([]);
+  const isDemo = useDemoMode();
+
+  useEffect(() => {
+    if (isDemo) {
+      import('../demo/demoAccounts').then((mod) => {
+        setDemoAccounts(mod.DEMO_ACCOUNTS || mod.default || []);
+      });
+    }
+  }, [isDemo]);
 
   const onFinish = async (values: any) => {
     setLoading(true);
@@ -112,6 +56,7 @@ const LoginPage: React.FC = () => {
   };
 
   const handleSelectDemoAccount = (acc: DemoAccount) => {
+    if (!isDemo) return;
     form.setFieldsValue({
       username: acc.username,
       password: acc.password
@@ -149,31 +94,33 @@ const LoginPage: React.FC = () => {
             <Text type="secondary">Hệ thống quản lý doanh nghiệp</Text>
           </div>
 
-          {/* Quick banner to open demo accounts modal */}
-          <div
-            onClick={() => setDemoModalOpen(true)}
-            style={{
-              marginBottom: 20,
-              padding: '10px 14px',
-              background: 'linear-gradient(135deg, #e6f7ff 0%, #f9f0ff 100%)',
-              border: '1px solid #91d5ff',
-              borderRadius: 10,
-              cursor: 'pointer',
-              fontSize: 13,
-              color: '#0050b3',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              transition: 'all 0.2s',
-              boxShadow: '0 2px 6px rgba(24, 144, 255, 0.1)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 16 }}>🔑</span>
-              <span><strong>Trải nghiệm Demo?</strong> Chọn tài khoản mẫu</span>
+          {/* Quick banner to open demo accounts modal (only in demo mode) */}
+          {isDemo && (
+            <div
+              onClick={() => setDemoModalOpen(true)}
+              style={{
+                marginBottom: 20,
+                padding: '10px 14px',
+                background: 'linear-gradient(135deg, #e6f7ff 0%, #f9f0ff 100%)',
+                border: '1px solid #91d5ff',
+                borderRadius: 10,
+                cursor: 'pointer',
+                fontSize: 13,
+                color: '#0050b3',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                transition: 'all 0.2s',
+                boxShadow: '0 2px 6px rgba(24, 144, 255, 0.1)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16 }}>🔑</span>
+                <span><strong>Trải nghiệm Demo?</strong> Chọn tài khoản mẫu</span>
+              </div>
+              <RightOutlined style={{ fontSize: 12, color: '#1890ff' }} />
             </div>
-            <RightOutlined style={{ fontSize: 12, color: '#1890ff' }} />
-          </div>
+          )}
 
           <Form
             form={form}
@@ -203,24 +150,27 @@ const LoginPage: React.FC = () => {
               </Button>
             </Form.Item>
 
-            <Form.Item style={{ marginBottom: 16 }}>
-              <Button
-                type="dashed"
-                block
-                icon={<TeamOutlined />}
-                onClick={() => setDemoModalOpen(true)}
-                style={{
-                  height: 42,
-                  borderRadius: 8,
-                  borderColor: '#1890ff',
-                  color: '#1890ff',
-                  fontWeight: 600,
-                  background: '#f0f5ff'
-                }}
-              >
-                Danh sách tài khoản Demo
-              </Button>
-            </Form.Item>
+            {/* Demo accounts button (only in demo mode) */}
+            {isDemo && (
+              <Form.Item style={{ marginBottom: 16 }}>
+                <Button
+                  type="dashed"
+                  block
+                  icon={<TeamOutlined />}
+                  onClick={() => setDemoModalOpen(true)}
+                  style={{
+                    height: 42,
+                    borderRadius: 8,
+                    borderColor: '#1890ff',
+                    color: '#1890ff',
+                    fontWeight: 600,
+                    background: '#f0f5ff'
+                  }}
+                >
+                  Danh sách tài khoản Demo
+                </Button>
+              </Form.Item>
+            )}
 
             <div style={{ textAlign: 'center', fontSize: 12, color: '#888' }}>
               &copy; 2025 ERP4U System
@@ -229,122 +179,124 @@ const LoginPage: React.FC = () => {
         </Card>
       </div>
 
-      {/* MODAL DANH SÁCH TÀI KHOẢN DEMO */}
-      <Modal
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 4 }}>
-            <span style={{ fontSize: 20 }}>✨</span>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 17, color: '#001529' }}>Danh Sách Tài Khoản Trải Nghiệm Demo</div>
-              <div style={{ fontSize: 12, color: '#8c8c8c', fontWeight: 400 }}>
-                Nhấn <strong>"Đăng nhập ngay"</strong> để tự động điền và vào hệ thống với vai trò tương ứng
+      {/* MODAL DANH SÁCH TÀI KHOẢN DEMO (only in demo mode) */}
+      {isDemo && (
+        <Modal
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 4 }}>
+              <span style={{ fontSize: 20 }}>✨</span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 17, color: '#001529' }}>Danh Sách Tài Khoản Trải Nghiệm Demo</div>
+                <div style={{ fontSize: 12, color: '#8c8c8c', fontWeight: 400 }}>
+                  Nhấn <strong>"Đăng nhập ngay"</strong> để tự động điền và vào hệ thống với vai trò tương ứng
+                </div>
               </div>
             </div>
-          </div>
-        }
-        open={demoModalOpen}
-        onCancel={() => setDemoModalOpen(false)}
-        footer={null}
-        width={660}
-        style={{ top: 24 }}
-        styles={{ body: { maxHeight: '75vh', overflowY: 'auto', padding: '16px 8px' } }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {DEMO_ACCOUNTS.map((acc) => (
-            <div
-              key={acc.username}
-              style={{
-                border: `1px solid ${acc.color}33`,
-                borderRadius: 12,
-                padding: '14px 16px',
-                background: `linear-gradient(135deg, ${acc.color}08, #ffffff)`,
-                transition: 'all 0.2s',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-                boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 10,
-                      background: `${acc.color}18`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    {acc.icon}
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontWeight: 700, fontSize: 15, color: '#262626' }}>{acc.fullName}</span>
-                      <Tag color={acc.color} style={{ borderRadius: 6, fontWeight: 500 }}>{acc.groupName}</Tag>
+          }
+          open={demoModalOpen}
+          onCancel={() => setDemoModalOpen(false)}
+          footer={null}
+          width={660}
+          style={{ top: 24 }}
+          styles={{ body: { maxHeight: '75vh', overflowY: 'auto', padding: '16px 8px' } }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {demoAccounts.map((acc) => (
+              <div
+                key={acc.username}
+                style={{
+                  border: `1px solid ${acc.color}33`,
+                  borderRadius: 12,
+                  padding: '14px 16px',
+                  background: `linear-gradient(135deg, ${acc.color}08, #ffffff)`,
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.03)'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        background: `${acc.color}18`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      {acc.icon}
                     </div>
-                    <div style={{ fontSize: 12, color: '#595959', marginTop: 2 }}>{acc.roleTitle}</div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 700, fontSize: 15, color: '#262626' }}>{acc.fullName}</span>
+                        <Tag color={acc.color} style={{ borderRadius: 6, fontWeight: 500 }}>{acc.groupName}</Tag>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#595959', marginTop: 2 }}>{acc.roleTitle}</div>
+                    </div>
+                  </div>
+
+                  {/* 1-Click Login Button */}
+                  <Button
+                    type="primary"
+                    onClick={() => handleSelectDemoAccount(acc)}
+                    style={{
+                      borderRadius: 8,
+                      background: `linear-gradient(135deg, ${acc.color}, ${acc.color}dd)`,
+                      borderColor: acc.color,
+                      fontWeight: 600,
+                      height: 36
+                    }}
+                    icon={<LoginOutlined />}
+                  >
+                    Đăng nhập ngay
+                  </Button>
+                </div>
+
+                {/* Description */}
+                <div style={{ fontSize: 12, color: '#666', background: 'rgba(0,0,0,0.02)', padding: '6px 10px', borderRadius: 6 }}>
+                  <strong>Quyền hạn:</strong> {acc.description}
+                </div>
+
+                {/* Credentials & Copy buttons */}
+                <div style={{ display: 'flex', gap: 16, alignItems: 'center', fontSize: 12, color: '#595959', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f5f5f5', padding: '4px 8px', borderRadius: 6 }}>
+                    <span>Tài khoản:</span>
+                    <code style={{ fontWeight: 700, color: '#001529' }}>{acc.username}</code>
+                    <Tooltip title="Sao chép tên đăng nhập">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<CopyOutlined style={{ fontSize: 12 }} />}
+                        onClick={(e) => copyToClipboard(acc.username, 'tài khoản', e)}
+                        style={{ padding: '0 4px', height: 20 }}
+                      />
+                    </Tooltip>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f5f5f5', padding: '4px 8px', borderRadius: 6 }}>
+                    <span>Mật khẩu:</span>
+                    <code style={{ fontWeight: 700, color: '#001529' }}>{acc.password}</code>
+                    <Tooltip title="Sao chép mật khẩu">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<CopyOutlined style={{ fontSize: 12 }} />}
+                        onClick={(e) => copyToClipboard(acc.password, 'mật khẩu', e)}
+                        style={{ padding: '0 4px', height: 20 }}
+                      />
+                    </Tooltip>
                   </div>
                 </div>
-
-                {/* 1-Click Login Button */}
-                <Button
-                  type="primary"
-                  onClick={() => handleSelectDemoAccount(acc)}
-                  style={{
-                    borderRadius: 8,
-                    background: `linear-gradient(135deg, ${acc.color}, ${acc.color}dd)`,
-                    borderColor: acc.color,
-                    fontWeight: 600,
-                    height: 36
-                  }}
-                  icon={<LoginOutlined />}
-                >
-                  Đăng nhập ngay
-                </Button>
               </div>
-
-              {/* Description */}
-              <div style={{ fontSize: 12, color: '#666', background: 'rgba(0,0,0,0.02)', padding: '6px 10px', borderRadius: 6 }}>
-                <strong>Quyền hạn:</strong> {acc.description}
-              </div>
-
-              {/* Credentials & Copy buttons */}
-              <div style={{ display: 'flex', gap: 16, alignItems: 'center', fontSize: 12, color: '#595959', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f5f5f5', padding: '4px 8px', borderRadius: 6 }}>
-                  <span>Tài khoản:</span>
-                  <code style={{ fontWeight: 700, color: '#001529' }}>{acc.username}</code>
-                  <Tooltip title="Sao chép tên đăng nhập">
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={<CopyOutlined style={{ fontSize: 12 }} />}
-                      onClick={(e) => copyToClipboard(acc.username, 'tài khoản', e)}
-                      style={{ padding: '0 4px', height: 20 }}
-                    />
-                  </Tooltip>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f5f5f5', padding: '4px 8px', borderRadius: 6 }}>
-                  <span>Mật khẩu:</span>
-                  <code style={{ fontWeight: 700, color: '#001529' }}>{acc.password}</code>
-                  <Tooltip title="Sao chép mật khẩu">
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={<CopyOutlined style={{ fontSize: 12 }} />}
-                      onClick={(e) => copyToClipboard(acc.password, 'mật khẩu', e)}
-                      style={{ padding: '0 4px', height: 20 }}
-                    />
-                  </Tooltip>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Modal>
+            ))}
+          </div>
+        </Modal>
+      )}
     </Layout>
   );
 };
