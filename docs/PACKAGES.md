@@ -18,7 +18,7 @@ ERP4U được tổ chức theo kiến trúc **Modular Monolith + Entitlement**:
 | `DESIGN` | Thiết kế in/thêu *(Add-on ERP4U Cloud)* | Quản lý logo khách hàng, thiết kế in ấn & thêu, mẫu in, đơn hàng thiết kế | `designs` (Cloud) | `SALES` |
 | `MARKETING` | Marketing & Omnichannel *(Add-on ERP4U Cloud)* | Chiến dịch marketing, phân khúc khách hàng, kênh bán hàng Social/TikTok, Zalo ZNS, thống kê truy cập (analytics) | `marketing`, `social`, `tiktok`, `zns`, `analytics` (Cloud) | `SALES` |
 | `WEBSITE` | Website & CMS *(Add-on ERP4U Cloud)* | Cửa hàng & sản phẩm bán online (`/website-products`), bài viết/blog, dự án tiêu biểu, chính sách website, cấu hình trang chủ/giới thiệu/cài đặt, wizard tự thiết kế, nhận lead & đơn hàng từ website | `website` (Cloud) | `SALES` |
-| `AI` | AI Assistant *(Add-on ERP4U Cloud)* | Trợ lý AI gợi ý nghiệp vụ (không tự quyết định thay con người), hộp thư & kịch bản Chatbot AI | `ai`, `chatbot` (Cloud) | `CORE` |
+| `AI` | AI Assistant *(Add-on ERP4U Cloud)* | Trợ lý AI gợi ý nghiệp vụ (không tự quyết định thay con người), hộp thư & kịch bản Chatbot AI. Bảng lưu trữ: `ai_messages`, `ai_audit_log`, `ai_drafts` | `ai`, `chatbot` (Cloud) | `CORE` |
 
 > **Lưu ý về gói mã nguồn mở (Open-Core) và Add-on ERP4U Cloud:**
 > - Bản open-core của ERP4U bao gồm toàn bộ các phân hệ quản trị lõi: `CORE`, `SALES`, `INVENTORY`, `PRODUCTION`, `FINANCE`, `HR`, `PROJECTS`.
