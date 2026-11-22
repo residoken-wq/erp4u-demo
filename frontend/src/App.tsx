@@ -11,6 +11,7 @@ import {
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { Drawer } from 'antd'; // <--- Import Drawer
 import useMobile from './hooks/useMobile'; // <--- Import Hook
+import useDemoMode from './hooks/useDemoMode';
 import api from './utils/api';
 import { PackageKey, getRoutePackage, AddonKey, getRouteAddon } from './config/packages';
 import { EntitlementsProvider, useEntitlements, resetEntitlementsCache } from './hooks/useEntitlements';
@@ -113,7 +114,7 @@ const AppShell: React.FC<AppShellProps> = ({
     const [collapsed, setCollapsed] = useState(false);
     const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken();
     const { isEnabled, isAddonInstalled } = useEntitlements();
-    const [isDemo, setIsDemo] = useState(false);
+    const isDemo = useDemoMode();
 
     const isRouteEnabled = (path: string) => isEnabled(getRoutePackage(path));
     const renderRoute = (path: string, element: React.ReactElement) => {
@@ -123,16 +124,6 @@ const AppShell: React.FC<AppShellProps> = ({
         }
         return isRouteEnabled(path) ? element : <PackageLockedPage packageKey={getRoutePackage(path)} />;
     };
-
-    useEffect(() => {
-        api.get('/public/meta')
-            .then(res => {
-                if (res.data?.demo) {
-                    setIsDemo(true);
-                }
-            })
-            .catch(() => {});
-    }, []);
 
     // --- CHANGE PASSWORD STATE ---
     const [isChangePassOpen, setIsChangePassOpen] = useState(false);
