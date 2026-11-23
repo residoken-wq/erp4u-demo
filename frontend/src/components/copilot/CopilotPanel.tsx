@@ -17,6 +17,7 @@ import {
   ArrowLeftOutlined,
   CloseOutlined,
 } from '@ant-design/icons';
+import { API_URL } from '../../config';
 import useMobile from '../../hooks/useMobile';
 import { useEntitlements } from '../../hooks/useEntitlements';
 import { ConversationList } from './ConversationList';
@@ -25,6 +26,8 @@ import {
   ConversationItem,
   ConversationMessage,
   CopilotToolStep,
+  StreamCoordinator,
+  RequestTracker,
   getConversations,
   getConversationDetail,
   updateConversationTitle,
@@ -51,13 +54,21 @@ export const CopilotPanel: React.FC = () => {
   const [loadingConv, setLoadingConv] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
 
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const streamCoordinatorRef = useRef(new StreamCoordinator());
+  const selectTrackerRef = useRef(new RequestTracker());
+
+  // Cleanup stream on unmount
+  useEffect(() => {
+    return () => {
+      streamCoordinatorRef.current.cancelCurrent();
+    };
+  }, []);
 
   // Load conversations on mount or when opening
   const loadConversations = async () => {
     try {
       setLoadingList(true);
-      const list = await getConversations();
+      const list = await getConversations(API_URL);
       setConversations(list);
     } catch (err: any) {
       console.warn('[Copilot] Could not load conversations:', err?.message);
@@ -72,26 +83,43 @@ export const CopilotPanel: React.FC = () => {
     }
   }, [open]);
 
-  // Load active conversation details
+  // Load active conversation details with fast-switching race condition prevention
   const selectConversation = async (id: string) => {
+    // 1. Huỷ luồng stream đang chạy (nếu có)
+    streamCoordinatorRef.current.cancelCurrent();
+    setIsStreaming(false);
+    setCurrentSteps([]);
+
+    // 2. Gắn mã request cho lần chọn này
+    const reqId = selectTrackerRef.current.nextRequestId();
+    setLoadingConv(true);
+    setActiveId(id);
+    setView('chat');
+
     try {
-      setLoadingConv(true);
-      setActiveId(id);
-      setView('chat');
-      const detail = await getConversationDetail(id);
+      const detail = await getConversationDetail(id, API_URL);
+      // Chỉ áp dụng kết quả nếu request này là lần chọn mới nhất
+      if (!selectTrackerRef.current.isCurrent(reqId)) {
+        return;
+      }
       setActiveTitle(detail.title || 'Cuộc trò chuyện');
       setMessages(detail.messages || []);
     } catch (err: any) {
+      if (!selectTrackerRef.current.isCurrent(reqId)) {
+        return;
+      }
       antdMessage.error('Không thể tải lịch sử cuộc trò chuyện');
     } finally {
-      setLoadingConv(false);
+      if (selectTrackerRef.current.isCurrent(reqId)) {
+        setLoadingConv(false);
+      }
     }
   };
 
   const handleNewConversation = () => {
-    if (isStreaming) {
-      handleStopStreaming();
-    }
+    streamCoordinatorRef.current.cancelCurrent();
+    selectTrackerRef.current.reset();
+    setIsStreaming(false);
     setActiveId(null);
     setActiveTitle('Cuộc trò chuyện mới');
     setMessages([]);
@@ -101,7 +129,7 @@ export const CopilotPanel: React.FC = () => {
 
   const handleRename = async (id: string, newTitle: string) => {
     try {
-      await updateConversationTitle(id, newTitle);
+      await updateConversationTitle(id, newTitle, API_URL);
       antdMessage.success('Đổi tên hội thoại thành công');
       setConversations((prev) =>
         prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c))
@@ -115,8 +143,13 @@ export const CopilotPanel: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (activeId === id || isStreaming) {
+      streamCoordinatorRef.current.cancelCurrent();
+      setIsStreaming(false);
+      setCurrentSteps([]);
+    }
     try {
-      await deleteConversation(id);
+      await deleteConversation(id, API_URL);
       antdMessage.success('Đã xoá cuộc hội thoại');
       setConversations((prev) => prev.filter((c) => c.id !== id));
       if (activeId === id) {
@@ -128,12 +161,16 @@ export const CopilotPanel: React.FC = () => {
   };
 
   const handleStopStreaming = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
+    streamCoordinatorRef.current.cancelCurrent();
     setIsStreaming(false);
     setCurrentSteps([]);
+  };
+
+  const handleClosePanel = () => {
+    streamCoordinatorRef.current.cancelCurrent();
+    setIsStreaming(false);
+    setCurrentSteps([]);
+    setOpen(false);
   };
 
   const handleSend = async (customMessage?: string) => {
@@ -157,8 +194,8 @@ export const CopilotPanel: React.FC = () => {
     setIsStreaming(true);
     setCurrentSteps([]);
 
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
+    const session = streamCoordinatorRef.current.startRequest();
+    const reqId = session.requestId;
 
     let targetConvId = activeId;
 
@@ -166,8 +203,13 @@ export const CopilotPanel: React.FC = () => {
       await sendChatMessageStream({
         conversation_id: targetConvId || undefined,
         message: messageToSend,
-        signal: controller.signal,
+        signal: session.signal,
+        baseUrl: API_URL,
         onEvent: (event) => {
+          // Bỏ qua sự kiện nếu request không còn hiện hành (đã bị huỷ hoặc chuyển hội thoại)
+          if (!streamCoordinatorRef.current.isCurrent(reqId)) {
+            return;
+          }
           switch (event.type) {
             case 'conversation': {
               targetConvId = event.data.id;
@@ -214,6 +256,9 @@ export const CopilotPanel: React.FC = () => {
         },
       });
     } catch (err: any) {
+      if (!streamCoordinatorRef.current.isCurrent(reqId)) {
+        return;
+      }
       if (err.name === 'AbortError') {
         antdMessage.info('Đã dừng tạo câu trả lời');
       } else {
@@ -227,8 +272,9 @@ export const CopilotPanel: React.FC = () => {
         setMessages((prev) => [...prev, errorMsg]);
       }
     } finally {
-      setIsStreaming(false);
-      abortControllerRef.current = null;
+      if (streamCoordinatorRef.current.isCurrent(reqId)) {
+        setIsStreaming(false);
+      }
     }
   };
 
@@ -257,7 +303,7 @@ export const CopilotPanel: React.FC = () => {
       {/* Copilot Drawer Panel */}
       <Drawer
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={handleClosePanel}
         placement="right"
         width={drawerWidth}
         closable={false}
@@ -341,7 +387,7 @@ export const CopilotPanel: React.FC = () => {
               type="text"
               size="small"
               icon={<CloseOutlined />}
-              onClick={() => setOpen(false)}
+              onClick={handleClosePanel}
             />
           </div>
         </div>

@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { API_URL } from '../config';
 import { getPackageLabel } from '../config/packages';
+import { handleUnauthorized } from './authSession';
+
+export { handleUnauthorized };
 
 const api = axios.create({
     baseURL: API_URL,
@@ -27,9 +30,7 @@ api.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             // Token expired or invalid
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
+            handleUnauthorized();
         }
         if (error.response?.status === 402 && error.response?.data?.code === 'PACKAGE_REQUIRED') {
             const pkgLabel = getPackageLabel(error.response?.data?.package);

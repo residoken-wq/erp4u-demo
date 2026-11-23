@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { Avatar, Typography, Tag, Spin, Alert, Button, Card } from 'antd';
+import React, { useRef, useEffect, useMemo } from 'react';
+import { Avatar, Typography, Tag, Spin, Alert, Card } from 'antd';
 import {
   RobotOutlined,
   UserOutlined,
@@ -15,8 +15,8 @@ import {
   ConversationMessage,
   CopilotToolStep,
   isValidSourcePath,
-  isValidMarkdownLink,
   getErrorMessageByCode,
+  createMarkdownComponents,
 } from './copilotApi';
 
 const { Text } = Typography;
@@ -37,6 +37,10 @@ export const MessageView: React.FC<MessageViewProps> = ({
   onSelectPrompt,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const markdownComponents = useMemo(
+    () => createMarkdownComponents({ LinkComponent: Link }),
+    [],
+  );
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -163,58 +167,7 @@ export const MessageView: React.FC<MessageViewProps> = ({
                   <div className="copilot-markdown">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
-                      components={{
-                        // Safe link handling: only allow http(s) or relative safe links
-                        a: ({ href, children, ...props }) => {
-                          if (!href || !isValidMarkdownLink(href)) {
-                            return <span>{children}</span>;
-                          }
-                          if (href.startsWith('/')) {
-                            return (
-                              <Link
-                                to={href}
-                                style={{ color: '#0284c7', textDecoration: 'underline' }}
-                                {...props}
-                              >
-                                {children}
-                              </Link>
-                            );
-                          }
-                          return (
-                            <a
-                              href={href}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ color: '#0284c7', textDecoration: 'underline' }}
-                              {...props}
-                            >
-                              {children}
-                            </a>
-                          );
-                        },
-                        table: ({ children, ...props }) => (
-                          <div style={{ overflowX: 'auto', margin: '8px 0', border: '1px solid #e2e8f0', borderRadius: 6 }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }} {...props}>
-                              {children}
-                            </table>
-                          </div>
-                        ),
-                        th: ({ children, ...props }) => (
-                          <th style={{ background: '#f8fafc', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', textAlign: 'left', fontWeight: 600 }} {...props}>
-                            {children}
-                          </th>
-                        ),
-                        td: ({ children, ...props }) => (
-                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f1f5f9' }} {...props}>
-                            {children}
-                          </td>
-                        ),
-                        code: ({ children, ...props }) => (
-                          <code style={{ background: '#f1f5f9', padding: '1px 5px', borderRadius: 4, fontSize: 12, color: '#b91c1c', fontFamily: 'monospace' }} {...props}>
-                            {children}
-                          </code>
-                        ),
-                      }}
+                      components={markdownComponents}
                     >
                       {msg.content}
                     </ReactMarkdown>

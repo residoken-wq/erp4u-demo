@@ -1,17 +1,19 @@
+import React from 'react';
 import type { PackageKey } from '../../config/packages.ts';
+import { handleUnauthorized } from '../../utils/authSession.ts';
 
-export function getApiBaseUrl(): string {
-  if (typeof window !== 'undefined' && (window as any).__ERP4U_API_URL__) {
-    return (window as any).__ERP4U_API_URL__;
+export function getApiBaseUrl(overrideUrl?: string): string {
+  if (overrideUrl) {
+    return overrideUrl;
   }
   try {
-    return (import.meta as any)?.env?.VITE_API_URL || '/api';
+    return (import.meta as any)?.env?.VITE_API_URL || ((import.meta as any)?.env?.DEV ? 'http://localhost:3000/api' : '/api');
   } catch {
     return '/api';
   }
 }
 
-async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+export async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
   const headers = new Headers(options.headers || {});
   if (!headers.has('Content-Type') && options.method && options.method !== 'GET') {
@@ -20,7 +22,11 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  return fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...options, headers });
+  if (response.status === 401) {
+    handleUnauthorized();
+  }
+  return response;
 }
 
 export interface CopilotSourceItem {
@@ -111,6 +117,154 @@ export function isValidMarkdownLink(href: unknown): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * Tạo các components tuỳ biến cho ReactMarkdown:
+ * - Không render thẻ <img> để phòng chống rò rỉ dữ liệu qua URL ảnh động. Thay vào đó hiển thị [ảnh: alt] dạng chữ.
+ * - Link ngoài (http/https): hiển thị kèm tên miền (vd `nhãn (example.com)`), giữ rel="noopener noreferrer", target="_blank".
+ * - Bỏ thuộc tính `node` trước khi spread props xuống DOM element.
+ */
+export function createMarkdownComponents(options?: {
+  LinkComponent?: React.ComponentType<any>;
+}) {
+  const LinkComponent = options?.LinkComponent;
+
+  return {
+    img: ({ node, alt, ...props }: any) => {
+      return React.createElement('span', null, alt ? `[ảnh: ${alt}]` : '[ảnh]');
+    },
+    a: ({ href, children, node, ...props }: any) => {
+      if (!href || !isValidMarkdownLink(href)) {
+        return React.createElement('span', null, children);
+      }
+      if (href.startsWith('/')) {
+        if (LinkComponent) {
+          return React.createElement(
+            LinkComponent,
+            {
+              to: href,
+              style: { color: '#0284c7', textDecoration: 'underline' },
+              ...props,
+            },
+            children,
+          );
+        }
+        return React.createElement(
+          'a',
+          {
+            href,
+            style: { color: '#0284c7', textDecoration: 'underline' },
+            ...props,
+          },
+          children,
+        );
+      }
+      let hostname = '';
+      try {
+        hostname = new URL(href).hostname;
+      } catch {
+        hostname = '';
+      }
+      return React.createElement(
+        'a',
+        {
+          href,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          style: { color: '#0284c7', textDecoration: 'underline' },
+          ...props,
+        },
+        children,
+        hostname ? ` (${hostname})` : '',
+      );
+    },
+    table: ({ children, node, ...props }: any) =>
+      React.createElement(
+        'div',
+        { style: { overflowX: 'auto', margin: '8px 0', border: '1px solid #e2e8f0', borderRadius: 6 } },
+        React.createElement('table', { style: { width: '100%', borderCollapse: 'collapse', fontSize: 12 }, ...props }, children),
+      ),
+    th: ({ children, node, ...props }: any) =>
+      React.createElement(
+        'th',
+        { style: { background: '#f8fafc', padding: '6px 8px', borderBottom: '1px solid #e2e8f0', textAlign: 'left', fontWeight: 600 }, ...props },
+        children,
+      ),
+    td: ({ children, node, ...props }: any) =>
+      React.createElement(
+        'td',
+        { style: { padding: '6px 8px', borderBottom: '1px solid #f1f5f9' }, ...props },
+        children,
+      ),
+    code: ({ children, node, ...props }: any) =>
+      React.createElement(
+        'code',
+        { style: { background: '#f1f5f9', padding: '1px 5px', borderRadius: 4, fontSize: 12, color: '#b91c1c', fontFamily: 'monospace' }, ...props },
+        children,
+      ),
+  };
+}
+
+/**
+ * Quản lý vòng đời và huỷ luồng stream Copilot (AbortSignal + Request ID tăng dần).
+ */
+export class StreamCoordinator {
+  private currentRequestId = 0;
+  private activeAbortController: AbortController | null = null;
+
+  startRequest(): { requestId: number; signal: AbortSignal } {
+    if (this.activeAbortController) {
+      this.activeAbortController.abort();
+      this.activeAbortController = null;
+    }
+    this.currentRequestId += 1;
+    this.activeAbortController = new AbortController();
+    return {
+      requestId: this.currentRequestId,
+      signal: this.activeAbortController.signal,
+    };
+  }
+
+  cancelCurrent(): void {
+    if (this.activeAbortController) {
+      this.activeAbortController.abort();
+      this.activeAbortController = null;
+    }
+    this.currentRequestId += 1;
+  }
+
+  isCurrent(requestId: number): boolean {
+    return this.currentRequestId === requestId;
+  }
+
+  getCurrentRequestId(): number {
+    return this.currentRequestId;
+  }
+}
+
+/**
+ * Theo dõi mã request tăng dần để tránh race condition khi người dùng thao tác nhanh.
+ */
+export class RequestTracker {
+  private currentRequestId = 0;
+
+  nextRequestId(): number {
+    this.currentRequestId += 1;
+    return this.currentRequestId;
+  }
+
+  isCurrent(requestId: number): boolean {
+    return this.currentRequestId === requestId;
+  }
+
+  getCurrentRequestId(): number {
+    return this.currentRequestId;
+  }
+
+  reset(): void {
+    this.currentRequestId += 1;
+  }
 }
 
 /**
@@ -211,8 +365,8 @@ export function getSuggestedQuestions(isPackageEnabled: (pkg: PackageKey | strin
 /**
  * Lấy danh sách hội thoại
  */
-export async function getConversations(): Promise<ConversationItem[]> {
-  const res = await fetchWithAuth(`${getApiBaseUrl()}/ai/v2/conversations`);
+export async function getConversations(baseUrl: string = getApiBaseUrl()): Promise<ConversationItem[]> {
+  const res = await fetchWithAuth(`${baseUrl}/ai/v2/conversations`);
   if (!res.ok) throw new Error(`Lỗi tải danh sách (${res.status})`);
   return res.json();
 }
@@ -220,8 +374,8 @@ export async function getConversations(): Promise<ConversationItem[]> {
 /**
  * Lấy chi tiết một hội thoại kèm lịch sử tin nhắn
  */
-export async function getConversationDetail(id: string): Promise<ConversationDetail> {
-  const res = await fetchWithAuth(`${getApiBaseUrl()}/ai/v2/conversations/${id}`);
+export async function getConversationDetail(id: string, baseUrl: string = getApiBaseUrl()): Promise<ConversationDetail> {
+  const res = await fetchWithAuth(`${baseUrl}/ai/v2/conversations/${id}`);
   if (!res.ok) throw new Error(`Lỗi tải chi tiết (${res.status})`);
   return res.json();
 }
@@ -229,8 +383,8 @@ export async function getConversationDetail(id: string): Promise<ConversationDet
 /**
  * Cập nhật tiêu đề hội thoại
  */
-export async function updateConversationTitle(id: string, title: string): Promise<ConversationItem> {
-  const res = await fetchWithAuth(`${getApiBaseUrl()}/ai/v2/conversations/${id}`, {
+export async function updateConversationTitle(id: string, title: string, baseUrl: string = getApiBaseUrl()): Promise<ConversationItem> {
+  const res = await fetchWithAuth(`${baseUrl}/ai/v2/conversations/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({ title }),
   });
@@ -241,8 +395,8 @@ export async function updateConversationTitle(id: string, title: string): Promis
 /**
  * Xoá một cuộc hội thoại
  */
-export async function deleteConversation(id: string): Promise<void> {
-  const res = await fetchWithAuth(`${getApiBaseUrl()}/ai/v2/conversations/${id}`, {
+export async function deleteConversation(id: string, baseUrl: string = getApiBaseUrl()): Promise<void> {
+  const res = await fetchWithAuth(`${baseUrl}/ai/v2/conversations/${id}`, {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error(`Lỗi xoá (${res.status})`);
@@ -257,9 +411,11 @@ export async function sendChatMessageStream(params: {
   message: string;
   signal?: AbortSignal;
   onEvent: (event: CopilotSseEvent) => void;
+  baseUrl?: string;
 }): Promise<void> {
+  const baseUrl = params.baseUrl || getApiBaseUrl();
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
-  const response = await fetch(`${getApiBaseUrl()}/ai/v2/conversations/messages`, {
+  const response = await fetch(`${baseUrl}/ai/v2/conversations/messages`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -272,6 +428,16 @@ export async function sendChatMessageStream(params: {
     }),
     signal: params.signal,
   });
+
+  if (response.status === 401) {
+    handleUnauthorized();
+    params.onEvent({
+      type: 'error',
+      data: { code: 'FORBIDDEN', message: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại' },
+    });
+    params.onEvent({ type: 'done', data: {} });
+    return;
+  }
 
   if (!response.ok) {
     let errorCode = 'INTERNAL';
