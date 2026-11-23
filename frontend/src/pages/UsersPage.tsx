@@ -3,8 +3,10 @@ import { Table, Button, message, Card, Modal, Form, Input, Select, Tag, Switch, 
 import { PlusOutlined, EditOutlined, UserOutlined, LockOutlined, GlobalOutlined, DesktopOutlined, WifiOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../utils/api';
+import { useSubscription } from '../hooks/useSubscription';
 
 const UsersPage: React.FC = () => {
+    const { users: quotaUsers, refetch: refetchSubscription } = useSubscription();
     const [users, setUsers] = useState<any[]>([]);
     const [groups, setGroups] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -59,6 +61,7 @@ const UsersPage: React.FC = () => {
             }
             setIsModalOpen(false);
             fetchData();
+            refetchSubscription();
         } catch (e: any) {
             message.error(e.response?.data?.message || 'Có lỗi xảy ra');
         }
@@ -111,11 +114,27 @@ const UsersPage: React.FC = () => {
         }
     };
 
+    const isQuotaFull = quotaUsers.max !== null && quotaUsers.used >= quotaUsers.max;
+
     return (
         <Card title="Quản lý Người Dùng (Users)" extra={
-            <Space>
+            <Space size="middle">
+                <Tag color={isQuotaFull ? 'error' : 'blue'} style={{ fontSize: 13, padding: '2px 8px' }}>
+                    Người dùng: {quotaUsers.used} / {quotaUsers.max !== null ? quotaUsers.max : 'Không giới hạn'}
+                </Tag>
                 <Button icon={<GlobalOutlined />} onClick={fetchOnlineUsers}>Xem User Online</Button>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal(null)}>Thêm User</Button>
+                <Tooltip title={isQuotaFull ? 'Đã đạt số người dùng tối đa của gói' : undefined}>
+                    <span>
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => openModal(null)}
+                            disabled={isQuotaFull}
+                        >
+                            Thêm User
+                        </Button>
+                    </span>
+                </Tooltip>
             </Space>
         }>
             <Table dataSource={users} columns={columns} rowKey="id" loading={loading} />

@@ -23,6 +23,10 @@ import {
   FileStorage,
 } from '../common/storage/file-storage.interface';
 import { LocalFileStorage } from '../common/storage/local-file-storage.service';
+import {
+  SUBSCRIPTION_INFO_PROVIDER,
+  SubscriptionInfoProvider,
+} from '../common/subscription/subscription-info.interface';
 import { UploadService } from '../upload/upload.service';
 import { MeEntitlementsController } from '../common/packages/me-entitlements.controller';
 import { INSTALLED_ADDONS } from '../common/packages/installed-addons.token';
@@ -109,7 +113,7 @@ class FakePluginModule {
 describe('Erp4uCoreModule.forRoot()', () => {
   jest.setTimeout(30_000);
 
-  it('wires custom plugins and overrides TENANT_RESOLVER, TENANT_REGISTRY, ENTITLEMENT_PROVIDER, FILE_STORAGE', async () => {
+  it('wires custom plugins and overrides TENANT_RESOLVER, TENANT_REGISTRY, ENTITLEMENT_PROVIDER, FILE_STORAGE, SUBSCRIPTION_INFO_PROVIDER', async () => {
     const fakeResolver: TenantResolver = {
       resolve: jest.fn(async () => ({
         tenantId: 'tenant_custom',
@@ -131,6 +135,16 @@ describe('Erp4uCoreModule.forRoot()', () => {
       ]),
     };
 
+    const fakeSubscriptionInfoProvider: SubscriptionInfoProvider = {
+      getCurrent: jest.fn(async () => ({
+        plan_id: 'pro',
+        plan_name: 'Pro',
+        status: 'active',
+        trial_ends_at: null,
+        current_period_end: null,
+      })),
+    };
+
     const fakeFileStorage: FileStorage = {
       put: jest.fn(async (key) => ({
         key: `s3/${key}`,
@@ -148,6 +162,7 @@ describe('Erp4uCoreModule.forRoot()', () => {
           tenantResolver: fakeResolver,
           tenantRegistry: fakeRegistry,
           entitlementProvider: fakeEntitlementProvider,
+          subscriptionInfoProvider: fakeSubscriptionInfoProvider,
           fileStorage: fakeFileStorage,
           dataSourceFactory: createMockDataSourceFactory(),
         }),
@@ -158,6 +173,7 @@ describe('Erp4uCoreModule.forRoot()', () => {
     expect(moduleRef.get(TENANT_RESOLVER)).toBe(fakeResolver);
     expect(moduleRef.get(TENANT_REGISTRY)).toBe(fakeRegistry);
     expect(moduleRef.get(ENTITLEMENT_PROVIDER)).toBe(fakeEntitlementProvider);
+    expect(moduleRef.get(SUBSCRIPTION_INFO_PROVIDER)).toBe(fakeSubscriptionInfoProvider);
     expect(moduleRef.get(FILE_STORAGE)).toBe(fakeFileStorage);
 
     // 2. Verify plugin module was loaded and receives all overridden core tokens

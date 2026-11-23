@@ -24,6 +24,8 @@ import { Product } from '../products/product.entity';
 import { Material } from '../materials/material.entity';
 import { AgentApiController } from './agent-api.controller';
 import { AgentApiService } from './agent-api.service';
+import { SystemSubscriptionController } from './system-subscription.controller';
+import { UsersModule } from '../users/users.module';
 
 @Module({
     imports: [
@@ -42,9 +44,10 @@ import { AgentApiService } from './agent-api.service';
             Product,
             Material
         ]),
-        AuthModule
+        AuthModule,
+        UsersModule,
     ],
-    controllers: [SystemController, DashboardController, AgentApiController],
+    controllers: [SystemController, SystemSubscriptionController, DashboardController, AgentApiController],
     providers: [SystemService, ActivitySubscriber, UserContextService, EmailService, AgentApiService],
     exports: [SystemService, UserContextService, AgentApiService, EmailService]
 })
