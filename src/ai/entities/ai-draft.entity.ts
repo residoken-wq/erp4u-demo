@@ -29,9 +29,6 @@ export class AiDraft {
   @Column({ type: 'varchar', length: 20, default: 'pending' })
   status: 'pending' | 'confirmed' | 'rejected' | 'expired' | 'executing' | 'failed' | string;
 
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  error_code: string | null;
-
   @Column({ type: 'int' })
   created_by: number;
 
@@ -67,4 +64,7 @@ export class AiDraft {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  error_code: string | null;
 }

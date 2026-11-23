@@ -57,9 +57,6 @@ export class AiConversationMessage {
   @Column({ type: 'jsonb', nullable: true })
   sources: CopilotSourceItem[] | null;
 
-  @Column({ type: 'jsonb', nullable: true })
-  drafts: CopilotDraftItem[] | null;
-
   @Column({ type: 'uuid', nullable: true })
   audit_log_id: string | null;
 
@@ -72,4 +69,7 @@ export class AiConversationMessage {
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
+
+  @Column({ type: 'jsonb', nullable: true })
+  drafts: CopilotDraftItem[] | null;
 }
