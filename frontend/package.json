@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --test src/hooks/__tests__/useDemoMode.test.ts src/components/__tests__/SubscriptionTag.test.ts"
+    "test": "node --experimental-strip-types --test src/hooks/__tests__/useDemoMode.test.ts src/components/__tests__/SubscriptionTag.test.ts src/components/copilot/__tests__/copilot.test.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
@@ -37,10 +37,12 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-konva": "^18.2.10",
+    "react-markdown": "^10.1.0",
     "react-quill": "^2.0.0",
     "react-rnd": "^10.4.1",
     "react-router-dom": "^6.20.0",
     "recharts": "^3.10.1",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.6.0",
     "use-image": "^1.1.1"
   },

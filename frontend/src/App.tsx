@@ -23,7 +23,7 @@ import AddonUnavailablePage from './pages/AddonUnavailablePage';
 import HeaderNotifications from './components/HeaderNotifications';
 import SubscriptionTag from './components/SubscriptionTag';
 import LoadingDisplay from './components/LoadingDisplay';
-import AiChatWidget from './components/common/AiChatWidget'; // <--- Import AI Widget
+import CopilotPanel from './components/copilot/CopilotPanel';
 import AnnouncementBanner from './components/common/AnnouncementBanner'; // <--- Import Announcement Banner
 import { LanguageSwitcher } from './components/common/LanguageSwitcher';
 
@@ -625,7 +625,7 @@ const AppShell: React.FC<AppShellProps> = ({
                                     </div>
                                 </Content>
                                 <Footer style={{ textAlign: 'center' }}>ERP4U ©2025 Created by AI</Footer>
-                                {isEnabled(PackageKey.AI) && <AiChatWidget />} {/* <--- Insert AI Widget */}
+                                {isEnabled(PackageKey.AI) && <CopilotPanel />}
                             </Layout>
                         </Layout>
                     ) : (

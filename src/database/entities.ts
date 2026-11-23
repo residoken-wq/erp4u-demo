@@ -107,7 +107,12 @@ import { ReviewCampaign } from '../hr/entities/review-campaign.entity';
 import { EmployeeReview } from '../hr/entities/employee-review.entity';
 
 import { AiMessage } from '../ai/ai-message.entity';
-import { AiAuditLog, AiDraft } from '../ai/entities';
+import {
+  AiAuditLog,
+  AiDraft,
+  AiConversation,
+  AiConversationMessage,
+} from '../ai/entities';
 import { CustomerLogo } from '../designs/entities/customer-logo.entity';
 import { PrintDesign } from '../designs/entities/print-design.entity';
 import { PrintSample } from '../designs/entities/print-sample.entity';
@@ -173,6 +178,8 @@ export const PREMIUM_ENTITIES = [
   AiMessage,
   AiAuditLog,
   AiDraft,
+  AiConversation,
+  AiConversationMessage,
   CustomerLogo, PrintDesign, PrintSample, DesignOrder, DesignOrderItem,
   SocialChannel, SocialOrder, SocialProductMapping,
   TikTokMessage, TikTokComment, TikTokConversation,
