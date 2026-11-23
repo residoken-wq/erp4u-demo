@@ -1,0 +1,443 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  FloatButton,
+  Drawer,
+  Input,
+  Button,
+  Typography,
+  Tooltip,
+  message as antdMessage,
+} from 'antd';
+import {
+  RobotOutlined,
+  SendOutlined,
+  StopOutlined,
+  UnorderedListOutlined,
+  PlusOutlined,
+  ArrowLeftOutlined,
+  CloseOutlined,
+} from '@ant-design/icons';
+import useMobile from '../../hooks/useMobile';
+import { useEntitlements } from '../../hooks/useEntitlements';
+import { ConversationList } from './ConversationList';
+import { MessageView } from './MessageView';
+import {
+  ConversationItem,
+  ConversationMessage,
+  CopilotToolStep,
+  getConversations,
+  getConversationDetail,
+  updateConversationTitle,
+  deleteConversation,
+  sendChatMessageStream,
+  getSuggestedQuestions,
+} from './copilotApi';
+
+const { Text } = Typography;
+
+export const CopilotPanel: React.FC = () => {
+  const isMobile = useMobile();
+  const { isEnabled } = useEntitlements();
+
+  const [open, setOpen] = useState(false);
+  const [view, setView] = useState<'chat' | 'list'>('chat');
+  const [conversations, setConversations] = useState<ConversationItem[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeTitle, setActiveTitle] = useState<string>('Cuộc trò chuyện mới');
+  const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [currentSteps, setCurrentSteps] = useState<CopilotToolStep[]>([]);
+  const [input, setInput] = useState('');
+  const [loadingList, setLoadingList] = useState(false);
+  const [loadingConv, setLoadingConv] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Load conversations on mount or when opening
+  const loadConversations = async () => {
+    try {
+      setLoadingList(true);
+      const list = await getConversations();
+      setConversations(list);
+    } catch (err: any) {
+      console.warn('[Copilot] Could not load conversations:', err?.message);
+    } finally {
+      setLoadingList(false);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      loadConversations();
+    }
+  }, [open]);
+
+  // Load active conversation details
+  const selectConversation = async (id: string) => {
+    try {
+      setLoadingConv(true);
+      setActiveId(id);
+      setView('chat');
+      const detail = await getConversationDetail(id);
+      setActiveTitle(detail.title || 'Cuộc trò chuyện');
+      setMessages(detail.messages || []);
+    } catch (err: any) {
+      antdMessage.error('Không thể tải lịch sử cuộc trò chuyện');
+    } finally {
+      setLoadingConv(false);
+    }
+  };
+
+  const handleNewConversation = () => {
+    if (isStreaming) {
+      handleStopStreaming();
+    }
+    setActiveId(null);
+    setActiveTitle('Cuộc trò chuyện mới');
+    setMessages([]);
+    setCurrentSteps([]);
+    setView('chat');
+  };
+
+  const handleRename = async (id: string, newTitle: string) => {
+    try {
+      await updateConversationTitle(id, newTitle);
+      antdMessage.success('Đổi tên hội thoại thành công');
+      setConversations((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c))
+      );
+      if (activeId === id) {
+        setActiveTitle(newTitle);
+      }
+    } catch (err: any) {
+      antdMessage.error('Không thể đổi tên cuộc hội thoại');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteConversation(id);
+      antdMessage.success('Đã xoá cuộc hội thoại');
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      if (activeId === id) {
+        handleNewConversation();
+      }
+    } catch (err: any) {
+      antdMessage.error('Không thể xoá cuộc hội thoại');
+    }
+  };
+
+  const handleStopStreaming = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+    setCurrentSteps([]);
+  };
+
+  const handleSend = async (customMessage?: string) => {
+    const messageToSend = (customMessage ?? input).trim();
+    if (!messageToSend || isStreaming) return;
+
+    if (messageToSend.length > 4000) {
+      antdMessage.warning('Tin nhắn vượt quá giới hạn 4.000 ký tự');
+      return;
+    }
+
+    // Add user message to state
+    const userMsg: ConversationMessage = {
+      id: `usr-${Date.now()}`,
+      role: 'user',
+      content: messageToSend,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput('');
+    setIsStreaming(true);
+    setCurrentSteps([]);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    let targetConvId = activeId;
+
+    try {
+      await sendChatMessageStream({
+        conversation_id: targetConvId || undefined,
+        message: messageToSend,
+        signal: controller.signal,
+        onEvent: (event) => {
+          switch (event.type) {
+            case 'conversation': {
+              targetConvId = event.data.id;
+              setActiveId(event.data.id);
+              if (event.data.title) {
+                setActiveTitle(event.data.title);
+              }
+              break;
+            }
+            case 'step': {
+              setCurrentSteps((prev) => [...prev, event.data]);
+              break;
+            }
+            case 'answer': {
+              const assistantMsg: ConversationMessage = {
+                id: event.data.message_id || `bot-${Date.now()}`,
+                role: 'assistant',
+                content: event.data.content,
+                sources: event.data.sources,
+                created_at: new Date().toISOString(),
+              };
+              setMessages((prev) => [...prev, assistantMsg]);
+              setCurrentSteps([]);
+              break;
+            }
+            case 'error': {
+              const errorMsg: ConversationMessage = {
+                id: `err-${Date.now()}`,
+                role: 'assistant',
+                content: event.data.message,
+                error_code: event.data.code,
+                created_at: new Date().toISOString(),
+              };
+              setMessages((prev) => [...prev, errorMsg]);
+              setCurrentSteps([]);
+              break;
+            }
+            case 'done': {
+              setIsStreaming(false);
+              loadConversations();
+              break;
+            }
+          }
+        },
+      });
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        antdMessage.info('Đã dừng tạo câu trả lời');
+      } else {
+        const errorMsg: ConversationMessage = {
+          id: `err-${Date.now()}`,
+          role: 'assistant',
+          content: err.message || 'Mất kết nối tới máy chủ',
+          error_code: 'INTERNAL',
+          created_at: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, errorMsg]);
+      }
+    } finally {
+      setIsStreaming(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const suggestedPrompts = getSuggestedQuestions(isEnabled);
+
+  const drawerWidth = isMobile ? '100vw' : 420;
+
+  return (
+    <>
+      {/* Floating Action Button */}
+      <FloatButton
+        icon={<RobotOutlined style={{ fontSize: 20 }} />}
+        type="primary"
+        style={{ right: 24, bottom: 80, width: 48, height: 48 }}
+        onClick={() => setOpen(true)}
+        tooltip="ERP4U Copilot"
+      />
+
+      {/* Copilot Drawer Panel */}
+      <Drawer
+        open={open}
+        onClose={() => setOpen(false)}
+        placement="right"
+        width={drawerWidth}
+        closable={false}
+        bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%', background: '#f8fafc' }}
+        headerStyle={{ display: 'none' }}
+      >
+        {/* Custom Header */}
+        <div
+          style={{
+            padding: '12px 16px',
+            borderBottom: '1px solid #e2e8f0',
+            background: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            height: 54,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+            {view === 'chat' && (
+              <Button
+                type="text"
+                size="small"
+                icon={<ArrowLeftOutlined />}
+                onClick={() => setView('list')}
+                title="Danh sách hội thoại"
+              />
+            )}
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: '#e0f2fe',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <RobotOutlined style={{ color: '#0284c7', fontSize: 16 }} />
+            </div>
+            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <Text strong style={{ fontSize: 14, color: '#0f172a' }}>
+                {view === 'chat' ? activeTitle : 'Lịch sử hội thoại'}
+              </Text>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {view === 'chat' ? (
+              <>
+                <Tooltip title="Đoạn chat mới">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={handleNewConversation}
+                  />
+                </Tooltip>
+                <Tooltip title="Danh sách hội thoại">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<UnorderedListOutlined />}
+                    onClick={() => setView('list')}
+                  />
+                </Tooltip>
+              </>
+            ) : (
+              <Tooltip title="Đoạn chat mới">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={handleNewConversation}
+                />
+              </Tooltip>
+            )}
+            <Button
+              type="text"
+              size="small"
+              icon={<CloseOutlined />}
+              onClick={() => setOpen(false)}
+            />
+          </div>
+        </div>
+
+        {/* Content Body */}
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          {view === 'list' ? (
+            <ConversationList
+              conversations={conversations}
+              activeId={activeId}
+              onSelect={selectConversation}
+              onNew={handleNewConversation}
+              onRename={handleRename}
+              onDelete={handleDelete}
+              loading={loadingList}
+            />
+          ) : (
+            <>
+              <div style={{ flex: 1, overflowY: 'auto' }}>
+                <MessageView
+                  messages={messages}
+                  currentSteps={currentSteps}
+                  isStreaming={isStreaming}
+                  suggestedPrompts={suggestedPrompts}
+                  onSelectPrompt={(p) => handleSend(p)}
+                />
+              </div>
+
+              {/* Input Area */}
+              <div
+                style={{
+                  padding: '10px 12px',
+                  background: '#ffffff',
+                  borderTop: '1px solid #e2e8f0',
+                }}
+              >
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                  <Input.TextArea
+                    placeholder="Hỏi ERP4U Copilot bất cứ điều gì về ERP..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={isStreaming}
+                    maxLength={4000}
+                    showCount={{
+                      formatter: ({ count, maxLength }) => (
+                        <span style={{ fontSize: 10, color: '#94a3b8' }}>{`${count}/${maxLength}`}</span>
+                      ),
+                    }}
+                    autoSize={{ minRows: 1, maxRows: 4 }}
+                    style={{ borderRadius: 8, resize: 'none' }}
+                  />
+
+                  {isStreaming ? (
+                    <Button
+                      danger
+                      icon={<StopOutlined />}
+                      onClick={handleStopStreaming}
+                      title="Dừng phản hồi"
+                      style={{ borderRadius: 8, height: 32 }}
+                    />
+                  ) : (
+                    <Button
+                      type="primary"
+                      icon={<SendOutlined />}
+                      onClick={() => handleSend()}
+                      disabled={!input.trim()}
+                      style={{
+                        borderRadius: 8,
+                        background: '#0284c7',
+                        borderColor: '#0284c7',
+                        height: 32,
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* Fixed Disclaimer Notice */}
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: '#94a3b8',
+                    textAlign: 'center',
+                    marginTop: 6,
+                    lineHeight: '14px',
+                  }}
+                >
+                  AI có thể sai — kiểm tra lại số liệu trước khi quyết định.
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </Drawer>
+    </>
+  );
+};
+
+export default CopilotPanel;
