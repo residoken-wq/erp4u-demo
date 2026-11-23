@@ -50,6 +50,12 @@ import { StorageModule } from './common/storage/storage.module';
 import { FileStorage } from './common/storage/file-storage.interface';
 import { EntitlementsModule } from './common/packages/entitlements.module';
 import { EntitlementProvider } from './common/packages/entitlement-provider.interface';
+import { SubscriptionModule } from './common/subscription/subscription.module';
+import {
+  SubscriptionInfo,
+  SubscriptionInfoProvider,
+  SUBSCRIPTION_INFO_PROVIDER,
+} from './common/subscription/subscription-info.interface';
 import { INSTALLED_ADDONS } from './common/packages/installed-addons.token';
 import { RateLimitModule } from './common/security/rate-limit/rate-limit.module';
 
@@ -66,6 +72,12 @@ import { HrReviewQuestionsSeedService } from './hr/hr-review-questions-seed.serv
 import { normalizeProviderOverride, ProviderOverride } from './common/utils/provider-override.util';
 
 export { INSTALLED_ADDONS, InstalledAddonName } from './common/packages/installed-addons.token';
+export {
+  SubscriptionInfo,
+  SubscriptionInfoProvider,
+  SUBSCRIPTION_INFO_PROVIDER,
+} from './common/subscription/subscription-info.interface';
+export { SubscriptionModule } from './common/subscription/subscription.module';
 
 let hasWarnedDeprecatedIncludePremium = false;
 
@@ -97,6 +109,10 @@ export interface Erp4uCoreModuleOptions {
    * Custom ENTITLEMENT_PROVIDER override (default: ENTITLEMENTS_MODE factory).
    */
   entitlementProvider?: ProviderOverride<EntitlementProvider>;
+  /**
+   * Custom SUBSCRIPTION_INFO_PROVIDER override (default: NullSubscriptionInfoProvider returning null).
+   */
+  subscriptionInfoProvider?: ProviderOverride<SubscriptionInfoProvider>;
   /**
    * Custom FILE_STORAGE provider override (default: LocalFileStorage).
    */
@@ -194,6 +210,9 @@ export class Erp4uCoreModule implements OnModuleInit {
         EntitlementsModule.forRoot({
           entitlementProvider: options.entitlementProvider,
         }),
+        SubscriptionModule.forRoot({
+          subscriptionInfoProvider: options.subscriptionInfoProvider,
+        }),
         ProductsModule,
         MaterialsModule,
         BomModule,
@@ -250,7 +269,7 @@ export class Erp4uCoreModule implements OnModuleInit {
             },
         TenantSeedRunner,
       ],
-      exports: [TenancyModule, EntitlementsModule, TENANT_SEEDERS, TenantSeedRunner],
+      exports: [TenancyModule, EntitlementsModule, SubscriptionModule, TENANT_SEEDERS, TenantSeedRunner],
       controllers: [AppController],
     };
   }

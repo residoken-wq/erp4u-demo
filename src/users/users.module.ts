@@ -5,6 +5,7 @@ import { UserGroup } from './entities/user-group.entity';
 import { GroupPermission } from './entities/group-permission.entity';
 import { UsersController } from './users.controller'; // <--- Đảm bảo file này tồn tại cùng thư mục
 import { UsersService } from './users.service';
+import { UserQuotaService } from './user-quota.service';
 import { DemoModeService } from '../common/services/demo-mode.service';
 
 import { AuthModule } from '../auth/auth.module'; // <--- IMPORT
@@ -15,7 +16,7 @@ import { AuthModule } from '../auth/auth.module'; // <--- IMPORT
     forwardRef(() => AuthModule) // <--- Fix: Circular Dependency
   ],
   controllers: [UsersController],
-  providers: [UsersService, DemoModeService],
-  exports: [UsersService],
+  providers: [UsersService, UserQuotaService, DemoModeService],
+  exports: [UsersService, UserQuotaService],
 })
 export class UsersModule { }

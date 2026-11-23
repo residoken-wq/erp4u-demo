@@ -15,11 +15,13 @@ import useDemoMode from './hooks/useDemoMode';
 import api from './utils/api';
 import { PackageKey, getRoutePackage, AddonKey, getRouteAddon } from './config/packages';
 import { EntitlementsProvider, useEntitlements, resetEntitlementsCache } from './hooks/useEntitlements';
+import { SubscriptionProvider, useSubscription, resetSubscriptionCache } from './hooks/useSubscription';
 import PackageLockedPage from './pages/PackageLockedPage';
 import AddonUnavailablePage from './pages/AddonUnavailablePage';
 
 // Import Components
 import HeaderNotifications from './components/HeaderNotifications';
+import SubscriptionTag from './components/SubscriptionTag';
 import LoadingDisplay from './components/LoadingDisplay';
 import AiChatWidget from './components/common/AiChatWidget'; // <--- Import AI Widget
 import AnnouncementBanner from './components/common/AnnouncementBanner'; // <--- Import Announcement Banner
@@ -88,6 +90,7 @@ const AiDashboardPage = React.lazy(() => import('./pages/AiDashboardPage'));
 const RbacLogPage = React.lazy(() => import('./pages/RbacLogPage'));
 const ChatbotInboxPage = React.lazy(() => import('./pages/chatbot/ChatbotInboxPage'));
 const ChatbotRequestsPage = React.lazy(() => import('./pages/chatbot/ChatbotRequestsPage'));
+const SubscriptionPage = React.lazy(() => import('./pages/SubscriptionPage'));
 
 
 function getItem(label: React.ReactNode, key: React.Key, icon?: React.ReactNode, children?: MenuItem[]): MenuItem {
@@ -114,6 +117,7 @@ const AppShell: React.FC<AppShellProps> = ({
     const [collapsed, setCollapsed] = useState(false);
     const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken();
     const { isEnabled, isAddonInstalled } = useEntitlements();
+    const { subscription } = useSubscription();
     const isDemo = useDemoMode();
 
     const isRouteEnabled = (path: string) => isEnabled(getRoutePackage(path));
@@ -182,6 +186,7 @@ const AppShell: React.FC<AppShellProps> = ({
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         resetEntitlementsCache();
+        resetSubscriptionCache();
         setIsAuthenticated(false);
         window.location.href = '/login';
     };
@@ -398,11 +403,17 @@ const AppShell: React.FC<AppShellProps> = ({
                 );
             }
 
+            if (subscription) {
+                systemChildren.push(
+                    getItem(<Link to="/subscription">Gói dịch vụ</Link>, 'sys_subscription')
+                );
+            }
+
             items.push(getItem('Hệ thống & Phân quyền', 'sub_sys', <SettingOutlined />, systemChildren));
         }
 
         return items;
-    }, [permissions, currentUser, isAuthenticated, isEnabled, isAddonInstalled]);
+    }, [permissions, currentUser, isAuthenticated, isEnabled, isAddonInstalled, subscription]);
 
     const userMenu = (
         <Menu items={[
@@ -472,6 +483,8 @@ const AppShell: React.FC<AppShellProps> = ({
                                     )}
 
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
+                                        <SubscriptionTag />
+                                        <div style={{ width: 12 }} />
                                         <LanguageSwitcher />
                                         <div style={{ width: 10 }} />
                                         <HeaderNotifications />
@@ -602,6 +615,10 @@ const AppShell: React.FC<AppShellProps> = ({
                                                     <Route path="/system/settings" element={renderRoute('/system/settings', <SystemSettingsPage />)} />
                                                 )}
 
+                                                {subscription && (
+                                                    <Route path="/subscription" element={renderRoute('/subscription', <SubscriptionPage />)} />
+                                                )}
+
                                                 <Route path="*" element={<h2>Không tìm thấy trang hoặc bạn không có quyền truy cập.</h2>} />
                                             </Routes>
                                         </React.Suspense>
@@ -650,14 +667,16 @@ const App: React.FC = () => {
 
     return (
         <EntitlementsProvider enabled={isAuthenticated && !isPublicPortal}>
-            <AppShell
-                isAuthenticated={isAuthenticated}
-                setIsAuthenticated={setIsAuthenticated}
-                currentUser={currentUser}
-                setCurrentUser={setCurrentUser}
-                permissions={permissions}
-                setPermissions={setPermissions}
-            />
+            <SubscriptionProvider isAuthenticated={isAuthenticated && !isPublicPortal}>
+                <AppShell
+                    isAuthenticated={isAuthenticated}
+                    setIsAuthenticated={setIsAuthenticated}
+                    currentUser={currentUser}
+                    setCurrentUser={setCurrentUser}
+                    permissions={permissions}
+                    setPermissions={setPermissions}
+                />
+            </SubscriptionProvider>
         </EntitlementsProvider>
     );
 };

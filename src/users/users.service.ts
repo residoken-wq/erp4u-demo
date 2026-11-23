@@ -1,12 +1,13 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Inject, forwardRef, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { UserGroup } from './entities/user-group.entity';
 import { GroupPermission } from './entities/group-permission.entity';
 import { PermissionCacheService } from '../auth/permission-cache.service';
 import { DemoModeService } from '../common/services/demo-mode.service';
 import { UsageService } from '../common/packages/usage.service';
+import { UserQuotaService } from './user-quota.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -19,6 +20,8 @@ export class UsersService {
     private permCacheService: PermissionCacheService,
     private readonly demoModeService: DemoModeService,
     @Optional() private readonly usageService?: UsageService,
+    @Optional() private readonly quotaService?: UserQuotaService,
+    @Optional() private readonly dataSource?: DataSource,
   ) {
   }
 
@@ -28,6 +31,43 @@ export class UsersService {
   }
 
   async createUser(data: any) {
+    const executeInManager = async (manager: EntityManager) => {
+      if (this.dataSource?.options?.type === 'postgres') {
+        try {
+          await manager.query(
+            "SELECT pg_advisory_xact_lock(hashtext('user_quota:' || current_schema()))",
+          );
+        } catch {
+          // Fallback if advisory lock fails (e.g. non-postgres or mock)
+        }
+      }
+
+      const willBeActive = data.is_active !== false;
+      if (willBeActive && this.quotaService) {
+        await this.quotaService.assertQuota(manager);
+      }
+
+      const repo = manager.getRepository(User);
+      const existing = await repo.findOne({ where: { username: data.username } });
+      if (existing) throw new BadRequestException('Tên đăng nhập đã tồn tại');
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      const user = repo.create({ ...data, password: hashedPassword });
+      const saved = await repo.save(user);
+      await this.usageService?.increment('users_created');
+      return saved;
+    };
+
+    if (this.dataSource?.transaction) {
+      return await this.dataSource.transaction(executeInManager);
+    }
+
+    // Fallback if dataSource is not injected (e.g. unit tests with mockUserRepo)
+    const willBeActive = data.is_active !== false;
+    if (willBeActive && this.quotaService) {
+      await this.quotaService.assertQuota();
+    }
     const existing = await this.userRepo.findOne({ where: { username: data.username } });
     if (existing) throw new BadRequestException('Tên đăng nhập đã tồn tại');
 
@@ -40,6 +80,42 @@ export class UsersService {
   }
 
   async updateUser(id: number, data: any) {
+    const executeInManager = async (manager: EntityManager) => {
+      const repo = manager.getRepository(User);
+      const user = await repo.findOne({ where: { id } });
+      if (!user) throw new NotFoundException('User not found');
+
+      if (this.demoModeService.isDemoMode() && this.demoModeService.isDemoUser(user.username)) {
+        if (data.password || data.group_id !== undefined || data.groupId !== undefined || data.group !== undefined) {
+          throw new ForbiddenException('Không được phép trên bản demo');
+        }
+      }
+
+      const isActivating = !user.is_active && data.is_active === true;
+      if (isActivating) {
+        if (this.dataSource?.options?.type === 'postgres') {
+          try {
+            await manager.query(
+              "SELECT pg_advisory_xact_lock(hashtext('user_quota:' || current_schema()))",
+            );
+          } catch {
+            // Fallback
+          }
+        }
+        if (this.quotaService) {
+          await this.quotaService.assertQuota(manager);
+        }
+      }
+
+      await repo.update(id, data);
+      return repo.findOne({ where: { id }, relations: ['group'] });
+    };
+
+    if (this.dataSource?.transaction) {
+      return await this.dataSource.transaction(executeInManager);
+    }
+
+    // Fallback if dataSource is not injected
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
 
@@ -47,6 +123,11 @@ export class UsersService {
       if (data.password || data.group_id !== undefined || data.groupId !== undefined || data.group !== undefined) {
         throw new ForbiddenException('Không được phép trên bản demo');
       }
+    }
+
+    const isActivating = !user.is_active && data.is_active === true;
+    if (isActivating && this.quotaService) {
+      await this.quotaService.assertQuota();
     }
 
     await this.userRepo.update(id, data);

@@ -55,6 +55,7 @@ export const ROUTE_PACKAGES: Record<string, PackageKey> = {
   '/system/logs': PackageKey.CORE,
   '/system/rbac': PackageKey.CORE,
   '/system/settings': PackageKey.CORE,
+  '/subscription': PackageKey.CORE,
 
   // SALES
   '/sales': PackageKey.SALES,
