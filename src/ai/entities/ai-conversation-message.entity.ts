@@ -23,6 +23,13 @@ export interface CopilotToolStep {
   label: string;
 }
 
+export interface CopilotDraftItem {
+  id: string;
+  kind: string;
+  title: string;
+  summary: string;
+}
+
 @Entity('ai_conversation_messages')
 @Check(`"role" IN ('user', 'assistant')`)
 @Index(['conversation_id', 'created_at'])
@@ -49,6 +56,9 @@ export class AiConversationMessage {
 
   @Column({ type: 'jsonb', nullable: true })
   sources: CopilotSourceItem[] | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  drafts: CopilotDraftItem[] | null;
 
   @Column({ type: 'uuid', nullable: true })
   audit_log_id: string | null;

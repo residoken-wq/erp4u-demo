@@ -99,6 +99,7 @@ describe('AI Entities (Premium)', () => {
       expect(colNames).toContain('kind');
       expect(colNames).toContain('payload');
       expect(colNames).toContain('status');
+      expect(colNames).toContain('error_code');
       expect(colNames).toContain('created_by');
       expect(colNames).toContain('confirmed_by');
       expect(colNames).toContain('confirmed_at');
@@ -115,6 +116,10 @@ describe('AI Entities (Premium)', () => {
       expect(statusCol?.options.length).toBe(20);
       expect(statusCol?.options.default).toBe('pending');
 
+      const errCol = columns.find((c) => c.propertyName === 'error_code');
+      expect(errCol?.options.length).toBe(50);
+      expect(errCol?.options.nullable).toBe(true);
+
       const checks = storage.checks.filter((c) => c.target === AiDraft);
       expect(checks.length).toBeGreaterThan(0);
       expect(checks[0].expression).toContain('status');
@@ -122,6 +127,8 @@ describe('AI Entities (Premium)', () => {
       expect(checks[0].expression).toContain("'confirmed'");
       expect(checks[0].expression).toContain("'rejected'");
       expect(checks[0].expression).toContain("'expired'");
+      expect(checks[0].expression).toContain("'executing'");
+      expect(checks[0].expression).toContain("'failed'");
     });
 
     it('has composite indexes on (created_by, status) and (status, expires_at)', () => {
@@ -215,6 +222,7 @@ describe('AI Entities (Premium)', () => {
       expect(colNames).toContain('content');
       expect(colNames).toContain('tool_steps');
       expect(colNames).toContain('sources');
+      expect(colNames).toContain('drafts');
       expect(colNames).toContain('audit_log_id');
       expect(colNames).toContain('error_code');
       expect(colNames).toContain('created_at');

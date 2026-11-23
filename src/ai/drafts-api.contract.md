@@ -1,0 +1,288 @@
+# Hợp đồng API Nháp Hành động AI (AI Action Drafts API Contract)
+
+Tài liệu hợp đồng giữa Frontend (core) và Backend AI Service / Cloud Executor (cloud).
+Backend triển khai ở repo cloud (P9c2, P9c3). Core (P9c1) khai báo entity, migration, hợp đồng và giao diện duyệt/xác nhận nháp.
+
+---
+
+## 1. Xác thực & Phân quyền chung
+- Tất cả endpoint yêu cầu header HTTP:
+  ```http
+  Authorization: Bearer <jwt_token>
+  ```
+- **Quyền sở hữu (Ownership):** Chỉ người dùng đã tạo nháp (`created_by === req.user.id`) mới có quyền xem (`GET`), xác nhận (`confirm`), hoặc từ chối (`reject`) bản nháp đó.
+- Nếu không phải chủ sở hữu hoặc ID không phải định dạng UUID hợp lệ: trả về **`404 Not Found`** (tuyệt đối không trả về 403 để tránh rò rỉ ID hay sự tồn tại của nháp).
+- Khi xác nhận nháp (`confirm`), backend kiểm tra lại:
+  - Gói tính năng tương ứng với `kind` còn kích hoạt trên tenant (`@RequiresPackage`).
+  - Quyền `create` của người dùng đối với module tương ứng.
+  - Bản nháp phải đang ở trạng thái `pending` và chưa hết hạn (`expires_at > now()`).
+
+---
+
+## 2. Danh sách Endpoint REST
+
+### 2.1. Lấy chi tiết bản nháp
+- **Phương thức:** `GET`
+- **Đường dẫn:** `/api/ai/drafts/:id`
+- **Params:** `id` (UUID)
+- **Response 200 OK:**
+  ```json
+  {
+    "id": "d1a2b3c4-0001-4000-8000-000000000001",
+    "kind": "quotation",
+    "status": "pending",
+    "payload": {
+      "customer_id": 12,
+      "order_date": "2026-11-24",
+      "delivery_date": "2026-12-05",
+      "items": [
+        {
+          "product_id": 45,
+          "quantity": 100,
+          "unit_price": 150000,
+          "_display": { "product_name": "Áo thun Polo thể thao" }
+        }
+      ],
+      "note": "Báo giá đơn hàng mẫu",
+      "_display": {
+        "customer_name": "Khách hàng Demo 01"
+      }
+    },
+    "expires_at": "2026-11-25T06:00:00.000Z",
+    "result_ref": null,
+    "error_code": null
+  }
+  ```
+- **Response 404 Not Found:** Khi không tìm thấy bản nháp, ID không hợp lệ UUID, hoặc nháp thuộc user khác:
+  ```json
+  {
+    "statusCode": 404,
+    "message": "Không tìm thấy bản nháp"
+  }
+  ```
+
+---
+
+### 2.2. Xác nhận bản nháp (Confirm Draft)
+- **Phương thức:** `POST`
+- **Đường dẫn:** `/api/ai/drafts/:id/confirm`
+- **Headers:**
+  ```http
+  Content-Type: application/json
+  Authorization: Bearer <jwt_token>
+  ```
+- **Request Body:**
+  ```json
+  {
+    "payload": {
+      "customer_id": 12,
+      "order_date": "2026-11-24",
+      "delivery_date": "2026-12-05",
+      "items": [
+        {
+          "product_id": 45,
+          "quantity": 100,
+          "unit_price": 150000
+        }
+      ],
+      "note": "Báo giá đơn hàng mẫu"
+    }
+  }
+  ```
+  *Lưu ý:* Frontend tự động loại bỏ tất cả trường `_display` (dùng cho hiển thị trên thẻ) trước khi gửi `payload`.
+- **Response 200 OK:**
+  ```json
+  {
+    "draftId": "d1a2b3c4-0001-4000-8000-000000000001",
+    "result_ref": {
+      "entity": "sales_order",
+      "id": 108,
+      "path": "/orders"
+    }
+  }
+  ```
+- **Quy trình chống chạy 2 lần (Race Condition):**
+  Backend cập nhật nguyên tử: `UPDATE ai_drafts SET status = 'executing' WHERE id = :id AND status = 'pending'`.
+  Nếu không có bản ghi nào được cập nhật -> trả về lỗi `409 DRAFT_NOT_PENDING`.
+  Sau khi gọi executor thành công -> chuyển sang `confirmed` kèm `result_ref`.
+  Nếu executor lỗi -> chuyển sang `failed` kèm `error_code`.
+- **Các mã lỗi chuẩn (Error Responses):**
+  Tất cả lỗi trả về JSON chuẩn `{ code: string, message: string, errors?: Array<{ field: string, message: string }> }`:
+
+  | HTTP Code | Mã lỗi (`code`) | Ý nghĩa & Cấu trúc | Thông báo tiếng Việt giao diện |
+  |---|---|---|---|
+  | `400` | `DRAFT_INVALID` | Payload không hợp lệ theo JSON Schema hoặc thực thể tham chiếu không tồn tại trong tenant.<br>Kèm danh sách `errors: [{ field, message }]`. Trường dạng phẳng hoặc dạng đường dẫn dòng mảng (`items.0.quantity`). | Dữ liệu nháp không hợp lệ, vui lòng kiểm tra lại |
+  | `403` | `FORBIDDEN` | Người dùng không có quyền tạo đối tượng trong module tương ứng. | Bạn không có quyền thực hiện hành động này |
+  | `403` | `PACKAGE_NOT_ENABLED` | Gói tính năng của loại nháp chưa được bật trên tenant. | Gói tính năng này chưa được kích hoạt |
+  | `404` | `NOT_FOUND` | Bản nháp không tồn tại, id không phải UUID, hoặc nháp thuộc user khác. | Bản nháp không tồn tại |
+  | `409` | `DRAFT_NOT_PENDING` | Bản nháp không còn ở trạng thái `pending` (đã được xác nhận, từ chối, hết hạn hoặc đang xử lý). | Bản nháp không còn ở trạng thái chờ duyệt |
+  | `422` | `EMAIL_RECIPIENT_NOT_ALLOWED` | Người nhận email (`to`) không thuộc email của khách hàng hoặc liên hệ đã lưu của khách hàng. | Địa chỉ người nhận không thuộc thông tin đã lưu của khách hàng |
+  | `422` | `EMAIL_NOT_CONFIGURED` | Hệ thống SMTP của tenant chưa được cấu hình. | Cấu hình gửi email (SMTP) chưa được thiết lập |
+  | `429` | `RATE_LIMITED` | Vượt quá hạn mức gửi email (tối đa 20 email xác nhận/người/giờ). | Bạn đã vượt quá giới hạn gửi email trong giờ |
+
+  *Ví dụ lỗi 400 DRAFT_INVALID:*
+  ```json
+  {
+    "code": "DRAFT_INVALID",
+    "message": "Dữ liệu nháp không hợp lệ",
+    "errors": [
+      { "field": "customer_id", "message": "Khách hàng không tồn tại" },
+      { "field": "items.0.quantity", "message": "Số lượng phải lớn hơn 0" }
+    ]
+  }
+  ```
+
+---
+
+### 2.3. Từ chối / Bỏ bản nháp (Reject Draft)
+- **Phương thức:** `POST`
+- **Đường dẫn:** `/api/ai/drafts/:id/reject`
+- **Headers:**
+  ```http
+  Authorization: Bearer <jwt_token>
+  ```
+- **Response 200 OK:**
+  ```json
+  {
+    "status": "rejected"
+  }
+  ```
+- **Response 404 / 409:** Tương tự như endpoint confirm.
+
+---
+
+## 3. Cấu trúc Payload theo từng loại Nháp (`kind`)
+
+Payload của mỗi loại nháp tương thích hoàn toàn với body của API tạo thông thường của module đó:
+
+### 3.1. `quotation` (Báo giá bán hàng)
+- **Gói:** `SALES` | **Quyền:** `SALES` `can_create`
+- **Body tạo thường:** `SalesService.createOrder({ ..., is_quotation: true })`
+- **Đường dẫn mở form:** `/sales?aiDraft=:id`
+- **Đường dẫn kết quả:** `result_ref.path` = `/orders` (hoặc `/sales`)
+- **Trường Payload:**
+  - `customer_id` *(number, bắt buộc)*: ID khách hàng hợp lệ (hoặc `-1` nếu là nội bộ).
+  - `order_date` *(string ISO/YYYY-MM-DD, tuỳ chọn)*: Ngày báo giá.
+  - `delivery_date` *(string ISO/YYYY-MM-DD, tuỳ chọn)*: Ngày dự kiến giao.
+  - `is_quotation` *(boolean, mặc định true)*: Đánh dấu là báo giá.
+  - `note` *(string, tuỳ chọn)*: Ghi chú đơn báo giá.
+  - `items` *(array, bắt buộc, tối thiểu 1 dòng)*:
+    - `product_id` *(number, bắt buộc)*: ID sản phẩm.
+    - `quantity` *(number, bắt buộc, > 0)*: Số lượng.
+    - `unit_price` *(number, bắt buộc, >= 0)*: Đơn giá.
+    - `note` *(string, tuỳ chọn)*: Ghi chú dòng hàng.
+    - `_display` *(object, tuỳ chọn)*: `{ product_name, sku }` (chỉ hiển thị, bị lọc khi confirm).
+  - `_display` *(object, tuỳ chọn)*: `{ customer_name, customer_code }`.
+
+---
+
+### 3.2. `purchase_order` (Đơn mua hàng / PO)
+- **Gói:** `INVENTORY` | **Quyền:** `PURCHASE` `create`
+- **Body tạo thường:** `PurchasingService.createPO(data)`
+- **Đường dẫn mở form:** `/purchasing?aiDraft=:id`
+- **Đường dẫn kết quả:** `result_ref.path` = `/purchasing`
+- **Trường Payload:**
+  - `supplier_id` *(number, tuỳ chọn/bắt buộc nếu xác định)*: ID nhà cung cấp.
+  - `po_code` *(string, tuỳ chọn)*: Mã PO (nếu để trống hệ thống tự sinh).
+  - `note` *(string, tuỳ chọn)*: Ghi chú đơn mua hàng.
+  - `items` *(array, bắt buộc)*:
+    - `material_id` *(number, tuỳ chọn)*: ID nguyên vật liệu (nếu mua NPL).
+    - `product_id` *(number, tuỳ chọn)*: ID sản phẩm (nếu mua thành phẩm/gia công).
+    - `description` *(string, tuỳ chọn)*: Diễn giải chi tiết mặt hàng.
+    - `quantity` *(number, bắt buộc, > 0)*: Số lượng mua.
+    - `unit_price` *(number, bắt buộc, >= 0)*: Đơn giá mua.
+    - `note` *(string, tuỳ chọn)*: Ghi chú dòng.
+    - `_display` *(object, tuỳ chọn)*: `{ material_name, product_name }`.
+  - `_display` *(object, tuỳ chọn)*: `{ supplier_name }`.
+
+---
+
+### 3.3. `production_order` (Lệnh sản xuất)
+- **Gói:** `PRODUCTION` | **Quyền:** `PRODUCTION` `create`
+- **Body tạo thường:** `ProductionService.createOrder(data)`
+- **Đường dẫn mở form:** `/planning?aiDraft=:id`
+- **Đường dẫn kết quả:** `result_ref.path` = `/planning`
+- **Trường Payload:**
+  - `code` *(string, bắt buộc)*: Mã lệnh sản xuất.
+  - `product_id` *(number, bắt buộc)*: ID thành phẩm cần sản xuất.
+  - `quantity` *(number, bắt buộc, > 0)*: Số lượng cần sản xuất.
+  - `pfo_id` *(number, tuỳ chọn)*: ID kế hoạch PFO liên quan.
+  - `so_code` *(string, tuỳ chọn)*: Mã đơn hàng bán hàng liên quan.
+  - `assigned_supplier_id` *(number, tuỳ chọn)*: ID xưởng / nhà cung cấp gia công.
+  - `start_date` *(string ISO, tuỳ chọn)*: Ngày bắt đầu dự kiến.
+  - `due_date` *(string ISO, tuỳ chọn)*: Hạn hoàn thành.
+  - `_display` *(object, tuỳ chọn)*: `{ product_name, supplier_name }`.
+
+---
+
+### 3.4. `task` (Công việc)
+- **Gói:** `CORE` | **Quyền:** Đăng nhập (`@AuthOnly()`)
+- **Body tạo thường:** `TasksService.create(data)`
+- **Đường dẫn mở form:** `/tasks?aiDraft=:id`
+- **Đường dẫn kết quả:** `result_ref.path` = `/tasks`
+- **Trường Payload:**
+  - `title` *(string, bắt buộc, tối đa 255)*: Tiêu đề công việc.
+  - `description` *(string, tuỳ chọn)*: Nội dung chi tiết công việc.
+  - `assignee_id` *(number, tuỳ chọn)*: ID nhân viên được giao.
+  - `due_date` *(string ISO, tuỳ chọn)*: Hạn hoàn thành.
+  - `priority` *(string, tuỳ chọn, 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT')*: Mức độ ưu tiên.
+  - `reference_code` *(string, tuỳ chọn)*: Mã chứng từ tham chiếu (vd mã đơn SO, PO).
+  - `reference_type` *(string, tuỳ chọn, 'SALES' | 'PURCHASE' | 'PRODUCTION')*: Loại tham chiếu.
+  - `_display` *(object, tuỳ chọn)*: `{ assignee_name }`.
+
+---
+
+### 3.5. `lead` (Khách hàng tiềm năng)
+- **Gói:** `SALES` | **Quyền:** `SALES` `can_create`
+- **Body tạo thường:** `CustomersService.create({ ..., type: 'LEAD' })`
+- **Đường dẫn mở form:** `/customers?aiDraft=:id`
+- **Đường dẫn kết quả:** `result_ref.path` = `/customers`
+- **Trường Payload:**
+  - `name` *(string, bắt buộc)*: Tên khách hàng / tổ chức tiềm năng.
+  - `type` *(string, cố định 'LEAD')*: Phân loại LEAD.
+  - `phone` *(string, tuỳ chọn)*: Số điện thoại.
+  - `email` *(string, tuỳ chọn)*: Email liên hệ.
+  - `address` *(string, tuỳ chọn)*: Địa chỉ.
+  - `lead_status` *(string, tuỳ chọn, 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'PROPOSAL' | 'WON' | 'LOST')*: Trạng thái chăm sóc Lead.
+  - `lead_source` *(string, tuỳ chọn)*: Nguồn Lead (Website, Facebook, Giới thiệu...).
+  - `potential_value` *(number, tuỳ chọn)*: Giá trị tiềm năng ước tính.
+  - `assigned_to_id` *(number, tuỳ chọn)*: ID nhân viên phụ trách.
+  - `contacts` *(array, tuỳ chọn)*: Danh sách liên hệ ban đầu `[{ full_name, phone, email, job_title }]`.
+
+---
+
+### 3.6. `email` (Gửi email khách hàng)
+- **Gói:** `SALES` | **Quyền:** `SALES` `can_create`
+- **Body tạo thường:** `EmailService` qua SMTP của tenant
+- **Đường dẫn mở form:** `/customers?aiDraft=:id`
+- **Đường dẫn kết quả:** `result_ref.path` = `/customers`
+- **Trường Payload:**
+  - `customer_id` *(number, bắt buộc)*: ID khách hàng trong tenant.
+  - `to` *(string, bắt buộc)*: Email người nhận. BẮT BUỘC phải khớp với email khách hàng hoặc một trong các liên hệ thuộc khách hàng đó.
+  - `subject` *(string, bắt buộc, tối đa 200 ký tự)*: Tiêu đề email.
+  - `body` *(string, bắt buộc, tối đa 10.000 ký tự)*: Nội dung text thuần của email (hệ thống tự động escape khi tạo bản gửi HTML).
+  - `_display` *(object, tuỳ chọn)*: `{ customer_name }`.
+
+---
+
+## 4. Tích hợp SSE Copilot & Tin nhắn Hội thoại
+1. Khi AI gọi công cụ soạn nháp (vd `sales.draftQuotation`):
+   - AI tạo bản ghi `ai_drafts` trạng thái `pending`.
+   - Trong SSE phản hồi `answer`:
+     ```json
+     {
+       "message_id": "...",
+       "content": "Tôi đã soạn nháp báo giá cho anh/chị. Vui lòng mở để duyệt.",
+       "drafts": [
+         {
+           "id": "d1a2b3c4-0001-4000-8000-000000000001",
+           "kind": "quotation",
+           "title": "Báo giá Áo thun Polo",
+           "summary": "100 áo thun Polo cho Khách hàng Demo 01, tổng ước tính 15.000.000 ₫"
+         }
+       ]
+     }
+     ```
+2. Lưu trữ tin nhắn `ai_conversation_messages`:
+   - Cột `drafts jsonb` lưu danh sách `[{ id, kind, title, summary }]`.
+   - Khi gọi `GET /api/ai/v2/conversations/:id`, các tin nhắn trả về kèm trường `drafts`.

@@ -21,6 +21,8 @@ import { SendZnsModal } from './sales/SendZnsModal';
 import useMobile from '../hooks/useMobile';
 import { cleanComboDescription } from '../utils/productDescription';
 import { formatInvoiceDate } from '../utils/dateUtils';
+import { confirmDraft } from './copilot/draftApi';
+import { mapDraftValidationErrors } from './copilot/draftRoutes';
 
 const { Option } = Select;
 
@@ -35,9 +37,10 @@ interface Props {
     isQuotation?: boolean;
     defaultCommentTab?: string;  // For deep linking from notifications
     highlightCommentId?: string; // Comment to highlight/scroll to
+    aiDraftId?: string;
 }
 
-const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialData, customers, products, users = [], isQuotation = false, defaultCommentTab, highlightCommentId }) => {
+const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialData, customers, products, users = [], isQuotation = false, defaultCommentTab, highlightCommentId, aiDraftId }) => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('1');
@@ -1006,6 +1009,14 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                 }))
             };
 
+            if (aiDraftId) {
+                await confirmDraft(aiDraftId, { ...payload, is_quotation: isQuotation });
+                message.success(isQuotation ? 'Xác nhận nháp báo giá thành công' : 'Xác nhận nháp đơn hàng thành công');
+                onSuccess();
+                onClose();
+                return;
+            }
+
             if (initialData?.id) {
                 await api.put(`/sales/${initialData.id}`, payload);
                 message.success('Cập nhật thành công');
@@ -1249,6 +1260,15 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                 </div>
             }
         >
+            {aiDraftId && (
+                <Alert
+                    type="warning"
+                    showIcon
+                    icon={<RobotOutlined />}
+                    message="Nháp do AI soạn — kiểm tra kỹ trước khi lưu."
+                    style={{ marginBottom: 16, borderRadius: 6 }}
+                />
+            )}
             <Tabs activeKey={activeTab} onChange={setActiveTab} size={isMobile ? 'small' : 'middle'}>
                 <Tabs.TabPane tab={isMobile ? '1. SP' : '1. Thông tin & Sản phẩm'} key="1">
                     <Form form={form} layout="vertical" onValuesChange={handleFormValuesChange}>

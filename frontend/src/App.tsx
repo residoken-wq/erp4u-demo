@@ -566,6 +566,7 @@ const AppShell: React.FC<AppShellProps> = ({
                                                 )}
 
                                                 <Route path="/workspace" element={renderRoute('/workspace', <WorkSpacePage />)} />
+                                                <Route path="/tasks" element={renderRoute('/tasks', <TasksPage />)} />
                                                 <Route path="/workspace/discussions/:id" element={renderRoute('/workspace/discussions/:id', <DiscussionDetailPage />)} />
                                                 <Route path="/projects" element={renderRoute('/projects', <ProjectsPage />)} />
                                                 <Route path="/projects/:id" element={renderRoute('/projects/:id', <ProjectDetailPage />)} />

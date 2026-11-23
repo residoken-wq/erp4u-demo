@@ -6,6 +6,8 @@ import dayjs from 'dayjs';
 import { API_URL } from '../config';
 import LeadCarePanel from '../components/crm/LeadCarePanel';
 import CustomerPortrait360Tab from '../components/crm/CustomerPortrait360Tab';
+import useAiDraft from '../hooks/useAiDraft';
+import CustomerEmailModal from '../components/crm/CustomerEmailModal';
 import useMobile from '../hooks/useMobile';
 import usePermission from '../hooks/usePermission';
 
@@ -30,6 +32,28 @@ const CustomersPage: React.FC = () => {
     const [filterYear, setFilterYear] = useState<dayjs.Dayjs | null>(null); // Mặc định = ALL
 
     const [form] = Form.useForm();
+
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+    const [emailDraftData, setEmailDraftData] = useState<any>(null);
+
+    const { isAiDraft, draft: aiDraft, warningBanner, confirm: confirmAiDraft, clearDraftFromUrl } = useAiDraft({
+        form,
+        onDraftLoaded: (draftDetail) => {
+            if (draftDetail.kind === 'lead') {
+                setEditingItem(null);
+                form.resetFields();
+                form.setFieldsValue({
+                    ...draftDetail.payload,
+                    type: draftDetail.payload?.type || 'LEAD',
+                });
+                setActiveTabKey('1');
+                setIsModalOpen(true);
+            } else if (draftDetail.kind === 'email') {
+                setEmailDraftData(draftDetail);
+                setIsEmailModalOpen(true);
+            }
+        }
+    });
 
     // Fetch Data
     const fetchData = async () => {
@@ -84,6 +108,15 @@ const CustomersPage: React.FC = () => {
     // Save
     const handleSave = async (values: any) => {
         try {
+            if (isAiDraft && aiDraft?.kind === 'lead') {
+                const res = await confirmAiDraft(values);
+                if (res) {
+                    setIsModalOpen(false);
+                    fetchData();
+                }
+                return;
+            }
+
             if (editingItem) {
                 await api.put(`/customers/${editingItem.id}`, values);
                 message.success('Cập nhật thành công');
@@ -246,13 +279,14 @@ const CustomersPage: React.FC = () => {
             </Card>
 
             <Modal
-                title={editingItem ? `Sửa: ${editingItem.name}` : "Thêm Khách Hàng"}
+                title={isAiDraft && aiDraft?.kind === 'lead' ? 'Duyệt Nháp Khách Tiềm Năng (AI)' : (editingItem ? `Sửa: ${editingItem.name}` : "Thêm Khách Hàng")}
                 open={isModalOpen}
                 onCancel={() => setIsModalOpen(false)}
                 onOk={() => form.submit()}
                 width={1150}
                 style={{ top: 20 }}
             >
+                {isAiDraft && aiDraft?.kind === 'lead' && warningBanner}
                 <Form form={form} layout="vertical" onFinish={handleSave} initialValues={{ type: 'LEAD', credit_limit: 0 }}>
                     <Tabs activeKey={activeTabKey} onChange={setActiveTabKey} items={[
                         {
@@ -395,6 +429,23 @@ const CustomersPage: React.FC = () => {
                     ]} />
                 </Form>
             </Modal>
+
+            {emailDraftData && (
+                <CustomerEmailModal
+                    open={isEmailModalOpen}
+                    onClose={() => {
+                        setIsEmailModalOpen(false);
+                    }}
+                    customerId={Number(emailDraftData.payload?.customer_id)}
+                    customer={customers.find(c => c.id === Number(emailDraftData.payload?.customer_id))}
+                    aiDraftId={emailDraftData.id}
+                    initialPayload={emailDraftData.payload}
+                    onSuccess={() => {
+                        setIsEmailModalOpen(false);
+                        fetchData();
+                    }}
+                />
+            )}
         </div>
     );
 };

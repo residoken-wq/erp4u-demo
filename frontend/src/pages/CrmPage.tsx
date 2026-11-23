@@ -6,6 +6,7 @@ import api from '../utils/api';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
 import QuotationTemplate from '../components/QuotationTemplate';
+import useAiDraft from '../hooks/useAiDraft';
 import SalesOrderDetail from '../components/SalesOrderDetail';
 import QuickTaskModal from '../components/QuickTaskModal';
 import useMobile from '../hooks/useMobile';
@@ -83,6 +84,17 @@ const CrmPage: React.FC = () => {
     const [detailModalOpen, setDetailModalOpen] = useState(false);
     const [editingOrder, setEditingOrder] = useState<any>(null);
     const [isQuotationMode, setIsQuotationMode] = useState(false);
+    const [aiDraftQuotationId, setAiDraftQuotationId] = useState<string | null>(null);
+
+    useAiDraft({
+        expectedKind: 'quotation',
+        onDraftLoaded: (draftDetail) => {
+            setAiDraftQuotationId(draftDetail.id);
+            setEditingOrder(draftDetail.payload);
+            setIsQuotationMode(true);
+            setDetailModalOpen(true);
+        }
+    });
 
     // Lead Modal
     const [currentCustomer, setCurrentCustomer] = useState<any>(null);
@@ -880,7 +892,7 @@ const CrmPage: React.FC = () => {
 
             <SalesOrderDetail 
                 open={detailModalOpen} 
-                onClose={() => setDetailModalOpen(false)} 
+                onClose={() => { setDetailModalOpen(false); setAiDraftQuotationId(null); }} 
                 onSuccess={() => {
                     fetchData();
                     if (editingOrder && editingOrder.order_code) {
@@ -892,6 +904,7 @@ const CrmPage: React.FC = () => {
                 customers={allCustomers} 
                 products={products} 
                 users={users} 
+                aiDraftId={aiDraftQuotationId || undefined}
             />
             <Modal title="Xem Trước" open={isPreviewOpen} onCancel={() => setIsPreviewOpen(false)} footer={null} width={isMobile ? '100%' : 900} style={isMobile ? { top: 10, maxWidth: '100vw', padding: 8 } : undefined}>
                 <div id="printableArea"><QuotationTemplate data={editingOrder} /></div>

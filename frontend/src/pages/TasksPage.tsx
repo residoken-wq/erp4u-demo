@@ -6,6 +6,7 @@ import api from '../utils/api';
 import dayjs from 'dayjs';
 import { API_URL } from '../config';
 import useMobile from '../hooks/useMobile';
+import useAiDraft from '../hooks/useAiDraft';
 
 const { Option } = Select;
 
@@ -22,6 +23,20 @@ const TasksPage: React.FC = () => {
     const [projects, setProjects] = useState<any[]>([]);
     const [selectedProject, setSelectedProject] = useState<number | null>(null);
     const isMobile = useMobile();
+
+    const { isAiDraft, warningBanner, confirm: confirmAiDraft } = useAiDraft({
+        expectedKind: 'task',
+        form,
+        onDraftLoaded: (draftDetail) => {
+            setEditingTask(null);
+            setSelectedProject(draftDetail.payload?.project_id || null);
+            form.setFieldsValue({
+                ...draftDetail.payload,
+                due_date: draftDetail.payload?.due_date ? dayjs(draftDetail.payload.due_date) : null
+            });
+            setIsModalOpen(true);
+        }
+    });
 
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -83,6 +98,15 @@ const TasksPage: React.FC = () => {
                 creator_id: currentUser.id,
                 due_date: values.due_date ? values.due_date.toISOString() : null
             };
+
+            if (isAiDraft) {
+                const res = await confirmAiDraft(payload);
+                if (res) {
+                    setIsModalOpen(false);
+                    fetchData();
+                }
+                return;
+            }
 
             if (editingTask) {
                 await api.put(`/tasks/${editingTask.id}`, payload);
@@ -218,11 +242,12 @@ const TasksPage: React.FC = () => {
             </Card>
 
             <Modal
-                title={editingTask ? "Cập nhật Công Việc" : "Thêm Công Việc Mới"}
+                title={isAiDraft ? "Duyệt Nháp Công Việc (AI)" : (editingTask ? "Cập nhật Công Việc" : "Thêm Công Việc Mới")}
                 open={isModalOpen}
                 onCancel={() => setIsModalOpen(false)}
                 onOk={() => form.submit()}
             >
+                {warningBanner}
                 <Form form={form} layout="vertical" onFinish={handleSave} initialValues={{ priority: 'MEDIUM', status: 'TODO' }}>
                     <Form.Item name="title" label="Tên công việc" rules={[{ required: true }]}><Input /></Form.Item>
                     <Form.Item name="description" label="Mô tả chi tiết"><Input.TextArea rows={3} /></Form.Item>
