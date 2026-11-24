@@ -18,6 +18,7 @@ import {
   getErrorMessageByCode,
   createMarkdownComponents,
 } from './copilotApi';
+import DraftCard from './DraftCard';
 
 const { Text } = Typography;
 
@@ -200,6 +201,15 @@ export const MessageView: React.FC<MessageViewProps> = ({
                         );
                       })}
                     </div>
+                  </div>
+                )}
+
+                {/* Drafts list */}
+                {msg.drafts && msg.drafts.length > 0 && (
+                  <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #f1f5f9' }}>
+                    {msg.drafts.map((draft) => (
+                      <DraftCard key={draft.id} draft={draft} />
+                    ))}
                   </div>
                 )}
               </div>

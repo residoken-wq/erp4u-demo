@@ -23,6 +23,13 @@ export interface CopilotToolStep {
   label: string;
 }
 
+export interface CopilotDraftItem {
+  id: string;
+  kind: string;
+  title: string;
+  summary: string;
+}
+
 @Entity('ai_conversation_messages')
 @Check(`"role" IN ('user', 'assistant')`)
 @Index(['conversation_id', 'created_at'])
@@ -62,4 +69,7 @@ export class AiConversationMessage {
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
+
+  @Column({ type: 'jsonb', nullable: true })
+  drafts: CopilotDraftItem[] | null;
 }

@@ -48,6 +48,7 @@ Backend triển khai ở repo cloud (P9b3). Frontend ở core (P9b2) gọi theo 
         "tool_steps": null,
         "sources": null,
         "error_code": null,
+        "drafts": null,
         "created_at": "2026-11-23T09:30:00.000Z"
       },
       {
@@ -63,6 +64,14 @@ Backend triển khai ở repo cloud (P9b3). Frontend ở core (P9b2) gọi theo 
             "id": "SO-2026-001",
             "label": "Đơn hàng SO-2026-001",
             "path": "/orders"
+          }
+        ],
+        "drafts": [
+          {
+            "id": "d1a2b3c4-0001-4000-8000-000000000001",
+            "kind": "quotation",
+            "title": "Báo giá Đơn hàng SO-2026-001",
+            "summary": "Báo giá cho Khách hàng Demo 01, tổng tiền ước tính 1.250.000.000 ₫"
           }
         ],
         "error_code": null,
@@ -142,10 +151,10 @@ Backend triển khai ở repo cloud (P9b3). Frontend ở core (P9b2) gọi theo 
    ```
    *Có thể gửi 0, 1 hoặc nhiều sự kiện `step` tuỳ theo số bước tool.*
 
-3. **`answer`** (Gửi nội dung câu trả lời hoàn chỉnh kèm nguồn tham chiếu):
+3. **`answer`** (Gửi nội dung câu trả lời hoàn chỉnh kèm nguồn tham chiếu và nháp hành động nếu có):
    ```sse
    event: answer
-   data: {"message_id":"m1a2b3c4-0001-4000-8000-000000000003","content":"Hiện có **3 mặt hàng** đang dưới mức tồn an toàn...","sources":[{"type":"material","id":"MAT-01","label":"Vải Cotton 100%","path":"/materials"}]}
+   data: {"message_id":"m1a2b3c4-0001-4000-8000-000000000003","content":"Hiện có **3 mặt hàng** đang dưới mức tồn an toàn...","sources":[{"type":"material","id":"MAT-01","label":"Vải Cotton 100%","path":"/materials"}],"drafts":[{"id":"d1a2b3c4-0001-4000-8000-000000000001","kind":"purchase_order","title":"Đơn mua NPL Vải Cotton 100%","summary":"Mua 500m Vải Cotton từ NCC Dệt may Demo 01"}]}
    ```
 
 4. **`error`** (Gửi khi xảy ra lỗi trong quá trình xử lý):

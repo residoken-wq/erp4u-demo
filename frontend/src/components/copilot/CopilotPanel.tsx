@@ -229,6 +229,7 @@ export const CopilotPanel: React.FC = () => {
                 role: 'assistant',
                 content: event.data.content,
                 sources: event.data.sources,
+                drafts: event.data.drafts,
                 created_at: new Date().toISOString(),
               };
               setMessages((prev) => [...prev, assistantMsg]);

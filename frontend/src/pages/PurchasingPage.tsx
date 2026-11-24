@@ -9,6 +9,8 @@ import POPayments from '../components/purchasing/POPayments';
 import POBtpTab from '../components/purchasing/POBtpTab';
 import { handlePrintPO } from '../utils/printPurchasingTemplate';
 import { exportPOToExcel } from '../utils/exportPOToExcel';
+import useAiDraft from '../hooks/useAiDraft';
+import DraftPurchaseOrderModal from '../components/purchasing/DraftPurchaseOrderModal';
 
 const { RangePicker } = DatePicker;
 
@@ -20,6 +22,17 @@ const PurchasingPage: React.FC = () => {
     const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
     const [hideDelivered, setHideDelivered] = useState<boolean>(true);
     const isMobile = useMobile();
+
+    const [isAiDraftModalOpen, setIsAiDraftModalOpen] = useState(false);
+    const [aiDraftData, setAiDraftData] = useState<any>(null);
+
+    useAiDraft({
+        expectedKind: 'purchase_order',
+        onDraftLoaded: (draftDetail) => {
+            setAiDraftData(draftDetail);
+            setIsAiDraftModalOpen(true);
+        }
+    });
 
     // Detail Modal State
     const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -1992,6 +2005,20 @@ const PurchasingPage: React.FC = () => {
                 currentPO={issueModalPO}
                 onRefresh={fetchData}
             />
+
+            {aiDraftData && (
+                <DraftPurchaseOrderModal
+                    open={isAiDraftModalOpen}
+                    onClose={() => setIsAiDraftModalOpen(false)}
+                    draftId={aiDraftData.id}
+                    initialPayload={aiDraftData.payload}
+                    suppliers={suppliers}
+                    onSuccess={() => {
+                        setIsAiDraftModalOpen(false);
+                        fetchData();
+                    }}
+                />
+            )}
         </div>
     );
 };

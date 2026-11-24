@@ -14,6 +14,8 @@ import PendingOrdersTab from '../components/planning/PendingOrdersTab';
 import PfoDetailTabs from '../components/planning/PfoDetailTabs';
 import MaterialDemandDashboard from '../components/planning/MaterialDemandDashboard';
 import ProductDemandDashboard from '../components/planning/ProductDemandDashboard';
+import useAiDraft from '../hooks/useAiDraft';
+import DraftProductionOrderModal from '../components/planning/DraftProductionOrderModal';
 
 const { RangePicker } = DatePicker;
 const { Title, Text } = Typography;
@@ -33,6 +35,17 @@ const PlanningPage: React.FC = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
     const [form] = Form.useForm();
+
+    const [isAiDraftModalOpen, setIsAiDraftModalOpen] = useState(false);
+    const [aiDraftData, setAiDraftData] = useState<any>(null);
+
+    useAiDraft({
+        expectedKind: 'production_order',
+        onDraftLoaded: (draftDetail) => {
+            setAiDraftData(draftDetail);
+            setIsAiDraftModalOpen(true);
+        }
+    });
     
     // PFO Detail Drawer State
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -448,6 +461,20 @@ const PlanningPage: React.FC = () => {
                     ]}
                 />
             </Modal>
+
+            {aiDraftData && (
+                <DraftProductionOrderModal
+                    open={isAiDraftModalOpen}
+                    onClose={() => setIsAiDraftModalOpen(false)}
+                    draftId={aiDraftData.id}
+                    initialPayload={aiDraftData.payload}
+                    suppliers={suppliers}
+                    onSuccess={() => {
+                        setIsAiDraftModalOpen(false);
+                        fetchData();
+                    }}
+                />
+            )}
         </div>
     );
 };

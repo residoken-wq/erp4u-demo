@@ -41,6 +41,13 @@ export interface CopilotToolStep {
   label: string;
 }
 
+export interface CopilotDraftItem {
+  id: string;
+  kind: string;
+  title: string;
+  summary: string;
+}
+
 export interface ConversationItem {
   id: string;
   title: string;
@@ -53,6 +60,7 @@ export interface ConversationMessage {
   content: string;
   tool_steps?: CopilotToolStep[] | null;
   sources?: CopilotSourceItem[] | null;
+  drafts?: CopilotDraftItem[] | null;
   error_code?: string | null;
   created_at: string;
 }
@@ -66,7 +74,7 @@ export interface ConversationDetail {
 export type CopilotSseEvent =
   | { type: 'conversation'; data: { id: string; title: string } }
   | { type: 'step'; data: { tool: string; label: string } }
-  | { type: 'answer'; data: { message_id: string; content: string; sources?: CopilotSourceItem[] } }
+  | { type: 'answer'; data: { message_id: string; content: string; sources?: CopilotSourceItem[]; drafts?: CopilotDraftItem[] } }
   | { type: 'error'; data: { code: string; message: string } }
   | { type: 'done'; data: Record<string, never> };
 

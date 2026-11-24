@@ -13,7 +13,7 @@ import { User } from '../../users/entities/user.entity';
 import { AiAuditLog } from './ai-audit-log.entity';
 
 @Entity('ai_drafts')
-@Check(`"status" IN ('pending', 'confirmed', 'rejected', 'expired')`)
+@Check(`"status" IN ('pending', 'confirmed', 'rejected', 'expired', 'executing', 'failed')`)
 @Index(['created_by', 'status'])
 @Index(['status', 'expires_at'])
 export class AiDraft {
@@ -27,7 +27,7 @@ export class AiDraft {
   payload: Record<string, any>;
 
   @Column({ type: 'varchar', length: 20, default: 'pending' })
-  status: 'pending' | 'confirmed' | 'rejected' | 'expired' | string;
+  status: 'pending' | 'confirmed' | 'rejected' | 'expired' | 'executing' | 'failed' | string;
 
   @Column({ type: 'int' })
   created_by: number;
@@ -47,7 +47,7 @@ export class AiDraft {
   confirmed_at: Date | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  result_ref: { entity: string; id: string | number } | null;
+  result_ref: { entity: string; id: string | number; path?: string } | null;
 
   @Column({ type: 'uuid', nullable: true })
   audit_log_id: string | null;
@@ -64,4 +64,7 @@ export class AiDraft {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  error_code: string | null;
 }
