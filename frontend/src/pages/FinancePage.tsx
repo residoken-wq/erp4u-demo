@@ -1003,7 +1003,7 @@ const FinancePage: React.FC = () => {
                                                         radius={0.8}
                                                         innerRadius={0.6}
                                                         label={{ text: 'value', style: { fontWeight: 'bold' } }}
-                                                        legend={{ position: 'bottom' }}
+                                                        legend={{ color: { position: 'bottom' } }}
                                                         height={300}
                                                     />
                                                 </Card>
@@ -1024,7 +1024,7 @@ const FinancePage: React.FC = () => {
                                                         radius={0.8}
                                                         innerRadius={0.6}
                                                         label={{ text: 'value', style: { fontWeight: 'bold' } }}
-                                                        legend={{ position: 'bottom' }}
+                                                        legend={{ color: { position: 'bottom' } }}
                                                         height={300}
                                                     />
                                                 </Card>
@@ -1057,7 +1057,21 @@ const FinancePage: React.FC = () => {
                                                     colorField="type"
                                                     group={true}
                                                     columnWidthRatio={0.6}
-                                                    color={({ type }: any) => type === 'Thu' ? '#52c41a' : '#f5222d'}
+                                                    scale={{ color: { domain: ['Thu', 'Chi'], range: ['#52c41a', '#f5222d'] } }}
+                                                    axis={{
+                                                        y: {
+                                                            labelFormatter: (v: number) => `${(Number(v) / 1000000).toFixed(0)}M`,
+                                                        },
+                                                    }}
+                                                    tooltip={{
+                                                        items: [
+                                                            (d: any) => ({
+                                                                name: d.type,
+                                                                value: `${Number(d.value).toLocaleString('vi-VN')} ₫`,
+                                                            }),
+                                                        ],
+                                                    }}
+                                                    legend={{ color: { position: 'top' } }}
                                                     height={350}
                                                 />
                                             </Card>
