@@ -58,6 +58,7 @@ export interface ConversationMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  input_mode?: 'text' | 'voice';
   tool_steps?: CopilotToolStep[] | null;
   sources?: CopilotSourceItem[] | null;
   drafts?: CopilotDraftItem[] | null;
@@ -418,6 +419,7 @@ export async function deleteConversation(id: string, baseUrl: string = getApiBas
 export async function sendChatMessageStream(params: {
   conversation_id?: string;
   message: string;
+  input_mode?: 'text' | 'voice';
   signal?: AbortSignal;
   onEvent: (event: CopilotSseEvent) => void;
   baseUrl?: string;
@@ -434,6 +436,7 @@ export async function sendChatMessageStream(params: {
     body: JSON.stringify({
       conversation_id: params.conversation_id,
       message: params.message,
+      input_mode: params.input_mode || 'text',
     }),
     signal: params.signal,
   });

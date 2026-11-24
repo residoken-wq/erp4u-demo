@@ -32,6 +32,7 @@ export interface CopilotDraftItem {
 
 @Entity('ai_conversation_messages')
 @Check(`"role" IN ('user', 'assistant')`)
+@Check(`"input_mode" IN ('text', 'voice')`)
 @Index(['conversation_id', 'created_at'])
 @Index(['created_at'])
 export class AiConversationMessage {
@@ -72,4 +73,7 @@ export class AiConversationMessage {
 
   @Column({ type: 'jsonb', nullable: true })
   drafts: CopilotDraftItem[] | null;
+
+  @Column({ type: 'varchar', length: 10, default: 'text' })
+  input_mode: 'text' | 'voice' | string;
 }
