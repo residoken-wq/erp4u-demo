@@ -1,7 +1,6 @@
 // ERP4U Frontend Application
 import React, { useState, useEffect, useMemo } from 'react';
 import { Layout, Menu, theme, Button, Avatar, Dropdown, Modal, Form, Input, message, Alert, ConfigProvider } from 'antd';
-import viVN from 'antd/locale/vi_VN';
 import { antdTheme, brandColors } from './theme/brand';
 import type { MenuProps } from 'antd';
 import {
@@ -28,6 +27,10 @@ import LoadingDisplay from './components/LoadingDisplay';
 import CopilotPanel from './components/copilot/CopilotPanel';
 import AnnouncementBanner from './components/common/AnnouncementBanner'; // <--- Import Announcement Banner
 import { LanguageSwitcher } from './components/common/LanguageSwitcher';
+
+ConfigProvider.config({
+    holderRender: (children) => <ConfigProvider theme={antdTheme}>{children}</ConfigProvider>,
+});
 
 const { Header, Content, Footer, Sider } = Layout;
 type MenuItem = Required<MenuProps>['items'][number];
@@ -674,7 +677,7 @@ const App: React.FC = () => {
     const isPublicPortal = typeof window !== 'undefined' && window.location.pathname.startsWith('/portal/');
 
     return (
-        <ConfigProvider theme={antdTheme} locale={viVN}>
+        <ConfigProvider theme={antdTheme}>
             <EntitlementsProvider enabled={isAuthenticated && !isPublicPortal}>
                 <SubscriptionProvider isAuthenticated={isAuthenticated && !isPublicPortal}>
                     <AppShell
