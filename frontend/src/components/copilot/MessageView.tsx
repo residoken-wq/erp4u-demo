@@ -19,6 +19,7 @@ import {
   createMarkdownComponents,
 } from './copilotApi';
 import DraftCard from './DraftCard';
+import { brandColors } from '../../theme/brand';
 
 const { Text } = Typography;
 
@@ -63,16 +64,16 @@ export const MessageView: React.FC<MessageViewProps> = ({
               width: 52,
               height: 52,
               borderRadius: '50%',
-              background: '#e0f2fe',
+              background: brandColors.navy,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 12px',
             }}
           >
-            <RobotOutlined style={{ fontSize: 28, color: '#0284c7' }} />
+            <RobotOutlined style={{ fontSize: 28, color: brandColors.mint }} />
           </div>
-          <Text strong style={{ fontSize: 16, color: '#0f172a', display: 'block' }}>
+          <Text strong style={{ fontSize: 16, color: brandColors.navy, display: 'block' }}>
             ERP4U Copilot
           </Text>
           <Text type="secondary" style={{ fontSize: 13, display: 'block', marginTop: 4, marginBottom: 20 }}>
@@ -82,7 +83,7 @@ export const MessageView: React.FC<MessageViewProps> = ({
           {suggestedPrompts.length > 0 && (
             <div style={{ textAlign: 'left', marginTop: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                <CompassOutlined style={{ color: '#0284c7' }} />
+                <CompassOutlined style={{ color: brandColors.navy }} />
                 <Text strong style={{ fontSize: 12, color: '#475569' }}>
                   Gợi ý câu hỏi:
                 </Text>

@@ -343,7 +343,7 @@ export default function BodFollowUpPage() {
         },
         {
             title: 'Ngày Giao', dataIndex: 'delivery_date', width: 110,
-            render: (t: any) => t ? <span style={{ color: '#1890ff' }}>{dayjs(t).format('DD/MM/YYYY')}</span> : '-'
+            render: (t: any) => t ? <span style={{ color: '#272F72' }}>{dayjs(t).format('DD/MM/YYYY')}</span> : '-'
         },
         {
             title: 'Doanh Thu', dataIndex: 'total_amount', align: 'right' as const, width: 110,
@@ -593,7 +593,7 @@ export default function BodFollowUpPage() {
                     return (
                         <Card key={r.is_customer_record ? `cust_${r.id}` : `sale_${r.id}`} bodyStyle={{ padding: '16px' }} style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                <a href={linkPath} target="_blank" rel="noreferrer" style={{ fontSize: 16, fontWeight: 700, color: '#1890ff' }}>
+                                <a href={linkPath} target="_blank" rel="noreferrer" style={{ fontSize: 16, fontWeight: 700, color: '#272F72' }}>
                                     {r.order_code}
                                 </a>
                                 <Tag color={statusColor} style={{ margin: 0 }}>{statusLabel}</Tag>
@@ -618,7 +618,7 @@ export default function BodFollowUpPage() {
                                 </div>
                                 <div>
                                     <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 2 }}>Ngày giao</div>
-                                    <div style={{ fontWeight: 600, color: '#1890ff' }}>{r.delivery_date ? dayjs(r.delivery_date).format('DD/MM/YYYY') : '-'}</div>
+                                    <div style={{ fontWeight: 600, color: '#272F72' }}>{r.delivery_date ? dayjs(r.delivery_date).format('DD/MM/YYYY') : '-'}</div>
                                 </div>
                             </div>
 
@@ -671,9 +671,9 @@ export default function BodFollowUpPage() {
                                                 padding: '4px 12px',
                                                 borderRadius: 4,
                                                 cursor: 'pointer',
-                                                border: isActive ? '1px solid #1890ff' : '1px solid #d9d9d9',
+                                                border: isActive ? '1px solid #272F72' : '1px solid #d9d9d9',
                                                 background: isActive ? '#e6f7ff' : '#fff',
-                                                color: isActive ? '#1890ff' : '#666',
+                                                color: isActive ? '#272F72' : '#666',
                                                 fontSize: 13,
                                                 transition: 'all 0.2s',
                                                 fontWeight: isActive ? 500 : 400
@@ -741,8 +741,8 @@ export default function BodFollowUpPage() {
 
                 {/* THỐNG KÊ */}
                 <div style={{ display: 'flex', gap: 16, marginBottom: 24, overflowX: 'auto' }}>
-                    <Card size="small" style={{ minWidth: 200, flex: 1, borderLeft: '4px solid #1890ff' }}>
-                        <Statistic title="Tổng G.Trị" value={totalRevenue} precision={0} valueStyle={{ color: '#1890ff', fontWeight: 'bold' }} suffix="đ" />
+                    <Card size="small" style={{ minWidth: 200, flex: 1, borderLeft: '4px solid #272F72' }}>
+                        <Statistic title="Tổng G.Trị" value={totalRevenue} precision={0} valueStyle={{ color: '#272F72', fontWeight: 'bold' }} suffix="đ" />
                     </Card>
                     <Card size="small" style={{ minWidth: 200, flex: 1, borderLeft: '4px solid #52c41a' }}>
                         <Statistic title="Thực Thu" value={totalPaid} precision={0} valueStyle={{ color: '#52c41a', fontWeight: 'bold' }} suffix="đ" />

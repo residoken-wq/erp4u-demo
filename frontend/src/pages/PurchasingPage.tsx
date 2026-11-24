@@ -1151,7 +1151,7 @@ const PurchasingPage: React.FC = () => {
                     </Descriptions.Item>
                     <Descriptions.Item label="Timeline KHSX" span={2}>
                         {currentPO?.pfo?.planned_start_date && currentPO?.pfo?.committed_finish_date ? (
-                            <span style={{ color: '#1890ff', fontWeight: 500 }}>
+                            <span style={{ color: '#272F72', fontWeight: 500 }}>
                                 {dayjs(currentPO.pfo.planned_start_date).format('DD/MM/YYYY')} - {dayjs(currentPO.pfo.committed_finish_date).format('DD/MM/YYYY')}
                             </span>
                         ) : (
@@ -1210,7 +1210,7 @@ const PurchasingPage: React.FC = () => {
                                             );
                                             if (relatedProducts.length > 0) {
                                                 materialHtml = (
-                                                    <div style={{ paddingLeft: 30, color: '#1890ff', fontSize: 13, marginBottom: 8 }}>
+                                                    <div style={{ paddingLeft: 30, color: '#272F72', fontSize: 13, marginBottom: 8 }}>
                                                         <b style={{color: '#666'}}>Dùng cho SP (SO):</b> {relatedProducts.map(p => `${p.product?.name || p.name} (${p.quantity})`).join(', ')}
                                                     </div>
                                                 );
@@ -1221,7 +1221,7 @@ const PurchasingPage: React.FC = () => {
                                         if (r.po_details && r.po_details.length > 0) {
                                             poDetailsHtml = (
                                                 <div style={{ padding: '10px 20px', backgroundColor: '#fafafa', borderRadius: 4, border: '1px solid #e8e8e8' }}>
-                                                    <div style={{ marginBottom: 8, fontWeight: 'bold', color: '#1890ff' }}>Chi tiết từng PO:</div>
+                                                    <div style={{ marginBottom: 8, fontWeight: 'bold', color: '#272F72' }}>Chi tiết từng PO:</div>
                                                     <Table
                                                         dataSource={r.po_details}
                                                         rowKey="po_code"
@@ -1572,7 +1572,7 @@ const PurchasingPage: React.FC = () => {
                                     expandable={{
                                         expandedRowRender: record => (
                                             <div style={{ padding: '10px 20px', backgroundColor: '#f9f9f9', borderRadius: 4 }}>
-                                                <div style={{ marginBottom: 5, fontWeight: 'bold', color: '#1890ff' }}>Chi tiết NPL cần thiết:</div>
+                                                <div style={{ marginBottom: 5, fontWeight: 'bold', color: '#272F72' }}>Chi tiết NPL cần thiết:</div>
                                                 <Table
                                                     dataSource={record.materials}
                                                     rowKey="key"
@@ -1613,7 +1613,7 @@ const PurchasingPage: React.FC = () => {
                                 {/* MỚI: Bảng Lịch sử Phiếu Nhập Kho */}
                                 {poReceipts && poReceipts.length > 0 ? (
                                     <div style={{ marginBottom: 16 }}>
-                                        <div style={{ fontWeight: 600, color: '#1890ff', marginBottom: 8 }}>Lịch sử Phiếu Nhập Kho</div>
+                                        <div style={{ fontWeight: 600, color: '#272F72', marginBottom: 8 }}>Lịch sử Phiếu Nhập Kho</div>
                                         <Table
                                             dataSource={poReceipts}
                                             rowKey="id"
@@ -1908,7 +1908,7 @@ const PurchasingPage: React.FC = () => {
                                                     { title: 'Dự kiến cần (m)', render: (r: any) => {
                                                         const factor = item.material ? Number(item.material.conversion_factor || 1) : 1;
                                                         const val = factor > 1 ? Number(((item.quantity || 0) / factor).toFixed(2)) : (item.quantity || 0);
-                                                        return <b style={{ color: '#1890ff' }}>{Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>;
+                                                        return <b style={{ color: '#272F72' }}>{Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>;
                                                     }},
                                                     { title: 'Diện tích dư cuối (m²)', dataIndex: 'wasteArea', render: (v: number) => (Number(v || 0) / 10000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) },
                                                 ]}

@@ -186,7 +186,7 @@ const TikTokInboxPage: React.FC = () => {
                         <Statistic
                             title="Hôm nay"
                             value={stats?.today_messages || 0}
-                            valueStyle={{ color: '#1890ff' }}
+                            valueStyle={{ color: '#272F72' }}
                             prefix={<ClockCircleOutlined />}
                         />
                     </Card>
@@ -245,7 +245,7 @@ const TikTokInboxPage: React.FC = () => {
                                             cursor: 'pointer',
                                             padding: '10px 16px',
                                             background: selectedConv?.id === conv.id ? '#e6f7ff' : 'transparent',
-                                            borderLeft: selectedConv?.id === conv.id ? '3px solid #1890ff' : '3px solid transparent',
+                                            borderLeft: selectedConv?.id === conv.id ? '3px solid #272F72' : '3px solid transparent',
                                             transition: 'all 0.2s',
                                         }}
                                     >
@@ -360,7 +360,7 @@ const TikTokInboxPage: React.FC = () => {
                                                         borderRadius: msg.sender_type === 'SELLER'
                                                             ? '16px 16px 4px 16px'
                                                             : '16px 16px 16px 4px',
-                                                        background: msg.sender_type === 'SELLER' ? '#1890ff' : '#fff',
+                                                        background: msg.sender_type === 'SELLER' ? '#272F72' : '#fff',
                                                         color: msg.sender_type === 'SELLER' ? '#fff' : '#333',
                                                         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                                                     }}

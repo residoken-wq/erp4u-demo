@@ -17,7 +17,7 @@ const AddonUnavailablePage: React.FC<AddonUnavailablePageProps> = ({
   return (
     <div style={{ padding: '48px 24px', display: 'flex', justifyContent: 'center' }}>
       <Result
-        icon={<CloudOutlined style={{ color: '#1890ff', fontSize: 64 }} />}
+        icon={<CloudOutlined style={{ color: '#272F72', fontSize: 64 }} />}
         status="info"
         title={`Tính năng ${addonName} có trên ERP4U Cloud`}
         subTitle="Tính năng này thuộc phiên bản đám mây (ERP4U Cloud) và chưa được cài đặt trên phiên bản Open-Core hiện tại."

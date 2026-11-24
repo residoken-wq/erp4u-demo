@@ -41,7 +41,7 @@ const ProjectGantt: React.FC<ProjectGanttProps> = ({ tasks, milestones, onUpdate
             progress: m.status === 'COMPLETED' ? 100 : (m.status === 'ACTIVE' ? 50 : 0), // Progress based on Project status
             hideChildren: false,
             isDisabled: false,
-            styles: { progressColor: '#1890ff', progressSelectedColor: '#096dd9' }
+            styles: { progressColor: '#272F72', progressSelectedColor: '#096dd9' }
         });
 
         // 2. Tasks under this milestone

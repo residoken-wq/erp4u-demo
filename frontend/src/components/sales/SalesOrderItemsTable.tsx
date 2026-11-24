@@ -137,7 +137,7 @@ const NotePopover = ({ title, placeholder, value, icon, onChange, color }: { tit
             }
         >
             <Tooltip title={value ? value : title}>
-                <Button size="small" style={{ fontSize: 10, color: value ? color || '#1890ff' : '#999', borderColor: value ? color || '#1890ff' : '#d9d9d9' }} icon={icon} />
+                <Button size="small" style={{ fontSize: 10, color: value ? color || '#272F72' : '#999', borderColor: value ? color || '#272F72' : '#d9d9d9' }} icon={icon} />
             </Tooltip>
         </Popover>
     );
@@ -317,7 +317,7 @@ const SalesOrderItemsTable: React.FC<Props> = ({
                                 trigger="click"
                                 placement="bottomRight"
                             >
-                                <Button size="small" type="dashed" style={{ fontSize: 10, padding: '0 4px', height: 20, borderColor: record.price_ranges && record.price_ranges.length > 0 ? '#1890ff' : '#d9d9d9', color: record.price_ranges && record.price_ranges.length > 0 ? '#1890ff' : '#666' }}>
+                                <Button size="small" type="dashed" style={{ fontSize: 10, padding: '0 4px', height: 20, borderColor: record.price_ranges && record.price_ranges.length > 0 ? '#272F72' : '#d9d9d9', color: record.price_ranges && record.price_ranges.length > 0 ? '#272F72' : '#666' }}>
                                     <TagsOutlined /> {record.price_ranges && record.price_ranges.length > 0 ? `${record.price_ranges.length} mốc giá` : 'Mốc giá'}
                                 </Button>
                             </Popover>
@@ -435,7 +435,7 @@ const SalesOrderItemsTable: React.FC<Props> = ({
                                 </div>
                                 <div style={{ flex: 2, textAlign: 'right' }}>
                                     <div style={{ fontSize: 11, color: '#666', marginBottom: 2 }}>Thành tiền</div>
-                                    <div style={{ fontWeight: 600, fontSize: 14, color: '#1890ff', lineHeight: '32px' }}>
+                                    <div style={{ fontWeight: 600, fontSize: 14, color: '#272F72', lineHeight: '32px' }}>
                                         {Number(record.total_price).toLocaleString()}
                                     </div>
                                 </div>
@@ -446,7 +446,7 @@ const SalesOrderItemsTable: React.FC<Props> = ({
                                     title="Báo giá sỉ" 
                                     trigger="click"
                                 >
-                                    <Button size="small" type="dashed" style={{ fontSize: 11, borderColor: record.price_ranges && record.price_ranges.length > 0 ? '#1890ff' : '#d9d9d9', color: record.price_ranges && record.price_ranges.length > 0 ? '#1890ff' : '#666' }}>
+                                    <Button size="small" type="dashed" style={{ fontSize: 11, borderColor: record.price_ranges && record.price_ranges.length > 0 ? '#272F72' : '#d9d9d9', color: record.price_ranges && record.price_ranges.length > 0 ? '#272F72' : '#666' }}>
                                         <TagsOutlined /> {record.price_ranges && record.price_ranges.length > 0 ? `${record.price_ranges.length} mốc giá` : 'Mốc giá'}
                                     </Button>
                                 </Popover>

@@ -232,7 +232,7 @@ export const handlePrintPaymentRequest = (options: PrintPaymentRequestOptions) =
             transition: all 0.2s;
         }
         .preview-btn:hover {
-            background: #1677ff;
+            background: #272F72;
             transform: scale(1.02);
         }
         .preview-btn.secondary {

@@ -373,7 +373,7 @@ const RbacLogPage: React.FC = () => {
                 <Row align="middle" justify="space-between" gutter={[16, 16]}>
                     <Col>
                         <Space align="center" size={12}>
-                            <SafetyCertificateOutlined style={{ fontSize: 28, color: '#1890ff' }} />
+                            <SafetyCertificateOutlined style={{ fontSize: 28, color: '#272F72' }} />
                             <div>
                                 <Title level={4} style={{ margin: 0 }}>Quản trị Phân quyền RBAC & Nhật ký Truy cập</Title>
                                 <Text type="secondary">Giám sát và kiểm soát phân quyền hệ thống</Text>

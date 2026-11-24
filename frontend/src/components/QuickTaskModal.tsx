@@ -74,7 +74,7 @@ const QuickTaskModal: React.FC<QuickTaskModalProps> = ({ open, onClose, initialV
                 <Row gutter={16}>
                     <Col span={12}>
                         <Form.Item name="reference_code" label="Mã tham chiếu">
-                            <Input disabled style={{ fontWeight: 'bold', color: '#1890ff' }} />
+                            <Input disabled style={{ fontWeight: 'bold', color: '#272F72' }} />
                         </Form.Item>
                     </Col>
                     <Col span={12}>

@@ -232,7 +232,7 @@ const ChatbotRequestsPage: React.FC = () => {
             navigate(`/chatbot/requests/${row.id}`);
             openDetail(row.id);
           }}
-          style={{ fontWeight: 600, color: '#1677ff' }}
+          style={{ fontWeight: 600, color: '#272F72' }}
         >
           {code}
         </a>
@@ -398,7 +398,7 @@ const ChatbotRequestsPage: React.FC = () => {
         title={
           <Space>
             <span>Chi tiết yêu cầu:</span>
-            <Text strong style={{ color: '#1677ff' }}>
+            <Text strong style={{ color: '#272F72' }}>
               {detail?.code}
             </Text>
           </Space>
@@ -446,7 +446,7 @@ const ChatbotRequestsPage: React.FC = () => {
               </Descriptions.Item>
               <Descriptions.Item label="Số điện thoại">
                 {detail.contact?.phone ? (
-                  <Text strong style={{ color: '#1677ff' }}>
+                  <Text strong style={{ color: '#272F72' }}>
                     {detail.contact.phone}
                   </Text>
                 ) : (

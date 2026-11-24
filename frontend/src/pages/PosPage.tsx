@@ -223,7 +223,7 @@ const PosPage: React.FC = () => {
                                     </Text>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 8 }}>
                                         <div>
-                                            <Text strong style={{ color: '#1890ff', fontSize: 15 }}>{Number(product.base_price).toLocaleString('vi-VN')}đ</Text>
+                                            <Text strong style={{ color: '#272F72', fontSize: 15 }}>{Number(product.base_price).toLocaleString('vi-VN')}đ</Text>
                                         </div>
                                     </div>
                                     {!isMobile && <Tag color={isOutOfStock ? 'red' : 'green'} style={{ marginTop: 5 }}>{isOutOfStock ? 'Hết' : 'Kho: ' + product.quantity_in_stock}</Tag>}
@@ -272,7 +272,7 @@ const PosPage: React.FC = () => {
                 >
                     {customers.map(c => <Option key={c.id} value={c.id}>{c.name} - {c.phone}</Option>)}
                 </Select>
-                {selectedCustomer && <div style={{ marginTop: 5, fontSize: 12, color: '#1890ff' }}><UserOutlined /> {selectedCustomer.phone}</div>}
+                {selectedCustomer && <div style={{ marginTop: 5, fontSize: 12, color: '#272F72' }}><UserOutlined /> {selectedCustomer.phone}</div>}
             </div>
 
             {/* CART ITEMS */}
@@ -414,7 +414,7 @@ const PosPage: React.FC = () => {
                                     <div style={{ fontSize: 10, fontWeight: 500, lineHeight: 1.1, height: 22, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', color: '#333' }}>
                                         {p.name}
                                     </div>
-                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#1890ff', marginTop: 2 }}>{Number(p.base_price).toLocaleString('vi-VN')}</div>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#272F72', marginTop: 2 }}>{Number(p.base_price).toLocaleString('vi-VN')}</div>
                                     {isOOS && <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 'bold', color: 'red' }}>HẾT</div>}
                                 </div>
                             )

@@ -1336,12 +1336,12 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                                     <Form.Item name="require_invoice" valuePropName="checked" noStyle>
                                         <Switch checkedChildren="Có" unCheckedChildren="Không" />
                                     </Form.Item>
-                                    <span style={{ fontWeight: 500, color: '#1890ff' }}>Lấy hóa đơn</span>
+                                    <span style={{ fontWeight: 500, color: '#272F72' }}>Lấy hóa đơn</span>
                                 </div>
                             </Col>
                             <Col xs={12} sm={16}>
                                 <Form.Item name="is_production_sample_approved" valuePropName="checked">
-                                    <Checkbox style={{ fontWeight: 600, color: '#1890ff' }}>
+                                    <Checkbox style={{ fontWeight: 600, color: '#272F72' }}>
                                         {isMobile ? 'Đã duyệt mẫu SX' : 'Đã duyệt mẫu tiêu chuẩn - Production Sample Approved'}
                                     </Checkbox>
                                 </Form.Item>
@@ -1580,7 +1580,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
                 <Tabs.TabPane tab={isMobile ? '2. HĐ' : '2. Hợp đồng & Hóa đơn'} key="invoice">
                     <Form form={form} layout="vertical">
                         <div style={{ padding: 10, background: '#fff', border: '1px solid #d9d9d9', borderRadius: 4, marginBottom: 15 }}>
-                            <div style={{ fontWeight: 600, marginBottom: 10, color: '#1890ff' }}><FileTextOutlined /> TẠO HỢP ĐỒNG</div>
+                            <div style={{ fontWeight: 600, marginBottom: 10, color: '#272F72' }}><FileTextOutlined /> TẠO HỢP ĐỒNG</div>
                             <Row gutter={16} align="middle">
                                 <Col flex="auto">
                                     <i>Soạn thảo hợp đồng, tự động điền biến và thêm phụ lục hình ảnh.</i>
@@ -1866,7 +1866,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
 
                                         {vatDataList.some(inv => inv.lastEmailSentAt) && (
                                             <div style={{ marginTop: 12, fontSize: 12, color: '#666', borderTop: '1px dashed #e8e8e8', paddingTop: 8 }}>
-                                                <InfoCircleOutlined style={{ marginRight: 5, color: '#1890ff' }} />
+                                                <InfoCircleOutlined style={{ marginRight: 5, color: '#272F72' }} />
                                                 Lịch sử gửi email gần nhất: {vatDataList.filter(inv => inv.lastEmailSentAt).map(inv => (
                                                     <span key={inv.ikey} style={{ marginRight: 15 }}>
                                                         <b>{inv.ikey}</b>: {dayjs(inv.lastEmailSentAt).format('HH:mm DD/MM/YYYY')} tới <i>{inv.lastEmailSentTo}</i>
@@ -1982,7 +1982,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
             <Modal
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <CopyOutlined style={{ color: '#1890ff', fontSize: 18 }} />
+                        <CopyOutlined style={{ color: '#272F72', fontSize: 18 }} />
                         <span style={{ fontSize: 16 }}>Copy Sản Phẩm Từ Báo Giá / Đơn Hàng Cũ</span>
                     </div>
                 }

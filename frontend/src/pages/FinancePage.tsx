@@ -16,6 +16,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../utils/api';
+import { brandChartPalette } from '../theme/brand';
 import CashFlowDashboard from '../components/finance/CashFlowDashboard';
 import PaymentVoucherPrintModal from '../components/finance/PaymentVoucherPrintModal';
 
@@ -713,7 +714,7 @@ const FinancePage: React.FC = () => {
                             bordered={false} 
                             bodyStyle={{ padding: isMobile ? '10px 12px' : '14px 18px', cursor: 'pointer' }} 
                             style={{ 
-                                background: 'linear-gradient(135deg, #0958d9 0%, #1677ff 100%)', 
+                                background: 'linear-gradient(135deg, #0958d9 0%, #272F72 100%)', 
                                 borderRadius: 8, 
                                 boxShadow: '0 2px 8px rgba(9,88,217,0.2)',
                                 border: expenseStatusFilter === 'LOGISTICS' && activeTab === 'EXPENSE' ? '2px solid #fff' : undefined
@@ -855,7 +856,7 @@ const FinancePage: React.FC = () => {
                                                 { 
                                                     label: (
                                                         <Space size={4}>
-                                                            <TruckOutlined style={{ color: '#1677ff' }} />
+                                                            <TruckOutlined style={{ color: '#272F72' }} />
                                                             <span>Vận chuyển ({logisticsExpenses.length})</span>
                                                         </Space>
                                                     ), 
@@ -972,6 +973,7 @@ const FinancePage: React.FC = () => {
                                                         }, [])}
                                                         angleField="value"
                                                         colorField="type"
+                                                        scale={{ color: { range: brandChartPalette } }}
                                                         radius={0.8}
                                                         innerRadius={0.6}
                                                         label={{ text: 'value', style: { fontWeight: 'bold' } }}
@@ -992,6 +994,7 @@ const FinancePage: React.FC = () => {
                                                         }, [])}
                                                         angleField="value"
                                                         colorField="type"
+                                                        scale={{ color: { range: brandChartPalette } }}
                                                         radius={0.8}
                                                         innerRadius={0.6}
                                                         label={{ text: 'value', style: { fontWeight: 'bold' } }}
@@ -1114,9 +1117,9 @@ const FinancePage: React.FC = () => {
                                     <Col span={6}>
                                         {(() => { const totalProfit = filteredSOProfitData.reduce((s, r) => s + Number(r.profit || 0), 0); return (
                                         <Card size="small" bordered={false} style={{ background: totalProfit >= 0 ? 'linear-gradient(135deg, #e6f7ff 0%, #91d5ff 100%)' : 'linear-gradient(135deg, #fff2e8 0%, #ffbb96 100%)', borderRadius: 10 }}>
-                                            <Statistic title={<span style={{ color: '#1890ff', fontWeight: 600, fontSize: 12 }}>Tổng Lợi Nhuận</span>}
+                                            <Statistic title={<span style={{ color: '#272F72', fontWeight: 600, fontSize: 12 }}>Tổng Lợi Nhuận</span>}
                                                 value={totalProfit}
-                                                precision={0} valueStyle={{ color: totalProfit >= 0 ? '#1890ff' : '#cf1322', fontWeight: 'bold', fontSize: 20 }}
+                                                precision={0} valueStyle={{ color: totalProfit >= 0 ? '#272F72' : '#cf1322', fontWeight: 'bold', fontSize: 20 }}
                                                 prefix={<WalletOutlined />} />
                                         </Card>); })()}
                                     </Col>
@@ -1405,7 +1408,7 @@ const FinancePage: React.FC = () => {
 
                     {/* --- PROJECT & TASK LINKING --- */}
                     <div style={{ background: '#e6f7ff', padding: 12, borderRadius: 6, marginBottom: 16 }}>
-                        <div style={{ fontWeight: 600, marginBottom: 8, color: '#1890ff' }}>Gán chi phí / doanh thu (Tùy chọn)</div>
+                        <div style={{ fontWeight: 600, marginBottom: 8, color: '#272F72' }}>Gán chi phí / doanh thu (Tùy chọn)</div>
                         <Row gutter={16}>
                             <Col span={12}>
                                 <Form.Item name="project_id" label="Thuộc Dự án">

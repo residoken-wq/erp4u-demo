@@ -207,7 +207,7 @@ const MaterialsPage: React.FC = () => {
              <Col span={12}><Form.Item name="material_type" label="Loại"><Input placeholder="Cotton..."/></Form.Item></Col>
           </Row>
           
-          <Divider orientation="left" style={{ borderColor: '#1890ff', color: '#1890ff' }}>Quy Cách & Tồn Kho</Divider>
+          <Divider orientation="left" style={{ borderColor: '#272F72', color: '#272F72' }}>Quy Cách & Tồn Kho</Divider>
           
           <Row gutter={16}>
              <Col span={8}><Form.Item name="unit" label="ĐVT Kho (Gốc)" rules={[{ required: true }]}><Input placeholder="m, kg" /></Form.Item></Col>

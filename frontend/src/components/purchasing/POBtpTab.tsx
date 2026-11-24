@@ -551,7 +551,7 @@ export const POBtpTab: React.FC<POBtpTabProps> = ({ currentPO, suppliers, produc
                             </Col>
 
                             <Col xs={24} sm={12} md={5}>
-                                <label style={{ fontSize: 12, color: '#1890ff', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                                <label style={{ fontSize: 12, color: '#272F72', fontWeight: 600, display: 'block', marginBottom: 4 }}>
                                     🎯 Sản phẩm sử dụng BTP này:
                                 </label>
                                 <Select

@@ -165,7 +165,7 @@ export const SendZnsModal: React.FC<Props> = ({ open, onCancel, onSuccess, order
             <span style={{ fontSize: 12, fontWeight: 500 }}>Số điện thoại nhận ZNS:</span>
             <Input
               style={{ marginTop: 4 }}
-              prefix={<PhoneOutlined style={{ color: '#1890ff' }} />}
+              prefix={<PhoneOutlined style={{ color: '#272F72' }} />}
               placeholder="VD: 0900000001"
               value={phone}
               onChange={e => setPhone(e.target.value)}
@@ -178,7 +178,7 @@ export const SendZnsModal: React.FC<Props> = ({ open, onCancel, onSuccess, order
             <span style={{ fontSize: 12, fontWeight: 500 }}>Tên khách hàng / Người nhận:</span>
             <Input
               style={{ marginTop: 4 }}
-              prefix={<UserOutlined style={{ color: '#1890ff' }} />}
+              prefix={<UserOutlined style={{ color: '#272F72' }} />}
               placeholder="Tên khách"
               value={recipientName}
               onChange={e => setRecipientName(e.target.value)}

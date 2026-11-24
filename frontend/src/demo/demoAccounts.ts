@@ -35,8 +35,8 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     fullName: 'Nhân viên Demo 01',
     roleTitle: 'Trưởng Nhóm Kinh Doanh (Sales Lead)',
     groupName: 'Kinh Doanh',
-    color: '#1890ff',
-    icon: React.createElement(ShopOutlined, { style: { fontSize: 20, color: '#1890ff' } }),
+    color: '#272F72',
+    icon: React.createElement(ShopOutlined, { style: { fontSize: 20, color: '#272F72' } }),
     description: 'Bán hàng POS, quản lý khách hàng (CRM), tạo báo giá, theo dõi tiến độ đơn hàng (SO).'
   },
   {

@@ -314,14 +314,14 @@ const POPayments: React.FC<Props> = ({ po, onSuccess }) => {
             {/* HEADER VÀ NÚT TẠO THANH TOÁN */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <div style={{ fontWeight: 'bold', fontSize: 14 }}>
-                    <DollarOutlined style={{ marginRight: 6, color: '#1890ff' }} />
+                    <DollarOutlined style={{ marginRight: 6, color: '#272F72' }} />
                     Lịch sử các lần chi tiền thanh toán ({historyList.length})
                 </div>
                 <Button
                     type="primary"
                     icon={<PlusOutlined />}
                     onClick={openPaymentModal}
-                    style={{ background: '#1890ff' }}
+                    style={{ background: '#272F72' }}
                 >
                     Thêm thanh toán
                 </Button>
@@ -343,7 +343,7 @@ const POPayments: React.FC<Props> = ({ po, onSuccess }) => {
             <Modal
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <DollarOutlined style={{ color: '#1890ff' }} />
+                        <DollarOutlined style={{ color: '#272F72' }} />
                         <span>Ghi nhận Thanh toán cho PO: <b>{po?.po_code}</b></span>
                     </div>
                 }

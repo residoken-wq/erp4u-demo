@@ -96,7 +96,7 @@ const CashFlowDashboard: React.FC = () => {
     const StatCards = () => (
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
             <Col xs={24} sm={12} md={6}>
-                <Card bordered={false} style={{ background: 'linear-gradient(135deg, #096dd9 0%, #1890ff 100%)', borderRadius: 12 }}>
+                <Card bordered={false} style={{ background: 'linear-gradient(135deg, #272F72 0%, #353F94 100%)', borderRadius: 12 }}>
                     <Statistic
                         title={<span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>💵 Quỹ tiền mặt</span>}
                         value={summary?.currentBalance || 0}
@@ -232,13 +232,13 @@ const CashFlowDashboard: React.FC = () => {
                                 marginBottom: 10,
                                 borderRadius: 8,
                                 background: alert.severity === 'error' ? '#fff1f0' : alert.severity === 'warning' ? '#fffbe6' : '#e6f7ff',
-                                borderLeft: `4px solid ${alert.severity === 'error' ? '#ff4d4f' : alert.severity === 'warning' ? '#faad14' : '#1890ff'}`,
+                                borderLeft: `4px solid ${alert.severity === 'error' ? '#ff4d4f' : alert.severity === 'warning' ? '#faad14' : '#272F72'}`,
                             }}
                         >
                             <div style={{ fontWeight: 600, marginBottom: 4 }}>
                                 {alert.severity === 'error' && <WarningOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />}
                                 {alert.severity === 'warning' && <AlertOutlined style={{ color: '#faad14', marginRight: 8 }} />}
-                                {alert.severity === 'info' && <InfoCircleOutlined style={{ color: '#1890ff', marginRight: 8 }} />}
+                                {alert.severity === 'info' && <InfoCircleOutlined style={{ color: '#272F72', marginRight: 8 }} />}
                                 {alert.title}
                             </div>
                             <div style={{ fontSize: 12, color: '#666' }}>{alert.description}</div>
@@ -256,7 +256,7 @@ const CashFlowDashboard: React.FC = () => {
         <Card
             title={
                 <span>
-                    <UserOutlined style={{ color: '#1890ff' }} /> Công nợ phải thu
+                    <UserOutlined style={{ color: '#272F72' }} /> Công nợ phải thu
                     <Tag color="blue" style={{ marginLeft: 8 }}>{(summary?.receivablesTotal || 0).toLocaleString()}đ</Tag>
                 </span>
             }

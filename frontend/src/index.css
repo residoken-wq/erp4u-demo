@@ -6,19 +6,43 @@
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
-    --accent: 280 65% 60%;
+    /* Conix Brand Token CSS Variables */
+    --brand-navy: #272F72;
+    --brand-navy-hover: #353F94;
+    --brand-navy-active: #1D2459;
+    --brand-navy-selected: #343E8F;
+    --brand-navy-darker: #1E2456;
+    --brand-navy-subtle: #F0F1F8;
+
+    --brand-orange: #F04E23;
+    --brand-orange-hover: #F26741;
+    --brand-orange-active: #D63F17;
+    --brand-orange-dark: #C53B13;
+    --brand-orange-subtle: #FFF3EE;
+
+    --brand-cream: #FFF5E1;
+    --brand-cream-layout: #FAF8F5;
+    --brand-cream-hover: #FFF9ED;
+    --brand-cream-border: #F2E8D5;
+
+    --brand-mint: #64FAE1;
+    --brand-mint-dark: #0F766E;
+    --brand-mint-subtle: #E6FAF5;
+
+    /* Semantic base tokens */
+    --background: 40 20% 97%;
+    --foreground: 235 49% 30%;
+    --primary: 235 49% 30%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 14 88% 54%;
   }
 }
 
 body {
     margin: 0;
     padding: 0;
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background-color: var(--brand-cream-layout, #FAF8F5);
+    color: #1a1a1a;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
 }
 
@@ -35,23 +59,49 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   border-radius: 12px;
 }
 
+/* Sidebar menu selected indicator (Mint bar on Navy) */
+.ant-layout-sider .ant-menu-dark .ant-menu-item-selected {
+  background-color: var(--brand-navy-selected, #343E8F) !important;
+  border-left: 3px solid var(--brand-mint, #64FAE1) !important;
+  color: #ffffff !important;
+}
+
+.ant-layout-sider .ant-menu-dark .ant-menu-item:hover,
+.ant-layout-sider .ant-menu-dark .ant-menu-submenu-title:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+/* Standout CTA button helper */
+.btn-cta-orange {
+  background-color: var(--brand-orange, #F04E23) !important;
+  border-color: var(--brand-orange, #F04E23) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+.btn-cta-orange:hover, .btn-cta-orange:focus {
+  background-color: var(--brand-orange-hover, #F26741) !important;
+  border-color: var(--brand-orange-hover, #F26741) !important;
+  color: #ffffff !important;
+}
+
 /* Notification deep link highlight animation */
 .highlight-row td {
-    background-color: #e6f7ff !important;
+    background-color: var(--brand-cream, #FFF5E1) !important;
     animation: highlight-pulse 0.5s ease-in-out 2;
 }
 
 @keyframes highlight-pulse {
     0% {
-        background-color: #e6f7ff;
+        background-color: var(--brand-cream, #FFF5E1);
     }
 
     50% {
-        background-color: #91d5ff;
+        background-color: var(--brand-cream-border, #F2E8D5);
     }
 
     100% {
-        background-color: #e6f7ff;
+        background-color: var(--brand-cream, #FFF5E1);
     }
 }
 

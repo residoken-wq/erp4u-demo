@@ -200,7 +200,7 @@ const AttachmentUpload: React.FC<Props> = ({
                                                 // On error, replace with file icon
                                                 const target = e.target as HTMLImageElement;
                                                 target.style.display = 'none';
-                                                target.parentElement!.innerHTML = '<span style="font-size:20px;color:#1890ff">📷</span>';
+                                                target.parentElement!.innerHTML = '<span style="font-size:20px;color:#272F72">📷</span>';
                                             }}
                                         />
                                     </div>
@@ -216,7 +216,7 @@ const AttachmentUpload: React.FC<Props> = ({
                                             border: '1px solid #d9d9d9',
                                             borderRadius: 4,
                                             background: '#fafafa',
-                                            color: '#1890ff',
+                                            color: '#272F72',
                                             fontSize: 20,
                                             cursor: 'pointer'
                                         }}

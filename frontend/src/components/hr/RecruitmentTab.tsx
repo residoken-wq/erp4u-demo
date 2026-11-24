@@ -453,7 +453,7 @@ const RecruitmentTab: React.FC = () => {
                                         <p><strong>Ý chính cần có:</strong> {record.key_points?.join(', ')}</p>
                                         <div className="grid grid-cols-3 gap-4 mt-4">
                                             <Card size="small" title={<span style={{color: '#52c41a'}}>Xuất sắc (8-10đ)</span>}>{record.scoring_criteria?.excellent}</Card>
-                                            <Card size="small" title={<span style={{color: '#1890ff'}}>Tốt (5-7đ)</span>}>{record.scoring_criteria?.good}</Card>
+                                            <Card size="small" title={<span style={{color: '#272F72'}}>Tốt (5-7đ)</span>}>{record.scoring_criteria?.good}</Card>
                                             <Card size="small" title={<span style={{color: '#faad14'}}>Yếu (1-4đ)</span>}>{record.scoring_criteria?.poor}</Card>
                                         </div>
                                     </div>

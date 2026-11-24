@@ -211,7 +211,7 @@ const QCPage: React.FC = () => {
                 <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
                     <Col xs={12} sm={8} md={4}><Card size="small"><Statistic title="Tổng phiếu" value={summary.total_inspections} /></Card></Col>
                     <Col xs={12} sm={8} md={4}><Card size="small"><Statistic title="Chờ kiểm" value={summary.pending} valueStyle={{ color: '#999' }} /></Card></Col>
-                    <Col xs={12} sm={8} md={4}><Card size="small"><Statistic title="Đang kiểm" value={summary.in_progress} valueStyle={{ color: '#1890ff' }} /></Card></Col>
+                    <Col xs={12} sm={8} md={4}><Card size="small"><Statistic title="Đang kiểm" value={summary.in_progress} valueStyle={{ color: '#272F72' }} /></Card></Col>
                     <Col xs={12} sm={8} md={4}><Card size="small"><Statistic title="Đạt" value={summary.passed} valueStyle={{ color: '#52c41a' }} /></Card></Col>
                     <Col xs={12} sm={8} md={4}><Card size="small"><Statistic title="Đạt ĐK" value={summary.conditional} valueStyle={{ color: '#fa8c16' }} /></Card></Col>
                     <Col xs={12} sm={8} md={4}><Card size="small"><Statistic title="Không đạt" value={summary.failed} valueStyle={{ color: '#ff4d4f' }} /></Card></Col>
@@ -475,7 +475,7 @@ const QCPage: React.FC = () => {
                                                         style={{ display: i === 0 ? 'inline-block' : 'none', cursor: 'pointer', borderRadius: 4, border: '1px solid #d9d9d9', objectFit: 'cover' }} 
                                                     />
                                                 ))}
-                                                {images.length > 1 && <span style={{ marginLeft: 4, color: '#1890ff', fontSize: 12, cursor: 'pointer' }}>+{images.length - 1}</span>}
+                                                {images.length > 1 && <span style={{ marginLeft: 4, color: '#272F72', fontSize: 12, cursor: 'pointer' }}>+{images.length - 1}</span>}
                                             </Image.PreviewGroup>
                                         );
                                     } },

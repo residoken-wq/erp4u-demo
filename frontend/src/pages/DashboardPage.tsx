@@ -251,7 +251,7 @@ const DashboardPage: React.FC = () => {
             {/* HEADER */}
             <Row gutter={16} align="middle" style={{ marginBottom: 24 }}>
                 <Col flex="auto">
-                    <Title level={3} style={{ margin: 0, background: 'linear-gradient(135deg, #1890ff, #722ed1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    <Title level={3} style={{ margin: 0, background: 'linear-gradient(135deg, #272F72, #722ed1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         👋 Xin chào, {user?.full_name || 'User'}!
                     </Title>
                     <Text type="secondary">
@@ -264,7 +264,7 @@ const DashboardPage: React.FC = () => {
                             type="primary"
                             icon={<PlusOutlined />}
                             onClick={() => navigate('/sales/pos')}
-                            style={{ borderRadius: 8, background: 'linear-gradient(135deg, #1890ff, #722ed1)' }}
+                            style={{ borderRadius: 8, background: 'linear-gradient(135deg, #272F72, #722ed1)' }}
                         >
                             Bán hàng nhanh
                         </Button>
@@ -285,7 +285,7 @@ const DashboardPage: React.FC = () => {
                                     <Statistic
                                         title={<span style={{ fontWeight: 600, color: '#0050b3' }}>Đơn hàng hôm nay</span>}
                                         value={stats?.sales?.ordersToday || 0}
-                                        prefix={<ShoppingCartOutlined style={{ color: '#1890ff' }} />}
+                                        prefix={<ShoppingCartOutlined style={{ color: '#272F72' }} />}
                                         valueStyle={{ color: '#0050b3' }}
                                     />
                                 </Card>
@@ -395,14 +395,14 @@ const DashboardPage: React.FC = () => {
                 <Row gutter={[24, 24]}>
                     <Col xs={24} md={16}>
                         <Card
-                            title={<span><ShopOutlined style={{ color: '#1890ff' }} /> Truy cập nhanh</span>}
+                            title={<span><ShopOutlined style={{ color: '#272F72' }} /> Truy cập nhanh</span>}
                             bordered={false}
                             style={{ borderRadius: 16, height: '100%', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
                         >
                             <Row gutter={[16, 16]}>
                                 {hasPerm('SALES') && (
                                     <>
-                                        <Col span={6}><QuickAction title="Tạo Báo Giá" icon={<FileTextOutlined />} color="#1890ff" onClick={() => navigate('/sales')} /></Col>
+                                        <Col span={6}><QuickAction title="Tạo Báo Giá" icon={<FileTextOutlined />} color="#272F72" onClick={() => navigate('/sales')} /></Col>
                                         <Col span={6}><QuickAction title="Đơn Hàng (SO)" icon={<ShoppingCartOutlined />} color="#722ed1" onClick={() => navigate('/orders')} /></Col>
                                         <Col span={6}><QuickAction title="Khách Hàng" icon={<UserOutlined />} color="#13c2c2" onClick={() => navigate('/customers')} /></Col>
                                     </>

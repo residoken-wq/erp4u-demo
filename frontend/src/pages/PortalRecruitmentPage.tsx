@@ -156,7 +156,7 @@ const PortalRecruitmentPage: React.FC = () => {
                         <div style={{ marginTop: 24 }}>
                             <Title level={4}>Lịch Phỏng Vấn</Title>
                             {interviews.map((intv: any) => (
-                                <Card size="small" style={{ marginBottom: 16, borderColor: '#1890ff' }} key={intv.id}>
+                                <Card size="small" style={{ marginBottom: 16, borderColor: '#272F72' }} key={intv.id}>
                                     <Paragraph><b>Thời gian:</b> {dayjs(intv.scheduled_at).format('HH:mm - DD/MM/YYYY')}</Paragraph>
                                     <Paragraph><b>Địa điểm:</b> {intv.location || 'Online'}</Paragraph>
                                     {intv.meeting_link && <Paragraph><b>Link:</b> <a href={intv.meeting_link} target="_blank" rel="noreferrer">{intv.meeting_link}</a></Paragraph>}

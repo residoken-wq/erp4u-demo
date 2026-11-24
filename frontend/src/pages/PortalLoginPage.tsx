@@ -5,7 +5,7 @@ import { API_URL } from '../config';
 import { getPackageLabel } from '../config/packages';
 
 // Standalone Portal Login Page — NOT inside AdminLayout
-// Design follows erp4u-website CSS globals (Be Vietnam Pro, #23A7D3 primary, pill buttons)
+// Design follows Conix brand guidelines (Be Vietnam Pro, #272F72 primary, pill buttons)
 
 const PortalLoginPage: React.FC = () => {
     const navigate = useNavigate();
@@ -110,7 +110,7 @@ const PortalLoginPage: React.FC = () => {
                                     <label style={styles.label}>Email</label>
                                     <div style={styles.inputWrapper}>
                                         <span style={styles.inputIcon}>
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#23A7D3" strokeWidth="2">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#272F72" strokeWidth="2">
                                                 <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                             </svg>
                                         </span>
@@ -226,7 +226,7 @@ const PortalLoginPage: React.FC = () => {
 const styles: Record<string, React.CSSProperties> = {
     wrapper: {
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f8fcff 0%, #e8f7fc 30%, #f0f4f8 100%)',
+        background: 'linear-gradient(135deg, #FFF5E1 0%, #FAF8F5 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -240,7 +240,7 @@ const styles: Record<string, React.CSSProperties> = {
         width: 500,
         height: 500,
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(35,167,211,0.08) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(39,47,114,0.06) 0%, transparent 70%)',
         top: -100,
         right: -100,
     },
@@ -249,7 +249,7 @@ const styles: Record<string, React.CSSProperties> = {
         width: 400,
         height: 400,
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(35,167,211,0.06) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(240,78,35,0.05) 0%, transparent 70%)',
         bottom: -80,
         left: -80,
     },
@@ -269,7 +269,7 @@ const styles: Record<string, React.CSSProperties> = {
     logoText: {
         fontSize: 36,
         fontWeight: 900,
-        color: '#23A7D3',
+        color: '#272F72',
         letterSpacing: 4,
         lineHeight: 1,
     },
@@ -284,8 +284,8 @@ const styles: Record<string, React.CSSProperties> = {
         background: '#fff',
         borderRadius: 20,
         padding: '40px 36px',
-        boxShadow: '0 8px 40px rgba(35,167,211,0.08), 0 2px 6px rgba(0,0,0,0.04)',
-        border: '1px solid rgba(35,167,211,0.1)',
+        boxShadow: '0 8px 40px rgba(39,47,114,0.08), 0 2px 6px rgba(0,0,0,0.04)',
+        border: '1px solid rgba(39,47,114,0.1)',
     },
     title: {
         fontSize: 24,
@@ -352,7 +352,7 @@ const styles: Record<string, React.CSSProperties> = {
     button: {
         width: '100%',
         padding: '14px 24px',
-        background: 'linear-gradient(135deg, #23A7D3 0%, #1e8fb5 100%)',
+        background: 'linear-gradient(135deg, #272F72 0%, #353F94 100%)',
         color: '#fff',
         fontSize: 15,
         fontWeight: 700,
@@ -362,7 +362,7 @@ const styles: Record<string, React.CSSProperties> = {
         alignItems: 'center',
         justifyContent: 'center',
         transition: 'all 0.2s',
-        boxShadow: '0 4px 16px rgba(35,167,211,0.3)',
+        boxShadow: '0 4px 16px rgba(39,47,114,0.3)',
         fontFamily: "'Be Vietnam Pro', sans-serif",
     },
     loadingDots: {
@@ -372,7 +372,7 @@ const styles: Record<string, React.CSSProperties> = {
         width: '100%',
         padding: '10px',
         background: 'transparent',
-        color: '#23A7D3',
+        color: '#272F72',
         fontSize: 13,
         fontWeight: 600,
         border: 'none',
@@ -400,7 +400,7 @@ const styles: Record<string, React.CSSProperties> = {
         color: '#888',
     },
     footerLink: {
-        color: '#23A7D3',
+        color: '#272F72',
         fontWeight: 600,
         textDecoration: 'none',
     },

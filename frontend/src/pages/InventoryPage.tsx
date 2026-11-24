@@ -642,7 +642,7 @@ const InventoryPage: React.FC = () => {
             if (whCode === 'KHO_BTP' && r.item_type === 'PRODUCT') {
                 const btpStock = stocks.find(s => s.item_type === 'PRODUCT' && Number(s.item_id) === Number(r.id) && s.warehouse_code === 'KHO_BTP');
                 if (btpStock && btpStock.btp_name) {
-                    return <span style={{ color: '#1890ff', fontWeight: 500 }}>{btpStock.btp_name}</span>;
+                    return <span style={{ color: '#272F72', fontWeight: 500 }}>{btpStock.btp_name}</span>;
                 }
             }
             return val;
@@ -1019,7 +1019,7 @@ const InventoryPage: React.FC = () => {
                                 expandedRowRender: record => (
                                     <div style={{ margin: '6px 0', background: '#fafafa', padding: '10px 14px', borderRadius: 6, border: '1px solid #e8e8e8' }}>
                                         <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontWeight: 600, color: '#1890ff', fontSize: 13 }}>
+                                            <span style={{ fontWeight: 600, color: '#272F72', fontSize: 13 }}>
                                                 📋 Chi tiết hàng hóa & Quản lý giao hàng theo PO (Ma trận Cây / Cuộn / Kiện):
                                             </span>
                                         </div>
@@ -1073,7 +1073,7 @@ const InventoryPage: React.FC = () => {
                                                     align: 'right', 
                                                     render: (_: any, item: any, idx: number) => {
                                                         const info = getReceiptItemDeliveryInfo(record, item, idx);
-                                                        return <b style={{ color: '#1890ff' }}>{info.orderQty > 0 ? info.orderQty.toLocaleString() : '-'}</b>;
+                                                        return <b style={{ color: '#272F72' }}>{info.orderQty > 0 ? info.orderQty.toLocaleString() : '-'}</b>;
                                                     } 
                                                 },
                                                 { 
@@ -1287,7 +1287,7 @@ const InventoryPage: React.FC = () => {
                                     title: 'Mã Phiếu', 
                                     dataIndex: 'code', 
                                     width: 170,
-                                    render: (t: any) => <b style={{ color: '#1890ff' }}>{t}</b> 
+                                    render: (t: any) => <b style={{ color: '#272F72' }}>{t}</b> 
                                 },
                                 { 
                                     title: 'PO Liên Quan & Đối Tác', 
@@ -1320,7 +1320,7 @@ const InventoryPage: React.FC = () => {
                                             const info = getReceiptItemDeliveryInfo(r, item, idx);
                                             return acc + Number(info.orderQty || 0);
                                         }, 0);
-                                        return <b style={{ color: '#1890ff' }}>{totalOrder > 0 ? totalOrder.toLocaleString() : '-'}</b>;
+                                        return <b style={{ color: '#272F72' }}>{totalOrder > 0 ? totalOrder.toLocaleString() : '-'}</b>;
                                     }
                                 },
                                 {
@@ -1498,7 +1498,7 @@ const InventoryPage: React.FC = () => {
                 okText="Xác nhận Chuyển đổi"
             >
                 <div style={{ background: '#e6f7ff', padding: 12, borderRadius: 8, marginBottom: 16 }}>
-                    <InfoCircleOutlined style={{ color: '#1890ff', marginRight: 8 }} />
+                    <InfoCircleOutlined style={{ color: '#272F72', marginRight: 8 }} />
                     Tính năng này cho phép chuyển đổi tồn kho BTP của biến thể này sang biến thể khác <b>cùng sản phẩm cha</b>.
                 </div>
                 <Form form={convertBtpForm} layout="vertical">
@@ -1631,7 +1631,7 @@ const InventoryPage: React.FC = () => {
                                     align: 'right',
                                     render: (_: any, r: any, idx: number) => {
                                         const info = getReceiptItemDeliveryInfo(selectedReceipt, r, idx);
-                                        return <b style={{ color: '#1890ff' }}>{info.orderQty > 0 ? info.orderQty.toLocaleString() : '-'}</b>;
+                                        return <b style={{ color: '#272F72' }}>{info.orderQty > 0 ? info.orderQty.toLocaleString() : '-'}</b>;
                                     }
                                 },
                                 { 
@@ -1684,7 +1684,7 @@ const InventoryPage: React.FC = () => {
                         <span>Xác nhận xuất kho NPL - {selectedGiForConfirm?.code || ''}</span>
                         {getGiCustomerName(selectedGiForConfirm) && (
                             <span style={{ fontSize: 14, fontWeight: 'normal', color: '#666' }}>
-                                KH: <b style={{ color: '#1890ff' }}>{getGiCustomerName(selectedGiForConfirm)}</b>
+                                KH: <b style={{ color: '#272F72' }}>{getGiCustomerName(selectedGiForConfirm)}</b>
                             </span>
                         )}
                     </div>
@@ -1789,7 +1789,7 @@ const InventoryPage: React.FC = () => {
                             if (!custName) custName = getGiCustomerName(selectedGiForEdit);
                             return custName ? (
                                 <span style={{ fontSize: 14, fontWeight: 'normal', color: '#666' }}>
-                                    KH: <b style={{ color: '#1890ff' }}>{custName}</b>
+                                    KH: <b style={{ color: '#272F72' }}>{custName}</b>
                                 </span>
                             ) : null;
                         })()}
@@ -1817,7 +1817,7 @@ const InventoryPage: React.FC = () => {
                                 const selectedPfoId = editGiForm.getFieldValue('pfo_id');
                                 const selectedPfo = selectedPfoId ? productionPlans.find(p => p.id === selectedPfoId) : null;
                                 const custName = selectedPfo?.sales_order?.customer?.name || selectedPfo?.sales_order?.customer_name;
-                                return custName ? <div style={{ marginTop: -16, marginBottom: 8, fontSize: 12, color: '#1890ff' }}>KH: <b>{custName}</b></div> : null;
+                                return custName ? <div style={{ marginTop: -16, marginBottom: 8, fontSize: 12, color: '#272F72' }}>KH: <b>{custName}</b></div> : null;
                             })()}
                         </Col>
                         <Col span={8}>
@@ -1850,7 +1850,7 @@ const InventoryPage: React.FC = () => {
                                 const selectedPoId = editGiForm.getFieldValue('po_id');
                                 const selectedPo = selectedPoId ? purchaseOrders.find(p => p.id === selectedPoId) : null;
                                 const custName = selectedPo?.pfo?.sales_order?.customer?.name || selectedPo?.pfo?.sales_order?.customer_name;
-                                return custName ? <div style={{ marginTop: -16, marginBottom: 8, fontSize: 12, color: '#1890ff' }}>KH: <b>{custName}</b></div> : null;
+                                return custName ? <div style={{ marginTop: -16, marginBottom: 8, fontSize: 12, color: '#272F72' }}>KH: <b>{custName}</b></div> : null;
                             })()}
                         </Col>
                         <Col span={8}>

@@ -218,7 +218,7 @@ export const ChatbotConfigTab: React.FC = () => {
       <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#1a1a1a' }}>
-            <RobotOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+            <RobotOutlined style={{ marginRight: 8, color: '#272F72' }} />
             Cấu Hình Trợ Lý AI Website
           </h3>
           <p style={{ color: '#888', margin: 0, fontSize: 13 }}>
@@ -702,7 +702,7 @@ export const ChatbotConfigTab: React.FC = () => {
                               )}
                             </div>
                             {statusData?.llm_key_source === 'GEMINI_API_KEY' && (
-                              <div style={{ fontSize: 11, color: '#1890ff', marginTop: 4 }}>
+                              <div style={{ fontSize: 11, color: '#272F72', marginTop: 4 }}>
                                 Dùng chung với trợ lý nội bộ
                               </div>
                             )}
@@ -889,7 +889,7 @@ export const ChatbotConfigTab: React.FC = () => {
                         }}
                       />
                     ) : (
-                      <RobotOutlined style={{ fontSize: 32, color: '#1890ff' }} />
+                      <RobotOutlined style={{ fontSize: 32, color: '#272F72' }} />
                     )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>

@@ -307,7 +307,7 @@ export const ZnsConfigTab: React.FC = () => {
       <Card
         size="small"
         title="Kiểm tra kết nối & Gửi thử nghiệm ZNS"
-        style={{ marginBottom: 24, border: '1px dashed #1890ff', background: '#f0f5ff' }}
+        style={{ marginBottom: 24, border: '1px dashed #272F72', background: '#f0f5ff' }}
       >
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 240 }}>

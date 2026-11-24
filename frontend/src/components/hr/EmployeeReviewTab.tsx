@@ -185,7 +185,7 @@ const EmployeeReviewTab: React.FC<Props> = ({ employee }) => {
                             return (
                                 <div key={q.id} style={{ marginBottom: 12, borderBottom: '1px solid #f0f0f0', paddingBottom: 8 }}>
                                     <div><b>{index + 1}. {q.content}</b></div>
-                                    <div style={{ color: '#1890ff', marginTop: 4 }}>
+                                    <div style={{ color: '#272F72', marginTop: 4 }}>
                                         {q.type === 'RATING' ? `Đánh giá: ${ans}/5` : `Trả lời: ${ans}`}
                                     </div>
                                 </div>

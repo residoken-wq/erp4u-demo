@@ -25,7 +25,7 @@ export interface DuplicateDetectionResult {
 
 // Bảng màu cho các nhóm trùng lặp
 export const DUPLICATE_GROUP_COLORS = [
-    '#1890ff', // Blue
+    '#272F72', // Navy
     '#722ed1', // Purple
     '#eb2f96', // Magenta
     '#fa8c16', // Orange

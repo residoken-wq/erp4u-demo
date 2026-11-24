@@ -30,7 +30,7 @@ const SortableStepBar = ({ step, si, stepCount, totalDays, planStart, colors, on
         left: `${left}%`,
         width: `${width}%`,
         height: '100%',
-        background: isDragging ? '#40a9ff' : (step.live_status === 'COMPLETED' ? '#52c41a' : step.live_status === 'IN_PROGRESS' ? '#1890ff' : bgColor),
+        background: isDragging ? '#40a9ff' : (step.live_status === 'COMPLETED' ? '#52c41a' : step.live_status === 'IN_PROGRESS' ? '#272F72' : bgColor),
         opacity: isDragging ? 1 : 0.85,
         borderRight: '1px solid #fff',
         display: 'flex',
@@ -159,7 +159,7 @@ const GanttChartTab: React.FC<GanttChartTabProps> = ({ ganttPlans, setGanttPlans
                             ) : (
                                 plan.products.map((prod: any, pi: number) => {
                                     const stepCount = Math.max((prod.steps || []).length, 1);
-                                    const colors = ['#1890ff', '#13c2c2', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#eb2f96'];
+                                    const colors = ['#272F72', '#13c2c2', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#eb2f96'];
                                     const stepIds = (prod.steps || []).map((s: any, i: number) => s.step_name + '_' + i);
 
                                     const handleDragEnd = async (event: any) => {
@@ -196,7 +196,7 @@ const GanttChartTab: React.FC<GanttChartTabProps> = ({ ganttPlans, setGanttPlans
                                                 <Tag color="blue" style={{ margin: 0 }}>{prod.sku}</Tag>
                                                 <span style={{ marginLeft: 8, fontSize: 13, color: '#333' }}>{prod.product_name}</span>
                                                 {prod.progress !== undefined && prod.progress !== null && (
-                                                    <Progress percent={prod.progress} size="small" style={{ width: 120, marginLeft: 12 }} strokeColor={prod.progress >= 100 ? '#52c41a' : prod.progress > 0 ? '#1890ff' : '#d9d9d9'} />
+                                                    <Progress percent={prod.progress} size="small" style={{ width: 120, marginLeft: 12 }} strokeColor={prod.progress >= 100 ? '#52c41a' : prod.progress > 0 ? '#272F72' : '#d9d9d9'} />
                                                 )}
                                             </div>
                                             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

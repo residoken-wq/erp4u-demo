@@ -126,7 +126,7 @@ const LeadCarePanel: React.FC<LeadCarePanelProps> = ({ customerId, customerName 
                                             avatar={
                                                 <Avatar
                                                     icon={<UserOutlined />}
-                                                    style={{ backgroundColor: item.sender_type === 'STAFF' ? '#1890ff' : '#87d068' }}
+                                                    style={{ backgroundColor: item.sender_type === 'STAFF' ? '#272F72' : '#87d068' }}
                                                     size="small"
                                                 />
                                             }

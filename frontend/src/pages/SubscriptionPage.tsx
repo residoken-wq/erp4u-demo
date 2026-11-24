@@ -65,7 +65,7 @@ export const SubscriptionPage: React.FC = () => {
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: '8px 0' }}>
       <Title level={3} style={{ marginBottom: 24 }}>
-        <RocketOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+        <RocketOutlined style={{ marginRight: 8, color: '#272F72' }} />
         Gói Dịch Vụ
       </Title>
 
@@ -84,7 +84,7 @@ export const SubscriptionPage: React.FC = () => {
           >
             <div style={{ marginBottom: 16 }}>
               <Text type="secondary">Gói đang sử dụng:</Text>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#1890ff', marginTop: 4 }}>
+              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#272F72', marginTop: 4 }}>
                 {subscription.plan_name}
               </div>
             </div>
@@ -152,7 +152,7 @@ export const SubscriptionPage: React.FC = () => {
               <Progress
                 percent={userPercent}
                 status={isUserFull ? 'exception' : 'active'}
-                strokeColor={isUserFull ? '#ff4d4f' : '#1890ff'}
+                strokeColor={isUserFull ? '#ff4d4f' : '#272F72'}
               />
             </div>
 
@@ -224,7 +224,7 @@ export const SubscriptionPage: React.FC = () => {
               <Space direction="vertical" size={10}>
                 {subscription.support_contact.email && (
                   <Space>
-                    <MailOutlined style={{ color: '#1890ff' }} />
+                    <MailOutlined style={{ color: '#272F72' }} />
                     <Text strong>Email:</Text>
                     <a href={`mailto:${subscription.support_contact.email}`}>
                       {subscription.support_contact.email}

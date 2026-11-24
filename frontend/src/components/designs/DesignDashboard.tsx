@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Row, Col, Card, Statistic, Table, Tag } from 'antd';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../../utils/api';
+import { brandChartPalette } from '../../theme/brand';
 
 const DesignDashboard: React.FC = () => {
     const [stats, setStats] = useState<any>({
@@ -54,7 +55,7 @@ const DesignDashboard: React.FC = () => {
         setLoading(false);
     };
 
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+    const COLORS = brandChartPalette;
 
     return (
         <div>

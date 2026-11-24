@@ -14,7 +14,7 @@ const { Title, Text } = Typography;
 
 const statusConfig: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
     'DRAFT': { color: '#999', label: 'Nháp', icon: <ClockCircleOutlined /> },
-    'SENT': { color: '#1890ff', label: 'Chờ xác nhận', icon: <SendOutlined /> },
+    'SENT': { color: '#272F72', label: 'Chờ xác nhận', icon: <SendOutlined /> },
     'CONFIRMED': { color: '#722ed1', label: 'Đã xác nhận', icon: <CheckCircleOutlined /> },
     'ORDERED': { color: '#2f54eb', label: 'Đang thực hiện', icon: <BarChartOutlined /> },
     'PARTIAL_DELIVERED': { color: '#fa8c16', label: 'Giao 1 phần', icon: <TruckOutlined /> },
@@ -212,7 +212,7 @@ const PortalPurchasePage: React.FC = () => {
                             {data.type === 'OUTSOURCING' ? '📋 ĐƠN GIA CÔNG' : '📦 ĐƠN ĐẶT HÀNG (PO)'}
                         </Title>
                         <Text type="secondary" style={{ fontSize: 14 }}>
-                            Mã: <b style={{ color: '#1890ff', fontSize: 16 }}>{data.po_code}</b>
+                            Mã: <b style={{ color: '#272F72', fontSize: 16 }}>{data.po_code}</b>
                         </Text>
                     </div>
                     <Space>
@@ -316,7 +316,7 @@ const PortalPurchasePage: React.FC = () => {
                         { title: 'ĐVT', width: 60, align: 'center' as const, render: (r: any) => r.material?.unit || r.product?.unit || 'Cái' },
                         { title: 'Số lượng', dataIndex: 'quantity', width: 90, align: 'center' as const, render: (v: any) => <b>{Number(v).toLocaleString()}</b> },
                         { title: 'Đơn giá', dataIndex: 'unit_price', width: 110, align: 'right' as const, render: (v: any) => Number(v).toLocaleString() },
-                        { title: 'Thành tiền', dataIndex: 'subtotal', width: 130, align: 'right' as const, render: (v: any) => <b style={{ color: '#1890ff' }}>{Number(v).toLocaleString()}</b> },
+                        { title: 'Thành tiền', dataIndex: 'subtotal', width: 130, align: 'right' as const, render: (v: any) => <b style={{ color: '#272F72' }}>{Number(v).toLocaleString()}</b> },
                         { title: 'SL SX thực tế', dataIndex: 'actual_quantity', width: 110, align: 'center' as const, render: (v: any, r: any) => <b style={{ color: '#52c41a' }}>{Number(v || 0).toLocaleString()} <span style={{fontSize: 10, color: '#999'}}>/{Number(r.quantity)}</span></b> },
                         { title: 'Thành tiền thực tế', dataIndex: 'actual_subtotal', width: 140, align: 'right' as const, render: (v: any) => <b style={{ color: '#52c41a' }}>{Number(v || 0).toLocaleString()}</b> },
                         { 
@@ -339,7 +339,7 @@ const PortalPurchasePage: React.FC = () => {
                         return (
                             <Table.Summary.Row style={{ background: '#fafafa' }}>
                                 <Table.Summary.Cell index={0} colSpan={4} align="right"><b>TỔNG CỘNG</b></Table.Summary.Cell>
-                                <Table.Summary.Cell index={1} align="right"><b style={{ fontSize: 16, color: '#1890ff' }}>{total.toLocaleString()} ₫</b></Table.Summary.Cell>
+                                <Table.Summary.Cell index={1} align="right"><b style={{ fontSize: 16, color: '#272F72' }}>{total.toLocaleString()} ₫</b></Table.Summary.Cell>
                                 <Table.Summary.Cell index={2} colSpan={2} align="right"><b style={{ fontSize: 16, color: '#52c41a' }}>{actualTotal.toLocaleString()} ₫</b></Table.Summary.Cell>
                                 <Table.Summary.Cell index={3}></Table.Summary.Cell>
                             </Table.Summary.Row>
@@ -423,7 +423,7 @@ const PortalPurchasePage: React.FC = () => {
                                     title="Tỷ lệ"
                                     value={totalQty > 0 ? Math.round(totalCompleted / totalQty * 100) : 0}
                                     suffix="%"
-                                    valueStyle={{ color: totalCompleted >= totalQty ? '#52c41a' : '#1890ff' }}
+                                    valueStyle={{ color: totalCompleted >= totalQty ? '#52c41a' : '#272F72' }}
                                 />
                             </Card>
                         </Col>

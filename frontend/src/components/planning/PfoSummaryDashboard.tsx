@@ -3,6 +3,7 @@ import { Card, Row, Col, Typography, Alert, Progress, Space, Statistic, Divider 
 import { Pie } from '@ant-design/plots';
 import dayjs from 'dayjs';
 import { RobotOutlined, WarningOutlined, CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { brandChartPalette } from '../../theme/brand';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -73,6 +74,7 @@ const PfoSummaryDashboard: React.FC<PfoSummaryDashboardProps> = ({
         data: costData,
         angleField: 'value',
         colorField: 'type',
+        scale: { color: { range: brandChartPalette } },
         radius: 0.8,
         label: {
             text: (d: any) => `${d.type}: ${Number(d.value || 0).toLocaleString('vi-VN')} ₫`,

@@ -284,7 +284,7 @@ const MaterialMatrix: React.FC<MaterialMatrixProps> = ({
                                 dataIndex: 'total', 
                                 key: 'total', 
                                 align: 'right' as const, 
-                                render: (val: number) => <Text strong style={{ color: '#1890ff' }}>{Number(val || 0).toLocaleString()}</Text> 
+                                render: (val: number) => <Text strong style={{ color: '#272F72' }}>{Number(val || 0).toLocaleString()}</Text> 
                             }
                         ];
                         

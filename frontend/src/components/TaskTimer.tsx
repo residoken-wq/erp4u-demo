@@ -113,7 +113,7 @@ const TaskTimer: React.FC<TaskTimerProps> = ({ taskId, onUpdate }) => {
                         fontFamily: 'monospace',
                         fontSize: 16,
                         fontWeight: 'bold',
-                        color: '#1890ff',
+                        color: '#272F72',
                         padding: '4px 12px',
                         background: '#e6f7ff',
                         borderRadius: 16
