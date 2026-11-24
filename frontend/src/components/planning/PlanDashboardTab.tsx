@@ -59,7 +59,7 @@ const PlanDashboardTab: React.FC<PlanDashboardTabProps> = ({
                 const customers = Array.from(new Set(r.sales_orders.map((o: any) => o.customer?.name || o.customer_name || '').filter(Boolean)));
                 return (
                     <div style={{ maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={customers.join(', ')}>
-                        {customers.map((c: any, i) => <div key={i} style={{ fontSize: 13, color: '#1890ff' }}>{c}</div>)}
+                        {customers.map((c: any, i) => <div key={i} style={{ fontSize: 13, color: '#272F72' }}>{c}</div>)}
                     </div>
                 );
             } 
@@ -207,7 +207,7 @@ const PlanDashboardTab: React.FC<PlanDashboardTabProps> = ({
                         children: (
                             <div>
                                 <div style={{ marginBottom: 16 }}>
-                                    <h4 style={{ color: '#1890ff', marginBottom: 12 }}>Thống kê NPL (Cập nhật Real-time theo Dùng Kho)</h4>
+                                    <h4 style={{ color: '#272F72', marginBottom: 12 }}>Thống kê NPL (Cập nhật Real-time theo Dùng Kho)</h4>
                                     <Row gutter={[16, 16]}>
                                         <Col xs={12} sm={6}>
                                             <Card size="small" style={{ background: '#f6ffed', border: '1px solid #b7eb8f' }}>

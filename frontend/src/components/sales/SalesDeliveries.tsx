@@ -2257,7 +2257,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                                 {(leg.contact_phone || leg.carrier_phone) && <span style={{ color: '#64748b' }}>({leg.contact_phone || leg.carrier_phone})</span>}
                                                 {leg.tracking_code && <Tag color="cyan" style={{ margin: 0, fontSize: 10 }}>Mã: {leg.tracking_code}</Tag>}
                                                 {fee > 0 && (
-                                                    <span style={{ color: isShop ? '#1677ff' : '#d4380d', fontWeight: 500 }}>
+                                                    <span style={{ color: isShop ? '#272F72' : '#d4380d', fontWeight: 500 }}>
                                                         • {fee.toLocaleString()}đ ({isShop ? 'Shop trả' : 'Khách trả'})
                                                     </span>
                                                 )}
@@ -2319,7 +2319,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                                     href={r.shipping_metadata.lalamove.shareLink} 
                                                     target="_blank" 
                                                     rel="noreferrer"
-                                                    style={{ marginLeft: 6, fontSize: 11, color: '#1677ff', fontWeight: 600, textDecoration: 'underline' }}
+                                                    style={{ marginLeft: 6, fontSize: 11, color: '#272F72', fontWeight: 600, textDecoration: 'underline' }}
                                                 >
                                                     🗺️ Xem GPS
                                                 </a>
@@ -2373,7 +2373,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                     <Button 
                                         size="small" 
                                         type="link" 
-                                        icon={<CarOutlined style={{ color: '#1677ff' }} />} 
+                                        icon={<CarOutlined style={{ color: '#272F72' }} />} 
                                         onClick={() => openEditModal(r)}
                                         style={{ padding: 0, fontSize: 11, height: 20 }}
                                     >
@@ -2399,7 +2399,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                 {r.attachments?.length > 0 ? <AttachmentUpload value={r.attachments} maxFiles={0} /> : <span style={{ color: '#999', fontSize: 12 }}>Chưa có</span>}
                             </div>
                             <Tooltip title="Tải lên chứng từ (phiếu đã ký...)">
-                                <Button size="small" type="text" icon={<UploadOutlined style={{ color: '#1890ff' }} />} onClick={() => openUploadModal(r)} />
+                                <Button size="small" type="text" icon={<UploadOutlined style={{ color: '#272F72' }} />} onClick={() => openUploadModal(r)} />
                             </Tooltip>
                         </div>
                     )
@@ -2438,7 +2438,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                             });
                             moreMenuItems.push({
                                 key: 'ghtk_track',
-                                icon: <HistoryOutlined style={{ color: '#1890ff' }} />,
+                                icon: <HistoryOutlined style={{ color: '#272F72' }} />,
                                 label: 'Xem hành trình GHTK',
                                 onClick: () => handleViewTracking(r)
                             });
@@ -2471,7 +2471,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                             if (r.tracking_code) {
                                 moreMenuItems.push({
                                     key: 'llm_sync',
-                                    icon: <SyncOutlined spin={syncingLalamoveId === r.id} style={{ color: '#1890ff' }} />,
+                                    icon: <SyncOutlined spin={syncingLalamoveId === r.id} style={{ color: '#272F72' }} />,
                                     label: '🔄 Cập nhật cước & trạng thái Lalamove',
                                     onClick: () => handleSyncLalamoveStatus(r)
                                 });
@@ -2526,7 +2526,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
 
                         moreMenuItems.push({
                             key: 'upload_doc',
-                            icon: <UploadOutlined style={{ color: '#1890ff' }} />,
+                            icon: <UploadOutlined style={{ color: '#272F72' }} />,
                             label: 'Tải lên chứng từ giao hàng',
                             onClick: () => openUploadModal(r)
                         });
@@ -2607,7 +2607,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                         style={{ marginBottom: 12, border: '1px solid #91d5ff', background: '#e6f7ff' }}
                         type="info"
                         showIcon
-                        icon={<ThunderboltOutlined style={{ color: '#1890ff' }} />}
+                        icon={<ThunderboltOutlined style={{ color: '#272F72' }} />}
                         message={
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
@@ -2826,7 +2826,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                     <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: 8, border: '1px solid #cbd5e1', marginTop: 12, marginBottom: 12 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <CarOutlined style={{ color: '#1677ff', fontSize: 16 }} />
+                                <CarOutlined style={{ color: '#272F72', fontSize: 16 }} />
                                 <span style={{ fontWeight: 700, color: '#1e293b', fontSize: 13 }}>
                                     Tuyến Vận Chuyển Đa Chặng (Kho ➔ Chành xe ➔ Địa phương ➔ Khách):
                                 </span>
@@ -2983,7 +2983,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                         <span style={{ fontWeight: 600, color: '#1e293b' }}>
                                             {shippingLegs.reduce((sum, l) => sum + (Number(l.shipping_fee !== undefined ? l.shipping_fee : l.shipping_cost) || 0), 0).toLocaleString()}đ
                                         </span>
-                                        {' '}(<span style={{ color: '#1677ff' }}>Shop trả: {shippingLegs.filter(l => String(l.payer || '').toLowerCase() === 'shop').reduce((sum, l) => sum + (Number(l.shipping_fee !== undefined ? l.shipping_fee : l.shipping_cost) || 0), 0).toLocaleString()}đ</span>
+                                        {' '}(<span style={{ color: '#272F72' }}>Shop trả: {shippingLegs.filter(l => String(l.payer || '').toLowerCase() === 'shop').reduce((sum, l) => sum + (Number(l.shipping_fee !== undefined ? l.shipping_fee : l.shipping_cost) || 0), 0).toLocaleString()}đ</span>
                                         {' • '}<span style={{ color: '#d4380d' }}>Khách trả: {shippingLegs.filter(l => String(l.payer || '').toLowerCase() === 'customer').reduce((sum, l) => sum + (Number(l.shipping_fee !== undefined ? l.shipping_fee : l.shipping_cost) || 0), 0).toLocaleString()}đ</span>)
                                     </div>
                                     <Space size={6}>
@@ -3218,7 +3218,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                                         return (
                                                             <a 
                                                                 onClick={() => setGhtkDistrict(p.defaultCity)} 
-                                                                style={{ marginLeft: 4, color: '#1890ff', textDecoration: 'underline', fontWeight: 500 }}
+                                                                style={{ marginLeft: 4, color: '#272F72', textDecoration: 'underline', fontWeight: 500 }}
                                                             >
                                                                 Đổi thành "{p.defaultCity}"
                                                             </a>
@@ -3543,7 +3543,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                         <span>Ưu tiên xuất cho sản phẩm đã duyệt giữ kho. Sản phẩm chưa duyệt vẫn có thể nhập nếu còn tồn kho khả dụng hoặc chọn <b>Bản nháp</b>.</span>
                     </div>
                 )}
-                {isDraft && <div style={{ fontSize: 12, color: '#1890ff', marginBottom: 10, fontStyle: 'italic' }}>* Đang tạo Phiếu Nháp: Có thể điền số lượng tự do không cần giữ kho. Tồn kho sẽ KHÔNG bị trừ.</div>}
+                {isDraft && <div style={{ fontSize: 12, color: '#272F72', marginBottom: 10, fontStyle: 'italic' }}>* Đang tạo Phiếu Nháp: Có thể điền số lượng tự do không cần giữ kho. Tồn kho sẽ KHÔNG bị trừ.</div>}
 
                 <Table 
                     dataSource={shipItems} 
@@ -3615,7 +3615,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                                     </Table.Summary.Cell>
                                     <Table.Summary.Cell index={2} />
                                     <Table.Summary.Cell index={3} align="center">
-                                        <span style={{ color: '#1677ff' }}>{totalQty}</span>
+                                        <span style={{ color: '#272F72' }}>{totalQty}</span>
                                     </Table.Summary.Cell>
                                     <Table.Summary.Cell index={4} align="right">
                                         <span style={{ color: '#008444' }}>{totalAmt.toLocaleString('vi-VN')} đ</span>
@@ -3637,7 +3637,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
                 <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <MessageOutlined style={{ color: '#1677ff', fontSize: 16 }} />
+                            <MessageOutlined style={{ color: '#272F72', fontSize: 16 }} />
                             <span style={{ fontWeight: 600, color: '#1e293b', fontSize: 13 }}>Nội Dung Thông Báo Giao Hàng (Gửi Khách / Zalo):</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -3867,7 +3867,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
             <Modal
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <MessageOutlined style={{ color: '#1677ff' }} />
+                        <MessageOutlined style={{ color: '#272F72' }} />
                         <span>Thông Báo Giao Hàng - Phiếu: <b>{selectedDeliveryForNotice?.code}</b></span>
                     </div>
                 }

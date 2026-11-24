@@ -57,7 +57,7 @@ const AiPricingModal: React.FC<Props> = ({ open, onClose, productName, costPrice
         <Modal
             open={open}
             onCancel={onClose}
-            title={<span><RobotOutlined style={{ color: '#1890ff' }} /> AI Trợ Giá Thông Minh</span>}
+            title={<span><RobotOutlined style={{ color: '#272F72' }} /> AI Trợ Giá Thông Minh</span>}
             footer={null}
             width={700}
         >

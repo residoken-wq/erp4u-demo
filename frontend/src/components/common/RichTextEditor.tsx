@@ -324,7 +324,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
                     onClick={openLibrary}
                     type="primary"
                     size="small"
-                    style={{ background: '#1677ff', border: 'none' }}
+                    style={{ background: '#272F72', border: 'none' }}
                 >
                     Thư viện
                 </Button>,

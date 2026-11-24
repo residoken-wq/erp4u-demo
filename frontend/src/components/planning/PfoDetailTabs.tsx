@@ -422,7 +422,7 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
                 <Row gutter={[16, 8]}>
                     <Col span={isMobile ? 24 : 4}>
                         <Text type="secondary">Mã Đơn Hàng (SO):</Text><br />
-                        <Text strong style={{ fontSize: 15, color: '#1890ff' }}>
+                        <Text strong style={{ fontSize: 15, color: '#272F72' }}>
                             {pfoDetails?.sales_order?.order_code || selectedPfo?.sales_order_code || selectedPfo?.code?.replace('PFO-', '')}
                         </Text>
                     </Col>

@@ -74,7 +74,7 @@ const PortalUserGuide: React.FC = () => {
                         return (
                             <div key={index} style={{
                                 ...S.item,
-                                borderColor: isExpanded ? '#23A7D3' : '#eee',
+                                borderColor: isExpanded ? '#272F72' : '#eee',
                                 backgroundColor: isExpanded ? '#fbfdfd' : '#fff'
                             }}>
                                 <button 
@@ -85,7 +85,7 @@ const PortalUserGuide: React.FC = () => {
                                         <span style={S.itemIcon}>{guide.icon}</span>
                                         <span style={{
                                             fontWeight: isExpanded ? 700 : 600,
-                                            color: isExpanded ? '#23A7D3' : '#333'
+                                            color: isExpanded ? '#272F72' : '#333'
                                         }}>{guide.title}</span>
                                     </div>
                                     <span style={{
@@ -211,7 +211,7 @@ const S: Record<string, React.CSSProperties> = {
         verticalAlign: 'middle',
     },
     fakeBtnPrimary: {
-        background: 'linear-gradient(135deg, #23A7D3, #1e8fb5)',
+        background: 'linear-gradient(135deg, #272F72, #353F94)',
         color: '#fff',
         border: 'none',
         fontWeight: 600,

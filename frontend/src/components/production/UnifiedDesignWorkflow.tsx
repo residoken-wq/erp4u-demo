@@ -152,7 +152,7 @@ const DraggableRect = ({ rect, scale, face, isSelected, onSelect, onChange, onRe
                     width={rect.w * scale}
                     height={rect.h * scale}
                     fill={rect.data?.color || '#e6f7ff'}
-                    stroke={isSelected ? '#1890ff' : '#91d5ff'}
+                    stroke={isSelected ? '#272F72' : '#91d5ff'}
                     strokeWidth={isSelected ? 2 : 1}
                 />
                 
@@ -965,7 +965,7 @@ const UnifiedDesignWorkflow: React.FC<UnifiedDesignWorkflowProps> = ({ standalon
                 }
                 return <span style={{ color: '#555', fontWeight: 500 }}>{customerName || '-'}</span>;
             }},
-            { title: 'Nhà GC', dataIndex: ['supplier', 'name'], render: (t: string) => <span style={{ color: '#1890ff', fontWeight: 500 }}>{t}</span> },
+            { title: 'Nhà GC', dataIndex: ['supplier', 'name'], render: (t: string) => <span style={{ color: '#272F72', fontWeight: 500 }}>{t}</span> },
             { title: 'Trạng thái', dataIndex: 'status', render: (t: string) => <Tag color="blue" style={{ borderRadius: 12 }}>{t}</Tag> },
             { title: 'Tiến độ Sơ đồ', render: (r: any) => {
                 const items = r.filteredItems || [];
@@ -1036,7 +1036,7 @@ const UnifiedDesignWorkflow: React.FC<UnifiedDesignWorkflowProps> = ({ standalon
                                                 }
                                             }}
                                             style={{
-                                                background: selectedItem?.id === r.id ? 'linear-gradient(90deg, #1890ff, #096dd9)' : undefined,
+                                                background: selectedItem?.id === r.id ? 'linear-gradient(90deg, #272F72, #096dd9)' : undefined,
                                                 borderColor: selectedItem?.id === r.id ? 'transparent' : '#d9d9d9',
                                                 color: selectedItem?.id === r.id ? '#fff' : undefined
                                             }}
@@ -1270,7 +1270,7 @@ const UnifiedDesignWorkflow: React.FC<UnifiedDesignWorkflowProps> = ({ standalon
                                                     const newConf = {...continuousConfigs, [face.id]: { ...(continuousConfigs[face.id] || { width: 150, qtyPerFile: 10, totalQty: selectedItem?.quantity || 0, productQuantity: 100 }), qtyPerFile: v || 1 }};
                                                     setContinuousConfigs(newConf);
                                                 }} onBlur={() => executeAutoPack()} onPressEnter={() => executeAutoPack()} style={{ width: '100%' }} /></div>
-                                                <div style={{color: '#1890ff', fontSize: 12}}>Số lần in (Runs): <b>{Math.ceil((continuousConfigs[face.id]?.productQuantity || 100) / (continuousConfigs[face.id]?.qtyPerFile || 10))}</b></div>
+                                                <div style={{color: '#272F72', fontSize: 12}}>Số lần in (Runs): <b>{Math.ceil((continuousConfigs[face.id]?.productQuantity || 100) / (continuousConfigs[face.id]?.qtyPerFile || 10))}</b></div>
                                             </Space>
                                         ) : (
                                             <Space direction="vertical" style={{ width: '100%' }}>
@@ -1566,13 +1566,13 @@ const UnifiedDesignWorkflow: React.FC<UnifiedDesignWorkflowProps> = ({ standalon
                                         { title: 'Tổng mét vải (m)', dataIndex: 'expectedTotalLength', render: v => <b style={{ color: '#52c41a' }}>{(Number(v) / 100).toFixed(2)}</b> },
                                         { title: 'Khổ (cm)', dataIndex: 'width' },
                                         { title: 'Kích thước / file (cm)', dataIndex: 'length', render: (v, r) => r.remainderQty > 0 ? <span><span style={{ color: '#cf1322' }}>{v.toFixed(2)}</span> <br/><small style={{color: '#cf1322'}}>+ {r.remainderLength.toFixed(2)} (lượt cuối)</small></span> : <span style={{ color: '#cf1322' }}>{v.toFixed(2)}</span> },
-                                        { title: 'Dự kiến cần (cm)', dataIndex: 'expectedTotalLength', render: v => <b style={{ color: '#1890ff' }}>{v}</b> },
+                                        { title: 'Dự kiến cần (cm)', dataIndex: 'expectedTotalLength', render: v => <b style={{ color: '#272F72' }}>{v}</b> },
                                         { title: 'Diện tích dư cuối (cm²)', dataIndex: 'wasteArea' },
                                     ]}
                                 />
                             </Card>
 
-                            <Card title="Gửi nhà in" size="small" style={{ marginTop: 24, borderColor: '#1890ff' }}>
+                            <Card title="Gửi nhà in" size="small" style={{ marginTop: 24, borderColor: '#272F72' }}>
                                 <Table
                                     size="small"
                                     pagination={false}

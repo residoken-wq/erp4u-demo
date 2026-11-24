@@ -163,7 +163,7 @@ const ProfilePage: React.FC = () => {
                         <Avatar
                             size={100}
                             icon={employee.gender === 'FEMALE' ? <WomanOutlined /> : <ManOutlined />}
-                            style={{ backgroundColor: employee.gender === 'FEMALE' ? '#eb2f96' : '#1890ff' }}
+                            style={{ backgroundColor: employee.gender === 'FEMALE' ? '#eb2f96' : '#272F72' }}
                         />
                         <h2 style={{ marginTop: 16, marginBottom: 4 }}>{employee.full_name}</h2>
                         <Tag color="blue">{employee.position || 'Nhân viên'}</Tag>
@@ -314,7 +314,7 @@ const ProfilePage: React.FC = () => {
                                     boxShadow: '0 2px 12px rgba(0,0,0,0.06)'
                                 }}>
                                     <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <ClockCircleOutlined style={{ color: '#1890ff' }} /> Lịch sử chấm công
+                                        <ClockCircleOutlined style={{ color: '#272F72' }} /> Lịch sử chấm công
                                     </div>
                                     <Table
                                         dataSource={attendances.slice(0, 10)}
@@ -480,7 +480,7 @@ const ProfilePage: React.FC = () => {
                             <Col xs={24} md={14}>
                                 <div style={{ background: '#fff', borderRadius: 16, padding: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
                                     <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <ClockCircleOutlined style={{ color: '#1890ff' }} /> Lịch sử đơn nghỉ phép
+                                        <ClockCircleOutlined style={{ color: '#272F72' }} /> Lịch sử đơn nghỉ phép
                                     </div>
                                     <Table
                                         dataSource={leaves}
@@ -533,7 +533,7 @@ const ProfilePage: React.FC = () => {
                                     <Descriptions.Item label="Thưởng">{formatMoney(viewPayslip.bonus)}</Descriptions.Item>
                                     
                                     <Descriptions.Item label={<span style={{ fontWeight: 600 }}>Tổng thu nhập</span>}>
-                                        <span style={{ fontWeight: 600, color: '#1890ff' }}>{formatMoney(viewPayslip.gross_income)}</span>
+                                        <span style={{ fontWeight: 600, color: '#272F72' }}>{formatMoney(viewPayslip.gross_income)}</span>
                                     </Descriptions.Item>
                                     <Descriptions.Item label="Ghi chú">{viewPayslip.note || '-'}</Descriptions.Item>
                                     
@@ -612,7 +612,7 @@ const ProfilePage: React.FC = () => {
                                     justifyContent: 'center',
                                     flex: 1,
                                     height: '100%',
-                                    color: isActive ? '#1890ff' : '#888',
+                                    color: isActive ? '#272F72' : '#888',
                                     cursor: 'pointer',
                                     paddingTop: 8,
                                     paddingBottom: 8

@@ -845,7 +845,7 @@ const PortalQuotePage: React.FC = () => {
                             </Watermark>
                         ) : (
                             <a href={finalSrc} target="_blank" rel="noopener noreferrer">
-                                <LinkOutlined style={{ fontSize: 18, color: '#1890ff' }} />
+                                <LinkOutlined style={{ fontSize: 18, color: '#272F72' }} />
                             </a>
                         )}
                         
@@ -1026,7 +1026,7 @@ const PortalQuotePage: React.FC = () => {
                             <Space size={15} align="center">
                                 {/* Place Logo Here if needed */}
                                 <div>
-                                    <div style={{ fontSize: 18, fontWeight: 800, color: '#1890ff', textTransform: 'uppercase', letterSpacing: 1 }}>ERP4U</div>
+                                    <div style={{ fontSize: 18, fontWeight: 800, color: '#272F72', textTransform: 'uppercase', letterSpacing: 1 }}>ERP4U</div>
                                     <div style={{ fontSize: 12, color: '#999' }}>Cổng thông tin khách hàng</div>
                                 </div>
                                 <Divider type="vertical" style={{ height: 30 }} />
@@ -1391,7 +1391,7 @@ const PortalQuotePage: React.FC = () => {
                                                     <Table.Summary.Cell index={1} align="right">{Number(data.shipping_fee || 0).toLocaleString()}</Table.Summary.Cell>
                                                 </Table.Summary.Row>
                                                 <Table.Summary.Row style={{ background: '#fafafa' }}>
-                                                    <Table.Summary.Cell index={0} colSpan={7} align="right"><b style={{ fontSize: 18, color: '#1890ff' }}>TỔNG CỘNG</b></Table.Summary.Cell>
+                                                    <Table.Summary.Cell index={0} colSpan={7} align="right"><b style={{ fontSize: 18, color: '#272F72' }}>TỔNG CỘNG</b></Table.Summary.Cell>
                                                     <Table.Summary.Cell index={1} align="right"><b style={{ fontSize: 20, color: '#cf1322' }}>{total.toLocaleString()} ₫</b></Table.Summary.Cell>
                                                 </Table.Summary.Row>
                                             </Table.Summary>
@@ -1433,7 +1433,7 @@ const PortalQuotePage: React.FC = () => {
                                         )}
                                         <Divider style={{ margin: '12px 0' }} />
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontWeight: 800, fontSize: 16, color: '#1890ff' }}>TỔNG CỘNG</span>
+                                            <span style={{ fontWeight: 800, fontSize: 16, color: '#272F72' }}>TỔNG CỘNG</span>
                                             <span style={{ fontWeight: 800, fontSize: 20, color: '#cf1322' }}>
                                                 {total.toLocaleString()} ₫
                                             </span>
@@ -1562,7 +1562,7 @@ const PortalQuotePage: React.FC = () => {
                             <div style={{ height: 300, overflowY: 'auto', padding: 20, background: '#f9f9f9' }}>
                                 <List dataSource={visibleComments} renderItem={(item: any) => (
                                     <div style={{ display: 'flex', gap: 10, marginBottom: 15, flexDirection: item.sender_type === 'CUSTOMER' ? 'row-reverse' : 'row' }}>
-                                        <Avatar style={{ backgroundColor: item.sender_type === 'CUSTOMER' ? '#87d068' : '#1890ff' }} icon={item.sender_type === 'CUSTOMER' ? <UserOutlined /> : <SolutionOutlined />} />
+                                        <Avatar style={{ backgroundColor: item.sender_type === 'CUSTOMER' ? '#87d068' : '#272F72' }} icon={item.sender_type === 'CUSTOMER' ? <UserOutlined /> : <SolutionOutlined />} />
                                         <div style={{ maxWidth: '80%' }}>
                                             <div style={{ fontSize: 11, color: '#999', marginBottom: 2, textAlign: item.sender_type === 'CUSTOMER' ? 'right' : 'left' }}>
                                                 {item.sender_name} • {dayjs(item.created_at).format('HH:mm DD/MM')}
@@ -1632,7 +1632,7 @@ const PortalQuotePage: React.FC = () => {
                                     <List dataSource={data.deliveries} renderItem={(r: any) => (
                                         <div style={{ padding: '8px 0', borderBottom: '1px solid #f0f0f0' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                                                <span style={{ fontWeight: 700, color: '#1890ff' }}>{r.code}</span>
+                                                <span style={{ fontWeight: 700, color: '#272F72' }}>{r.code}</span>
                                                 <span style={{ fontSize: 12, color: '#999' }}>{dayjs(r.delivery_date).format('DD/MM/YY')}</span>
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -1664,7 +1664,7 @@ const PortalQuotePage: React.FC = () => {
                                         size="small"
                                         columns={[
                                             { title: 'Ngày', width: 90, align: 'center', render: (r: any) => dayjs(r.delivery_date).format('DD/MM/YY') },
-                                            { title: 'Mã Phiếu', width: 100, dataIndex: 'code', render: (t: string) => <div style={{ fontWeight: 700, color: '#1890ff' }}>{t}</div> },
+                                            { title: 'Mã Phiếu', width: 100, dataIndex: 'code', render: (t: string) => <div style={{ fontWeight: 700, color: '#272F72' }}>{t}</div> },
                                             {
                                                 title: 'Trạng thái', width: 90, align: 'center',
                                                 render: (r: any) => (

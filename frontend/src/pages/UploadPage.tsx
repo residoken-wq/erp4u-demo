@@ -33,8 +33,8 @@ const IMPORT_MODULES: ImportCardConfig[] = [
     title: '1. Nguyên Liệu',
     subTitle: 'Danh mục nguyên phụ liệu',
     desc: 'Mã NL, Tên, ĐVT tiêu hao & mua hàng, Hệ số quy đổi, Giá mua, Giá vốn BOM, Tồn kho, Nhà cung cấp.',
-    color: '#1890ff',
-    icon: <FileExcelOutlined style={{ fontSize: 36, color: '#1890ff' }} />,
+    color: '#272F72',
+    icon: <FileExcelOutlined style={{ fontSize: 36, color: '#272F72' }} />,
     tags: ['Vải, Gòn, Chỉ', 'Quy đổi ĐVT', 'Giá vốn BOM'],
   },
   {

@@ -352,7 +352,7 @@ const SalesComments: React.FC<SalesCommentsProps> = ({ orderId, defaultTab, high
                                         <Avatar
                                             size="small"
                                             icon={<UserOutlined />}
-                                            style={{ backgroundColor: item.sender_type === 'STAFF' ? '#1890ff' : '#52c41a' }}
+                                            style={{ backgroundColor: item.sender_type === 'STAFF' ? '#272F72' : '#52c41a' }}
                                         />
                                         {item.sender_name}
                                         <Tag color={item.sender_type === 'STAFF' ? 'blue' : 'green'} style={{ marginLeft: 4 }}>
@@ -386,7 +386,7 @@ const SalesComments: React.FC<SalesCommentsProps> = ({ orderId, defaultTab, high
                                                 background: 'linear-gradient(135deg, #f0f5ff 0%, #e6f0ff 100%)',
                                                 borderRadius: 6,
                                                 fontSize: 12,
-                                                color: '#1890ff',
+                                                color: '#272F72',
                                                 display: 'flex',
                                                 flexWrap: 'wrap',
                                                 gap: 6,
@@ -465,7 +465,7 @@ const SalesComments: React.FC<SalesCommentsProps> = ({ orderId, defaultTab, high
                                     value: u.full_name,
                                     label: (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+                                            <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: '#272F72' }} />
                                             <span>{u.full_name}</span>
                                         </div>
                                     ),

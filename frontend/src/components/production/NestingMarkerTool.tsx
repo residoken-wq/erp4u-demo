@@ -190,7 +190,7 @@ const NestingMarkerTool: React.FC<NestingMarkerToolProps> = () => {
                                             <KonvaRect
                                                 width={rect.w * scale}
                                                 height={rect.h * scale}
-                                                fill={rect.data?.color || '#1890ff'}
+                                                fill={rect.data?.color || '#272F72'}
                                                 opacity={0.8}
                                                 stroke="#000"
                                                 strokeWidth={1}

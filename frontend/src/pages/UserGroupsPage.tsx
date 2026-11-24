@@ -226,7 +226,7 @@ const UserGroupsPage: React.FC = () => {
                                 <div key={group.key} style={{ marginBottom: 14 }}>
                                     <div style={{
                                         fontWeight: 600,
-                                        color: '#1677ff',
+                                        color: '#272F72',
                                         margin: '10px 0 6px',
                                         fontSize: 12,
                                         textTransform: 'uppercase',

@@ -637,7 +637,7 @@ const ProductsPage: React.FC = () => {
             title: 'Giá trị tồn', key: 'inventory_value', width: 100, align: 'right' as const,
             render: (r: any) => {
                 const val = Number(r.quantity_in_stock || 0) * Number(r.cost_price || r.base_price || 0);
-                return <span style={{ color: '#1890ff' }}>{val.toLocaleString()}</span>;
+                return <span style={{ color: '#272F72' }}>{val.toLocaleString()}</span>;
             },
             sorter: (a: any, b: any) => (Number(a.quantity_in_stock || 0) * Number(a.cost_price || a.base_price || 0)) - (Number(b.quantity_in_stock || 0) * Number(b.cost_price || b.base_price || 0)),
             hidden: !canViewCost
@@ -652,7 +652,7 @@ const ProductsPage: React.FC = () => {
                         {val > 0 && !filterMonth && (
                             <Tooltip title="Xem danh sách đơn hàng đã book">
                                 <EyeOutlined
-                                    style={{ marginLeft: 6, cursor: 'pointer', color: '#1890ff' }}
+                                    style={{ marginLeft: 6, cursor: 'pointer', color: '#272F72' }}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setBookingDetailSku(record.sku);
@@ -1253,7 +1253,7 @@ const ProductsPage: React.FC = () => {
                                                         <Tooltip title="Làm mới mô tả từ sản phẩm con">
                                                             <SyncOutlined 
                                                                 onClick={handleRefreshComboDescription} 
-                                                                style={{ color: '#1890ff', cursor: 'pointer' }} 
+                                                                style={{ color: '#272F72', cursor: 'pointer' }} 
                                                             />
                                                         </Tooltip>
                                                     )}

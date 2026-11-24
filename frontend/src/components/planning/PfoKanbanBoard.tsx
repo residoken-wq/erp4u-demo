@@ -38,7 +38,7 @@ interface ColumnConfig {
 const COLUMNS: ColumnConfig[] = [
     { key: 'DRAFT', title: 'Khởi tạo / Tính BOM', color: '#8c8c8c', matchingStatuses: ['DRAFT', 'PENDING_APPROVAL'] },
     { key: 'WAITING_VENDOR', title: 'Chờ Giao Gia Công', color: '#fa8c16', matchingStatuses: ['WAITING_VENDOR'] },
-    { key: 'MATERIAL_PREP', title: 'Chuẩn bị NPL', color: '#1890ff', matchingStatuses: ['MATERIAL_PREP'] },
+    { key: 'MATERIAL_PREP', title: 'Chuẩn bị NPL', color: '#272F72', matchingStatuses: ['MATERIAL_PREP'] },
     { key: 'IN_PRODUCTION', title: 'Đang Sản Xuất', color: '#52c41a', matchingStatuses: ['IN_PRODUCTION', 'QC'] },
     { key: 'RECEIVING', title: 'Chờ Nhập Kho', color: '#722ed1', matchingStatuses: ['RECEIVING', 'READY_TO_SHIP', 'RECONCILIATION'] },
     { key: 'COMPLETED', title: 'Hoàn Thành', color: '#389e0d', matchingStatuses: ['COMPLETED', 'CLOSED'] },
@@ -295,7 +295,7 @@ const PfoKanbanBoard: React.FC<PfoKanbanBoardProps> = ({ pfos, onPfoClick, onRef
                             {pfo.code}
                         </Text>
                         <Text type="secondary" style={{ fontSize: 13 }}>
-                            Đơn hàng: <b style={{ color: '#1890ff' }}>{pfo.sales_order?.order_code || 'N/A'}</b>
+                            Đơn hàng: <b style={{ color: '#272F72' }}>{pfo.sales_order?.order_code || 'N/A'}</b>
                         </Text>
                     </div>
                     <div style={{ fontSize: 13, color: '#475569' }}>
@@ -331,7 +331,7 @@ const PfoKanbanBoard: React.FC<PfoKanbanBoardProps> = ({ pfos, onPfoClick, onRef
                                 ) : c.severity === 'warning' ? (
                                     <WarningOutlined style={{ color: '#faad14', marginTop: 2, fontSize: 14 }} />
                                 ) : (
-                                    <InfoCircleOutlined style={{ color: '#1890ff', marginTop: 2, fontSize: 14 }} />
+                                    <InfoCircleOutlined style={{ color: '#272F72', marginTop: 2, fontSize: 14 }} />
                                 )}
                                 <div style={{ flex: 1 }}>
                                     <div style={{ fontWeight: 600, fontSize: 13, color: '#1f2937' }}>{c.label}</div>
@@ -402,7 +402,7 @@ const PfoKanbanBoard: React.FC<PfoKanbanBoardProps> = ({ pfos, onPfoClick, onRef
                     hoverable 
                     style={{ 
                         borderRadius: 12,
-                        borderLeft: `4px solid ${isLate ? '#ff4d4f' : '#1890ff'}`,
+                        borderLeft: `4px solid ${isLate ? '#ff4d4f' : '#272F72'}`,
                         boxShadow: isBeingDragged ? '0 8px 24px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.04)',
                         background: '#ffffff',
                         borderTop: '1px solid #f0f0f0',
@@ -427,7 +427,7 @@ const PfoKanbanBoard: React.FC<PfoKanbanBoardProps> = ({ pfos, onPfoClick, onRef
                     </div>
                     
                     {soCode && (
-                        <div style={{ fontSize: 12, color: '#1890ff', fontWeight: 600, marginBottom: 4 }}>
+                        <div style={{ fontSize: 12, color: '#272F72', fontWeight: 600, marginBottom: 4 }}>
                             <FileTextOutlined style={{ marginRight: 4 }} /> Đơn hàng: {soCode}
                         </div>
                     )}
@@ -465,7 +465,7 @@ const PfoKanbanBoard: React.FC<PfoKanbanBoardProps> = ({ pfos, onPfoClick, onRef
                             </Button>
                         )}
                         {pfo.status === 'MATERIAL_PREP' && (
-                            <Button size="small" type="default" icon={<ShoppingCartOutlined />} style={{ borderRadius: 6, fontSize: 12, borderColor: '#1890ff', color: '#1890ff' }}>
+                            <Button size="small" type="default" icon={<ShoppingCartOutlined />} style={{ borderRadius: 6, fontSize: 12, borderColor: '#272F72', color: '#272F72' }}>
                                 Cấp NPL / Tạo PO
                             </Button>
                         )}
@@ -506,7 +506,7 @@ const PfoKanbanBoard: React.FC<PfoKanbanBoardProps> = ({ pfos, onPfoClick, onRef
                                 minWidth: 270, 
                                 maxWidth: 320, 
                                 background: isDragOver ? '#e6f7ff' : '#f7f8fa', 
-                                border: isDragOver ? '2px dashed #1890ff' : '1px solid #e8e8e8',
+                                border: isDragOver ? '2px dashed #272F72' : '1px solid #e8e8e8',
                                 borderRadius: 14, 
                                 padding: '14px 12px',
                                 display: 'flex',
@@ -532,7 +532,7 @@ const PfoKanbanBoard: React.FC<PfoKanbanBoardProps> = ({ pfos, onPfoClick, onRef
                                         textAlign: 'center', 
                                         color: '#bfbfbf', 
                                         padding: '36px 0', 
-                                        border: isDragOver ? '1px dashed #1890ff' : '1px dashed #d9d9d9', 
+                                        border: isDragOver ? '1px dashed #272F72' : '1px dashed #d9d9d9', 
                                         borderRadius: 8, 
                                         fontSize: 12,
                                         background: isDragOver ? '#ffffff' : 'transparent'
@@ -550,7 +550,7 @@ const PfoKanbanBoard: React.FC<PfoKanbanBoardProps> = ({ pfos, onPfoClick, onRef
             <Modal
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16 }}>
-                        <ExclamationCircleOutlined style={{ color: '#1890ff' }} />
+                        <ExclamationCircleOutlined style={{ color: '#272F72' }} />
                         <span>Xác nhận chuyển trạng thái Lệnh SX</span>
                     </div>
                 }
@@ -578,7 +578,7 @@ const PfoKanbanBoard: React.FC<PfoKanbanBoardProps> = ({ pfos, onPfoClick, onRef
                         loading={confirmLoading}
                         disabled={validating}
                         onClick={handleConfirmMove}
-                        style={{ background: pendingMove?.toCol.color || '#1890ff', borderColor: pendingMove?.toCol.color || '#1890ff' }}
+                        style={{ background: pendingMove?.toCol.color || '#272F72', borderColor: pendingMove?.toCol.color || '#272F72' }}
                     >
                         Xác nhận chuyển sang: {pendingMove?.toCol.title}
                     </Button>

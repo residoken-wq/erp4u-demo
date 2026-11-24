@@ -266,7 +266,7 @@ const SalesPage: React.FC = () => {
         },
         {
             title: 'Ngày Giao', dataIndex: 'delivery_date', width: 110,
-            render: (t: any) => t ? <span style={{ color: '#1890ff' }}>{dayjs(t).format('DD/MM/YYYY')}</span> : '-'
+            render: (t: any) => t ? <span style={{ color: '#272F72' }}>{dayjs(t).format('DD/MM/YYYY')}</span> : '-'
         },
         {
             title: 'Doanh Thu', dataIndex: 'total_amount', align: 'right' as const, width: 130,
@@ -289,7 +289,7 @@ const SalesPage: React.FC = () => {
             title: 'Nhân sự', dataIndex: 'assigned_to', width: 120, align: 'center' as const,
             render: (u: any) => u ? (
                 <Tooltip title={u.full_name || u.username}>
-                    <Avatar src={u.avatar} style={{ backgroundColor: '#1890ff', cursor: 'pointer' }} size="small">
+                    <Avatar src={u.avatar} style={{ backgroundColor: '#272F72', cursor: 'pointer' }} size="small">
                         {!u.avatar && (u.full_name || u.username || '?').charAt(0).toUpperCase()}
                     </Avatar>
                 </Tooltip>
@@ -324,7 +324,7 @@ const SalesPage: React.FC = () => {
                     <Tooltip title={`Đã trả: ${paid.toLocaleString()} / ${total.toLocaleString()}`}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 5, width: '100%' }}>
-                                <Progress percent={pct} size="small" steps={5} strokeColor={pct >= 100 ? '#52c41a' : '#1890ff'} showInfo={false} />
+                                <Progress percent={pct} size="small" steps={5} strokeColor={pct >= 100 ? '#52c41a' : '#272F72'} showInfo={false} />
                                 <span style={{ fontSize: 11, color: pct >= 100 ? 'green' : '#666' }}>{pct}%</span>
                             </div>
                             {r.require_invoice && (() => {
@@ -347,7 +347,7 @@ const SalesPage: React.FC = () => {
             render: (r: any) => (
                 <Space size={2}>
                     <Tooltip title="Xem/Sửa">
-                        <Button type="text" size="small" icon={<EditOutlined style={{ color: '#1890ff' }} />} onClick={() => openDetailModal(r)} />
+                        <Button type="text" size="small" icon={<EditOutlined style={{ color: '#272F72' }} />} onClick={() => openDetailModal(r)} />
                     </Tooltip>
                     <Tooltip title="Nhắc nhở">
                         <Button type="text" size="small" icon={<BellOutlined style={{ color: '#fa8c16' }} />} onClick={() => handleCreateTask(r)} />
@@ -389,9 +389,9 @@ const SalesPage: React.FC = () => {
                                                 padding: '4px 12px',
                                                 borderRadius: 4,
                                                 cursor: 'pointer',
-                                                border: isActive ? '1px solid #1890ff' : '1px solid #d9d9d9',
+                                                border: isActive ? '1px solid #272F72' : '1px solid #d9d9d9',
                                                 background: isActive ? '#e6f7ff' : '#fff',
-                                                color: isActive ? '#1890ff' : '#666',
+                                                color: isActive ? '#272F72' : '#666',
                                                 fontSize: 13,
                                                 transition: 'all 0.2s',
                                                 fontWeight: isActive ? 500 : 400
@@ -528,7 +528,7 @@ const SalesPage: React.FC = () => {
                                     <div style={{ width: '100%' }} onClick={() => openDetailModal(r)}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                                             <div onClick={() => openDetailModal(r)} style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: 600, fontSize: 14, color: '#1890ff' }}>{r.order_code}</div>
+                                                <div style={{ fontWeight: 600, fontSize: 14, color: '#272F72' }}>{r.order_code}</div>
                                                 <div style={{ fontSize: 13, color: '#333' }}>{r.customer?.name || r.customer_name || '-'}</div>
                                             </div>
                                             <Tag color={color}>{label}</Tag>
@@ -545,7 +545,7 @@ const SalesPage: React.FC = () => {
                                                 </div>
                                             </div>
                                             <div style={{ marginTop: 8 }}>
-                                                <Progress percent={pct} size="small" strokeColor={pct >= 100 ? '#52c41a' : '#1890ff'} showInfo={false} />
+                                                <Progress percent={pct} size="small" strokeColor={pct >= 100 ? '#52c41a' : '#272F72'} showInfo={false} />
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, fontSize: 11, color: '#999' }}>
                                                 <span>{r.order_date ? dayjs(r.order_date).format('DD/MM/YYYY') : '-'}</span>
@@ -569,7 +569,7 @@ const SalesPage: React.FC = () => {
                                             <div style={{ color: '#52c41a', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }} onClick={(e) => { e.stopPropagation(); handleCopyLink(r.uuid); }}>
                                                 <LinkOutlined /> <span>Link KH</span>
                                             </div>
-                                            <div style={{ color: '#1890ff', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }} onClick={(e) => { e.stopPropagation(); openDetailModal(r); }}>
+                                            <div style={{ color: '#272F72', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }} onClick={(e) => { e.stopPropagation(); openDetailModal(r); }}>
                                                 <EditOutlined /> <span>Chi tiết</span>
                                             </div>
                                         </div>

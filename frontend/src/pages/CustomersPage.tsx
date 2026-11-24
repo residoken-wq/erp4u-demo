@@ -168,7 +168,7 @@ const CustomersPage: React.FC = () => {
             title: 'Tên Khách Hàng', dataIndex: 'name',
             render: (t: any, r: any) => (
                 <div>
-                    <div style={{ fontWeight: 500, color: '#1890ff' }}>{t}</div>
+                    <div style={{ fontWeight: 500, color: '#272F72' }}>{t}</div>
                     {r.parent && <Tag icon={<BranchesOutlined />} color="purple" style={{ marginTop: 4 }}>Thuộc: {r.parent.name}</Tag>}
                     <div style={{ color: '#888', fontSize: 12 }}>{r.address}</div>
                 </div>
@@ -381,7 +381,7 @@ const CustomersPage: React.FC = () => {
                             )
                         },
                         {
-                            key: '5', label: <span style={{ color: '#1890ff' }}><HistoryOutlined /> Lịch sử Mua Hàng</span>,
+                            key: '5', label: <span style={{ color: '#272F72' }}><HistoryOutlined /> Lịch sử Mua Hàng</span>,
                             disabled: !editingItem,
                             children: (
                                 <div>
@@ -390,7 +390,7 @@ const CustomersPage: React.FC = () => {
                                             <span>Lọc theo năm:</span>
                                             <DatePicker picker="year" value={filterYear} onChange={setFilterYear} allowClear placeholder="Tất cả" />
                                             <Divider type="vertical" />
-                                            <Statistic title="Doanh Thu" value={revenueStats.total} prefix={<DollarOutlined />} valueStyle={{ fontSize: 16, color: '#1890ff' }} />
+                                            <Statistic title="Doanh Thu" value={revenueStats.total} prefix={<DollarOutlined />} valueStyle={{ fontSize: 16, color: '#272F72' }} />
                                             <Statistic title="Đã Thu" value={revenueStats.paid} valueStyle={{ fontSize: 16, color: 'green' }} />
                                             <Statistic title="Công Nợ" value={revenueStats.debt} valueStyle={{ fontSize: 16, color: 'red' }} />
                                         </Space>

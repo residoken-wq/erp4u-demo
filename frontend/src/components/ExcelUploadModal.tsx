@@ -88,7 +88,7 @@ const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({ open, onClose, onSu
                     style={{ padding: 20 }}
                 >
                     <p className="ant-upload-drag-icon">
-                        <InboxOutlined style={{ color: '#1890ff' }} />
+                        <InboxOutlined style={{ color: '#272F72' }} />
                     </p>
                     <p className="ant-upload-text">Kéo thả file vào đây hoặc click để chọn file</p>
                     <p className="ant-upload-hint">Chỉ hỗ trợ file Excel (.xlsx, .xls)</p>

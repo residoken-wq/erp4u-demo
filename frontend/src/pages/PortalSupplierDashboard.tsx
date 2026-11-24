@@ -174,7 +174,7 @@ const PortalSupplierDashboard: React.FC = () => {
         },
         { 
             title: 'Ngày giao hàng', dataIndex: 'expected_delivery_date', key: 'expected_delivery_date', 
-            render: (val: any) => val ? <b style={{color: '#1890ff'}}>{dayjs(val).format('DD/MM/YYYY')}</b> : '-',
+            render: (val: any) => val ? <b style={{color: '#272F72'}}>{dayjs(val).format('DD/MM/YYYY')}</b> : '-',
             filters: Array.from(new Set(pos.map((p: any) => p.expected_delivery_date ? dayjs(p.expected_delivery_date).format('DD/MM/YYYY') : null).filter(Boolean))).map((d: any) => ({ text: d, value: d })),
             onFilter: (value: any, record: any) => record.expected_delivery_date ? dayjs(record.expected_delivery_date).format('DD/MM/YYYY') === value : false
         },
@@ -223,7 +223,7 @@ const PortalSupplierDashboard: React.FC = () => {
         { title: 'Mã Đơn (PO)', dataIndex: 'po_code', key: 'po_code', render: (text: string, record: any) => <a onClick={() => window.open(`/portal/po/${record.po_uuid}`, '_blank')}>{text}</a> },
         { 
             title: 'Ngày giao hàng', dataIndex: 'expected_delivery_date', key: 'expected_delivery_date', 
-            render: (val: any) => val ? <b style={{color: '#1890ff'}}>{dayjs(val).format('DD/MM/YYYY')}</b> : '-',
+            render: (val: any) => val ? <b style={{color: '#272F72'}}>{dayjs(val).format('DD/MM/YYYY')}</b> : '-',
             filters: Array.from(new Set(allItems.map((p: any) => p.expected_delivery_date ? dayjs(p.expected_delivery_date).format('DD/MM/YYYY') : null).filter(Boolean))).map((d: any) => ({ text: d, value: d })),
             onFilter: (value: any, record: any) => record.expected_delivery_date ? dayjs(record.expected_delivery_date).format('DD/MM/YYYY') === value : false
         },
@@ -454,7 +454,7 @@ const PortalSupplierDashboard: React.FC = () => {
                             if (!r.pxks || r.pxks.length === 0) return '-';
                             return (
                                 <Space>
-                                    <span style={{ fontSize: 12, color: '#1890ff' }}>{r.pxks.map((p:any) => p.code).join(', ')}</span>
+                                    <span style={{ fontSize: 12, color: '#272F72' }}>{r.pxks.map((p:any) => p.code).join(', ')}</span>
                                     <Button size="small" type="text" icon={<EyeOutlined />} onClick={() => { setSelectedPxks(r.pxks); setPxkModalOpen(true); }} />
                                 </Space>
                             );
@@ -488,7 +488,7 @@ const PortalSupplierDashboard: React.FC = () => {
                     pagination={false}
                     size="small"
                     columns={[
-                        { title: 'Mã PXK', dataIndex: 'code', render: (v: any) => <b style={{ color: '#1890ff' }}>{v}</b> },
+                        { title: 'Mã PXK', dataIndex: 'code', render: (v: any) => <b style={{ color: '#272F72' }}>{v}</b> },
                         { title: 'Ngày xuất', dataIndex: 'date', render: (v: any) => dayjs(v).format('DD/MM/YYYY') },
                         { title: 'Số lượng giao', dataIndex: 'qty', align: 'right', render: (v: any) => <b style={{ color: '#52c41a' }}>{Number(v).toLocaleString()}</b> }
                     ]}

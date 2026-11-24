@@ -403,11 +403,11 @@ const PrintBrandingTab: React.FC = () => {
 
     // Preset color options
     const colorPresets = [
-        { label: 'Xanh Navy ERP4U (Mặc định)', value: '#0050b3' },
-        { label: 'Xanh Dương Hiện Đại', value: '#1677ff' },
+        { label: 'Xanh Navy Conix (Mặc định)', value: '#272F72' },
+        { label: 'Xanh Navy Đậm', value: '#1D2459' },
         { label: 'Đỏ Đô Sang Trọng', value: '#a8071a' },
         { label: 'Xanh Lá Tươi Mới', value: '#135200' },
-        { label: 'Cam ERP4U Năng Động', value: '#d46b08' },
+        { label: 'Cam Conix Năng Động', value: '#F04E23' },
         { label: 'Tím Hoàng Gia', value: '#531dab' },
         { label: 'Xám Đen Tối Giản', value: '#1f1f1f' }
     ];
@@ -699,7 +699,7 @@ const PrintBrandingTab: React.FC = () => {
                                             display: 'flex', 
                                             alignItems: 'center', 
                                             gap: 6,
-                                            borderColor: primaryColor === c.value ? '#1890ff' : '#d9d9d9',
+                                            borderColor: primaryColor === c.value ? '#272F72' : '#d9d9d9',
                                             fontWeight: primaryColor === c.value ? 700 : 400
                                         }}
                                         onClick={() => setPrimaryColor(c.value)}

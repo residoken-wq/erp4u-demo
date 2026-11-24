@@ -10,7 +10,7 @@ import PackageLockedPage from './PackageLockedPage';
 
 // ============================================================
 // B2B PORTAL DASHBOARD
-// Design: erp4u-website CSS globals (Be Vietnam Pro, #23A7D3, card-v2)
+// Design: erp4u-website CSS globals (Be Vietnam Pro, #272F72, card-v2)
 // Layout: Header → Hero → Stats → Orders → Promotions → Tracking
 // ============================================================
 
@@ -90,7 +90,7 @@ interface DashboardData {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-    QUOTATION: { label: 'Báo giá', color: '#1890ff', bg: '#e6f7ff' },
+    QUOTATION: { label: 'Báo giá', color: '#272F72', bg: '#e6f7ff' },
     SO_PENDING: { label: 'Chờ xử lý', color: '#fa8c16', bg: '#fff7e6' },
     DEPOSITED: { label: 'Đã cọc', color: '#52c41a', bg: '#f6ffed' },
     SAMPLE_APPROVED: { label: 'Duyệt mẫu', color: '#13c2c2', bg: '#e6fffb' },
@@ -422,7 +422,7 @@ const PortalDashboardPage: React.FC = () => {
                     </a>
                     <div style={S.headerRight}>
                         <span style={{ fontSize: 14, color: '#555' }}>
-                            Xin chào, <strong style={{ color: '#23A7D3' }}>{customer.name}</strong>
+                            Xin chào, <strong style={{ color: '#272F72' }}>{customer.name}</strong>
                         </span>
                         <button onClick={handleLogout} style={S.logoutBtn}>Đăng xuất</button>
                     </div>
@@ -440,7 +440,7 @@ const PortalDashboardPage: React.FC = () => {
                         </p>
                         <button
                             onClick={() => setIsCustomizerOpen(true)}
-                            style={{ padding: '12px 24px', background: '#fff', color: '#23A7D3', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', marginBottom: '16px', display: 'inline-block' }}
+                            style={{ padding: '12px 24px', background: '#fff', color: '#272F72', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', marginBottom: '16px', display: 'inline-block' }}
                         >
                             🎨 Tự Thiết Kế Sản Phẩm
                         </button>
@@ -455,7 +455,7 @@ const PortalDashboardPage: React.FC = () => {
                 {/* ===== STATS CARDS ===== */}
                 <section style={S.statsSection}>
                     <div style={S.statsGrid}>
-                        <div style={{ ...S.statCard, borderLeftColor: '#23A7D3' }}>
+                        <div style={{ ...S.statCard, borderLeftColor: '#272F72' }}>
                             <div style={S.statIcon}>📦</div>
                             <div>
                                 <div style={S.statValue}>{stats.total_orders}</div>
@@ -592,7 +592,7 @@ const PortalDashboardPage: React.FC = () => {
                                                 <div style={{ fontWeight: 600 }}>{stat.name}</div>
                                                 <div style={{ fontSize: 12, color: '#888' }}>SKU: {stat.sku}</div>
                                             </td>
-                                            <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#23A7D3' }}>
+                                            <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600, color: '#272F72' }}>
                                                 {fmt(stat.total_quantity)} <span style={{ fontSize: 12, color: '#999', fontWeight: 400 }}>{stat.unit}</span>
                                             </td>
                                             <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 600 }}>{fmt(stat.total_value)}đ</td>
@@ -658,7 +658,7 @@ const PortalDashboardPage: React.FC = () => {
                                                                 <div style={{ fontSize: 11, color: '#888' }}>SKU: {item.sku}</div>
                                                             </td>
                                                             <td style={{ padding: '8px 16px', textAlign: 'right', color: '#666' }}>{fmt(item.unit_price)}đ</td>
-                                                            <td style={{ padding: '8px 16px', textAlign: 'right', color: '#23A7D3', fontWeight: 600 }}>x{item.quantity}</td>
+                                                            <td style={{ padding: '8px 16px', textAlign: 'right', color: '#272F72', fontWeight: 600 }}>x{item.quantity}</td>
                                                             <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: 600, color: '#333' }}>{fmt(item.subtotal)}đ</td>
                                                         </tr>
                                                     ))}
@@ -741,21 +741,21 @@ const PortalDashboardPage: React.FC = () => {
                                                             <div key={step.key} style={S.trackingStep}>
                                                                 <div style={{
                                                                     ...S.trackingDot,
-                                                                    background: isActive ? '#23A7D3' : '#e0e0e0',
+                                                                    background: isActive ? '#272F72' : '#e0e0e0',
                                                                     transform: isCurrent ? 'scale(1.3)' : 'scale(1)',
-                                                                    boxShadow: isCurrent ? '0 0 0 4px rgba(35,167,211,0.2)' : 'none',
+                                                                    boxShadow: isCurrent ? '0 0 0 4px rgba(39, 47, 114,0.2)' : 'none',
                                                                 }}>
                                                                     <span style={{ fontSize: 14 }}>{step.icon}</span>
                                                                 </div>
                                                                 {idx < TRACKING_STEPS.length - 1 && (
                                                                     <div style={{
                                                                         ...S.trackingLine,
-                                                                        background: idx < trackingStep ? '#23A7D3' : '#e0e0e0',
+                                                                        background: idx < trackingStep ? '#272F72' : '#e0e0e0',
                                                                     }} />
                                                                 )}
                                                                 <div style={{
                                                                     ...S.trackingLabel,
-                                                                    color: isActive ? '#23A7D3' : '#aaa',
+                                                                    color: isActive ? '#272F72' : '#aaa',
                                                                     fontWeight: isCurrent ? 700 : 400,
                                                                 }}>
                                                                     {step.label}
@@ -785,10 +785,10 @@ const PortalDashboardPage: React.FC = () => {
                             Cần hỗ trợ về đơn hàng, báo giá hoặc sản phẩm? Liên hệ đội ngũ Sales ngay.
                         </p>
                         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-                            <a href="tel:19000000" style={{ ...S.supportBtn, background: '#23A7D3', color: '#fff' }}>
+                            <a href="tel:19000000" style={{ ...S.supportBtn, background: '#272F72', color: '#fff' }}>
                                 📞 Hotline
                             </a>
-                            <a href="mailto:support@example.com" style={{ ...S.supportBtn, background: '#fff', color: '#23A7D3', border: '1px solid #23A7D3' }}>
+                            <a href="mailto:support@example.com" style={{ ...S.supportBtn, background: '#fff', color: '#272F72', border: '1px solid #272F72' }}>
                                 ✉️ Email
                             </a>
                         </div>
@@ -845,7 +845,7 @@ const PortalDashboardPage: React.FC = () => {
                                                 <div style={{ flex: 1, minWidth: 0 }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
                                                         <span style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>{p.name}</span>
-                                                        {p.product_type === 'COMBO' && <span style={{ fontSize: 10, background: '#e6f7ff', color: '#1890ff', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>COMBO</span>}
+                                                        {p.product_type === 'COMBO' && <span style={{ fontSize: 10, background: '#e6f7ff', color: '#272F72', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>COMBO</span>}
                                                     </div>
                                                     {p.customer_description ? (
                                                         <div style={{ fontSize: 12, color: '#666', marginBottom: 4, whiteSpace: 'pre-line', lineHeight: 1.4 }}>
@@ -862,7 +862,7 @@ const PortalDashboardPage: React.FC = () => {
                                                         <div style={{ fontSize: 11, color: '#aaa', fontStyle: 'italic', marginBottom: 4 }}>Chưa có mô tả chi tiết</div>
                                                     )}
                                                     <div style={{ fontSize: 11, color: '#aaa' }}><span style={{ background: '#f0f0f0', padding: '1px 4px', borderRadius: 2 }}>{p.sku}</span> • {p.unit || 'Cái'}</div>
-                                                    <div style={{ fontSize: 14, fontWeight: 700, color: '#23A7D3', marginTop: 2 }}>{fmt(p.base_price)}đ</div>
+                                                    <div style={{ fontSize: 14, fontWeight: 700, color: '#272F72', marginTop: 2 }}>{fmt(p.base_price)}đ</div>
                                                 </div>
                                                 <div style={S.qtyControl}>
                                                     <button onClick={() => updatePromoQty(p.sku, qty - 1)} style={S.qtyBtn} disabled={qty <= 0}>−</button>
@@ -893,7 +893,7 @@ const PortalDashboardPage: React.FC = () => {
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', paddingTop: 8, marginTop: 4 }}>
                                             <span style={{ fontWeight: 700, fontSize: 15 }}>Ước tính:</span>
-                                            <span style={{ fontWeight: 800, fontSize: 16, color: '#23A7D3' }}>{fmt(Math.max(0, promoCartTotal - promoDiscount))}đ</span>
+                                            <span style={{ fontWeight: 800, fontSize: 16, color: '#272F72' }}>{fmt(Math.max(0, promoCartTotal - promoDiscount))}đ</span>
                                         </div>
                                     </div>
                                 )}
@@ -978,7 +978,7 @@ const PortalDashboardPage: React.FC = () => {
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
                                                 <span style={{ fontSize: 14, fontWeight: 600, color: '#333' }}>{p.product_name}</span>
-                                                {p.product_type === 'COMBO' && <span style={{ fontSize: 10, background: '#e6f7ff', color: '#1890ff', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>COMBO</span>}
+                                                {p.product_type === 'COMBO' && <span style={{ fontSize: 10, background: '#e6f7ff', color: '#272F72', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>COMBO</span>}
                                             </div>
                                             {p.vat_content && <div style={{ fontSize: 11, color: '#888', fontStyle: 'italic', marginBottom: 4 }}>VAT: {p.vat_content}</div>}
                                             {p.customer_description ? (
@@ -996,7 +996,7 @@ const PortalDashboardPage: React.FC = () => {
                                                 <div style={{ fontSize: 11, color: '#aaa', fontStyle: 'italic', marginBottom: 4 }}>Chưa có mô tả chi tiết</div>
                                             )}
                                             <div style={{ fontSize: 11, color: '#aaa' }}><span style={{ background: '#f0f0f0', padding: '1px 4px', borderRadius: 2 }}>{p.sku}</span> <span style={{ color: '#888' }}>(Đơn cũ: {p.quantity})</span></div>
-                                            <div style={{ fontSize: 14, fontWeight: 700, color: '#23A7D3', marginTop: 2 }}>{fmt(p.unit_price)}đ</div>
+                                            <div style={{ fontSize: 14, fontWeight: 700, color: '#272F72', marginTop: 2 }}>{fmt(p.unit_price)}đ</div>
                                         </div>
                                         <div style={S.qtyControl}>
                                             <button onClick={() => setReorderItems(prev => ({ ...prev, [p.sku]: Math.max(minQty, qty - 1) }))} style={S.qtyBtn} disabled={qty <= minQty}>−</button>
@@ -1057,7 +1057,7 @@ const PortalDashboardPage: React.FC = () => {
             <footer style={S.footer}>
                 <p>© 2026 ERP4U — Công ty TNHH Sản xuất Mẫu | Cổng Đối Tác B2B</p>
                 <p style={{ fontSize: 11, marginTop: 4 }}>
-                    <a href="https://demo.erp4u.local" style={{ color: '#23A7D3', textDecoration: 'none' }}>demo.erp4u.local</a>
+                    <a href="https://demo.erp4u.local" style={{ color: '#272F72', textDecoration: 'none' }}>demo.erp4u.local</a>
                 </p>
             </footer>
 
@@ -1277,7 +1277,7 @@ const S: Record<string, React.CSSProperties> = {
     orderCode: {
         fontSize: 16,
         fontWeight: 800,
-        color: '#23A7D3',
+        color: '#272F72',
         marginRight: 10,
     },
     statusTag: {
@@ -1312,7 +1312,7 @@ const S: Record<string, React.CSSProperties> = {
         gap: 12,
     },
     totalLabel: { fontSize: 14, color: '#888', marginRight: 6 },
-    totalValue: { fontSize: 18, fontWeight: 800, color: '#23A7D3' },
+    totalValue: { fontSize: 18, fontWeight: 800, color: '#272F72' },
     paidBadge: {
         display: 'inline-block',
         marginLeft: 10,
@@ -1343,7 +1343,7 @@ const S: Record<string, React.CSSProperties> = {
     },
     reorderBtn: {
         padding: '6px 14px',
-        background: 'linear-gradient(135deg, #23A7D3, #1e8fb5)',
+        background: 'linear-gradient(135deg, #272F72, #353F94)',
         border: 'none',
         borderRadius: 20,
         fontSize: 12,
@@ -1406,7 +1406,7 @@ const S: Record<string, React.CSSProperties> = {
         borderRadius: 20,
         padding: '32px 24px',
         textAlign: 'center' as const,
-        border: '1px solid rgba(35,167,211,0.15)',
+        border: '1px solid rgba(39, 47, 114,0.15)',
     },
     supportBtn: {
         padding: '10px 24px',
@@ -1435,7 +1435,7 @@ const S: Record<string, React.CSSProperties> = {
     },
     primaryBtn: {
         padding: '12px 28px',
-        background: 'linear-gradient(135deg, #23A7D3, #1e8fb5)',
+        background: 'linear-gradient(135deg, #272F72, #353F94)',
         color: '#fff',
         border: 'none',
         borderRadius: 50,
@@ -1542,7 +1542,7 @@ const S: Record<string, React.CSSProperties> = {
         background: 'linear-gradient(135deg, #f0faff 0%, #e8f7fc 100%)',
         borderRadius: 12,
         padding: '12px 16px',
-        border: '1px solid rgba(35,167,211,0.15)',
+        border: '1px solid rgba(39, 47, 114,0.15)',
         fontSize: 14,
     },
 };

@@ -196,7 +196,7 @@ const QuotationTemplate: React.FC<QuotationProps> = ({ data }) => {
                         
                         <div style={{ marginBottom: 5, fontSize: 11, color: '#666' }}>Quét mã để thanh toán</div>
                         <Image src={qrLink} width={150} preview={false} />
-                        <div style={{ marginTop: 5, fontWeight: 'bold', color: '#1890ff', fontSize: 12 }}>ERP4U PAYMENT</div>
+                        <div style={{ marginTop: 5, fontWeight: 'bold', color: '#272F72', fontSize: 12 }}>ERP4U PAYMENT</div>
                     </div>
                 )}
             </div>

@@ -66,8 +66,8 @@ const RootProductChildrenTable: React.FC<RootProductChildrenTableProps> = ({
             render: (sku: string, record: any) => (
                 <Space direction="vertical" size={1}>
                     <Space size={4}>
-                        <ForkOutlined style={{ color: '#1890ff', fontSize: 12 }} />
-                        <b style={{ color: '#1890ff' }}>{sku}</b>
+                        <ForkOutlined style={{ color: '#272F72', fontSize: 12 }} />
+                        <b style={{ color: '#272F72' }}>{sku}</b>
                     </Space>
                     {record.hierarchyLevel > 1 && (
                         <Tag color="purple" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', margin: 0 }}>

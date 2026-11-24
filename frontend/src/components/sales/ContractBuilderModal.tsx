@@ -646,7 +646,7 @@ const ContractBuilderModal: React.FC<Props> = ({ open, onCancel, onSuccess, init
                         {customVariables.length > 0 && (
                             <>
                                 <Divider style={{ margin: '12px 0' }} />
-                                <div style={{ fontWeight: 'bold', color: '#1890ff', marginBottom: 10, fontSize: 15 }}>2. Thông Tin Điền Thêm</div>
+                                <div style={{ fontWeight: 'bold', color: '#272F72', marginBottom: 10, fontSize: 15 }}>2. Thông Tin Điền Thêm</div>
                                 <div style={{ marginBottom: 12, fontSize: 13, color: '#666' }}>
                                     <i>Các biến tùy chỉnh từ mẫu ({customVariables.length} biến):</i>
                                 </div>

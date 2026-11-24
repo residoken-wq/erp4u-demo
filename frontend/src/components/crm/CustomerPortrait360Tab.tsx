@@ -145,7 +145,7 @@ export const CustomerPortrait360Tab: React.FC<CustomerPortrait360TabProps> = ({ 
         {
             key: '1',
             label: '🛒 Mẫu 1: Thói quen & Hành vi Đặt hàng',
-            icon: <ShoppingCartOutlined style={{ color: '#1890ff' }} />,
+            icon: <ShoppingCartOutlined style={{ color: '#272F72' }} />,
             onClick: () => setNotes(prev => (prev ? prev + '<hr/>' + NOTE_TEMPLATES.BUYING_BEHAVIOR : NOTE_TEMPLATES.BUYING_BEHAVIOR))
         },
         {
@@ -229,7 +229,7 @@ export const CustomerPortrait360Tab: React.FC<CustomerPortrait360TabProps> = ({ 
                 const parts = content.split(/(\*\*.*?\*\*)/g);
                 return (
                     <div key={idx} style={{ paddingLeft: 14, marginBottom: 5, position: 'relative', fontSize: 13, lineHeight: '1.6', color: '#262626' }}>
-                        <span style={{ position: 'absolute', left: 2, top: 0, color: '#1890ff', fontWeight: 'bold' }}>•</span>
+                        <span style={{ position: 'absolute', left: 2, top: 0, color: '#272F72', fontWeight: 'bold' }}>•</span>
                         {parts.map((p, pIdx) => {
                             if (p.startsWith('**') && p.endsWith('**')) {
                                 return <strong key={pIdx} style={{ color: '#1f1f1f' }}>{p.slice(2, -2)}</strong>;
@@ -282,12 +282,12 @@ export const CustomerPortrait360Tab: React.FC<CustomerPortrait360TabProps> = ({ 
                     <Row gutter={[16, 8]} align="middle">
                         <Col xs={24} sm={12} md={5}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <div style={{ background: '#e6f7ff', padding: 8, borderRadius: 8, color: '#1890ff', fontSize: 18 }}>
+                                <div style={{ background: '#e6f7ff', padding: 8, borderRadius: 8, color: '#272F72', fontSize: 18 }}>
                                     <FileTextOutlined />
                                 </div>
                                 <div>
                                     <div style={{ fontSize: 11, color: '#8c8c8c' }}>Báo giá (BG)</div>
-                                    <div style={{ fontWeight: 700, fontSize: 14, color: '#1890ff' }}>
+                                    <div style={{ fontWeight: 700, fontSize: 14, color: '#272F72' }}>
                                         {summary.total_quotations} phiếu <span style={{ fontSize: 11, fontWeight: 'normal', color: '#595959' }}>({formatMoney(summary.total_quotations_amount)} đ)</span>
                                     </div>
                                 </div>
@@ -371,7 +371,7 @@ export const CustomerPortrait360Tab: React.FC<CustomerPortrait360TabProps> = ({ 
                             }}
                             bodyStyle={{ padding: 12, flex: 1, display: 'flex', flexDirection: 'column' }}
                             title={
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: '#1890ff' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, color: '#272F72' }}>
                                     <FileTextOutlined /> Ghi chú Chân dung Khách hàng (User Input)
                                 </div>
                             }
@@ -388,7 +388,7 @@ export const CustomerPortrait360Tab: React.FC<CustomerPortrait360TabProps> = ({ 
                                         icon={<SaveOutlined />}
                                         loading={saving}
                                         onClick={handleSaveNotes}
-                                        style={{ background: '#1890ff', borderColor: '#1890ff' }}
+                                        style={{ background: '#272F72', borderColor: '#272F72' }}
                                     >
                                         Lưu ghi chú
                                     </Button>

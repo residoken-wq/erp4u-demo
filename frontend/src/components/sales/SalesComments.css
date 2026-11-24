@@ -102,7 +102,7 @@
 }
 
 .comment-item.staff {
-  border-left: 3px solid #1890ff;
+  border-left: 3px solid #272F72;
 }
 
 .comment-item.customer {
@@ -189,13 +189,13 @@
 }
 
 .mentioned-preview .label {
-  color: #1890ff;
+  color: #272F72;
   font-weight: 500;
 }
 
 .mentioned-preview .user-tag {
   background: #e6f7ff;
-  color: #1890ff;
+  color: #272F72;
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -277,7 +277,7 @@
 
 .mentions-input-wrapper .ant-mentions:hover,
 .mentions-input-wrapper .ant-mentions:focus-within {
-  border-color: #1890ff;
+  border-color: #272F72;
 }
 
 /* ========================================

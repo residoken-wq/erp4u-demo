@@ -374,14 +374,14 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
                                                 {
                                                     key: 'dntt_print',
                                                     label: 'Mẫu 2: In DNTT (Ký sống, không mộc)',
-                                                    icon: <PrinterOutlined style={{ color: '#1677ff' }} />,
+                                                    icon: <PrinterOutlined style={{ color: '#272F72' }} />,
                                                     onClick: () => handlePrintDNTT(r, 'print')
                                                 }
                                             ]
                                         }}
                                         placement="bottomRight"
                                     >
-                                        <Button size="small" icon={<PrinterOutlined style={{ color: '#1677ff' }} />}>
+                                        <Button size="small" icon={<PrinterOutlined style={{ color: '#272F72' }} />}>
                                             In ĐNTT
                                         </Button>
                                     </Dropdown>
@@ -474,13 +474,13 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
                                 {
                                     key: 'print',
                                     label: 'Mẫu 2: In DNTT (Ký sống, không mộc)',
-                                    icon: <PrinterOutlined style={{ color: '#1677ff' }} />,
+                                    icon: <PrinterOutlined style={{ color: '#272F72' }} />,
                                     onClick: () => handlePrintFromModal('print')
                                 }
                             ]
                         }}
                     >
-                        <Button icon={<PrinterOutlined style={{ color: '#1677ff' }} />} style={{ float: 'left' }}>
+                        <Button icon={<PrinterOutlined style={{ color: '#272F72' }} />} style={{ float: 'left' }}>
                             In Mẫu ĐNTT
                         </Button>
                     </Dropdown>,
@@ -559,7 +559,7 @@ const SalesPayments: React.FC<Props> = ({ orderId, orderCode, totalAmount, paidA
                         />
                         <div style={{ fontSize: 13, textAlign: 'left', background: '#fafafa', padding: 14, borderRadius: 8, border: '1px solid #f0f0f0', lineHeight: 1.8 }}>
                             <div><b>Ngân hàng:</b> {qrModalData.bankName} <b>({qrModalData.bankCode})</b></div>
-                            <div><b>Số tài khoản:</b> <span style={{ color: '#1677ff', fontWeight: 700, fontSize: 15 }}>{qrModalData.bankAccount}</span></div>
+                            <div><b>Số tài khoản:</b> <span style={{ color: '#272F72', fontWeight: 700, fontSize: 15 }}>{qrModalData.bankAccount}</span></div>
                             <div><b>Chủ tài khoản:</b> {qrModalData.bankHolder}</div>
                             <div><b>Số tiền:</b> <span style={{ color: '#cf1322', fontWeight: 700, fontSize: 15 }}>{Number(qrModalData.amount).toLocaleString()}₫</span></div>
                             <div><b>Nội dung CK:</b> <span style={{ fontWeight: 600, background: '#fff1f0', padding: '2px 6px', borderRadius: 4, color: '#cf1322' }}>{qrModalData.description}</span></div>

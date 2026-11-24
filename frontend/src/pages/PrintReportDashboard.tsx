@@ -103,7 +103,7 @@ const PrintReportDashboard: React.FC = () => {
             key: 'date',
             render: (text: string, record: any) => {
                 const obj = {
-                    children: <Text strong style={{ color: '#1890ff' }}>{text}</Text>,
+                    children: <Text strong style={{ color: '#272F72' }}>{text}</Text>,
                     props: { rowSpan: record.rowSpan }
                 };
                 return obj;

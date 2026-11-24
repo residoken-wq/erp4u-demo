@@ -166,14 +166,14 @@ const ProductDemandDashboard: React.FC<Props> = ({ isMobile }) => {
             title: (
                 <div>
                     Tổng Cần Đặt<br/>
-                    <span style={{ color: '#1677ff', fontSize: 12 }}>Tổng: {totalPlannedSum.toLocaleString()}</span>
+                    <span style={{ color: '#272F72', fontSize: 12 }}>Tổng: {totalPlannedSum.toLocaleString()}</span>
                 </div>
             ),
             dataIndex: 'total_planned',
             key: 'total_planned',
             width: 110,
             align: 'right' as const,
-            render: (val: number) => <b style={{ color: '#1677ff' }}>{val?.toLocaleString()}</b>,
+            render: (val: number) => <b style={{ color: '#272F72' }}>{val?.toLocaleString()}</b>,
         },
         {
             title: (
@@ -268,7 +268,7 @@ const ProductDemandDashboard: React.FC<Props> = ({ isMobile }) => {
         ];
         return (
             <div style={{ margin: '4px 0', padding: '8px 12px', background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0' }}>
-                <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: '#1677ff' }}>
+                <div style={{ marginBottom: 6, fontWeight: 600, fontSize: 13, color: '#272F72' }}>
                     Chi tiết yêu cầu gia công theo từng Lệnh Sản Xuất (PFO):
                 </div>
                 <Table

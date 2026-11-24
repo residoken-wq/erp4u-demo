@@ -119,7 +119,7 @@ const PriceListsPage: React.FC = () => {
     const listColumns = [
         {
             title: 'Tên Bảng Giá', dataIndex: 'name',
-            render: (t: any) => <span style={{ fontWeight: 600, fontSize: 15, color: '#1890ff' }}>{t}</span>
+            render: (t: any) => <span style={{ fontWeight: 600, fontSize: 15, color: '#272F72' }}>{t}</span>
         },
         {
             title: 'Áp dụng cho Nhóm', dataIndex: 'group_id',
@@ -210,7 +210,7 @@ const PriceListsPage: React.FC = () => {
                 <div style={{ background: '#fff', padding: 20, borderRadius: 8, marginBottom: 15, boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                         <div style={{ fontWeight: 600, color: '#0050b3', textTransform: 'uppercase', fontSize: 13 }}>Thêm / Cập nhật Giá Sỉ</div>
-                        <Button type="dashed" size="small" icon={<RobotOutlined style={{ color: '#1890ff' }} />} onClick={openAiModal}>AI Trợ Giá</Button>
+                        <Button type="dashed" size="small" icon={<RobotOutlined style={{ color: '#272F72' }} />} onClick={openAiModal}>AI Trợ Giá</Button>
                     </div>
 
                     <Form form={formRule} layout="vertical" onFinish={handleAddRule}>

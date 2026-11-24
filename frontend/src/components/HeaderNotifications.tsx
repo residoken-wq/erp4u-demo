@@ -205,7 +205,7 @@ const HeaderNotifications: React.FC = () => {
                                     cursor: 'pointer',
                                     padding: '12px 16px',
                                     transition: 'all 0.2s',
-                                    borderLeft: item.is_read ? '3px solid transparent' : '3px solid #1890ff'
+                                    borderLeft: item.is_read ? '3px solid transparent' : '3px solid #272F72'
                                 }}
                                 onClick={() => handleRead(item)}
                             >
@@ -214,7 +214,7 @@ const HeaderNotifications: React.FC = () => {
                                         <Avatar
                                             style={{
                                                 backgroundColor: item.type === 'WARNING' ? '#ff4d4f' :
-                                                    item.type === 'SUCCESS' ? '#52c41a' : '#1890ff',
+                                                    item.type === 'SUCCESS' ? '#52c41a' : '#272F72',
                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
                                             }}
                                             icon={

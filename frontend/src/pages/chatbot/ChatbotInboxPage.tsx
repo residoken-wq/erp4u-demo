@@ -567,7 +567,7 @@ const ChatbotInboxPage: React.FC = () => {
                         size="small"
                         icon={isCustomer ? <UserOutlined /> : isAi ? <RobotOutlined /> : <CustomerServiceOutlined />}
                         style={{
-                          backgroundColor: isCustomer ? '#1677ff' : isAi ? '#722ed1' : '#52c41a',
+                          backgroundColor: isCustomer ? '#272F72' : isAi ? '#722ed1' : '#52c41a',
                           margin: isStaff ? '0 0 0 8px' : '0 8px 0 0',
                         }}
                       />
@@ -812,7 +812,7 @@ const ChatbotInboxPage: React.FC = () => {
                   ]}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <Text strong style={{ color: '#1677ff' }}>
+                    <Text strong style={{ color: '#272F72' }}>
                       {r.code}
                     </Text>
                     <Tag color={r.status === 'received' ? 'blue' : 'green'}>{r.status}</Tag>

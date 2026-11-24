@@ -81,8 +81,8 @@ const ProductionDashboardPage: React.FC = () => {
             {/* ROW 1: Overview Cards */}
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 <Col xs={12} sm={6}>
-                    <Card size="small" style={{ borderTop: '3px solid #1890ff' }}>
-                        <Statistic title="Kế hoạch đang SX" value={activePlans.length} prefix={<ClockCircleOutlined />} valueStyle={{ color: '#1890ff' }} />
+                    <Card size="small" style={{ borderTop: '3px solid #272F72' }}>
+                        <Statistic title="Kế hoạch đang SX" value={activePlans.length} prefix={<ClockCircleOutlined />} valueStyle={{ color: '#272F72' }} />
                     </Card>
                 </Col>
                 <Col xs={12} sm={6}>
@@ -193,7 +193,7 @@ const ProductionDashboardPage: React.FC = () => {
                                         />
                                     </Card>
                                 </Col>
-                                <Col span={4}><Card size="small"><Statistic title="Đang kiểm" value={qcSummary.in_progress} valueStyle={{ color: '#1890ff' }} /></Card></Col>
+                                <Col span={4}><Card size="small"><Statistic title="Đang kiểm" value={qcSummary.in_progress} valueStyle={{ color: '#272F72' }} /></Card></Col>
                             </Row>
 
                             <Divider orientation="left" style={{ fontSize: 13 }}>Thống kê theo NCC</Divider>
@@ -230,7 +230,7 @@ const ProductionDashboardPage: React.FC = () => {
                     key: 'outsourcing', label: '🏭 Gia công', children: (
                         <div>
                             <Row gutter={16} style={{ marginBottom: 16 }}>
-                                <Col span={6}><Card size="small"><Statistic title="Phân bổ đang chạy" value={activeAssignments.length} valueStyle={{ color: '#1890ff' }} /></Card></Col>
+                                <Col span={6}><Card size="small"><Statistic title="Phân bổ đang chạy" value={activeAssignments.length} valueStyle={{ color: '#272F72' }} /></Card></Col>
                                 <Col span={6}><Card size="small"><Statistic title="Hoàn thành" value={completedAssignments.length} valueStyle={{ color: '#52c41a' }} /></Card></Col>
                                 <Col span={6}><Card size="small"><Statistic title="Tổng SL giao" value={totalAssignedQty} /></Card></Col>
                                 <Col span={6}>

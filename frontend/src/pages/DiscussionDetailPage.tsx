@@ -134,7 +134,7 @@ const DiscussionDetailPage: React.FC = () => {
                 }
             >
                 <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+                    <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: '#272F72' }} />
                     <Text strong>{discussion.creator?.full_name}</Text>
                     <Text type="secondary" style={{ fontSize: 12 }}>
                         <ClockCircleOutlined /> {dayjs(discussion.created_at).fromNow()}

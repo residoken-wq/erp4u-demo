@@ -115,7 +115,7 @@ const MarketingPage: React.FC = () => {
 
     const getTypeIcon = (type: string) => {
         switch (type) {
-            case 'EMAIL': return <MailOutlined style={{ color: '#1890ff' }} />;
+            case 'EMAIL': return <MailOutlined style={{ color: '#272F72' }} />;
             case 'SMS': return <MessageOutlined style={{ color: '#52c41a' }} />;
             case 'SOCIAL_AD': return <RocketOutlined style={{ color: '#722ed1' }} />;
             default: return <ThunderboltOutlined />;
@@ -166,7 +166,7 @@ const MarketingPage: React.FC = () => {
             title: 'Đối tượng',
             dataIndex: 'target_count',
             width: 100,
-            render: (count: number) => <Badge count={count} showZero overflowCount={99999} style={{ backgroundColor: '#1890ff' }} />,
+            render: (count: number) => <Badge count={count} showZero overflowCount={99999} style={{ backgroundColor: '#272F72' }} />,
         },
         {
             title: 'Hiệu suất',
@@ -283,7 +283,7 @@ const MarketingPage: React.FC = () => {
                                     {
                                         title: 'Số khách hàng',
                                         dataIndex: 'customer_count',
-                                        render: (count: number) => <Badge count={count} showZero overflowCount={99999} style={{ backgroundColor: '#1890ff' }} />,
+                                        render: (count: number) => <Badge count={count} showZero overflowCount={99999} style={{ backgroundColor: '#272F72' }} />,
                                     },
                                     {
                                         title: 'Loại',

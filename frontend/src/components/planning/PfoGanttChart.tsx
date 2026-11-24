@@ -31,7 +31,7 @@ const PfoGanttChart: React.FC<PfoGanttChartProps> = ({ selectedPfo, pfoDetails }
                 type: 'project',
                 progress: selectedPfo?.progress || 0,
                 isDisabled: true,
-                styles: { progressColor: '#1890ff', progressSelectedColor: '#096dd9' },
+                styles: { progressColor: '#272F72', progressSelectedColor: '#096dd9' },
             });
         }
 

@@ -491,7 +491,7 @@ const CrmPage: React.FC = () => {
             title: 'Khách Hàng', dataIndex: 'name', width: 280,
             render: (t: any, r: any) => (
                 <Space>
-                    <Avatar style={{ backgroundColor: '#1890ff', verticalAlign: 'middle' }} size="small">
+                    <Avatar style={{ backgroundColor: '#272F72', verticalAlign: 'middle' }} size="small">
                         {t ? t.charAt(0).toUpperCase() : 'U'}
                     </Avatar>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -522,7 +522,7 @@ const CrmPage: React.FC = () => {
                 if (myOrders.some((o: any) => o.status === 'SO_PENDING')) { pct = 70; status = 'active'; text = 'Chốt đơn/HĐ'; }
                 if (myOrders.some((o: any) => o.status === 'DEPOSITED')) { pct = 90; status = 'success'; text = 'Đang sản xuất'; }
 
-                return <Tooltip title={text}><Progress percent={pct} size="small" status={status as any} showInfo={false} strokeColor={pct === 90 ? '#52c41a' : '#1890ff'} /></Tooltip>
+                return <Tooltip title={text}><Progress percent={pct} size="small" status={status as any} showInfo={false} strokeColor={pct === 90 ? '#52c41a' : '#272F72'} /></Tooltip>
             }
         },
         {
@@ -601,9 +601,9 @@ const CrmPage: React.FC = () => {
                                         padding: isMobile ? '3px 10px' : '4px 12px',
                                         borderRadius: 4,
                                         cursor: 'pointer',
-                                        border: isActive ? '1px solid #1890ff' : '1px solid #d9d9d9',
+                                        border: isActive ? '1px solid #272F72' : '1px solid #d9d9d9',
                                         background: isActive ? '#e6f7ff' : '#fff',
-                                        color: isActive ? '#1890ff' : '#666',
+                                        color: isActive ? '#272F72' : '#666',
                                         fontSize: 13,
                                         flexShrink: 0,
                                         transition: 'all 0.2s',
@@ -652,7 +652,7 @@ const CrmPage: React.FC = () => {
             {/* KPI DASHBOARD - HORIZONTAL SCROLL ON MOBILE */}
             <div style={{ overflowX: isMobile ? 'auto' : 'visible', marginBottom: 16 }}>
                 <Row gutter={[isMobile ? 8 : 16, 8]} wrap={!isMobile} style={{ flexWrap: isMobile ? 'nowrap' : 'wrap', minWidth: isMobile ? 500 : 'auto' }}>
-                    <Col flex={isMobile ? '160px' : 1}><Card bordered={false} bodyStyle={{ padding: isMobile ? 8 : 12 }} style={{ background: 'linear-gradient(135deg, #e6f7ff 0%, #ffffff 100%)' }}><Statistic title="Leads" value={dateFilteredLeads.length} prefix={<UserOutlined style={{ color: '#1890ff' }} />} valueStyle={{ fontSize: isMobile ? 16 : 24 }} /></Card></Col>
+                    <Col flex={isMobile ? '160px' : 1}><Card bordered={false} bodyStyle={{ padding: isMobile ? 8 : 12 }} style={{ background: 'linear-gradient(135deg, #e6f7ff 0%, #ffffff 100%)' }}><Statistic title="Leads" value={dateFilteredLeads.length} prefix={<UserOutlined style={{ color: '#272F72' }} />} valueStyle={{ fontSize: isMobile ? 16 : 24 }} /></Card></Col>
                     <Col flex={isMobile ? '160px' : 1}><Card bordered={false} bodyStyle={{ padding: isMobile ? 8 : 12 }} style={{ background: 'linear-gradient(135deg, #fff7e6 0%, #ffffff 100%)' }}><Statistic title="Báo Giá" value={dateFilteredQuotes.length} prefix={<FileTextOutlined style={{ color: '#fa8c16' }} />} valueStyle={{ fontSize: isMobile ? 16 : 24 }} /></Card></Col>
                     <Col flex={isMobile ? '160px' : 1}><Card bordered={false} bodyStyle={{ padding: isMobile ? 8 : 12 }} style={{ background: 'linear-gradient(135deg, #f6ffed 0%, #ffffff 100%)' }}><Statistic title="Chuyển đổi" value={dateFilteredLeads.length > 0 ? ((dateFilteredOrders.length / dateFilteredLeads.length) * 100).toFixed(1) : 0} suffix="%" prefix={<RiseOutlined style={{ color: '#52c41a' }} />} valueStyle={{ fontSize: isMobile ? 16 : 24 }} /></Card></Col>
                 </Row>
@@ -713,7 +713,7 @@ const CrmPage: React.FC = () => {
                                                     >
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                                <Avatar style={{ backgroundColor: '#1890ff' }} size="small">
+                                                                <Avatar style={{ backgroundColor: '#272F72' }} size="small">
                                                                     {(r.name || 'U').charAt(0).toUpperCase()}
                                                                 </Avatar>
                                                                 <div>
@@ -727,7 +727,7 @@ const CrmPage: React.FC = () => {
                                                                         {r.phone && (
                                                                             <>
                                                                                 {' • '}
-                                                                                <a href={`tel:${r.phone}`} onClick={(e) => e.stopPropagation()} style={{ color: '#1890ff' }}>
+                                                                                <a href={`tel:${r.phone}`} onClick={(e) => e.stopPropagation()} style={{ color: '#272F72' }}>
                                                                                     <PhoneOutlined style={{ fontSize: 11 }} /> {r.phone}
                                                                                 </a>
                                                                             </>
@@ -1000,7 +1000,7 @@ const CrmPage: React.FC = () => {
                 {/* Customer Info Section */}
                 <div style={{ background: '#f6f8fa', borderRadius: 8, padding: 12, marginBottom: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                        <Avatar style={{ backgroundColor: '#1890ff' }} icon={<UserOutlined />} />
+                        <Avatar style={{ backgroundColor: '#272F72' }} icon={<UserOutlined />} />
                         <div>
                             <div style={{ fontWeight: 600, fontSize: 15 }}>{currentCustomer?.name}</div>
                             <div style={{ fontSize: 12, color: '#666' }}>{currentCustomer?.code}</div>

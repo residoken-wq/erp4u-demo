@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --test src/hooks/__tests__/useDemoMode.test.ts src/components/__tests__/SubscriptionTag.test.ts src/components/copilot/__tests__/copilot.test.ts src/components/copilot/__tests__/drafts.test.ts"
+    "test": "node --experimental-strip-types --test src/hooks/__tests__/useDemoMode.test.ts src/components/__tests__/SubscriptionTag.test.ts src/components/copilot/__tests__/copilot.test.ts src/components/copilot/__tests__/drafts.test.ts src/theme/__tests__/brandContrast.test.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
@@ -17,7 +17,7 @@
     "@dnd-kit/modifiers": "^7.0.0",
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "antd": "^5.12.0",
+    "antd": "^5.13.0",
     "axios": "^1.6.2",
     "browser-image-compression": "^2.0.2",
     "ckeditor5": "^43.0.0",

@@ -20,6 +20,7 @@ import {
 import { API_URL } from '../../config';
 import useMobile from '../../hooks/useMobile';
 import { useEntitlements } from '../../hooks/useEntitlements';
+import { brandColors } from '../../theme/brand';
 import { ConversationList } from './ConversationList';
 import { MessageView } from './MessageView';
 import {
@@ -294,9 +295,9 @@ export const CopilotPanel: React.FC = () => {
     <>
       {/* Floating Action Button */}
       <FloatButton
-        icon={<RobotOutlined style={{ fontSize: 20 }} />}
+        icon={<RobotOutlined style={{ fontSize: 20, color: brandColors.mint }} />}
         type="primary"
-        style={{ right: 24, bottom: 80, width: 48, height: 48 }}
+        style={{ right: 24, bottom: 80, width: 48, height: 48, background: brandColors.navy }}
         onClick={() => setOpen(true)}
         tooltip="ERP4U Copilot"
       />
@@ -338,14 +339,14 @@ export const CopilotPanel: React.FC = () => {
                 width: 28,
                 height: 28,
                 borderRadius: '50%',
-                background: '#e0f2fe',
+                background: brandColors.navy,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
               }}
             >
-              <RobotOutlined style={{ color: '#0284c7', fontSize: 16 }} />
+              <RobotOutlined style={{ color: brandColors.mint, fontSize: 16 }} />
             </div>
             <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               <Text strong style={{ fontSize: 14, color: '#0f172a' }}>
@@ -458,8 +459,8 @@ export const CopilotPanel: React.FC = () => {
                       disabled={!input.trim()}
                       style={{
                         borderRadius: 8,
-                        background: '#0284c7',
-                        borderColor: '#0284c7',
+                        background: brandColors.navy,
+                        borderColor: brandColors.navy,
                         height: 32,
                       }}
                     />

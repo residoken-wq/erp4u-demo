@@ -82,7 +82,7 @@ const EmployeesTab: React.FC<Props> = ({ employees, users, shifts, onRefresh }) 
             render: (t: string, r: any) => (
                 <Space>
                     <Avatar icon={r.gender === 'FEMALE' ? <WomanOutlined /> : <ManOutlined />}
-                        style={{ backgroundColor: r.gender === 'FEMALE' ? '#eb2f96' : '#1890ff' }} />
+                        style={{ backgroundColor: r.gender === 'FEMALE' ? '#eb2f96' : '#272F72' }} />
                     {t}
                 </Space>
             )

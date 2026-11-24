@@ -366,7 +366,7 @@ const SampleInventoryPage: React.FC = () => {
             dataIndex: 'quantity', 
             width: 140, 
             align: 'right' as const, 
-            render: (v:any)=> <span style={{ fontWeight: 'bold', color: '#1890ff', fontSize: 16 }}>{Number(v).toLocaleString()}</span>,
+            render: (v:any)=> <span style={{ fontWeight: 'bold', color: '#272F72', fontSize: 16 }}>{Number(v).toLocaleString()}</span>,
             sorter: (a: any, b: any) => Number(a.quantity) - Number(b.quantity)
         },
     ];

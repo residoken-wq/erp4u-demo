@@ -200,7 +200,7 @@ const ManufacturersPage: React.FC = () => {
                           </div>
                       }
                     />
-                    <div style={{fontWeight: 'bold', color: '#1890ff', fontSize: 16}}>
+                    <div style={{fontWeight: 'bold', color: '#272F72', fontSize: 16}}>
                         {Number(item.price).toLocaleString()} ₫
                     </div>
                   </List.Item>
@@ -301,7 +301,7 @@ const ManufacturersPage: React.FC = () => {
                                             columns={[
                                                 { title: 'Mã NPL', dataIndex: ['material', 'code'] },
                                                 { title: 'Tên NPL', dataIndex: ['material', 'name'] },
-                                                { title: 'Tồn kho (Live)', dataIndex: 'quantity', align: 'right', render: v => <b style={{color:'#1890ff'}}>{Number(v).toLocaleString()}</b> }
+                                                { title: 'Tồn kho (Live)', dataIndex: 'quantity', align: 'right', render: v => <b style={{color:'#272F72'}}>{Number(v).toLocaleString()}</b> }
                                             ]}
                                         />
                                     )

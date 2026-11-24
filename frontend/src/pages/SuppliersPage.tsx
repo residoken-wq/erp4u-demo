@@ -139,7 +139,7 @@ const SuppliersPage: React.FC = () => {
             width: 300,
             render: (t: any, r: any) => (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <Avatar shape="square" size={48} style={{ backgroundColor: r.type === 'MATERIAL' ? '#1890ff' : r.type === 'PROCESSING' ? '#fa8c16' : '#722ed1', fontSize: 20 }}>
+                    <Avatar shape="square" size={48} style={{ backgroundColor: r.type === 'MATERIAL' ? '#272F72' : r.type === 'PROCESSING' ? '#fa8c16' : '#722ed1', fontSize: 20 }}>
                         {t?.charAt(0)?.toUpperCase()}
                     </Avatar>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -227,7 +227,7 @@ const SuppliersPage: React.FC = () => {
                         }} />
                     </Tooltip>
                     <Tooltip title="Chỉnh sửa">
-                        <Button type="text" icon={<EditOutlined style={{ color: '#1890ff' }} />} onClick={() => {
+                        <Button type="text" icon={<EditOutlined style={{ color: '#272F72' }} />} onClick={() => {
                             setEditingItem(r);
                             form.setFieldsValue(r);
                             setPriceDrawerOpen(false);
@@ -446,7 +446,7 @@ const SuppliersPage: React.FC = () => {
             <Drawer
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Avatar shape="square" style={{ backgroundColor: '#1890ff' }}>{editingItem?.name?.charAt(0).toUpperCase() || '+'}</Avatar>
+                        <Avatar shape="square" style={{ backgroundColor: '#272F72' }}>{editingItem?.name?.charAt(0).toUpperCase() || '+'}</Avatar>
                         <div>
                             <div style={{ fontWeight: 700, fontSize: 16 }}>{editingItem ? editingItem.name : "Thêm NCC Mới"}</div>
                             {editingItem && <div style={{ fontWeight: 400, fontSize: 12, color: '#888' }}>{editingItem.code} | {editingItem.type}</div>}

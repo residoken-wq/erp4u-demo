@@ -1,6 +1,7 @@
 // ERP4U Frontend Application
 import React, { useState, useEffect, useMemo } from 'react';
-import { Layout, Menu, theme, Button, Avatar, Dropdown, Modal, Form, Input, message, Alert } from 'antd';
+import { Layout, Menu, theme, Button, Avatar, Dropdown, Modal, Form, Input, message, Alert, ConfigProvider } from 'antd';
+import { antdTheme, brandColors } from './theme/brand';
 import type { MenuProps } from 'antd';
 import {
     DesktopOutlined, PieChartOutlined, TeamOutlined, ShopOutlined, DropboxOutlined, CloudUploadOutlined,
@@ -26,6 +27,10 @@ import LoadingDisplay from './components/LoadingDisplay';
 import CopilotPanel from './components/copilot/CopilotPanel';
 import AnnouncementBanner from './components/common/AnnouncementBanner'; // <--- Import Announcement Banner
 import { LanguageSwitcher } from './components/common/LanguageSwitcher';
+
+ConfigProvider.config({
+    holderRender: (children) => <ConfigProvider theme={antdTheme}>{children}</ConfigProvider>,
+});
 
 const { Header, Content, Footer, Sider } = Layout;
 type MenuItem = Required<MenuProps>['items'][number];
@@ -207,7 +212,7 @@ const AppShell: React.FC<AppShellProps> = ({
                     fontSize: 10,
                     padding: '1px 5px',
                     borderRadius: 4,
-                    background: '#1890ff',
+                    background: brandColors.navy,
                     color: '#fff',
                     fontWeight: 'normal',
                     display: 'inline-block',
@@ -445,19 +450,24 @@ const AppShell: React.FC<AppShellProps> = ({
 
                 <Route path="*" element={
                     isAuthenticated ? (
-                        <Layout style={{ minHeight: '100vh' }}>
+                        <Layout style={{ minHeight: '100vh', background: brandColors.creamLayout }}>
                             {/* DESKTOP SIDER */}
                             {!isMobile && (
-                                <Sider collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)}>
-                                    <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)', textAlign: 'center', color: '#fff', lineHeight: '32px', fontWeight: 'bold' }}>ERP4U</div>
-                                    <Menu theme="dark" selectedKeys={[window.location.pathname]} mode="inline" items={menuItems} />
+                                <Sider
+                                    collapsible
+                                    collapsed={collapsed}
+                                    onCollapse={(value) => setCollapsed(value)}
+                                    style={{ background: brandColors.navy }}
+                                >
+                                    <div style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.12)', textAlign: 'center', color: '#fff', lineHeight: '32px', fontWeight: 'bold', borderRadius: 8, letterSpacing: 1 }}>ERP4U</div>
+                                    <Menu theme="dark" selectedKeys={[window.location.pathname]} mode="inline" items={menuItems} style={{ background: brandColors.navy }} />
                                 </Sider>
                             )}
 
                             {/* MOBILE DRAWER MENU */}
                             {isMobile && (
                                 <Drawer
-                                    title={<span style={{ fontWeight: 'bold' }}>ERP4U</span>}
+                                    title={<span style={{ fontWeight: 'bold', color: brandColors.navy }}>ERP4U</span>}
                                     placement="left"
                                     onClose={() => setMobileMenuOpen(false)}
                                     open={mobileMenuOpen}
@@ -473,8 +483,8 @@ const AppShell: React.FC<AppShellProps> = ({
                                     />
                                 </Drawer>
                             )}
-                            <Layout>
-                                <Header style={{ padding: '0 24px', background: colorBgContainer, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Layout style={{ background: brandColors.creamLayout }}>
+                                <Header style={{ padding: '0 24px', background: colorBgContainer, borderBottom: '1px solid rgba(39, 47, 114, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     {/* MOBILE BURGER TRIGGER */}
                                     {isMobile ? (
                                         <Button type="text" icon={<MenuOutlined />} onClick={() => setMobileMenuOpen(true)} style={{ fontSize: '18px', width: 46, height: 46 }} />
@@ -496,8 +506,8 @@ const AppShell: React.FC<AppShellProps> = ({
                                         </Dropdown>
                                     </div>
                                 </Header>
-                                <Content style={{ margin: isMobile ? '16px 8px' : '0 16px' }}> {/* Less margin on mobile */}
-                                    <div style={{ padding: isMobile ? 12 : 24, minHeight: 360, background: colorBgContainer, borderRadius: borderRadiusLG, marginTop: 16 }}>
+                                <Content style={{ margin: isMobile ? '16px 8px' : '0 16px', background: brandColors.creamLayout }}> {/* Less margin on mobile */}
+                                    <div style={{ padding: isMobile ? 12 : 24, minHeight: 360, background: colorBgContainer, borderRadius: borderRadiusLG, marginTop: 16, border: '1px solid rgba(39, 47, 114, 0.06)' }}>
                                         <AnnouncementBanner />
                                         <React.Suspense fallback={<LoadingDisplay />}>
                                             <Routes>
@@ -667,18 +677,20 @@ const App: React.FC = () => {
     const isPublicPortal = typeof window !== 'undefined' && window.location.pathname.startsWith('/portal/');
 
     return (
-        <EntitlementsProvider enabled={isAuthenticated && !isPublicPortal}>
-            <SubscriptionProvider isAuthenticated={isAuthenticated && !isPublicPortal}>
-                <AppShell
-                    isAuthenticated={isAuthenticated}
-                    setIsAuthenticated={setIsAuthenticated}
-                    currentUser={currentUser}
-                    setCurrentUser={setCurrentUser}
-                    permissions={permissions}
-                    setPermissions={setPermissions}
-                />
-            </SubscriptionProvider>
-        </EntitlementsProvider>
+        <ConfigProvider theme={antdTheme}>
+            <EntitlementsProvider enabled={isAuthenticated && !isPublicPortal}>
+                <SubscriptionProvider isAuthenticated={isAuthenticated && !isPublicPortal}>
+                    <AppShell
+                        isAuthenticated={isAuthenticated}
+                        setIsAuthenticated={setIsAuthenticated}
+                        currentUser={currentUser}
+                        setCurrentUser={setCurrentUser}
+                        permissions={permissions}
+                        setPermissions={setPermissions}
+                    />
+                </SubscriptionProvider>
+            </EntitlementsProvider>
+        </ConfigProvider>
     );
 };
 

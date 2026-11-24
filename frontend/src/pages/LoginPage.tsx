@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import api from '../utils/api';
 import useDemoMode from '../hooks/useDemoMode';
+import { brandColors } from '../theme/brand';
 import type { DemoAccount } from '../demo/demoAccounts';
 
 const { Title, Text } = Typography;
@@ -82,15 +83,16 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1890ff 0%, #001529 100%)' }}>
+    <Layout style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #FFF5E1 0%, #FAF8F5 100%)' }}>
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', padding: '16px' }}>
         <Card
-          style={{ width: 420, borderRadius: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}
+          style={{ width: 420, borderRadius: 16, boxShadow: '0 8px 32px rgba(39, 47, 114, 0.08)', border: '1px solid #F2E8D5', background: '#FFFFFF' }}
           bordered={false}
         >
           <div style={{ textAlign: 'center', marginBottom: 20 }}>
-            <div style={{ fontSize: 42, color: '#1890ff', marginBottom: 8 }}><LoginOutlined /></div>
-            <Title level={3} style={{ color: '#001529', margin: 0 }}>ERP4U</Title>
+            <div style={{ fontSize: 42, color: brandColors.navy, marginBottom: 8 }}><LoginOutlined /></div>
+            <Title level={3} style={{ color: brandColors.navy, margin: 0 }}>ERP4U</Title>
+            <div style={{ width: 36, height: 3, background: brandColors.orange, margin: '8px auto 10px', borderRadius: 2 }} />
             <Text type="secondary">Hệ thống quản lý doanh nghiệp</Text>
           </div>
 
@@ -101,24 +103,24 @@ const LoginPage: React.FC = () => {
               style={{
                 marginBottom: 20,
                 padding: '10px 14px',
-                background: 'linear-gradient(135deg, #e6f7ff 0%, #f9f0ff 100%)',
-                border: '1px solid #91d5ff',
+                background: 'linear-gradient(135deg, #FFF5E1 0%, #FAF8F5 100%)',
+                border: '1px solid #F2E8D5',
                 borderRadius: 10,
                 cursor: 'pointer',
                 fontSize: 13,
-                color: '#0050b3',
+                color: brandColors.navy,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 transition: 'all 0.2s',
-                boxShadow: '0 2px 6px rgba(24, 144, 255, 0.1)'
+                boxShadow: '0 2px 6px rgba(39, 47, 114, 0.05)'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 16 }}>🔑</span>
                 <span><strong>Trải nghiệm Demo?</strong> Chọn tài khoản mẫu</span>
               </div>
-              <RightOutlined style={{ fontSize: 12, color: '#1890ff' }} />
+              <RightOutlined style={{ fontSize: 12, color: brandColors.orange }} />
             </div>
           )}
 
@@ -134,18 +136,18 @@ const LoginPage: React.FC = () => {
               name="username"
               rules={[{ required: true, message: 'Vui lòng nhập tên đăng nhập!' }]}
             >
-              <Input prefix={<UserOutlined />} placeholder="Tên đăng nhập" />
+              <Input prefix={<UserOutlined style={{ color: brandColors.navy }} />} placeholder="Tên đăng nhập" />
             </Form.Item>
 
             <Form.Item
               name="password"
               rules={[{ required: true, message: 'Vui lòng nhập mật khẩu!' }]}
             >
-              <Input.Password prefix={<LockOutlined />} placeholder="Mật khẩu" />
+              <Input.Password prefix={<LockOutlined style={{ color: brandColors.navy }} />} placeholder="Mật khẩu" />
             </Form.Item>
 
             <Form.Item style={{ marginBottom: 12 }}>
-              <Button type="primary" htmlType="submit" block loading={loading} style={{ height: 46, fontWeight: 'bold', borderRadius: 8 }}>
+              <Button type="primary" htmlType="submit" block loading={loading} style={{ height: 46, fontWeight: 'bold', borderRadius: 8, background: brandColors.navy, borderColor: brandColors.navy }}>
                 ĐĂNG NHẬP
               </Button>
             </Form.Item>
@@ -161,10 +163,10 @@ const LoginPage: React.FC = () => {
                   style={{
                     height: 42,
                     borderRadius: 8,
-                    borderColor: '#1890ff',
-                    color: '#1890ff',
+                    borderColor: brandColors.navy,
+                    color: brandColors.navy,
                     fontWeight: 600,
-                    background: '#f0f5ff'
+                    background: brandColors.creamLayout
                   }}
                 >
                   Danh sách tài khoản Demo
@@ -186,7 +188,7 @@ const LoginPage: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 4 }}>
               <span style={{ fontSize: 20 }}>✨</span>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 17, color: '#001529' }}>Danh Sách Tài Khoản Trải Nghiệm Demo</div>
+                <div style={{ fontWeight: 700, fontSize: 17, color: brandColors.navy }}>Danh Sách Tài Khoản Trải Nghiệm Demo</div>
                 <div style={{ fontSize: 12, color: '#8c8c8c', fontWeight: 400 }}>
                   Nhấn <strong>"Đăng nhập ngay"</strong> để tự động điền và vào hệ thống với vai trò tương ứng
                 </div>

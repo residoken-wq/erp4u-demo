@@ -328,7 +328,7 @@ const DeliveriesManagementPage: React.FC = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         <a 
                             href={`/orders?search=${encodeURIComponent(r.order_code)}`} 
-                            style={{ fontWeight: 700, color: '#1677ff', fontSize: 13 }}
+                            style={{ fontWeight: 700, color: '#272F72', fontSize: 13 }}
                         >
                             {r.order_code || `SO #${r.order_id}`}
                         </a>
@@ -556,7 +556,7 @@ const DeliveriesManagementPage: React.FC = () => {
                         <Tooltip title="Xem & Sao chép Thông báo giao hàng (Zalo)">
                             <Button 
                                 size="small" 
-                                style={{ color: '#1677ff', borderColor: '#91d5ff' }} 
+                                style={{ color: '#272F72', borderColor: '#91d5ff' }} 
                                 icon={<MessageOutlined />} 
                                 onClick={() => {
                                     setCurrentNoticeDelivery(r);
@@ -593,7 +593,7 @@ const DeliveriesManagementPage: React.FC = () => {
                     <Col xs={24} lg={13}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                             <div style={{ fontWeight: 700, color: '#1e293b', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <DropboxOutlined style={{ color: '#1677ff' }} />
+                                <DropboxOutlined style={{ color: '#272F72' }} />
                                 <span>Danh Sách Sản Phẩm Xuất Đợt Này (Tổng: {totalDeliveredQty}):</span>
                             </div>
                             <Tag color="blue">Phiếu: {record.code}</Tag>
@@ -616,7 +616,7 @@ const DeliveriesManagementPage: React.FC = () => {
                                     align: 'center',
                                     render: (_: any, it: DeliveryItem) => (
                                         <span>
-                                            <b style={{ color: '#1677ff', fontSize: 13 }}>{it.quantity}</b>
+                                            <b style={{ color: '#272F72', fontSize: 13 }}>{it.quantity}</b>
                                             <span style={{ color: '#94a3b8' }}> / {it.order_quantity || it.quantity}</span>
                                         </span>
                                     )
@@ -718,7 +718,7 @@ const DeliveriesManagementPage: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
                 <div>
                     <Title level={4} style={{ margin: 0, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <CarOutlined style={{ color: '#1677ff' }} />
+                        <CarOutlined style={{ color: '#272F72' }} />
                         <span>Quản Lý Giao Nhận & Vận Đơn (GHTK / Lalamove)</span>
                     </Title>
                     <Text type="secondary" style={{ fontSize: 13 }}>
@@ -744,7 +744,7 @@ const DeliveriesManagementPage: React.FC = () => {
                             title={<span style={{ fontSize: 12, color: '#64748b' }}>Tổng Vận Đơn</span>}
                             value={stats.total_count}
                             valueStyle={{ color: '#0f172a', fontWeight: 700, fontSize: 20 }}
-                            prefix={<DropboxOutlined style={{ color: '#1677ff' }} />}
+                            prefix={<DropboxOutlined style={{ color: '#272F72' }} />}
                         />
                     </Card>
                 </Col>
@@ -1022,7 +1022,7 @@ const DeliveriesManagementPage: React.FC = () => {
             <Modal
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <MessageOutlined style={{ color: '#1677ff' }} />
+                        <MessageOutlined style={{ color: '#272F72' }} />
                         <span>Nội Dung Thông Báo Giao Hàng - Phiếu: <b>{currentNoticeDelivery?.code}</b></span>
                     </div>
                 }

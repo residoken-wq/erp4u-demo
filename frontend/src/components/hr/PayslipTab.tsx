@@ -266,7 +266,7 @@ const PayslipTab: React.FC<Props> = ({ employees, payslips, onRefresh }) => {
                     <div style={{ fontFamily: 'Arial, sans-serif', fontSize: 13 }}>
                         {/* Header với Logo */}
                         <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                            <div style={{ fontSize: 28, fontWeight: 'bold', color: '#1890ff', marginBottom: 4 }}>ERP4U</div>
+                            <div style={{ fontSize: 28, fontWeight: 'bold', color: '#272F72', marginBottom: 4 }}>ERP4U</div>
                             <h3 style={{ margin: 0, fontSize: 16 }}>BẢNG THANH TOÁN LƯƠNG</h3>
                             <p style={{ margin: '4px 0 0', color: '#666' }}>Tháng {viewPayslip.month} / {viewPayslip.year}</p>
                         </div>

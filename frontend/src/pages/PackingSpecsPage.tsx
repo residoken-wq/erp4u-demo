@@ -206,7 +206,7 @@ const PackingSpecsPage: React.FC = () => {
             key: 'name',
             render: (text: string, r: PackingSpec) => (
                 <div>
-                    <Text strong style={{ color: '#1890ff', fontSize: 14 }}>{text}</Text>
+                    <Text strong style={{ color: '#272F72', fontSize: 14 }}>{text}</Text>
                     {r.package_type && (
                         <div style={{ fontSize: 12, color: '#8c8c8c' }}>
                             Loại bao bì: <Tag color="blue">{r.package_type}</Tag>
@@ -364,7 +364,7 @@ const PackingSpecsPage: React.FC = () => {
                 <Row justify="space-between" align="middle" gutter={[16, 16]}>
                     <Col xs={24} sm={12}>
                         <Space align="center" size="middle">
-                            <div style={{ background: '#e6f7ff', padding: 10, borderRadius: 8, color: '#1890ff', fontSize: 24 }}>
+                            <div style={{ background: '#e6f7ff', padding: 10, borderRadius: 8, color: '#272F72', fontSize: 24 }}>
                                 <InboxOutlined />
                             </div>
                             <div>
@@ -443,7 +443,7 @@ const PackingSpecsPage: React.FC = () => {
             <Modal
                 title={
                     <Space>
-                        <InboxOutlined style={{ color: '#1890ff' }} />
+                        <InboxOutlined style={{ color: '#272F72' }} />
                         <span>{editingId ? 'Chỉnh Sửa Quy Cách Đóng Gói' : 'Thêm Mới Quy Cách Đóng Gói'}</span>
                     </Space>
                 }
@@ -536,7 +536,7 @@ const PackingSpecsPage: React.FC = () => {
                     </Row>
 
                     <Card size="small" style={{ background: '#f9f9f9', marginBottom: 16, border: '1px solid #e8e8e8', borderRadius: 6 }}>
-                        <div style={{ fontWeight: 600, color: '#1890ff', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ fontWeight: 600, color: '#272F72', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                             <CalculatorOutlined /> Kích thước & Trọng lượng kiện hàng:
                         </div>
                         <Row gutter={12}>

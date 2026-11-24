@@ -349,7 +349,7 @@ const OutsourcingMaterialIssueModal: React.FC<OutsourcingMaterialIssueModalProps
                     <span><CarOutlined style={{ color: '#fa8c16', marginRight: 8 }} />Xuất Kho NPL Gia Công — {currentPO?.po_code}</span>
                     {getCustomerName(currentPO) && (
                         <span style={{ fontSize: 14, fontWeight: 'normal', color: '#666' }}>
-                            KH: <b style={{ color: '#1890ff' }}>{getCustomerName(currentPO)}</b>
+                            KH: <b style={{ color: '#272F72' }}>{getCustomerName(currentPO)}</b>
                         </span>
                     )}
                 </div>
@@ -387,7 +387,7 @@ const OutsourcingMaterialIssueModal: React.FC<OutsourcingMaterialIssueModalProps
                             onClick={handleSaveConfig} 
                             loading={loading} 
                             size="large"
-                            style={{ borderColor: '#1890ff', color: '#1890ff', fontWeight: 500 }}
+                            style={{ borderColor: '#272F72', color: '#272F72', fontWeight: 500 }}
                         >
                             Lưu Cấu Hình
                         </Button>
@@ -512,7 +512,7 @@ const OutsourcingMaterialIssueModal: React.FC<OutsourcingMaterialIssueModalProps
                     },
                     {
                         title: 'Cần (ĐM)', dataIndex: 'quantity', width: 95, align: 'right' as const,
-                        render: (v: number) => <b style={{ color: '#1890ff' }}>{Number(v || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}</b>
+                        render: (v: number) => <b style={{ color: '#272F72' }}>{Number(v || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}</b>
                     },
                     {
                         title: 'Đã Xuất', width: 130, align: 'center' as const,
@@ -566,7 +566,7 @@ const OutsourcingMaterialIssueModal: React.FC<OutsourcingMaterialIssueModalProps
                                     <InputNumber
                                         min={0}
                                         placeholder={remain.toString()}
-                                        style={{ width: 75, borderColor: isHighlight ? '#1890ff' : undefined }}
+                                        style={{ width: 75, borderColor: isHighlight ? '#272F72' : undefined }}
                                         value={r.issue_qty}
                                         onChange={(val) => {
                                             const newList = [...materials];
@@ -575,7 +575,7 @@ const OutsourcingMaterialIssueModal: React.FC<OutsourcingMaterialIssueModalProps
                                         }}
                                     />
                                     {remain > 0 && (!r.issue_qty || r.issue_qty < remain) && (
-                                        <Button type="text" size="small" style={{ color: '#1890ff', padding: 0, fontSize: 12, minWidth: 26, fontWeight: 500 }} onClick={() => {
+                                        <Button type="text" size="small" style={{ color: '#272F72', padding: 0, fontSize: 12, minWidth: 26, fontWeight: 500 }} onClick={() => {
                                             const newList = [...materials];
                                             newList[idx].issue_qty = remain;
                                             setMaterials(newList);

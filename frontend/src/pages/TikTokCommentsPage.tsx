@@ -166,7 +166,7 @@ const TikTokCommentsPage: React.FC = () => {
                             padding: '4px 8px',
                             borderRadius: 6,
                             fontSize: 12,
-                            borderLeft: '3px solid #1890ff',
+                            borderLeft: '3px solid #272F72',
                             marginTop: 4,
                         }}>
                             <strong>Đã trả lời:</strong> {record.our_reply}

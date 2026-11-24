@@ -132,7 +132,7 @@ const ProjectsPage: React.FC = () => {
         {
             title: 'Project Name', dataIndex: 'title',
             render: (t: string, r: any) => (
-                <div style={{ cursor: 'pointer', color: '#1890ff', fontWeight: 500 }} onClick={() => navigate(`/projects/${r.id}`)}>
+                <div style={{ cursor: 'pointer', color: '#272F72', fontWeight: 500 }} onClick={() => navigate(`/projects/${r.id}`)}>
                     <FolderOutlined style={{ marginRight: 8 }} />
                     {r.project_type === 'SO_PROJECT' && <Tag color="magenta" style={{ border: 'none', background: '#fff0f6', color: '#eb2f96' }}>Đơn Hàng</Tag>}
                     {t}
@@ -143,7 +143,7 @@ const ProjectsPage: React.FC = () => {
             title: 'Manager', dataIndex: 'manager',
             render: (u: any) => u ? (
                 <Space>
-                    <Avatar size="small" style={{ backgroundColor: '#1890ff' }}>{getInitials(u.full_name)}</Avatar>
+                    <Avatar size="small" style={{ backgroundColor: '#272F72' }}>{getInitials(u.full_name)}</Avatar>
                     <Text>{u.full_name}</Text>
                 </Space>
             ) : <Tag>Unassigned</Tag>
@@ -326,7 +326,7 @@ const ProjectsPage: React.FC = () => {
                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flex: 1, minWidth: 0 }}>
                                             <div style={{
                                                 width: 48, height: 48, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                                                background: r.project_type === 'SO_PROJECT' ? 'linear-gradient(135deg, #ff7875 0%, #f5222d 100%)' : 'linear-gradient(135deg, #69c0ff 0%, #1890ff 100%)',
+                                                background: r.project_type === 'SO_PROJECT' ? 'linear-gradient(135deg, #ff7875 0%, #f5222d 100%)' : 'linear-gradient(135deg, #69c0ff 0%, #272F72 100%)',
                                                 color: '#fff',
                                                 boxShadow: r.project_type === 'SO_PROJECT' ? '0 4px 12px rgba(245,34,45,0.2)' : '0 4px 12px rgba(24,144,255,0.2)'
                                             }}>
@@ -349,7 +349,7 @@ const ProjectsPage: React.FC = () => {
                                     <div style={{ marginBottom: 16, marginTop: 'auto' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                                             <Text type="secondary" style={{ fontSize: 13, fontWeight: 500 }}>Progress</Text>
-                                            <Text strong style={{ fontSize: 13, color: getProgress(r) === 100 ? '#52c41a' : '#1890ff' }}>{getProgress(r)}%</Text>
+                                            <Text strong style={{ fontSize: 13, color: getProgress(r) === 100 ? '#52c41a' : '#272F72' }}>{getProgress(r)}%</Text>
                                         </div>
                                         <Progress 
                                             percent={getProgress(r)} 
@@ -364,7 +364,7 @@ const ProjectsPage: React.FC = () => {
                                         <Space size={4}>
                                             <Tooltip title={r.manager?.full_name || 'Unassigned Manager'}>
                                                 {r.manager ? (
-                                                    <Avatar size="small" style={{ backgroundColor: '#1890ff', border: '1px solid #fff' }}>{getInitials(r.manager.full_name)}</Avatar>
+                                                    <Avatar size="small" style={{ backgroundColor: '#272F72', border: '1px solid #fff' }}>{getInitials(r.manager.full_name)}</Avatar>
                                                 ) : (
                                                     <Avatar size="small" icon={<UserOutlined />} style={{ border: '1px solid #fff' }} />
                                                 )}
@@ -455,7 +455,7 @@ const ProjectsPage: React.FC = () => {
                     transform: translateY(-5px);
                     box-shadow: 0 14px 28px rgba(0, 0, 0, 0.1) !important;
                 }
-                .stat-total { background: linear-gradient(135deg, #1890ff 0%, #0050b3 100%); }
+                .stat-total { background: linear-gradient(135deg, #272F72 0%, #0050b3 100%); }
                 .stat-active { background: linear-gradient(135deg, #52c41a 0%, #237804 100%); }
                 .stat-planning { background: linear-gradient(135deg, #faad14 0%, #ad6800 100%); }
                 .stat-completed { background: linear-gradient(135deg, #722ed1 0%, #391085 100%); }

@@ -131,7 +131,7 @@ const ProjectDetailPage: React.FC = () => {
             children: (
                 <div style={{ animation: 'fadeIn 0.3s' }}>
                     <Descriptions 
-                        title={<span style={{ color: '#1890ff' }}>Project Details</span>} 
+                        title={<span style={{ color: '#272F72' }}>Project Details</span>} 
                         bordered 
                         column={isMobile ? 1 : 2}
                         extra={<Button type="primary" ghost onClick={() => { membersForm.setFieldsValue({ member_ids: project.members?.map((m: any) => m.id) }); setIsMembersModalOpen(true); }}>Manage Members</Button>}
@@ -140,7 +140,7 @@ const ProjectDetailPage: React.FC = () => {
                         <Descriptions.Item label="Manager">
                             {project.manager ? (
                                 <Space>
-                                    <Avatar size="small" style={{ backgroundColor: '#1890ff' }}>{project.manager.full_name.charAt(0)}</Avatar>
+                                    <Avatar size="small" style={{ backgroundColor: '#272F72' }}>{project.manager.full_name.charAt(0)}</Avatar>
                                     <Text strong>{project.manager.full_name}</Text>
                                 </Space>
                             ) : <Text type="secondary">Unassigned</Text>}
@@ -205,7 +205,7 @@ const ProjectDetailPage: React.FC = () => {
                                 title: 'Actions', key: 'act', width: 100, align: 'right' as const,
                                 render: (r) => (
                                     <Space size="small">
-                                        <Button type="text" size="small" icon={<EditOutlined style={{ color: '#1890ff' }} />} onClick={() => { setEditingMilestone(r); milestoneForm.setFieldsValue({ ...r, start_date: r.start_date ? dayjs(r.start_date) : null, due_date: r.due_date ? dayjs(r.due_date) : null }); setIsMilestoneModalOpen(true) }} />
+                                        <Button type="text" size="small" icon={<EditOutlined style={{ color: '#272F72' }} />} onClick={() => { setEditingMilestone(r); milestoneForm.setFieldsValue({ ...r, start_date: r.start_date ? dayjs(r.start_date) : null, due_date: r.due_date ? dayjs(r.due_date) : null }); setIsMilestoneModalOpen(true) }} />
                                         <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={() => handleDeleteMilestone(r.id)} />
                                     </Space>
                                 )
@@ -242,7 +242,7 @@ const ProjectDetailPage: React.FC = () => {
                                 render: (r: any) => (
                                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
                                         <TaskTimer taskId={r.id} />
-                                        <Button type="text" size="small" icon={<EditOutlined style={{ color: '#1890ff' }} />} onClick={() => {
+                                        <Button type="text" size="small" icon={<EditOutlined style={{ color: '#272F72' }} />} onClick={() => {
                                             setEditingTask(r);
                                             taskForm.setFieldsValue({
                                                 ...r,
@@ -331,7 +331,7 @@ const ProjectDetailPage: React.FC = () => {
                                 bordered
                                 style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}
                                 columns={[
-                                    { title: 'Milestone', dataIndex: 'milestone_title', render: (t, r) => <b style={{ color: '#1890ff' }}>{t}</b> },
+                                    { title: 'Milestone', dataIndex: 'milestone_title', render: (t, r) => <b style={{ color: '#272F72' }}>{t}</b> },
                                     { title: 'Bộ phận', dataIndex: 'department', render: (d: string) => <Tag color="geekblue">{d}</Tag> },
                                     { title: 'Tasks (Done/Total)', render: (r) => (
                                         <Progress percent={r.task_count > 0 ? Math.round((r.done_count / r.task_count) * 100) : 0} size="small" format={() => `${r.done_count}/${r.task_count}`} />
@@ -362,7 +362,7 @@ const ProjectDetailPage: React.FC = () => {
                 bodyStyle={{ padding: isMobile ? '16px' : '24px' }}
             >
                 <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'linear-gradient(135deg, #1890ff 0%, #0050b3 100%)', color: '#fff', boxShadow: '0 4px 12px rgba(24,144,255,0.3)' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'linear-gradient(135deg, #272F72 0%, #0050b3 100%)', color: '#fff', boxShadow: '0 4px 12px rgba(24,144,255,0.3)' }}>
                         <ProjectOutlined style={{ fontSize: 24 }} />
                     </div>
                     <div>
@@ -513,7 +513,7 @@ const ProjectDetailPage: React.FC = () => {
                     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08) !important;
                 }
                 
-                .revenue-card { background: linear-gradient(135deg, #1890ff 0%, #0050b3 100%); }
+                .revenue-card { background: linear-gradient(135deg, #272F72 0%, #0050b3 100%); }
                 .cost-total-card { background: linear-gradient(135deg, #faad14 0%, #d46b08 100%); }
                 .profit-positive { background: linear-gradient(135deg, #52c41a 0%, #237804 100%); }
                 .profit-negative { background: linear-gradient(135deg, #ff4d4f 0%, #a8071a 100%); }

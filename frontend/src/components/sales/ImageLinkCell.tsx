@@ -38,7 +38,7 @@ const ImageLinkCell: React.FC<Props> = ({ value, onChange }) => {
             content={
                 <div style={{ width: 320 }}>
                     <div style={{ marginBottom: 12, padding: '8px', background: '#e6f7ff', borderRadius: 4, border: '1px solid #91d5ff' }}>
-                        <InfoCircleOutlined style={{ color: '#1890ff', marginRight: 5 }} />
+                        <InfoCircleOutlined style={{ color: '#272F72', marginRight: 5 }} />
                         <span style={{ fontSize: 12 }}>Mở folder, copy link ảnh, rồi dán vào đây.</span>
                     </div>
 
@@ -46,7 +46,7 @@ const ImageLinkCell: React.FC<Props> = ({ value, onChange }) => {
                         block
                         icon={<FolderOpenOutlined />}
                         onClick={() => window.open(driveLink, '_blank')}
-                        style={{ marginBottom: 12, borderColor: '#1890ff', color: '#1890ff' }}
+                        style={{ marginBottom: 12, borderColor: '#272F72', color: '#272F72' }}
                     >
                         Mở Kho Ảnh (Google Drive)
                     </Button>

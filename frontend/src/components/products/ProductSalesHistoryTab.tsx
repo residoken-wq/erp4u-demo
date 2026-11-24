@@ -88,8 +88,8 @@ const ProductSalesHistoryTab: React.FC<ProductSalesHistoryTabProps> = ({ editing
             render: (orderCode: string, record: any) => (
                 <div>
                     <Space size={4}>
-                        <FileTextOutlined style={{ color: '#1890ff' }} />
-                        <b style={{ color: '#1890ff' }}>{orderCode}</b>
+                        <FileTextOutlined style={{ color: '#272F72' }} />
+                        <b style={{ color: '#272F72' }}>{orderCode}</b>
                     </Space>
                     {record.order_date && (
                         <div style={{ fontSize: 11, color: '#8c8c8c' }}>
@@ -179,7 +179,7 @@ const ProductSalesHistoryTab: React.FC<ProductSalesHistoryTabProps> = ({ editing
                         <Statistic
                             title={<span style={{ color: '#096dd9', fontWeight: 600 }}>Tổng Doanh Thu</span>}
                             value={stats.totalRevenue}
-                            prefix={<DollarOutlined style={{ color: '#1890ff' }} />}
+                            prefix={<DollarOutlined style={{ color: '#272F72' }} />}
                             suffix="₫"
                             valueStyle={{ color: '#096dd9', fontWeight: 'bold' }}
                             formatter={val => Number(val).toLocaleString()}
@@ -201,7 +201,7 @@ const ProductSalesHistoryTab: React.FC<ProductSalesHistoryTabProps> = ({ editing
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <Text strong style={{ fontSize: 14 }}>
-                    Danh Sách Các Đơn Hàng Đã Đặt Sản Phẩm: <b style={{ color: '#1890ff' }}>{editingItem?.sku}</b>
+                    Danh Sách Các Đơn Hàng Đã Đặt Sản Phẩm: <b style={{ color: '#272F72' }}>{editingItem?.sku}</b>
                 </Text>
                 <Button
                     size="small"
