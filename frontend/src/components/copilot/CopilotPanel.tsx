@@ -39,6 +39,12 @@ import {
 
 const { Text } = Typography;
 
+export function openCopilotWithPrompt(prompt?: string) {
+  window.dispatchEvent(
+    new CustomEvent('erp4u:open-copilot', { detail: { prompt } }),
+  );
+}
+
 export const CopilotPanel: React.FC = () => {
   const isMobile = useMobile();
   const { isEnabled } = useEntitlements();
@@ -62,6 +68,22 @@ export const CopilotPanel: React.FC = () => {
   useEffect(() => {
     return () => {
       streamCoordinatorRef.current.cancelCurrent();
+    };
+  }, []);
+
+  // Event listener to open Copilot externally with a pre-filled prompt (Task P9d1)
+  useEffect(() => {
+    const handleOpenExternal = (e: any) => {
+      const prompt = e?.detail?.prompt;
+      setOpen(true);
+      setView('chat');
+      if (prompt) {
+        setInput(prompt);
+      }
+    };
+    window.addEventListener('erp4u:open-copilot', handleOpenExternal);
+    return () => {
+      window.removeEventListener('erp4u:open-copilot', handleOpenExternal);
     };
   }, []);
 

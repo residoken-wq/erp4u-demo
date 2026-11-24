@@ -9,11 +9,12 @@ import {
     LoginOutlined, LogoutOutlined, CheckCircleOutlined, CloseCircleOutlined,
     ManOutlined, WomanOutlined, BankOutlined, GiftOutlined, CarOutlined,
     CoffeeOutlined, PhoneOutlined, SafetyCertificateOutlined, PrinterOutlined,
-    WalletOutlined, RiseOutlined, FallOutlined, FormOutlined
+    WalletOutlined, RiseOutlined, FallOutlined, FormOutlined, BellOutlined
 } from '@ant-design/icons';
 import api from '../utils/api';
 import dayjs from 'dayjs';
 import EmployeeReviewTab from '../components/hr/EmployeeReviewTab';
+import AlertUserPrefsTab from '../components/settings/AlertUserPrefsTab';
 
 const { TabPane } = Tabs;
 const { TextArea } = Input;
@@ -573,6 +574,12 @@ const ProfilePage: React.FC = () => {
                     <TabPane tab={<><FormOutlined /> Đánh giá</>} key="review360">
                         <div style={{ background: '#fff', borderRadius: 16, padding: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
                             <EmployeeReviewTab employee={employee} />
+                        </div>
+                    </TabPane>
+
+                    <TabPane tab={<><BellOutlined /> Cài đặt cảnh báo</>} key="alert_prefs">
+                        <div style={{ background: '#fff', borderRadius: 16, padding: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                            <AlertUserPrefsTab />
                         </div>
                     </TabPane>
                 </Tabs>

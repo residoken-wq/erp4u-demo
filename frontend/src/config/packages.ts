@@ -106,6 +106,7 @@ export const ROUTE_PACKAGES: Record<string, PackageKey> = {
   '/website-products': PackageKey.WEBSITE,
 
   // AI
+  '/alerts': PackageKey.AI,
   '/chatbot/inbox': PackageKey.AI,
   '/chatbot/inbox/:id': PackageKey.AI,
   '/chatbot/requests': PackageKey.AI,
@@ -143,6 +144,7 @@ export function getAddonLabel(addon?: string | null): string {
  */
 export const ROUTE_ADDONS: Record<string, AddonKey> = {
   // AI
+  '/alerts': AddonKey.AI,
   '/chatbot/inbox': AddonKey.AI,
   '/chatbot/inbox/:id': AddonKey.AI,
   '/chatbot/requests': AddonKey.AI,

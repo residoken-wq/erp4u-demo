@@ -13,6 +13,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
 import api from '../utils/api';
 import LeadCareModal from '../components/crm/LeadCareModal';
+import AlertsSummaryWidget from '../components/dashboard/AlertsSummaryWidget';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -273,6 +274,9 @@ const DashboardPage: React.FC = () => {
             </Row>
 
             <Skeleton loading={loading} active>
+                {/* AI ALERTS SUMMARY WIDGET */}
+                <AlertsSummaryWidget />
+
                 {/* 1. STATS GRID */}
                 <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                     {hasPerm('SALES') && (
