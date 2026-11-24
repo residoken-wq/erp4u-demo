@@ -7,7 +7,7 @@ import {
     DesktopOutlined, PieChartOutlined, TeamOutlined, ShopOutlined, DropboxOutlined, CloudUploadOutlined,
     SettingOutlined, UserOutlined, LogoutOutlined, BankOutlined, CalendarOutlined, ShoppingCartOutlined, QuestionCircleOutlined, CodeOutlined, MenuOutlined, IdcardOutlined,
     LinkOutlined, RocketOutlined, FacebookOutlined, NotificationOutlined, FolderOutlined, MessageOutlined, GlobalOutlined, PrinterOutlined, ExperimentOutlined, RobotOutlined,
-    SafetyCertificateOutlined
+    SafetyCertificateOutlined, AlertOutlined
 } from '@ant-design/icons';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { Drawer } from 'antd'; // <--- Import Drawer
@@ -96,6 +96,7 @@ const RbacLogPage = React.lazy(() => import('./pages/RbacLogPage'));
 const ChatbotInboxPage = React.lazy(() => import('./pages/chatbot/ChatbotInboxPage'));
 const ChatbotRequestsPage = React.lazy(() => import('./pages/chatbot/ChatbotRequestsPage'));
 const SubscriptionPage = React.lazy(() => import('./pages/SubscriptionPage'));
+const AlertsPage = React.lazy(() => import('./pages/AlertsPage'));
 
 
 function getItem(label: React.ReactNode, key: React.Key, icon?: React.ReactNode, children?: MenuItem[]): MenuItem {
@@ -124,6 +125,33 @@ const AppShell: React.FC<AppShellProps> = ({
     const { isEnabled, isAddonInstalled } = useEntitlements();
     const { subscription } = useSubscription();
     const isDemo = useDemoMode();
+
+    const [openAlertsCount, setOpenAlertsCount] = useState<number>(0);
+
+    // Fetch alert summary for menu badge
+    useEffect(() => {
+        if (!isAuthenticated || !isEnabled(PackageKey.AI)) return;
+        const fetchAlertSummary = () => {
+            api.get('/alerts/summary')
+                .then((res) => {
+                    if (res.data) {
+                        const count = res.data.total_open ?? (
+                            (res.data.by_type?.['stock.low_cover'] || 0) +
+                            (res.data.by_type?.['order.at_risk'] || 0) +
+                            (res.data.by_type?.['receivable.overdue'] || 0) +
+                            (res.data.by_type?.['cash.anomaly'] || 0)
+                        );
+                        setOpenAlertsCount(count);
+                    }
+                })
+                .catch(() => setOpenAlertsCount(0));
+        };
+        fetchAlertSummary();
+        window.addEventListener('erp4u:alerts-updated', fetchAlertSummary);
+        return () => {
+            window.removeEventListener('erp4u:alerts-updated', fetchAlertSummary);
+        };
+    }, [isAuthenticated, isEnabled]);
 
     const isRouteEnabled = (path: string) => isEnabled(getRoutePackage(path));
     const renderRoute = (path: string, element: React.ReactElement) => {
@@ -230,6 +258,33 @@ const AppShell: React.FC<AppShellProps> = ({
         // 1. Tổng quan
         if (hasPerm('DASHBOARD') || true) {
             items.push(getItem(<Link to="/">Tổng quan</Link>, '1', <PieChartOutlined />));
+        }
+
+        // 1b. Cảnh báo & Dự báo (Gói AI)
+        if (isEnabled(PackageKey.AI)) {
+            items.push(getItem(
+                <Link to="/alerts" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <span>Cảnh báo</span>
+                    {openAlertsCount > 0 && (
+                        <span
+                            style={{
+                                marginLeft: 6,
+                                fontSize: 11,
+                                padding: '1px 6px',
+                                borderRadius: 10,
+                                background: '#ff4d4f',
+                                color: '#fff',
+                                fontWeight: 'bold',
+                                lineHeight: '16px',
+                            }}
+                        >
+                            {openAlertsCount > 99 ? '99+' : openAlertsCount}
+                        </span>
+                    )}
+                </Link>,
+                '/alerts',
+                <AlertOutlined />
+            ));
         }
 
         // 2. Quản lý sản phẩm
@@ -512,6 +567,9 @@ const AppShell: React.FC<AppShellProps> = ({
                                         <React.Suspense fallback={<LoadingDisplay />}>
                                             <Routes>
                                                 <Route path="/" element={renderRoute('/', <DashboardPage />)} />
+                                                {isEnabled(PackageKey.AI) && (
+                                                    <Route path="/alerts" element={renderRoute('/alerts', <AlertsPage />)} />
+                                                )}
 
                                                 {(hasPerm('PRODUCT') || hasPerm('INVENTORY') || hasPerm('SALES')) && <Route path="/upload" element={renderRoute('/upload', <UploadPage />)} />}
 

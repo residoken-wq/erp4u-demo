@@ -11,7 +11,7 @@ import {
     QrcodeOutlined, BgColorsOutlined, CheckCircleOutlined, ReloadOutlined, 
     SafetyCertificateOutlined, EyeOutlined, ProjectOutlined, DollarOutlined,
     GlobalOutlined, BankOutlined, PhoneOutlined, PictureOutlined, CarOutlined, ThunderboltOutlined,
-    SendOutlined, MessageOutlined, RobotOutlined
+    SendOutlined, MessageOutlined, RobotOutlined, AlertOutlined
 } from '@ant-design/icons';
 import api from '../utils/api';
 import { SketchPicker } from 'react-color';
@@ -23,6 +23,7 @@ import RichTextEditor from '../components/common/RichTextEditor';
 import { DEFAULT_DELIVERY_NOTICE_TEMPLATES, PLACEHOLDER_GUIDE, DeliveryNoticeTemplate } from '../utils/deliveryNoticeHelper';
 import { ZnsConfigTab } from '../components/settings/ZnsConfigTab';
 import { ChatbotConfigTab } from '../components/system/ChatbotConfigTab';
+import AlertAdminSettingsTab from '../components/settings/AlertAdminSettingsTab';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -186,6 +187,16 @@ const SystemSettingsPage: React.FC = () => {
                                 </div>
                             ),
                             children: <div style={{ padding: '24px 32px' }}><ChatbotConfigTab /></div>
+                        },
+                        {
+                            key: 'alerts',
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                                    <AlertOutlined style={{ fontSize: 16 }} />
+                                    <span>Cảnh Báo & Dự Báo (AI)</span>
+                                </div>
+                            ),
+                            children: <div style={{ padding: '24px 32px' }}><AlertAdminSettingsTab /></div>
                         },
                         {
                             key: 'api_keys',

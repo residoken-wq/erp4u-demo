@@ -113,6 +113,12 @@ import {
   AiConversation,
   AiConversationMessage,
 } from '../ai/entities';
+import {
+  Alert,
+  AlertSetting,
+  AlertUserPref,
+  AlertRun,
+} from '../alerts/entities';
 import { CustomerLogo } from '../designs/entities/customer-logo.entity';
 import { PrintDesign } from '../designs/entities/print-design.entity';
 import { PrintSample } from '../designs/entities/print-sample.entity';
@@ -180,6 +186,10 @@ export const PREMIUM_ENTITIES = [
   AiDraft,
   AiConversation,
   AiConversationMessage,
+  Alert,
+  AlertSetting,
+  AlertUserPref,
+  AlertRun,
   CustomerLogo, PrintDesign, PrintSample, DesignOrder, DesignOrderItem,
   SocialChannel, SocialOrder, SocialProductMapping,
   TikTokMessage, TikTokComment, TikTokConversation,
