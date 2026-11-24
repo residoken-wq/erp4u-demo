@@ -16,7 +16,12 @@ import {
   PlusOutlined,
   ArrowLeftOutlined,
   CloseOutlined,
+  PaperClipOutlined,
+  UploadOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
+import { uploadScanDocument } from '../documents/documentScanApi';
+import { validateScanFile } from '../documents/documentScanTransformers';
 import { API_URL } from '../../config';
 import useMobile from '../../hooks/useMobile';
 import { useEntitlements } from '../../hooks/useEntitlements';
@@ -60,6 +65,9 @@ export const CopilotPanel: React.FC = () => {
   const [loadingList, setLoadingList] = useState(false);
   const [loadingConv, setLoadingConv] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [uploadingScan, setUploadingScan] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const streamCoordinatorRef = useRef(new StreamCoordinator());
   const selectTrackerRef = useRef(new RequestTracker());
@@ -194,6 +202,32 @@ export const CopilotPanel: React.FC = () => {
     setIsStreaming(false);
     setCurrentSteps([]);
     setOpen(false);
+  };
+
+  const handleFileUpload = async (file: File) => {
+    const validation = validateScanFile(file);
+    if (!validation.valid) {
+      antdMessage.error(validation.error);
+      return;
+    }
+
+    setUploadingScan(true);
+    try {
+      const scanResult = await uploadScanDocument(file, 'auto');
+      const scanMsg: ConversationMessage = {
+        id: `scan-${Date.now()}`,
+        role: 'assistant',
+        content: `Tôi đã nhận diện được chứng từ "${file.name}". Bạn có thể kiểm tra loại chứng từ dự kiến và mở để duyệt:`,
+        scans: [scanResult],
+        created_at: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, scanMsg]);
+      antdMessage.success('Tải lên và nhận diện chứng từ thành công');
+    } catch (err: any) {
+      antdMessage.error(err.message || 'Lỗi khi đọc chứng từ');
+    } finally {
+      setUploadingScan(false);
+    }
   };
 
   const handleSend = async (customMessage?: string) => {
@@ -417,7 +451,59 @@ export const CopilotPanel: React.FC = () => {
         </div>
 
         {/* Content Body */}
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div
+          style={{
+            flex: 1,
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={(e) => {
+            if (e.currentTarget === e.target) {
+              setIsDragging(false);
+            }
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            const file = e.dataTransfer.files?.[0];
+            if (file) {
+              handleFileUpload(file);
+            }
+          }}
+        >
+          {isDragging && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(39, 47, 114, 0.88)',
+                zIndex: 100,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                pointerEvents: 'none',
+              }}
+            >
+              <UploadOutlined style={{ fontSize: 44, marginBottom: 12, color: brandColors.mint }} />
+              <Text strong style={{ color: '#ffffff', fontSize: 16 }}>
+                Kéo thả file chứng từ vào đây
+              </Text>
+              <Text style={{ color: '#cbd5e1', fontSize: 12, marginTop: 4 }}>
+                Hỗ trợ ảnh JPEG/PNG, PDF (≤ 5 trang), XML TT78 (tối đa 10 MB)
+              </Text>
+            </div>
+          )}
           {view === 'list' ? (
             <ConversationList
               conversations={conversations}
@@ -449,6 +535,26 @@ export const CopilotPanel: React.FC = () => {
                 }}
               >
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    accept="image/*,application/pdf,.xml"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload(file);
+                      e.target.value = '';
+                    }}
+                  />
+                  <Tooltip title="Đính kèm chứng từ (Ảnh, PDF, XML)">
+                    <Button
+                      type="text"
+                      icon={uploadingScan ? <LoadingOutlined /> : <PaperClipOutlined />}
+                      disabled={uploadingScan || isStreaming}
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{ height: 32, borderRadius: 8, color: '#64748b' }}
+                    />
+                  </Tooltip>
                   <Input.TextArea
                     placeholder="Hỏi ERP4U Copilot bất cứ điều gì về ERP..."
                     value={input}

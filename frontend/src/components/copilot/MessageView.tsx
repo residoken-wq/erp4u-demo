@@ -19,6 +19,7 @@ import {
   createMarkdownComponents,
 } from './copilotApi';
 import DraftCard from './DraftCard';
+import ScanCard from './ScanCard';
 import { brandColors } from '../../theme/brand';
 
 const { Text } = Typography;
@@ -210,6 +211,15 @@ export const MessageView: React.FC<MessageViewProps> = ({
                   <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #f1f5f9' }}>
                     {msg.drafts.map((draft) => (
                       <DraftCard key={draft.id} draft={draft} />
+                    ))}
+                  </div>
+                )}
+
+                {/* Scans list */}
+                {msg.scans && msg.scans.length > 0 && (
+                  <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid #f1f5f9' }}>
+                    {msg.scans.map((scan) => (
+                      <ScanCard key={scan.id} scan={scan} />
                     ))}
                   </div>
                 )}
