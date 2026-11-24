@@ -297,10 +297,10 @@ Mảng chứa các đối tượng cảnh báo có cấu trúc tất định (kh
     "code": "duplicate_transaction_id",
     "params": {
       "transaction_id": 482,
-      "reference_code": "00000123",
-      "supplier_name": "NCC Test 01"
-    },
-    "message": "Trùng số hoá đơn với giao dịch chi #482 đã có trong hệ thống"
+      "vat_invoice_code": "1C26TAA-00000123",
+      "supplier_name": "NCC Test 01",
+      "supplier_tax_code": "0100000001"
+    }
   },
   {
     "code": "subtotal_mismatch",
@@ -308,11 +308,17 @@ Mảng chứa các đối tượng cảnh báo có cấu trúc tất định (kh
       "calculated_subtotal": 5000000,
       "extracted_subtotal": 5200000,
       "diff": 200000
-    },
-    "message": "Tổng tiền các dòng không khớp với tổng tiền hàng trên chứng từ"
+    }
   }
 ]
 ```
+
+> [!IMPORTANT]
+> **Quy định kiểm trùng hoá đơn chi phí (`expense_invoice`):**
+> - **Kiểm trùng hoá đơn dùng `vat_invoice_code` + NCC/MST (`supplier_tax_code` hoặc `supplier_id`)**.
+> - Tuyệt đối **không** dùng `reference_code` để lưu số hoá đơn hoặc kiểm trùng (vì trong hệ thống, `transactions.reference_code` là mã liên kết PO-/SO-… dùng để đồng bộ thanh toán; hoá đơn chi phí độc lập để trống `reference_code`).
+> - Số hoá đơn được chuẩn hoá vào `vat_invoice_code` theo định dạng `<ký hiệu>-<số>` (ví dụ `1C26TAA-00000123`), hoặc `<số>` nếu thiếu ký hiệu.
+> - Cảnh báo `duplicate_transaction_id` gửi `params` gồm `transaction_id`, `vat_invoice_code`, `supplier_name`, `supplier_tax_code`. Phía client tự dựng câu thông báo tiếng Việt từ `code` + `params`, bỏ dùng trường `message` tự do từ server để đảm bảo an toàn và tính nhất quán.
 
 ---
 

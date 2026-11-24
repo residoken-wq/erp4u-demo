@@ -12,6 +12,7 @@ import {
   Space,
   Typography,
   Tooltip,
+  theme,
 } from 'antd';
 import { InboxOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -39,6 +40,7 @@ export const ScanReviewGoodsReceiptModal: React.FC<ScanReviewGoodsReceiptModalPr
   scan,
   onSuccess,
 }) => {
+  const { token } = theme.useToken();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState<boolean>(false);
   const [items, setItems] = useState<any[]>([]);
@@ -116,6 +118,16 @@ export const ScanReviewGoodsReceiptModal: React.FC<ScanReviewGoodsReceiptModalPr
       return;
     }
 
+    // Bắt buộc số lượng > 0 cho mọi dòng (không fallback || 1)
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const qty = Number(it.quantity);
+      if (it.quantity === undefined || it.quantity === null || isNaN(qty) || qty <= 0) {
+        message.error(`Dòng ${i + 1} (${it.description || 'Mặt hàng'}): Số lượng phải lớn hơn 0`);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const payload = {
@@ -125,7 +137,7 @@ export const ScanReviewGoodsReceiptModal: React.FC<ScanReviewGoodsReceiptModalPr
           po_item_id: it.po_item_id,
           material_id: it.material_id,
           product_id: it.product_id,
-          quantity: Number(it.quantity) || 1,
+          quantity: Number(it.quantity),
         })),
       };
 
@@ -160,9 +172,9 @@ export const ScanReviewGoodsReceiptModal: React.FC<ScanReviewGoodsReceiptModalPr
     const mark = markedFields[fieldName];
     if (!mark) return {};
     if (mark.level === 'missing') {
-      return { border: '1.5px solid #ff4d4f', borderRadius: 6 };
+      return { border: `1.5px solid ${token.colorError}`, borderRadius: 6 };
     }
-    return { border: '1.5px solid #faad14', borderRadius: 6 };
+    return { border: `1.5px solid ${token.colorWarning}`, borderRadius: 6 };
   };
 
   const columns = [
@@ -174,7 +186,7 @@ export const ScanReviewGoodsReceiptModal: React.FC<ScanReviewGoodsReceiptModalPr
         const element = (
           <Input
             value={text}
-            style={mark ? { border: '1px dashed #ff4d4f' } : undefined}
+            style={mark ? { border: `1px dashed ${token.colorError}` } : undefined}
             onChange={(e) => updateItem(record.key, 'description', e.target.value)}
           />
         );
@@ -226,7 +238,7 @@ export const ScanReviewGoodsReceiptModal: React.FC<ScanReviewGoodsReceiptModalPr
       onCancel={onClose}
       title={
         <Space>
-          <InboxOutlined style={{ color: '#272F72' }} />
+          <InboxOutlined style={{ color: token.colorPrimary }} />
           <span>Duyệt Phiếu Giao Hàng & Tạo Phiếu Nhập Kho Nháp</span>
         </Space>
       }
@@ -288,7 +300,7 @@ export const ScanReviewGoodsReceiptModal: React.FC<ScanReviewGoodsReceiptModalPr
             <Button onClick={onClose} disabled={loading}>
               Bỏ qua
             </Button>
-            <Button type="primary" htmlType="submit" loading={loading} style={{ background: '#272F72' }}>
+            <Button type="primary" htmlType="submit" loading={loading} style={{ background: token.colorPrimary, borderColor: token.colorPrimary }}>
               Tạo Phiếu Nhập Kho Nháp
             </Button>
           </div>

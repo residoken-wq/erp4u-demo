@@ -12,6 +12,7 @@ import {
   Space,
   Typography,
   Tooltip,
+  theme,
 } from 'antd';
 import { PlusOutlined, DeleteOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -42,6 +43,7 @@ export const ScanReviewPurchaseOrderModal: React.FC<ScanReviewPurchaseOrderModal
   suppliers = [],
   onSuccess,
 }) => {
+  const { token } = theme.useToken();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState<boolean>(false);
   const [items, setItems] = useState<any[]>([]);
@@ -110,6 +112,21 @@ export const ScanReviewPurchaseOrderModal: React.FC<ScanReviewPurchaseOrderModal
       return;
     }
 
+    // Bắt buộc số lượng > 0 và đơn giá >= 0 cho mọi dòng
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const qty = Number(it.quantity);
+      if (it.quantity === undefined || it.quantity === null || isNaN(qty) || qty <= 0) {
+        message.error(`Dòng ${i + 1} (${it.description || 'Mặt hàng'}): Số lượng phải lớn hơn 0`);
+        return;
+      }
+      const price = Number(it.unit_price);
+      if (it.unit_price === undefined || it.unit_price === null || isNaN(price) || price < 0) {
+        message.error(`Dòng ${i + 1} (${it.description || 'Mặt hàng'}): Đơn giá không hợp lệ`);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const payload = buildPurchaseOrderDraftPayload({
@@ -148,9 +165,9 @@ export const ScanReviewPurchaseOrderModal: React.FC<ScanReviewPurchaseOrderModal
     const mark = markedFields[fieldName];
     if (!mark) return {};
     if (mark.level === 'missing') {
-      return { border: '1.5px solid #ff4d4f', borderRadius: 6 };
+      return { border: `1.5px solid ${token.colorError}`, borderRadius: 6 };
     }
-    return { border: '1.5px solid #faad14', borderRadius: 6 };
+    return { border: `1.5px solid ${token.colorWarning}`, borderRadius: 6 };
   };
 
   const columns = [
@@ -163,7 +180,7 @@ export const ScanReviewPurchaseOrderModal: React.FC<ScanReviewPurchaseOrderModal
         const element = (
           <Input
             value={text}
-            style={mark ? getFieldStyle(`items.${idx}.description`) : itemMark ? { border: '1px dashed #ff4d4f' } : undefined}
+            style={mark ? getFieldStyle(`items.${idx}.description`) : itemMark ? { border: `1px dashed ${token.colorError}` } : undefined}
             onChange={(e) => updateItem(record.key, 'description', e.target.value)}
           />
         );
@@ -252,7 +269,7 @@ export const ScanReviewPurchaseOrderModal: React.FC<ScanReviewPurchaseOrderModal
       onCancel={onClose}
       title={
         <Space>
-          <ShoppingCartOutlined style={{ color: '#272F72' }} />
+          <ShoppingCartOutlined style={{ color: token.colorPrimary }} />
           <span>Duyệt Báo giá & Lập Đơn mua hàng (PO)</span>
         </Space>
       }
@@ -320,7 +337,7 @@ export const ScanReviewPurchaseOrderModal: React.FC<ScanReviewPurchaseOrderModal
 
           <div style={{ textAlign: 'right', marginBottom: 16 }}>
             <Text type="secondary" style={{ marginRight: 8 }}>Tổng tiền ước tính:</Text>
-            <Text strong style={{ fontSize: 18, color: '#272F72' }}>
+            <Text strong style={{ fontSize: 18, color: token.colorPrimary }}>
               {totalAmount.toLocaleString()} ₫
             </Text>
           </div>
@@ -329,7 +346,7 @@ export const ScanReviewPurchaseOrderModal: React.FC<ScanReviewPurchaseOrderModal
             <Button onClick={onClose} disabled={loading}>
               Bỏ qua
             </Button>
-            <Button type="primary" htmlType="submit" loading={loading} style={{ background: '#272F72' }}>
+            <Button type="primary" htmlType="submit" loading={loading} style={{ background: token.colorPrimary, borderColor: token.colorPrimary }}>
               Lưu Đơn Mua Hàng
             </Button>
           </div>

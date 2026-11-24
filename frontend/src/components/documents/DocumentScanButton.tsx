@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Button, Upload, Progress, Modal, message, Typography } from 'antd';
+import { Button, Upload, Progress, Modal, message, Typography, theme } from 'antd';
 import { ScanOutlined, LoadingOutlined, UploadOutlined } from '@ant-design/icons';
 import { useEntitlements } from '../../hooks/useEntitlements';
 import { usePermission } from '../../hooks/usePermission';
@@ -29,6 +29,7 @@ export const DocumentScanButton: React.FC<DocumentScanButtonProps> = ({
   icon = <ScanOutlined />,
   style,
 }) => {
+  const { token } = theme.useToken();
   const { isEnabled } = useEntitlements();
   const perms = usePermission(moduleCode);
   const isMobile = useMobile();
@@ -96,8 +97,8 @@ export const DocumentScanButton: React.FC<DocumentScanButtonProps> = ({
         onClick={() => fileInputRef.current?.click()}
         style={{
           borderRadius: 8,
-          borderColor: '#1890ff',
-          color: buttonType === 'primary' ? undefined : '#1890ff',
+          borderColor: token.colorPrimary,
+          color: buttonType === 'primary' ? undefined : token.colorPrimary,
           ...style,
         }}
       >

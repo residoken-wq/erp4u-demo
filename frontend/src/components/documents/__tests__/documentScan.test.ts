@@ -10,9 +10,11 @@ import {
   mapScanErrorCode,
   safeNumber,
   safeString,
+  getDocumentPreviewMode,
+  formatScanWarningMessage,
 } from '../documentScanTransformers.ts';
 
-test('Document Scan Pure Transformers, Validation & Security Tests (Task P9e1)', async (t) => {
+test('Document Scan Pure Transformers, Validation & Security Tests (Task P9e1 & P9e1-r2)', async (t) => {
   // -------------------------------------------------------------
   // 1. TRANSFORMER: transformSupplierQuoteToPo
   // -------------------------------------------------------------
@@ -61,7 +63,7 @@ test('Document Scan Pure Transformers, Validation & Security Tests (Task P9e1)',
     assert.strictEqual(res.markedFields['supplier_id'], undefined);
   });
 
-  await t.test('1.2. transformSupplierQuoteToPo: thiếu NCC và trường low confidence', () => {
+  await t.test('1.2. transformSupplierQuoteToPo: thiếu NCC và số lượng không tự thành 1 khi thiếu', () => {
     const extracted = {
       document_no: 'BG-2026-002',
       lines: [
@@ -71,7 +73,7 @@ test('Document Scan Pure Transformers, Validation & Security Tests (Task P9e1)',
           unit_price: '120000', // chuỗi
         },
         {
-          description: 'Mặt hàng thiếu giá',
+          description: 'Mặt hàng thiếu số lượng',
           quantity: null,
           unit_price: null,
         },
@@ -103,7 +105,8 @@ test('Document Scan Pure Transformers, Validation & Security Tests (Task P9e1)',
     assert.strictEqual(res.initialValues.items[0].unit_price, 120000);
     assert.strictEqual(res.markedFields['items.0.quantity']?.level, 'low');
 
-    // Dòng 1: quantity null -> đánh dấu missing
+    // Dòng 1: quantity null -> KHÔNG tự thành 1, đánh dấu missing
+    assert.strictEqual(res.initialValues.items[1].quantity, 0);
     assert.strictEqual(res.markedFields['items.1.quantity']?.level, 'missing');
     assert.strictEqual(res.markedFields['items.1.item_id']?.level, 'missing');
   });
@@ -173,10 +176,26 @@ test('Document Scan Pure Transformers, Validation & Security Tests (Task P9e1)',
     assert.strictEqual(res.markedFields['items.0.item_id']?.level, 'missing');
   });
 
+  await t.test('2.3. transformDeliveryNoteToGoodsReceipt: số lượng thiếu hoặc <= 0 không tự thành 1', () => {
+    const extracted = {
+      document_no: 'PGH-TEST-0',
+      lines: [
+        { description: 'Vải thiếu SL', quantity: null },
+        { description: 'Vải SL âm', quantity: -5 },
+      ],
+    };
+
+    const res = transformDeliveryNoteToGoodsReceipt(extracted);
+    assert.strictEqual(res.initialValues.items[0].quantity, 0);
+    assert.strictEqual(res.markedFields['items.0.quantity']?.level, 'missing');
+    assert.strictEqual(res.initialValues.items[1].quantity, 0);
+    assert.strictEqual(res.markedFields['items.1.quantity']?.level, 'missing');
+  });
+
   // -------------------------------------------------------------
   // 3. TRANSFORMER: transformExpenseInvoiceToTransaction
   // -------------------------------------------------------------
-  await t.test('3.1. transformExpenseInvoiceToTransaction: đầy đủ trường', () => {
+  await t.test('3.1. transformExpenseInvoiceToTransaction: đầy đủ trường & reference_code để trống', () => {
     const extracted = {
       document_no: '00000123',
       invoice_no: '00000123',
@@ -204,13 +223,16 @@ test('Document Scan Pure Transformers, Validation & Security Tests (Task P9e1)',
     assert.strictEqual(res.initialValues.supplier_id, 12);
     assert.strictEqual(res.initialValues.category_id, 4);
     assert.strictEqual(res.initialValues.vat_invoice_code, '1C26TAA-00000123');
+    // BẮT BUỘC: reference_code để trống (chỉ dùng cho PO-/SO- để đồng bộ thanh toán)
+    assert.strictEqual(res.initialValues.reference_code, '');
     assert.strictEqual(res.initialValues.date, '2026-11-24');
     assert.strictEqual(res.duplicateWarning, null);
   });
 
-  await t.test('3.2. transformExpenseInvoiceToTransaction: cảnh báo trùng hoá đơn (duplicate_transaction_id)', () => {
+  await t.test('3.2. transformExpenseInvoiceToTransaction: cảnh báo trùng dựng từ code+params, bỏ qua message tự do từ server', () => {
     const extracted = {
       invoice_no: '00000123',
+      invoice_series: '1C26TAA',
       total: 3500000,
       supplier: { name: 'Công ty Test' },
     };
@@ -222,8 +244,12 @@ test('Document Scan Pure Transformers, Validation & Security Tests (Task P9e1)',
     const warnings = [
       {
         code: 'duplicate_transaction_id',
-        params: { transaction_id: 482 },
-        message: 'Trùng số hoá đơn với giao dịch chi #482',
+        params: {
+          transaction_id: 482,
+          vat_invoice_code: '1C26TAA-00000123',
+          supplier_name: 'Công ty Test',
+        },
+        message: 'UNTRUSTED_SERVER_STRING_DO_NOT_USE', // Server có thể gửi câu tự do nhưng client phải bỏ qua
       },
     ];
 
@@ -232,8 +258,12 @@ test('Document Scan Pure Transformers, Validation & Security Tests (Task P9e1)',
     assert.notStrictEqual(res.duplicateWarning, null);
     assert.strictEqual(res.duplicateWarning?.transaction_id, 482);
     assert.strictEqual(res.duplicateWarning?.link, '/finance?transaction=482');
-    // Vẫn trả về initialValues hợp lệ để người dùng có thể chủ động bấm lưu
-    assert.strictEqual(res.initialValues.amount, 3500000);
+    // Khẳng định không dùng câu tự do từ server
+    assert.strictEqual(res.duplicateWarning?.message.includes('UNTRUSTED_SERVER_STRING_DO_NOT_USE'), false);
+    assert.ok(res.duplicateWarning?.message.includes('1C26TAA-00000123'));
+    assert.ok(res.duplicateWarning?.message.includes('#482'));
+    assert.strictEqual(res.initialValues.reference_code, '');
+    assert.strictEqual(res.initialValues.vat_invoice_code, '1C26TAA-00000123');
   });
 
   await t.test('3.3. transformExpenseInvoiceToTransaction: số tiền null / 0 -> đánh dấu missing', () => {
@@ -244,6 +274,18 @@ test('Document Scan Pure Transformers, Validation & Security Tests (Task P9e1)',
     const res = transformExpenseInvoiceToTransaction(extracted);
     assert.strictEqual(res.initialValues.amount, 0);
     assert.strictEqual(res.markedFields['amount']?.level, 'missing');
+  });
+
+  await t.test('3.4. transformExpenseInvoiceToTransaction: vat_invoice_code dạng <số> khi thiếu ký hiệu', () => {
+    const extracted = {
+      invoice_no: '00000999',
+      invoice_series: '',
+      total: 100000,
+    };
+
+    const res = transformExpenseInvoiceToTransaction(extracted);
+    assert.strictEqual(res.initialValues.vat_invoice_code, '00000999');
+    assert.strictEqual(res.initialValues.reference_code, '');
   });
 
   // -------------------------------------------------------------
@@ -371,5 +413,65 @@ test('Document Scan Pure Transformers, Validation & Security Tests (Task P9e1)',
     assert.strictEqual(apiCalls.includes('/purchasing'), false);
     assert.strictEqual(apiCalls.includes('/inventory/goods-receipt/draft'), false);
     assert.strictEqual(apiCalls.includes('/finance/transactions'), false);
+  });
+
+  // -------------------------------------------------------------
+  // 8. HELPER getDocumentPreviewMode (XSS Prevention & Strict MIME)
+  // -------------------------------------------------------------
+  await t.test('8.1. getDocumentPreviewMode: XML luôn ra text', () => {
+    assert.strictEqual(getDocumentPreviewMode('xml', 'application/xml'), 'text');
+    assert.strictEqual(getDocumentPreviewMode('xml', 'text/xml'), 'text');
+    assert.strictEqual(getDocumentPreviewMode('xml', ''), 'text');
+    assert.strictEqual(getDocumentPreviewMode('other', 'application/xml'), 'text');
+    assert.strictEqual(getDocumentPreviewMode('other', 'text/xml'), 'text');
+  });
+
+  await t.test('8.2. getDocumentPreviewMode: SVG và HTML luôn ra unsupported (chặn XSS)', () => {
+    assert.strictEqual(getDocumentPreviewMode('image', 'image/svg+xml'), 'unsupported');
+    assert.strictEqual(getDocumentPreviewMode('image', 'image/svg'), 'unsupported');
+    assert.strictEqual(getDocumentPreviewMode('xml', 'image/svg+xml'), 'unsupported');
+    assert.strictEqual(getDocumentPreviewMode('xml', 'text/html'), 'unsupported');
+    assert.strictEqual(getDocumentPreviewMode('pdf', 'text/html'), 'unsupported');
+    assert.strictEqual(getDocumentPreviewMode('image', 'application/xhtml+xml'), 'unsupported');
+    assert.strictEqual(getDocumentPreviewMode('file', 'application/javascript'), 'unsupported');
+  });
+
+  await t.test('8.3. getDocumentPreviewMode: PDF chỉ ra pdf khi mime khớp', () => {
+    assert.strictEqual(getDocumentPreviewMode('pdf', 'application/pdf'), 'pdf');
+    assert.strictEqual(getDocumentPreviewMode('any', 'application/pdf'), 'pdf');
+    assert.strictEqual(getDocumentPreviewMode('pdf', ''), 'pdf');
+  });
+
+  await t.test('8.4. getDocumentPreviewMode: Ảnh hợp lệ chỉ nhận jpeg/png/webp/heic', () => {
+    assert.strictEqual(getDocumentPreviewMode('image', 'image/jpeg'), 'image');
+    assert.strictEqual(getDocumentPreviewMode('image', 'image/jpg'), 'image');
+    assert.strictEqual(getDocumentPreviewMode('image', 'image/png'), 'image');
+    assert.strictEqual(getDocumentPreviewMode('image', 'image/webp'), 'image');
+    assert.strictEqual(getDocumentPreviewMode('image', 'image/heic'), 'image');
+    assert.strictEqual(getDocumentPreviewMode('image', 'image/gif'), 'unsupported');
+    assert.strictEqual(getDocumentPreviewMode('image', 'image/bmp'), 'unsupported');
+  });
+
+  // -------------------------------------------------------------
+  // 9. HELPER formatScanWarningMessage (Dựng cảnh báo tiếng Việt)
+  // -------------------------------------------------------------
+  await t.test('9.1. formatScanWarningMessage: dựng đúng câu từ code + params', () => {
+    const msg1 = formatScanWarningMessage('duplicate_transaction_id', {
+      transaction_id: 101,
+      vat_invoice_code: '1C26TAA-00000099',
+      supplier_name: 'NCC An Lạc',
+    });
+    assert.ok(msg1.includes('1C26TAA-00000099'));
+    assert.ok(msg1.includes('NCC An Lạc'));
+    assert.ok(msg1.includes('#101'));
+
+    const msg2 = formatScanWarningMessage('subtotal_mismatch');
+    assert.strictEqual(msg2, 'Tổng tiền các dòng chi tiết không khớp với tổng tiền hàng trên chứng từ');
+
+    const msg3 = formatScanWarningMessage('tax_mismatch');
+    assert.strictEqual(msg3, 'Tiền thuế tính toán không khớp với tiền thuế ghi trên chứng từ');
+
+    const msgUnknown = formatScanWarningMessage('unknown_code');
+    assert.strictEqual(msgUnknown, 'Phát hiện cảnh báo khi đối chiếu chứng từ');
   });
 });

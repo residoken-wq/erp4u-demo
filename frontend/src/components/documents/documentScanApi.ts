@@ -126,12 +126,12 @@ export async function getScanDocumentByRef(
 /**
  * Tải file gốc chứng từ qua endpoint xác thực JWT và tạo Blob URL
  */
-export async function fetchDocumentFileBlobUrl(id: string): Promise<{ blobUrl: string; mimeType: string }> {
+export async function fetchDocumentFileBlobUrl(id: string): Promise<{ blobUrl: string; mimeType: string; blob: Blob }> {
   const res = await api.get(`/ai/documents/${id}/file`, {
     responseType: 'blob',
   });
   const blob: Blob = res.data;
   const mimeType = blob.type || 'application/octet-stream';
   const blobUrl = URL.createObjectURL(blob);
-  return { blobUrl, mimeType };
+  return { blobUrl, mimeType, blob };
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Row, Col, Card, Spin, Alert, Button, Space, Typography, Tooltip } from 'antd';
+import { Row, Col, Card, Spin, Alert, Button, Space, Typography, theme } from 'antd';
 import {
   ZoomInOutlined,
   ZoomOutOutlined,
@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons';
 import useMobile from '../../hooks/useMobile';
 import { fetchDocumentFileBlobUrl } from './documentScanApi';
+import { getDocumentPreviewMode, DocumentPreviewMode } from './documentScanTransformers';
 
 const { Text } = Typography;
 
@@ -32,9 +33,12 @@ export const ScanReviewLayout: React.FC<ScanReviewLayoutProps> = ({
   duplicateWarning,
   children,
 }) => {
+  const { token } = theme.useToken();
   const isMobile = useMobile();
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [mimeType, setMimeType] = useState<string>('');
+  const [xmlContent, setXmlContent] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState<DocumentPreviewMode>('unsupported');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState<number>(100);
@@ -45,16 +49,54 @@ export const ScanReviewLayout: React.FC<ScanReviewLayoutProps> = ({
 
     setLoading(true);
     setError(null);
+    setXmlContent(null);
+    setBlobUrl(null);
 
     fetchDocumentFileBlobUrl(scanId)
-      .then(({ blobUrl: url, mimeType: mime }) => {
+      .then(async ({ blobUrl: url, mimeType: mime, blob }) => {
         if (!isMounted) {
           URL.revokeObjectURL(url);
           return;
         }
-        currentBlobUrl = url;
-        setBlobUrl(url);
+
+        const mode = getDocumentPreviewMode(sourceType, mime);
         setMimeType(mime);
+        setPreviewMode(mode);
+
+        if (mode === 'text') {
+          // XML: đọc text thuần qua blob.text(), tuyệt đối không dùng iframe/object/dangerouslySetInnerHTML
+          URL.revokeObjectURL(url);
+          currentBlobUrl = null;
+          setBlobUrl(null);
+
+          const fullText = await blob.text();
+          const maxChars = 200 * 1024; // Giới hạn hiển thị 200 KB
+          if (fullText.length > maxChars) {
+            setXmlContent(fullText.slice(0, maxChars) + '\n\n... [Nội dung đã được cắt bớt vì vượt quá 200 KB]');
+          } else {
+            setXmlContent(fullText);
+          }
+        } else if (mode === 'pdf') {
+          // PDF: chỉ tạo iframe khi blob.type === 'application/pdf'
+          if (blob.type !== 'application/pdf') {
+            const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+            URL.revokeObjectURL(url);
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            currentBlobUrl = pdfUrl;
+            setBlobUrl(pdfUrl);
+          } else {
+            currentBlobUrl = url;
+            setBlobUrl(url);
+          }
+        } else if (mode === 'image') {
+          currentBlobUrl = url;
+          setBlobUrl(url);
+        } else {
+          URL.revokeObjectURL(url);
+          currentBlobUrl = null;
+          setBlobUrl(null);
+          setError('Định dạng file không được hỗ trợ để xem trước hoặc có nguy cơ bảo mật');
+        }
       })
       .catch((err) => {
         if (!isMounted) return;
@@ -70,10 +112,22 @@ export const ScanReviewLayout: React.FC<ScanReviewLayoutProps> = ({
         URL.revokeObjectURL(currentBlobUrl);
       }
     };
-  }, [scanId]);
+  }, [scanId, sourceType]);
 
-  const isPdf = sourceType === 'pdf' || mimeType.includes('pdf');
-  const isXml = sourceType === 'xml' || mimeType.includes('xml');
+  const renderCardTitle = () => {
+    let icon = <FileImageOutlined style={{ color: token.colorSuccess }} />;
+    if (previewMode === 'pdf') {
+      icon = <FilePdfOutlined style={{ color: token.colorError }} />;
+    } else if (previewMode === 'text') {
+      icon = <FileTextOutlined style={{ color: token.colorPrimary }} />;
+    }
+    return (
+      <Space>
+        {icon}
+        <span>Chứng từ gốc</span>
+      </Space>
+    );
+  };
 
   return (
     <div style={{ width: '100%' }}>
@@ -88,16 +142,16 @@ export const ScanReviewLayout: React.FC<ScanReviewLayoutProps> = ({
             <div>
               <span>{duplicateWarning.message}. </span>
               {duplicateWarning.link && (
-                <a href={duplicateWarning.link} target="_blank" rel="noreferrer" style={{ fontWeight: 600 }}>
+                <a href={duplicateWarning.link} target="_blank" rel="noreferrer" style={{ fontWeight: 600, color: token.colorLink }}>
                   Xem giao dịch cũ #{duplicateWarning.transaction_id}
                 </a>
               )}
-              <div style={{ marginTop: 4, fontSize: 12, color: '#666' }}>
+              <div style={{ marginTop: 4, fontSize: 12, color: token.colorTextSecondary }}>
                 Hệ thống vẫn cho phép bạn lưu nếu đây là hoá đơn hợp lệ riêng biệt.
               </div>
             </div>
           }
-          style={{ marginBottom: 16, borderRadius: 8, border: '1px solid #ffe58f' }}
+          style={{ marginBottom: 16, borderRadius: 8, border: `1px solid ${token.colorWarningBorder}` }}
         />
       )}
 
@@ -108,14 +162,14 @@ export const ScanReviewLayout: React.FC<ScanReviewLayoutProps> = ({
           alignItems: 'center',
           gap: 16,
           padding: '8px 12px',
-          background: '#f8fafc',
+          background: token.colorBgLayout,
           borderRadius: 8,
           marginBottom: 16,
-          border: '1px solid #e2e8f0',
+          border: `1px solid ${token.colorBorderSecondary}`,
           fontSize: 12,
         }}
       >
-        <span style={{ fontWeight: 600, color: '#475569' }}>
+        <span style={{ fontWeight: 600, color: token.colorText }}>
           <InfoCircleOutlined style={{ marginRight: 4 }} /> Chú thích AI trích xuất:
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -123,24 +177,24 @@ export const ScanReviewLayout: React.FC<ScanReviewLayoutProps> = ({
             style={{
               width: 14,
               height: 14,
-              border: '2px solid #faad14', // Status warning yellow
+              border: `2px solid ${token.colorWarning}`,
               borderRadius: 3,
-              background: '#fffbe6',
+              background: token.colorWarningBg,
             }}
           />
-          <Text style={{ color: '#d48806' }}>Viền vàng: AI đọc chưa chắc chắn, vui lòng kiểm tra</Text>
+          <Text style={{ color: token.colorWarningText }}>Viền vàng: AI đọc chưa chắc chắn, vui lòng kiểm tra</Text>
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span
             style={{
               width: 14,
               height: 14,
-              border: '2px solid #ff4d4f', // Status error red
+              border: `2px solid ${token.colorError}`,
               borderRadius: 3,
-              background: '#fff1f0',
+              background: token.colorErrorBg,
             }}
           />
-          <Text style={{ color: '#cf1322' }}>Viền đỏ: Trường thiếu hoặc chưa khớp hệ thống</Text>
+          <Text style={{ color: token.colorErrorText }}>Viền đỏ: Trường thiếu hoặc chưa khớp hệ thống</Text>
         </span>
       </div>
 
@@ -148,14 +202,9 @@ export const ScanReviewLayout: React.FC<ScanReviewLayoutProps> = ({
         {/* Left Pane: File gốc */}
         <Col xs={24} lg={11}>
           <Card
-            title={
-              <Space>
-                {isPdf ? <FilePdfOutlined style={{ color: '#ff4d4f' }} /> : isXml ? <FileTextOutlined style={{ color: '#1890ff' }} /> : <FileImageOutlined style={{ color: '#52c41a' }} />}
-                <span>Chứng từ gốc</span>
-              </Space>
-            }
+            title={renderCardTitle()}
             extra={
-              !isPdf && !isXml && blobUrl ? (
+              previewMode === 'image' && blobUrl ? (
                 <Space size="small">
                   <Button
                     size="small"
@@ -179,7 +228,7 @@ export const ScanReviewLayout: React.FC<ScanReviewLayoutProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               overflow: 'auto',
-              background: '#f1f5f9',
+              background: token.colorBgLayout,
             }}
           >
             {loading ? (
@@ -188,34 +237,45 @@ export const ScanReviewLayout: React.FC<ScanReviewLayoutProps> = ({
               </div>
             ) : error ? (
               <Alert type="error" message={error} showIcon />
-            ) : blobUrl ? (
-              isPdf ? (
-                <iframe
+            ) : previewMode === 'pdf' && blobUrl ? (
+              <iframe
+                src={blobUrl}
+                title="PDF Viewer"
+                style={{ width: '100%', height: '100%', border: 'none', borderRadius: 4 }}
+              />
+            ) : previewMode === 'text' && xmlContent !== null ? (
+              <pre
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  margin: 0,
+                  padding: 12,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                  overflow: 'auto',
+                  background: token.colorBgContainer,
+                  color: token.colorText,
+                  borderRadius: 4,
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                }}
+              >
+                {xmlContent}
+              </pre>
+            ) : previewMode === 'image' && blobUrl ? (
+              <div style={{ textAlign: 'center', overflow: 'auto', width: '100%', height: '100%' }}>
+                <img
                   src={blobUrl}
-                  title="PDF Viewer"
-                  style={{ width: '100%', height: '100%', border: 'none', borderRadius: 4 }}
+                  alt="Chứng từ gốc"
+                  style={{
+                    width: `${zoom}%`,
+                    maxWidth: 'none',
+                    transition: 'width 0.2s',
+                    borderRadius: 4,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  }}
                 />
-              ) : isXml ? (
-                <iframe
-                  src={blobUrl}
-                  title="XML Viewer"
-                  style={{ width: '100%', height: '100%', border: 'none', background: '#ffffff', borderRadius: 4 }}
-                />
-              ) : (
-                <div style={{ textAlign: 'center', overflow: 'auto', width: '100%', height: '100%' }}>
-                  <img
-                    src={blobUrl}
-                    alt="Chứng từ gốc"
-                    style={{
-                      width: `${zoom}%`,
-                      maxWidth: 'none',
-                      transition: 'width 0.2s',
-                      borderRadius: 4,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                    }}
-                  />
-                </div>
-              )
+              </div>
             ) : (
               <Text type="secondary">Không có file hiển thị</Text>
             )}

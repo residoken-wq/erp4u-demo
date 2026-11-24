@@ -10,6 +10,7 @@ import {
   message,
   Space,
   Typography,
+  theme,
 } from 'antd';
 import { DollarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -41,6 +42,7 @@ export const ScanReviewExpenseModal: React.FC<ScanReviewExpenseModalProps> = ({
   categories = [],
   onSuccess,
 }) => {
+  const { token } = theme.useToken();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -58,7 +60,7 @@ export const ScanReviewExpenseModal: React.FC<ScanReviewExpenseModalProps> = ({
       const init = transformed.initialValues;
       form.setFieldsValue({
         type: 'EXPENSE',
-        amount: init.amount || 0,
+        amount: init.amount || undefined,
         partner_name: init.partner_name || '',
         supplier_id: init.supplier_id || undefined,
         category_id: init.category_id || undefined,
@@ -73,11 +75,17 @@ export const ScanReviewExpenseModal: React.FC<ScanReviewExpenseModalProps> = ({
   }, [open, scan, transformed, form]);
 
   const handleSubmit = async (values: any) => {
+    const amount = Number(values.amount);
+    if (values.amount === undefined || values.amount === null || isNaN(amount) || amount <= 0) {
+      message.error('Số tiền chi phải lớn hơn 0');
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
         type: 'EXPENSE',
-        amount: Number(values.amount) || 0,
+        amount: amount,
         partner_name: safeString(values.partner_name),
         supplier_id: values.supplier_id ? Number(values.supplier_id) : undefined,
         category_id: values.category_id ? Number(values.category_id) : undefined,
@@ -118,9 +126,9 @@ export const ScanReviewExpenseModal: React.FC<ScanReviewExpenseModalProps> = ({
     const mark = markedFields[fieldName];
     if (!mark) return {};
     if (mark.level === 'missing') {
-      return { border: '1.5px solid #ff4d4f', borderRadius: 6 };
+      return { border: `1.5px solid ${token.colorError}`, borderRadius: 6 };
     }
-    return { border: '1.5px solid #faad14', borderRadius: 6 };
+    return { border: `1.5px solid ${token.colorWarning}`, borderRadius: 6 };
   };
 
   return (
@@ -129,7 +137,7 @@ export const ScanReviewExpenseModal: React.FC<ScanReviewExpenseModalProps> = ({
       onCancel={onClose}
       title={
         <Space>
-          <DollarOutlined style={{ color: '#cf1322' }} />
+          <DollarOutlined style={{ color: token.colorError }} />
           <span>Duyệt Hoá Đơn Chi Phí & Lập Phiếu Chi</span>
         </Space>
       }
@@ -152,7 +160,7 @@ export const ScanReviewExpenseModal: React.FC<ScanReviewExpenseModalProps> = ({
               validateStatus={markedFields['amount'] ? (markedFields['amount'].level === 'missing' ? 'error' : 'warning') : undefined}
             >
               <InputNumber
-                style={{ width: '100%', fontSize: 16, fontWeight: 700, color: '#cf1322', ...getFieldStyle('amount') }}
+                style={{ width: '100%', fontSize: 16, fontWeight: 700, color: token.colorErrorText, ...getFieldStyle('amount') }}
                 formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 parser={(v) => Number(v?.replace(/,/g, '') || 0)}
               />
@@ -201,8 +209,8 @@ export const ScanReviewExpenseModal: React.FC<ScanReviewExpenseModalProps> = ({
               />
             </Form.Item>
 
-            <Form.Item label="Số hoá đơn / Mã chứng từ" name="reference_code">
-              <Input placeholder="Số hoá đơn VAT / Phiếu thu tiền" />
+            <Form.Item label="Mã chứng từ liên kết (PO/SO)" name="reference_code">
+              <Input placeholder="Mã PO-/SO- liên kết (để trống nếu chi độc lập)" />
             </Form.Item>
           </div>
 

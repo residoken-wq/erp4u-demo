@@ -179,13 +179,15 @@ export function transformSupplierQuoteToPo(
     const qtyConfidence = getFieldConfidence(fieldConfidence, `lines[${idx}].quantity`);
     const priceConfidence = getFieldConfidence(fieldConfidence, `lines[${idx}].unit_price`);
     const descConfidence = getFieldConfidence(fieldConfidence, `lines[${idx}].description`);
+    const rawQty = safeNumber(line.quantity, 0);
+    const finalQty = rawQty <= 0 ? 0 : rawQty;
 
     if (qtyConfidence === 'low') {
       markedFields[`items.${idx}.quantity`] = {
         level: 'low',
         message: 'AI đọc số lượng chưa chắc chắn',
       };
-    } else if (qtyConfidence === 'missing' || line.quantity === undefined || line.quantity === null) {
+    } else if (qtyConfidence === 'missing' || line.quantity === undefined || line.quantity === null || rawQty <= 0) {
       markedFields[`items.${idx}.quantity`] = {
         level: 'missing',
         message: 'Thiếu số lượng',
@@ -220,11 +222,11 @@ export function transformSupplierQuoteToPo(
       material_id: matId,
       product_id: prodId,
       description: safeString(line.description, `Mặt hàng #${idx + 1}`),
-      quantity: safeNumber(line.quantity, 1),
+      quantity: finalQty,
       unit_price: safeNumber(line.unit_price, 0),
       note: line.sku_or_code ? `Mã: ${safeString(line.sku_or_code)}` : '',
       tax_rate: line.tax_rate !== undefined ? safeNumber(line.tax_rate) : undefined,
-      amount: safeNumber(line.amount, safeNumber(line.quantity, 1) * safeNumber(line.unit_price, 0)),
+      amount: safeNumber(line.amount, finalQty * safeNumber(line.unit_price, 0)),
     };
   });
 
@@ -270,13 +272,15 @@ export function transformDeliveryNoteToGoodsReceipt(
   const items = lines.map((line: any, idx: number) => {
     const itemSuggestion = suggestions?.items?.find((s: any) => s.line_index === idx);
     const qtyConfidence = getFieldConfidence(fieldConfidence, `lines[${idx}].quantity`);
+    const rawQty = safeNumber(line.quantity, 0);
+    const finalQty = rawQty <= 0 ? 0 : rawQty;
 
     if (qtyConfidence === 'low') {
       markedFields[`items.${idx}.quantity`] = {
         level: 'low',
         message: 'AI đọc số lượng giao chưa chắc chắn',
       };
-    } else if (qtyConfidence === 'missing' || line.quantity === undefined || line.quantity === null) {
+    } else if (qtyConfidence === 'missing' || line.quantity === undefined || line.quantity === null || rawQty <= 0) {
       markedFields[`items.${idx}.quantity`] = {
         level: 'missing',
         message: 'Thiếu số lượng giao',
@@ -298,7 +302,7 @@ export function transformDeliveryNoteToGoodsReceipt(
       material_id: matId,
       product_id: prodId,
       description: safeString(line.description, `Mặt hàng #${idx + 1}`),
-      quantity: safeNumber(line.quantity, 1),
+      quantity: finalQty,
     };
   });
 
@@ -367,15 +371,22 @@ export function transformExpenseInvoiceToTransaction(
     ? lineDescriptions.slice(0, 3).join(', ')
     : (invoiceNo ? `Chi phí theo HĐ ${invoiceNo}` : 'Chi phí theo hoá đơn');
 
-  // Kiểm tra cảnh báo trùng hoá đơn
+  // Kiểm tra cảnh báo trùng hoá đơn (dựng câu tiếng Việt phía client từ code + params, bỏ dùng message từ server)
   let duplicateWarning: TransformedExpenseTransaction['duplicateWarning'] = null;
   const dupWarningItem = warnings?.find((w) => w.code === 'duplicate_transaction_id');
   const duplicateTxId = suggestions?.duplicate_transaction_id || dupWarningItem?.params?.transaction_id;
 
   if (duplicateTxId) {
+    const warningMessage = formatScanWarningMessage('duplicate_transaction_id', {
+      ...dupWarningItem?.params,
+      transaction_id: duplicateTxId,
+      vat_invoice_code: vatInvoiceCode || dupWarningItem?.params?.vat_invoice_code,
+      supplier_name: supplierName || dupWarningItem?.params?.supplier_name,
+    });
+
     duplicateWarning = {
       transaction_id: duplicateTxId,
-      message: dupWarningItem?.message || `Hoá đơn này có thể trùng với giao dịch #${duplicateTxId} đã có trong hệ thống`,
+      message: warningMessage,
       link: `/finance?transaction=${duplicateTxId}`,
     };
   }
@@ -388,13 +399,115 @@ export function transformExpenseInvoiceToTransaction(
       supplier_id: supplierId,
       category_id: suggestions?.category_id ? Number(suggestions.category_id) : undefined,
       date: docDate,
-      reference_code: invoiceNo,
+      reference_code: '', // Số hoá đơn không đặt vào reference_code (chỉ dùng PO-/SO- để đồng bộ thanh toán)
       vat_invoice_code: vatInvoiceCode,
       description,
     },
     markedFields,
     duplicateWarning,
   };
+}
+
+export type DocumentPreviewMode = 'pdf' | 'text' | 'image' | 'unsupported';
+
+/**
+ * Helper thuần xác định phương thức hiển thị file an toàn theo `source` và `mimeType`
+ * Phòng chống XSS từ XML/SVG/HTML:
+ * - XML (source = xml hoặc mime = application/xml | text/xml): luôn hiển thị dạng text thuần ('text')
+ * - PDF (mime = application/pdf hoặc source = pdf khi mime hợp lệ): 'pdf' (dùng iframe)
+ * - Ảnh (mime = image/jpeg|png|webp|heic hoặc source = image): 'image' (dùng <img>)
+ * - Tuyệt đối chặn image/svg+xml, text/html, application/xhtml+xml, javascript...: 'unsupported'
+ */
+export function getDocumentPreviewMode(
+  source?: string | null,
+  mimeType?: string | null,
+): DocumentPreviewMode {
+  const normMime = (mimeType || '').toLowerCase().trim();
+  const normSource = (source || '').toLowerCase().trim();
+
+  // 1. Chặn tuyệt đối các định dạng có thể thực thi mã kịch bản (XSS)
+  const dangerousMimes = [
+    'image/svg+xml',
+    'image/svg',
+    'text/html',
+    'application/xhtml+xml',
+    'text/javascript',
+    'application/javascript',
+    'application/x-javascript',
+  ];
+  if (dangerousMimes.some((d) => normMime.includes(d))) {
+    return 'unsupported';
+  }
+
+  // 2. XML: luôn hiển thị text thuần, không bao giờ dùng iframe
+  if (
+    normSource === 'xml' ||
+    normMime === 'application/xml' ||
+    normMime === 'text/xml' ||
+    normMime.endsWith('+xml')
+  ) {
+    return 'text';
+  }
+
+  // 3. PDF: chỉ khi mime là application/pdf (hoặc source là pdf và mime rỗng/octet-stream)
+  if (
+    normMime === 'application/pdf' ||
+    (normSource === 'pdf' && (!normMime || normMime === 'application/pdf' || normMime === 'application/octet-stream'))
+  ) {
+    return 'pdf';
+  }
+
+  // 4. Ảnh: chỉ các định dạng an toàn (JPEG, PNG, WebP, HEIC)
+  const safeImageMimes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+  ];
+  if (safeImageMimes.includes(normMime)) {
+    return 'image';
+  }
+  if (normSource === 'image') {
+    if (!normMime || normMime === 'application/octet-stream') {
+      return 'image';
+    }
+    return 'unsupported';
+  }
+
+  return 'unsupported';
+}
+
+/**
+ * Dựng câu thông báo tiếng Việt từ mã cảnh báo (`code`) và tham số (`params`)
+ * Tuyệt đối không dùng câu tự do từ server để đảm bảo an toàn và tính nhất quán
+ */
+export function formatScanWarningMessage(code: string, params?: Record<string, any> | null): string {
+  switch (code) {
+    case 'duplicate_transaction_id': {
+      const txId = params?.transaction_id;
+      const vatCode = params?.vat_invoice_code || params?.reference_code;
+      const supplier = params?.supplier_name;
+      if (vatCode && supplier) {
+        return `Hoá đơn ${vatCode} (${supplier}) có thể trùng với giao dịch #${txId} đã có trong hệ thống`;
+      }
+      if (vatCode) {
+        return `Hoá đơn ${vatCode} có thể trùng với giao dịch #${txId} đã có trong hệ thống`;
+      }
+      if (txId) {
+        return `Hoá đơn này có thể trùng với giao dịch #${txId} đã có trong hệ thống`;
+      }
+      return 'Hoá đơn này có thể trùng với một giao dịch chi đã có trong hệ thống';
+    }
+    case 'subtotal_mismatch': {
+      return 'Tổng tiền các dòng chi tiết không khớp với tổng tiền hàng trên chứng từ';
+    }
+    case 'tax_mismatch': {
+      return 'Tiền thuế tính toán không khớp với tiền thuế ghi trên chứng từ';
+    }
+    default:
+      return 'Phát hiện cảnh báo khi đối chiếu chứng từ';
+  }
 }
 
 /**

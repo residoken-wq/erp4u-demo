@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Tag, Button, Select, Space, Typography, message } from 'antd';
+import { Card, Tag, Button, Select, Space, Typography, message, theme } from 'antd';
 import {
   FileSearchOutlined,
   ArrowRightOutlined,
@@ -36,6 +36,7 @@ const KIND_INFO: Record<string, { label: string; route: string; color: string }>
 };
 
 export const ScanCard: React.FC<ScanCardProps> = ({ scan, onKindChanged }) => {
+  const { token } = theme.useToken();
   const navigate = useNavigate();
   const [currentKind, setCurrentKind] = useState<string>(scan.kind || 'supplier_quote');
   const [changing, setChanging] = useState<boolean>(false);
@@ -73,16 +74,16 @@ export const ScanCard: React.FC<ScanCardProps> = ({ scan, onKindChanged }) => {
       style={{
         marginTop: 10,
         borderRadius: 8,
-        border: '1px solid #e2e8f0',
-        background: '#ffffff',
+        border: `1px solid ${token.colorBorderSecondary}`,
+        background: token.colorBgContainer,
         boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
       }}
       bodyStyle={{ padding: '12px 14px' }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <Space size={6}>
-          <FileSearchOutlined style={{ color: '#272F72', fontSize: 16 }} />
-          <Text strong style={{ fontSize: 13, color: '#0f172a' }}>
+          <FileSearchOutlined style={{ color: token.colorPrimary, fontSize: 16 }} />
+          <Text strong style={{ fontSize: 13, color: token.colorTextHeading }}>
             Chứng từ AI đã nhận diện
           </Text>
         </Space>
@@ -91,13 +92,13 @@ export const ScanCard: React.FC<ScanCardProps> = ({ scan, onKindChanged }) => {
         </Tag>
       </div>
 
-      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: token.colorTextSecondary, marginBottom: 12 }}>
         Định dạng: <b>{scan.source?.toUpperCase()}</b> &bull; Kích thước: <b>{(scan.size_bytes / 1024).toFixed(1)} KB</b>
         {scan.page_count > 1 ? ` • ${scan.page_count} trang` : ''}
       </div>
 
-      <div style={{ background: '#f8fafc', padding: 8, borderRadius: 6, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Text style={{ fontSize: 12, color: '#475569', flexShrink: 0 }}>
+      <div style={{ background: token.colorBgLayout, padding: 8, borderRadius: 6, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Text style={{ fontSize: 12, color: token.colorTextSecondary, flexShrink: 0 }}>
           <SwapOutlined /> Đổi loại chứng từ:
         </Text>
         <Select
@@ -120,7 +121,7 @@ export const ScanCard: React.FC<ScanCardProps> = ({ scan, onKindChanged }) => {
           size="small"
           icon={<ArrowRightOutlined />}
           onClick={handleOpenReview}
-          style={{ borderRadius: 6, background: '#272F72', borderColor: '#272F72' }}
+          style={{ borderRadius: 6, background: token.colorPrimary, borderColor: token.colorPrimary }}
         >
           Mở để duyệt
         </Button>
