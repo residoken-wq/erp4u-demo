@@ -6,6 +6,7 @@ import {
   Button,
   Typography,
   Tooltip,
+  Space,
   message as antdMessage,
 } from 'antd';
 import {
@@ -19,7 +20,22 @@ import {
   PaperClipOutlined,
   UploadOutlined,
   LoadingOutlined,
+  AudioOutlined,
+  CheckOutlined,
 } from '@ant-design/icons';
+import { useVoiceRecorder } from './voice/useVoiceRecorder';
+import { useBrowserSpeech } from './voice/useBrowserSpeech';
+import {
+  VoiceConsentModal,
+  hasUserGivenVoiceConsent,
+  wasPermissionDeniedInSession,
+  markPermissionDeniedInSession,
+} from './voice/VoiceConsentModal';
+import { getVoiceConfig, VoiceConfig } from './voice/voiceApi';
+import {
+  isBrowserSpeechSupported,
+  isMediaRecorderSupported,
+} from './voice/voiceStateMachine';
 import { uploadScanDocument } from '../documents/documentScanApi';
 import { validateScanFile } from '../documents/documentScanTransformers';
 import { API_URL } from '../../config';
@@ -69,6 +85,11 @@ export const CopilotPanel: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [voiceConfig, setVoiceConfig] = useState<VoiceConfig | null>(null);
+  const [hasVoiceInput, setHasVoiceInput] = useState<boolean>(false);
+  const [consentModalOpen, setConsentModalOpen] = useState<boolean>(false);
+  const textareaRef = useRef<any>(null);
+
   const streamCoordinatorRef = useRef(new StreamCoordinator());
   const selectTrackerRef = useRef(new RequestTracker());
 
@@ -111,8 +132,117 @@ export const CopilotPanel: React.FC = () => {
   useEffect(() => {
     if (open) {
       loadConversations();
+      getVoiceConfig(API_URL)
+        .then((cfg) => setVoiceConfig(cfg))
+        .catch(() => setVoiceConfig({ enabled: false, provider: 'gemini', max_seconds: 60 }));
     }
   }, [open]);
+
+  // Determine effective provider: if provider is 'browser' and supported, use browser speech; otherwise fallback to gemini
+  const effectiveProvider =
+    voiceConfig?.provider === 'browser' && isBrowserSpeechSupported()
+      ? 'browser'
+      : 'gemini';
+
+  const handleTranscriptReceived = (text: string) => {
+    if (!text || !text.trim()) return;
+    setInput((prev) => {
+      const trimmed = prev.trim();
+      return trimmed ? `${trimmed} ${text.trim()}` : text.trim();
+    });
+    setHasVoiceInput(true);
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 50);
+  };
+
+  const handleVoiceError = (errText: string, code?: string) => {
+    if (code === 'NotAllowedError' || code === 'PERMISSION_DENIED') {
+      markPermissionDeniedInSession();
+      antdMessage.error(
+        'Microphone bị từ chối hoặc bị chặn. Vui lòng cấp quyền micro trên thanh địa chỉ trình duyệt để tiếp tục.',
+      );
+    } else {
+      antdMessage.error(errText);
+    }
+  };
+
+  const recorder = useVoiceRecorder({
+    baseUrl: API_URL,
+    maxSeconds: voiceConfig?.max_seconds || 60,
+    onTranscript: handleTranscriptReceived,
+    onError: handleVoiceError,
+  });
+
+  const browserSpeech = useBrowserSpeech({
+    maxSeconds: voiceConfig?.max_seconds || 60,
+    onTranscript: handleTranscriptReceived,
+    onError: handleVoiceError,
+  });
+
+  const isVoiceRecording =
+    effectiveProvider === 'browser'
+      ? browserSpeech.isListening
+      : recorder.isRecording || recorder.isUploading;
+
+  const voiceSeconds =
+    effectiveProvider === 'browser' ? browserSpeech.seconds : recorder.seconds;
+
+  const handleStartVoice = () => {
+    if (isStreaming || uploadingScan) return;
+
+    if (wasPermissionDeniedInSession()) {
+      antdMessage.warning(
+        'Quyền micro đã bị từ chối trong phiên này. Vui lòng mở quyền micro trên thanh địa chỉ trình duyệt để dùng lại.',
+      );
+      return;
+    }
+
+    if (!hasUserGivenVoiceConsent()) {
+      setConsentModalOpen(true);
+      return;
+    }
+
+    if (effectiveProvider === 'browser') {
+      browserSpeech.startListening();
+    } else {
+      recorder.startRecording(true);
+    }
+  };
+
+  const handleStopVoice = () => {
+    if (effectiveProvider === 'browser') {
+      browserSpeech.stopListening();
+    } else {
+      recorder.stopRecording();
+    }
+  };
+
+  const handleCancelVoice = () => {
+    if (effectiveProvider === 'browser') {
+      browserSpeech.cancelListening();
+    } else {
+      recorder.cancelRecording();
+    }
+  };
+
+  // Esc key cancels voice recording
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isVoiceRecording) {
+        e.preventDefault();
+        handleCancelVoice();
+        antdMessage.info('Đã huỷ ghi âm');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isVoiceRecording]);
+
+  // Can use voice: enabled and supported
+  const canUseVoice = Boolean(
+    voiceConfig?.enabled && (isMediaRecorderSupported() || isBrowserSpeechSupported()),
+  );
 
   // Load active conversation details with fast-switching race condition prevention
   const selectConversation = async (id: string) => {
@@ -199,6 +329,9 @@ export const CopilotPanel: React.FC = () => {
 
   const handleClosePanel = () => {
     streamCoordinatorRef.current.cancelCurrent();
+    if (isVoiceRecording) {
+      handleCancelVoice();
+    }
     setIsStreaming(false);
     setCurrentSteps([]);
     setOpen(false);
@@ -239,15 +372,19 @@ export const CopilotPanel: React.FC = () => {
       return;
     }
 
+    const inputModeToSend: 'text' | 'voice' = hasVoiceInput ? 'voice' : 'text';
+
     // Add user message to state
     const userMsg: ConversationMessage = {
       id: `usr-${Date.now()}`,
       role: 'user',
       content: messageToSend,
+      input_mode: inputModeToSend,
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
+    setHasVoiceInput(false);
     setIsStreaming(true);
     setCurrentSteps([]);
 
@@ -260,6 +397,7 @@ export const CopilotPanel: React.FC = () => {
       await sendChatMessageStream({
         conversation_id: targetConvId || undefined,
         message: messageToSend,
+        input_mode: inputModeToSend,
         signal: session.signal,
         baseUrl: API_URL,
         onEvent: (event) => {
@@ -534,6 +672,63 @@ export const CopilotPanel: React.FC = () => {
                   borderTop: '1px solid #e2e8f0',
                 }}
               >
+                {/* Voice Recording Indicator Bar */}
+                {isVoiceRecording && (
+                  <div
+                    role="region"
+                    aria-live="polite"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      borderRadius: 8,
+                      padding: '6px 12px',
+                      marginBottom: 8,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          backgroundColor: '#ef4444',
+                          display: 'inline-block',
+                          animation: 'voicePulse 1.2s infinite ease-in-out',
+                        }}
+                      />
+                      <Text strong style={{ color: '#b91c1c', fontSize: 13 }}>
+                        {recorder.isUploading
+                          ? 'Đang nhận diện giọng nói…'
+                          : `Đang ghi âm: ${String(Math.floor(voiceSeconds / 60)).padStart(2, '0')}:${String(voiceSeconds % 60).padStart(2, '0')} / 01:00`}
+                      </Text>
+                    </div>
+                    <Space size="small">
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<CheckOutlined />}
+                        onClick={handleStopVoice}
+                        loading={recorder.isUploading}
+                        style={{ background: '#dc2626', borderColor: '#dc2626', fontSize: 12, height: 26, borderRadius: 6 }}
+                      >
+                        Dừng
+                      </Button>
+                      <Button
+                        size="small"
+                        icon={<CloseOutlined />}
+                        onClick={handleCancelVoice}
+                        disabled={recorder.isUploading}
+                        style={{ fontSize: 12, height: 26, borderRadius: 6 }}
+                      >
+                        Huỷ (Esc)
+                      </Button>
+                    </Space>
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                   <input
                     type="file"
@@ -555,10 +750,42 @@ export const CopilotPanel: React.FC = () => {
                       style={{ height: 32, borderRadius: 8, color: '#64748b' }}
                     />
                   </Tooltip>
+                  {canUseVoice && (
+                    <Tooltip title={isVoiceRecording ? 'Đang ghi âm...' : 'Nhập bằng giọng nói (Micro)'}>
+                      <Button
+                        type={isVoiceRecording ? 'primary' : 'text'}
+                        danger={isVoiceRecording}
+                        icon={
+                          <AudioOutlined
+                            style={{
+                              color: isVoiceRecording ? '#ffffff' : '#64748b',
+                              fontSize: 16,
+                            }}
+                          />
+                        }
+                        disabled={isStreaming || uploadingScan || (isVoiceRecording && recorder.isUploading)}
+                        onClick={isVoiceRecording ? handleStopVoice : handleStartVoice}
+                        aria-label="Nhập bằng giọng nói"
+                        aria-pressed={isVoiceRecording}
+                        style={{
+                          height: 32,
+                          borderRadius: 8,
+                          background: isVoiceRecording ? '#ef4444' : undefined,
+                          borderColor: isVoiceRecording ? '#ef4444' : undefined,
+                        }}
+                      />
+                    </Tooltip>
+                  )}
                   <Input.TextArea
+                    ref={textareaRef}
                     placeholder="Hỏi ERP4U Copilot bất cứ điều gì về ERP..."
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    onChange={(e) => {
+                      setInput(e.target.value);
+                      if (!e.target.value.trim()) {
+                        setHasVoiceInput(false);
+                      }
+                    }}
                     onKeyDown={handleKeyDown}
                     disabled={isStreaming}
                     maxLength={4000}
@@ -612,6 +839,29 @@ export const CopilotPanel: React.FC = () => {
           )}
         </div>
       </Drawer>
+
+      {/* Voice Consent Modal */}
+      <VoiceConsentModal
+        open={consentModalOpen}
+        provider={effectiveProvider}
+        onConsent={() => {
+          setConsentModalOpen(false);
+          if (effectiveProvider === 'browser') {
+            browserSpeech.startListening();
+          } else {
+            recorder.startRecording(true);
+          }
+        }}
+        onCancel={() => setConsentModalOpen(false)}
+      />
+
+      <style>{`
+        @keyframes voicePulse {
+          0% { transform: scale(0.95); opacity: 0.8; }
+          50% { transform: scale(1.25); opacity: 1; }
+          100% { transform: scale(0.95); opacity: 0.8; }
+        }
+      `}</style>
     </>
   );
 };

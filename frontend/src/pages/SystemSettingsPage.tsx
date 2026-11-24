@@ -11,7 +11,7 @@ import {
     QrcodeOutlined, BgColorsOutlined, CheckCircleOutlined, ReloadOutlined, 
     SafetyCertificateOutlined, EyeOutlined, ProjectOutlined, DollarOutlined,
     GlobalOutlined, BankOutlined, PhoneOutlined, PictureOutlined, CarOutlined, ThunderboltOutlined,
-    SendOutlined, MessageOutlined, RobotOutlined, AlertOutlined
+    SendOutlined, MessageOutlined, RobotOutlined, AlertOutlined, AudioOutlined
 } from '@ant-design/icons';
 import api from '../utils/api';
 import { SketchPicker } from 'react-color';
@@ -24,6 +24,7 @@ import { DEFAULT_DELIVERY_NOTICE_TEMPLATES, PLACEHOLDER_GUIDE, DeliveryNoticeTem
 import { ZnsConfigTab } from '../components/settings/ZnsConfigTab';
 import { ChatbotConfigTab } from '../components/system/ChatbotConfigTab';
 import AlertAdminSettingsTab from '../components/settings/AlertAdminSettingsTab';
+import AiVoiceAdminSettingsTab from '../components/settings/AiVoiceAdminSettingsTab';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -197,6 +198,16 @@ const SystemSettingsPage: React.FC = () => {
                                 </div>
                             ),
                             children: <div style={{ padding: '24px 32px' }}><AlertAdminSettingsTab /></div>
+                        },
+                        {
+                            key: 'ai_voice',
+                            label: (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
+                                    <AudioOutlined style={{ fontSize: 16 }} />
+                                    <span>Giọng Nói AI (Copilot Voice)</span>
+                                </div>
+                            ),
+                            children: <div style={{ padding: '24px 32px' }}><AiVoiceAdminSettingsTab /></div>
                         },
                         {
                             key: 'api_keys',

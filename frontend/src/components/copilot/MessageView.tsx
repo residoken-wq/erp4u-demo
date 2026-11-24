@@ -7,6 +7,7 @@ import {
   LinkOutlined,
   CompassOutlined,
   WarningOutlined,
+  AudioOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
@@ -165,7 +166,19 @@ export const MessageView: React.FC<MessageViewProps> = ({
                     style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6 }}
                   />
                 ) : isUser ? (
-                  <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                  <div style={{ whiteSpace: 'pre-wrap' }}>
+                    {msg.input_mode === 'voice' && (
+                      <span
+                        role="img"
+                        aria-label="Tin nhắn nhập bằng giọng nói"
+                        title="Tin nhắn nhập bằng giọng nói"
+                        style={{ marginRight: 6, display: 'inline-flex', alignItems: 'center' }}
+                      >
+                        <AudioOutlined style={{ fontSize: 13 }} />
+                      </span>
+                    )}
+                    {msg.content}
+                  </div>
                 ) : (
                   <div className="copilot-markdown">
                     <ReactMarkdown

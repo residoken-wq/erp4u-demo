@@ -5,6 +5,7 @@ import { AiConversation } from '../ai-conversation.entity';
 import { AiConversationMessage } from '../ai-conversation-message.entity';
 import { AiDocumentScan } from '../ai-document-scan.entity';
 import { AiDocumentScans1795317950000 } from '../../../database/migrations/1795317950000-AiDocumentScans';
+import { AiVoiceInputMode1795317960000 } from '../../../database/migrations/1795317960000-AiVoiceInputMode';
 import { getMetadataArgsStorage } from 'typeorm';
 
 describe('AI Entities (Premium)', () => {
@@ -229,19 +230,23 @@ describe('AI Entities (Premium)', () => {
       expect(colNames).toContain('drafts');
       expect(colNames).toContain('audit_log_id');
       expect(colNames).toContain('error_code');
+      expect(colNames).toContain('input_mode');
       expect(colNames).toContain('created_at');
 
       const roleCol = columns.find((c) => c.propertyName === 'role');
       expect(roleCol?.options.length).toBe(20);
 
+      const inputModeCol = columns.find((c) => c.propertyName === 'input_mode');
+      expect(inputModeCol?.options.length).toBe(10);
+      expect(inputModeCol?.options.default).toBe('text');
+
       const errCol = columns.find((c) => c.propertyName === 'error_code');
       expect(errCol?.options.length).toBe(50);
 
       const checks = storage.checks.filter((c) => c.target === AiConversationMessage);
-      expect(checks.length).toBeGreaterThan(0);
-      expect(checks[0].expression).toContain('role');
-      expect(checks[0].expression).toContain("'user'");
-      expect(checks[0].expression).toContain("'assistant'");
+      expect(checks.length).toBeGreaterThanOrEqual(2);
+      expect(checks.some(c => c.expression.includes('role') && c.expression.includes("'user'") && c.expression.includes("'assistant'"))).toBe(true);
+      expect(checks.some(c => c.expression.includes('input_mode') && c.expression.includes("'text'") && c.expression.includes("'voice'"))).toBe(true);
     });
 
     it('has indexes on (conversation_id, created_at) and (created_at)', () => {
@@ -374,6 +379,44 @@ describe('AI Entities (Premium)', () => {
 
       await migration.down(mockRunnerDown);
       expect(downQueries.length).toBeGreaterThanOrEqual(6);
+      downQueries.forEach((q) => {
+        expect(q).not.toContain('"public".');
+      });
+    });
+  });
+
+  describe('AiVoiceInputMode1795317960000 Migration up & down', () => {
+    it('executes up and down queries cleanly without hardcoded schema', async () => {
+      const migration = new AiVoiceInputMode1795317960000();
+      const upQueries: string[] = [];
+      const downQueries: string[] = [];
+
+      const mockRunnerUp = {
+        query: jest.fn().mockImplementation((q: string) => {
+          upQueries.push(q);
+          return Promise.resolve();
+        }),
+      } as any;
+
+      const mockRunnerDown = {
+        query: jest.fn().mockImplementation((q: string) => {
+          downQueries.push(q);
+          return Promise.resolve();
+        }),
+      } as any;
+
+      await migration.up(mockRunnerUp);
+      expect(upQueries.length).toBe(2);
+      expect(upQueries[0]).toContain('ADD "input_mode" character varying(10) NOT NULL DEFAULT \'text\'');
+      expect(upQueries[1]).toContain('ADD CONSTRAINT "CHK_6be2fa8d0cab5ef93e0a4b1be1" CHECK ("input_mode" IN (\'text\', \'voice\'))');
+      upQueries.forEach((q) => {
+        expect(q).not.toContain('"public".');
+      });
+
+      await migration.down(mockRunnerDown);
+      expect(downQueries.length).toBe(2);
+      expect(downQueries[0]).toContain('DROP CONSTRAINT "CHK_6be2fa8d0cab5ef93e0a4b1be1"');
+      expect(downQueries[1]).toContain('DROP COLUMN "input_mode"');
       downQueries.forEach((q) => {
         expect(q).not.toContain('"public".');
       });

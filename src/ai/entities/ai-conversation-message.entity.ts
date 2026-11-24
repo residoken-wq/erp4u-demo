@@ -32,6 +32,7 @@ export interface CopilotDraftItem {
 
 @Entity('ai_conversation_messages')
 @Check(`"role" IN ('user', 'assistant')`)
+@Check(`"input_mode" IN ('text', 'voice')`)
 @Index(['conversation_id', 'created_at'])
 @Index(['created_at'])
 export class AiConversationMessage {
@@ -66,6 +67,9 @@ export class AiConversationMessage {
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   error_code: string | null;
+
+  @Column({ type: 'varchar', length: 10, default: 'text' })
+  input_mode: 'text' | 'voice' | string;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
