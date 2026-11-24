@@ -68,12 +68,12 @@ export class AiConversationMessage {
   @Column({ type: 'varchar', length: 50, nullable: true })
   error_code: string | null;
 
-  @Column({ type: 'varchar', length: 10, default: 'text' })
-  input_mode: 'text' | 'voice' | string;
-
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
   @Column({ type: 'jsonb', nullable: true })
   drafts: CopilotDraftItem[] | null;
+
+  @Column({ type: 'varchar', length: 10, default: 'text' })
+  input_mode: 'text' | 'voice' | string;
 }
