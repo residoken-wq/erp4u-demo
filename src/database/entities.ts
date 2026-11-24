@@ -112,6 +112,7 @@ import {
   AiDraft,
   AiConversation,
   AiConversationMessage,
+  AiDocumentScan,
 } from '../ai/entities';
 import {
   Alert,
@@ -186,6 +187,7 @@ export const PREMIUM_ENTITIES = [
   AiDraft,
   AiConversation,
   AiConversationMessage,
+  AiDocumentScan,
   Alert,
   AlertSetting,
   AlertUserPref,

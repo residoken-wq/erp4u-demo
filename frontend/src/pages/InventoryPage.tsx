@@ -8,6 +8,10 @@ import {
 import api from '../utils/api';
 import dayjs from 'dayjs';
 import useMobile from '../hooks/useMobile';
+import DocumentScanButton from '../components/documents/DocumentScanButton';
+import ScanReviewGoodsReceiptModal from '../components/documents/ScanReviewGoodsReceiptModal';
+import OriginalDocumentLink from '../components/documents/OriginalDocumentLink';
+import useAiScan from '../hooks/useAiScan';
 
 
 const { Option } = Select;
@@ -24,6 +28,17 @@ const WAREHOUSES = [
 const InventoryPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const isMobile = useMobile();
+
+    const [isAiScanModalOpen, setIsAiScanModalOpen] = useState(false);
+    const [aiScanData, setAiScanData] = useState<any>(null);
+
+    useAiScan({
+        expectedKind: 'delivery_note',
+        onScanLoaded: (scanDetail) => {
+            setAiScanData(scanDetail);
+            setIsAiScanModalOpen(true);
+        }
+    });
 
     const [products, setProducts] = useState<any[]>([]);
     const [materials, setMaterials] = useState<any[]>([]);
@@ -784,6 +799,15 @@ const InventoryPage: React.FC = () => {
                                 <span style={{ color: showNegativeOnly ? 'red' : 'inherit' }}>Chỉ hiện tồn âm</span>
                             </Checkbox>
                             <Divider type="vertical" />
+                            <DocumentScanButton
+                                kind="delivery_note"
+                                moduleCode="INVENTORY"
+                                buttonText="Quét Phiếu Giao Hàng"
+                                onSuccess={(scanRes) => {
+                                    setAiScanData(scanRes);
+                                    setIsAiScanModalOpen(true);
+                                }}
+                            />
                             <Button type="primary" icon={<SwapOutlined />} onClick={() => { form.resetFields(); setIsModalOpen(true) }}>Điều Chỉnh Kho</Button>
                             <Button icon={<ReloadOutlined />} onClick={fetchData}>Làm mới</Button>
                             <Button type="text" danger icon={<AlertOutlined />} onClick={() => setIsResetModalOpen(true)} title="Admin Reset System" />
@@ -1352,6 +1376,7 @@ const InventoryPage: React.FC = () => {
                                             <Popconfirm title="Bạn có chắc chắn muốn hủy phiếu nhập này?" onConfirm={() => handleDeleteReceipt(r.id)}>
                                                 <Button danger size="small" icon={<DeleteOutlined />}>Hủy</Button>
                                             </Popconfirm>
+                                            <OriginalDocumentLink resultType="goods_receipt" resultId={r.id} />
                                         </Space>
                                     )
                                 }
@@ -1947,6 +1972,18 @@ const InventoryPage: React.FC = () => {
                     ]}
                 />
             </Modal>
+
+            {aiScanData && (
+                <ScanReviewGoodsReceiptModal
+                    open={isAiScanModalOpen}
+                    onClose={() => setIsAiScanModalOpen(false)}
+                    scan={aiScanData}
+                    onSuccess={() => {
+                        setIsAiScanModalOpen(false);
+                        fetchData();
+                    }}
+                />
+            )}
         </div>
     );
 };

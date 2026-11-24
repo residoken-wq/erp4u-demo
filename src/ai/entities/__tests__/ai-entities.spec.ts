@@ -3,21 +3,25 @@ import { AiAuditLog } from '../ai-audit-log.entity';
 import { AiDraft } from '../ai-draft.entity';
 import { AiConversation } from '../ai-conversation.entity';
 import { AiConversationMessage } from '../ai-conversation-message.entity';
+import { AiDocumentScan } from '../ai-document-scan.entity';
+import { AiDocumentScans1795317950000 } from '../../../database/migrations/1795317950000-AiDocumentScans';
 import { getMetadataArgsStorage } from 'typeorm';
 
 describe('AI Entities (Premium)', () => {
-  it('registers AiAuditLog, AiDraft, AiConversation, and AiConversationMessage in PREMIUM_ENTITIES', () => {
+  it('registers AiAuditLog, AiDraft, AiConversation, AiConversationMessage, and AiDocumentScan in PREMIUM_ENTITIES', () => {
     expect(PREMIUM_ENTITIES).toContain(AiAuditLog);
     expect(PREMIUM_ENTITIES).toContain(AiDraft);
     expect(PREMIUM_ENTITIES).toContain(AiConversation);
     expect(PREMIUM_ENTITIES).toContain(AiConversationMessage);
+    expect(PREMIUM_ENTITIES).toContain(AiDocumentScan);
   });
 
-  it('registers AiAuditLog, AiDraft, AiConversation, and AiConversationMessage in ENTITIES', () => {
+  it('registers AiAuditLog, AiDraft, AiConversation, AiConversationMessage, and AiDocumentScan in ENTITIES', () => {
     expect(ENTITIES).toContain(AiAuditLog);
     expect(ENTITIES).toContain(AiDraft);
     expect(ENTITIES).toContain(AiConversation);
     expect(ENTITIES).toContain(AiConversationMessage);
+    expect(ENTITIES).toContain(AiDocumentScan);
   });
 
   describe('AiAuditLog metadata', () => {
@@ -263,6 +267,116 @@ describe('AI Entities (Premium)', () => {
       expect(auditRel).toBeDefined();
       expect(auditRel?.options.nullable).toBe(true);
       expect(auditRel?.options.onDelete).toBe('SET NULL');
+    });
+  });
+
+  describe('AiDocumentScan metadata', () => {
+    it('is mapped to table ai_document_scans', () => {
+      const storage = getMetadataArgsStorage();
+      const tableMeta = storage.tables.find(
+        (t) => t.target === AiDocumentScan && t.name === 'ai_document_scans',
+      );
+      expect(tableMeta).toBeDefined();
+    });
+
+    it('has required columns and check constraints on kind, source, status', () => {
+      const storage = getMetadataArgsStorage();
+      const columns = storage.columns.filter((c) => c.target === AiDocumentScan);
+      const colNames = columns.map((c) => c.propertyName);
+
+      expect(colNames).toContain('kind');
+      expect(colNames).toContain('source');
+      expect(colNames).toContain('status');
+      expect(colNames).toContain('file_key');
+      expect(colNames).toContain('mime');
+      expect(colNames).toContain('size_bytes');
+      expect(colNames).toContain('page_count');
+      expect(colNames).toContain('sha256');
+      expect(colNames).toContain('extracted');
+      expect(colNames).toContain('field_confidence');
+      expect(colNames).toContain('warnings');
+      expect(colNames).toContain('error_code');
+      expect(colNames).toContain('result_type');
+      expect(colNames).toContain('result_id');
+      expect(colNames).toContain('created_by');
+      expect(colNames).toContain('created_at');
+      expect(colNames).toContain('expires_at');
+
+      const kindCol = columns.find((c) => c.propertyName === 'kind');
+      expect(kindCol?.options.length).toBe(50);
+
+      const statusCol = columns.find((c) => c.propertyName === 'status');
+      expect(statusCol?.options.length).toBe(20);
+      expect(statusCol?.options.default).toBe('processing');
+
+      const sourceCol = columns.find((c) => c.propertyName === 'source');
+      expect(sourceCol?.options.length).toBe(20);
+
+      const pageCountCol = columns.find((c) => c.propertyName === 'page_count');
+      expect(pageCountCol?.options.default).toBe(1);
+
+      const checks = storage.checks.filter((c) => c.target === AiDocumentScan);
+      expect(checks.length).toBe(3);
+
+      const checkExpressions = checks.map((c) => c.expression);
+      expect(checkExpressions.some((e) => e.includes('kind') && e.includes("'supplier_quote'"))).toBe(true);
+      expect(checkExpressions.some((e) => e.includes('source') && e.includes("'xml'"))).toBe(true);
+      expect(checkExpressions.some((e) => e.includes('status') && e.includes("'processing'"))).toBe(true);
+    });
+
+    it('has 4 indexes as specified in the plan', () => {
+      const storage = getMetadataArgsStorage();
+      const indices = storage.indices.filter((i) => i.target === AiDocumentScan);
+      const indexedColumns = indices.map((i) => i.columns);
+
+      expect(indexedColumns).toContainEqual(['created_by', 'created_at']);
+      expect(indexedColumns).toContainEqual(['result_type', 'result_id']);
+      expect(indexedColumns).toContainEqual(['expires_at']);
+      expect(indexedColumns).toContainEqual(['sha256']);
+    });
+
+    it('has relation to User on created_by with onDelete SET NULL', () => {
+      const storage = getMetadataArgsStorage();
+      const creatorRel = storage.relations.find(
+        (r) => r.target === AiDocumentScan && r.propertyName === 'creator',
+      );
+      expect(creatorRel).toBeDefined();
+      expect(creatorRel?.options.nullable).toBe(true);
+      expect(creatorRel?.options.onDelete).toBe('SET NULL');
+    });
+  });
+
+  describe('AiDocumentScans1795317950000 Migration up & down', () => {
+    it('executes up and down queries cleanly without hardcoded schema', async () => {
+      const migration = new AiDocumentScans1795317950000();
+      const upQueries: string[] = [];
+      const downQueries: string[] = [];
+
+      const mockRunnerUp = {
+        query: jest.fn().mockImplementation((q: string) => {
+          upQueries.push(q);
+          return Promise.resolve();
+        }),
+      } as any;
+
+      const mockRunnerDown = {
+        query: jest.fn().mockImplementation((q: string) => {
+          downQueries.push(q);
+          return Promise.resolve();
+        }),
+      } as any;
+
+      await migration.up(mockRunnerUp);
+      expect(upQueries.length).toBeGreaterThanOrEqual(6);
+      upQueries.forEach((q) => {
+        expect(q).not.toContain('"public".');
+      });
+
+      await migration.down(mockRunnerDown);
+      expect(downQueries.length).toBeGreaterThanOrEqual(6);
+      downQueries.forEach((q) => {
+        expect(q).not.toContain('"public".');
+      });
     });
   });
 });

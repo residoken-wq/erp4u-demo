@@ -19,6 +19,10 @@ import api from '../utils/api';
 import { brandChartPalette } from '../theme/brand';
 import CashFlowDashboard from '../components/finance/CashFlowDashboard';
 import PaymentVoucherPrintModal from '../components/finance/PaymentVoucherPrintModal';
+import DocumentScanButton from '../components/documents/DocumentScanButton';
+import ScanReviewExpenseModal from '../components/documents/ScanReviewExpenseModal';
+import OriginalDocumentLink from '../components/documents/OriginalDocumentLink';
+import useAiScan from '../hooks/useAiScan';
 
 const { Option } = Select;
 
@@ -43,6 +47,17 @@ const FinancePage: React.FC = () => {
     const [projects, setProjects] = useState<any[]>([]); 
     const [salesOrders, setSalesOrders] = useState<any[]>([]); 
     const [summary, setSummary] = useState({ income: 0, expense: 0, balance: 0 });
+
+    const [isAiScanModalOpen, setIsAiScanModalOpen] = useState(false);
+    const [aiScanData, setAiScanData] = useState<any>(null);
+
+    useAiScan({
+        expectedKind: 'expense_invoice',
+        onScanLoaded: (scanDetail) => {
+            setAiScanData(scanDetail);
+            setIsAiScanModalOpen(true);
+        }
+    });
 
     // UI State
     const [isTransModalOpen, setIsTransModalOpen] = useState(false);
@@ -875,14 +890,25 @@ const FinancePage: React.FC = () => {
                                         />
                                     </Space>
                                     {canCreate && (
-                                        <Button 
-                                            type="primary" 
-                                            danger 
-                                            icon={<PlusOutlined />} 
-                                            onClick={() => { formTrans.resetFields(); formTrans.setFieldsValue({ type: 'EXPENSE' }); setIsTransModalOpen(true) }}
-                                        >
-                                            Tạo Phiếu Chi
-                                        </Button>
+                                        <Space>
+                                            <DocumentScanButton
+                                                kind="expense_invoice"
+                                                moduleCode="FINANCE"
+                                                buttonText="Quét Hoá Đơn Chi Phí"
+                                                onSuccess={(scanRes) => {
+                                                    setAiScanData(scanRes);
+                                                    setIsAiScanModalOpen(true);
+                                                }}
+                                            />
+                                            <Button 
+                                                type="primary" 
+                                                danger 
+                                                icon={<PlusOutlined />} 
+                                                onClick={() => { formTrans.resetFields(); formTrans.setFieldsValue({ type: 'EXPENSE' }); setIsTransModalOpen(true) }}
+                                            >
+                                                Tạo Phiếu Chi
+                                            </Button>
+                                        </Space>
                                     )}
                                 </div>
                                 <Table
@@ -1593,6 +1619,9 @@ const FinancePage: React.FC = () => {
                                     <a href={selectedTransaction.vat_invoice_url} target="_blank" rel="noreferrer">Xem file đính kèm</a>
                                 </Descriptions.Item>
                             )}
+                            <Descriptions.Item label="Chứng từ gốc" span={2}>
+                                <OriginalDocumentLink resultType="transaction" resultId={selectedTransaction.id} />
+                            </Descriptions.Item>
                         </Descriptions>
                     </div>
                 )}
@@ -1670,6 +1699,20 @@ const FinancePage: React.FC = () => {
                 onClose={() => { setIsPrintModalOpen(false); setPrintingTransaction(null); }}
                 transaction={printingTransaction}
             />
+
+            {aiScanData && (
+                <ScanReviewExpenseModal
+                    open={isAiScanModalOpen}
+                    onClose={() => setIsAiScanModalOpen(false)}
+                    scan={aiScanData}
+                    suppliers={suppliers}
+                    categories={categories.filter((c: any) => c.type === 'EXPENSE')}
+                    onSuccess={() => {
+                        setIsAiScanModalOpen(false);
+                        fetchData();
+                    }}
+                />
+            )}
         </div>
     );
 };

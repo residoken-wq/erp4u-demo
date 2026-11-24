@@ -11,6 +11,10 @@ import { handlePrintPO } from '../utils/printPurchasingTemplate';
 import { exportPOToExcel } from '../utils/exportPOToExcel';
 import useAiDraft from '../hooks/useAiDraft';
 import DraftPurchaseOrderModal from '../components/purchasing/DraftPurchaseOrderModal';
+import DocumentScanButton from '../components/documents/DocumentScanButton';
+import ScanReviewPurchaseOrderModal from '../components/documents/ScanReviewPurchaseOrderModal';
+import OriginalDocumentLink from '../components/documents/OriginalDocumentLink';
+import useAiScan from '../hooks/useAiScan';
 
 const { RangePicker } = DatePicker;
 
@@ -31,6 +35,17 @@ const PurchasingPage: React.FC = () => {
         onDraftLoaded: (draftDetail) => {
             setAiDraftData(draftDetail);
             setIsAiDraftModalOpen(true);
+        }
+    });
+
+    const [isAiScanModalOpen, setIsAiScanModalOpen] = useState(false);
+    const [aiScanData, setAiScanData] = useState<any>(null);
+
+    useAiScan({
+        expectedKind: 'supplier_quote',
+        onScanLoaded: (scanDetail) => {
+            setAiScanData(scanDetail);
+            setIsAiScanModalOpen(true);
         }
     });
 
@@ -902,6 +917,14 @@ const PurchasingPage: React.FC = () => {
                         </Space>
                     ) : (
                         <Space>
+                            <DocumentScanButton
+                                kind="supplier_quote"
+                                moduleCode="PURCHASE"
+                                onSuccess={(scanRes) => {
+                                    setAiScanData(scanRes);
+                                    setIsAiScanModalOpen(true);
+                                }}
+                            />
                             {(activeTab === 'REQ_NPL' || activeTab === 'REQ_GC') && <Button type="primary" onClick={handleCreatePooledPO} disabled={selectedReqs.length === 0}>+ Tạo PO Gộp ({selectedReqs.length})</Button>}
                             {(activeTab === 'MATERIAL' || activeTab === 'OUTSOURCING') && <Button type="primary" onClick={handleCreatePooledPO} disabled={selectedMainRows.length === 0} icon={<LinkOutlined />}>Gộp PO ({selectedMainRows.length})</Button>}
                             {(activeTab === 'MATERIAL' || activeTab === 'OUTSOURCING') && selectedMainRows.length > 0 && (
@@ -1099,6 +1122,11 @@ const PurchasingPage: React.FC = () => {
                 ]}
             >
                 <Descriptions size="small" bordered column={2} style={{ marginBottom: 16 }}>
+                    {currentPO?.id && (
+                        <Descriptions.Item label="Chứng từ gốc" span={2}>
+                            <OriginalDocumentLink resultType="purchase_order" resultId={currentPO.id} />
+                        </Descriptions.Item>
+                    )}
                     <Descriptions.Item label="NCC">
                         <Select
                             showSearch
@@ -2015,6 +2043,19 @@ const PurchasingPage: React.FC = () => {
                     suppliers={suppliers}
                     onSuccess={() => {
                         setIsAiDraftModalOpen(false);
+                        fetchData();
+                    }}
+                />
+            )}
+
+            {aiScanData && (
+                <ScanReviewPurchaseOrderModal
+                    open={isAiScanModalOpen}
+                    onClose={() => setIsAiScanModalOpen(false)}
+                    scan={aiScanData}
+                    suppliers={suppliers}
+                    onSuccess={() => {
+                        setIsAiScanModalOpen(false);
                         fetchData();
                     }}
                 />

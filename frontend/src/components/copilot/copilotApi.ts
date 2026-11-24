@@ -61,6 +61,7 @@ export interface ConversationMessage {
   tool_steps?: CopilotToolStep[] | null;
   sources?: CopilotSourceItem[] | null;
   drafts?: CopilotDraftItem[] | null;
+  scans?: any[] | null;
   error_code?: string | null;
   created_at: string;
 }
