@@ -4,6 +4,8 @@ import { AudioOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import {
   VoiceProvider,
   VOICE_CONSENT_KEY,
+  VOICE_CONSENT_KEY_PREFIX,
+  getVoiceConsentKey,
   VOICE_DENIED_SESSION_KEY,
   hasUserGivenVoiceConsent,
   saveUserVoiceConsent,
@@ -16,6 +18,8 @@ const { Text, Paragraph } = Typography;
 
 export {
   VOICE_CONSENT_KEY,
+  VOICE_CONSENT_KEY_PREFIX,
+  getVoiceConsentKey,
   VOICE_DENIED_SESSION_KEY,
   hasUserGivenVoiceConsent,
   saveUserVoiceConsent,
@@ -43,7 +47,7 @@ export const VoiceConsentModal: React.FC<VoiceConsentModalProps> = ({
     : 'Âm thanh được gửi tới nhà cung cấp AI (Gemini) để chuyển thành chữ, không lưu lại. Chữ sẽ hiện để bạn kiểm trước khi gửi.';
 
   const handleOk = () => {
-    saveUserVoiceConsent();
+    saveUserVoiceConsent(provider);
     onConsent();
   };
 

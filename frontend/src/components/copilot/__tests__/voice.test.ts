@@ -242,7 +242,7 @@ test('Voice STT Unit Tests (Task P9f1)', async (t) => {
     );
   });
 
-  await t.test('12. Lưu trữ đồng ý và từ chối trong Storage an toàn', () => {
+  await t.test('12. Lưu trữ đồng ý và từ chối trong Storage an toàn theo nguồn nhận dạng (Task P9f1-r2)', () => {
     const fakeStore: Record<string, string> = {};
     (globalThis as any).localStorage = {
       getItem: (k: string) => fakeStore[k] || null,
@@ -254,11 +254,74 @@ test('Voice STT Unit Tests (Task P9f1)', async (t) => {
       },
     };
 
+    // Ban đầu chưa đồng ý nguồn nào
+    assert.strictEqual(hasUserGivenVoiceConsent('gemini'), false);
+    assert.strictEqual(hasUserGivenVoiceConsent('browser'), false);
     assert.strictEqual(hasUserGivenVoiceConsent(), false);
-    saveUserVoiceConsent();
-    assert.strictEqual(hasUserGivenVoiceConsent(), true);
-    assert.strictEqual(fakeStore[VOICE_CONSENT_KEY], 'true');
 
+    // 1. Đồng ý gemini -> hasUserGivenVoiceConsent('browser') = false
+    saveUserVoiceConsent('gemini');
+    assert.strictEqual(hasUserGivenVoiceConsent('gemini'), true);
+    assert.strictEqual(hasUserGivenVoiceConsent(), true);
+    assert.strictEqual(hasUserGivenVoiceConsent('browser'), false, 'Đồng ý gemini không được làm browser thành true');
+    assert.strictEqual(fakeStore['erp4u_voice_consent_given:gemini'], 'true');
+    assert.strictEqual(fakeStore['erp4u_voice_consent_given:browser'], undefined);
+
+    // 2. Đồng ý browser không làm gemini thành true trừ khi đã có
+    const cleanStore: Record<string, string> = {};
+    (globalThis as any).localStorage = {
+      getItem: (k: string) => cleanStore[k] || null,
+      setItem: (k: string, v: string) => {
+        cleanStore[k] = v;
+      },
+      removeItem: (k: string) => {
+        delete cleanStore[k];
+      },
+    };
+
+    saveUserVoiceConsent('browser');
+    assert.strictEqual(hasUserGivenVoiceConsent('browser'), true);
+    assert.strictEqual(hasUserGivenVoiceConsent('gemini'), false, 'Đồng ý browser không làm gemini thành true');
+    assert.strictEqual(hasUserGivenVoiceConsent(), false);
+    assert.strictEqual(cleanStore['erp4u_voice_consent_given:browser'], 'true');
+    assert.strictEqual(cleanStore['erp4u_voice_consent_given:gemini'], undefined);
+
+    // 3. Bỏ khoá cũ: khoá cũ erp4u_voice_consent_given không coi là đồng ý cho browser; có thể coi là đồng ý gemini
+    const legacyStore: Record<string, string> = {
+      [VOICE_CONSENT_KEY]: 'true',
+    };
+    (globalThis as any).localStorage = {
+      getItem: (k: string) => legacyStore[k] || null,
+      setItem: (k: string, v: string) => {
+        legacyStore[k] = v;
+      },
+      removeItem: (k: string) => {
+        delete legacyStore[k];
+      },
+    };
+    assert.strictEqual(hasUserGivenVoiceConsent('gemini'), true, 'Khoá cũ có thể coi là đồng ý cho gemini');
+    assert.strictEqual(hasUserGivenVoiceConsent(), true);
+    assert.strictEqual(hasUserGivenVoiceConsent('browser'), false, 'Khoá cũ KHÔNG được coi là đồng ý cho browser');
+
+    // 4. LocalStorage ném lỗi -> coi như chưa đồng ý, không crash
+    (globalThis as any).localStorage = {
+      getItem: () => {
+        throw new Error('SecurityError: The operation is insecure.');
+      },
+      setItem: () => {
+        throw new Error('QuotaExceededError');
+      },
+      removeItem: () => {},
+    };
+    assert.strictEqual(hasUserGivenVoiceConsent('gemini'), false);
+    assert.strictEqual(hasUserGivenVoiceConsent('browser'), false);
+    assert.strictEqual(hasUserGivenVoiceConsent(), false);
+    assert.doesNotThrow(() => {
+      saveUserVoiceConsent('gemini');
+      saveUserVoiceConsent('browser');
+    });
+
+    // 5. SessionStorage kiểm tra từ chối quyền
     const fakeSession: Record<string, string> = {};
     (globalThis as any).sessionStorage = {
       getItem: (k: string) => fakeSession[k] || null,

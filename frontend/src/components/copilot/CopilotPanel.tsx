@@ -198,7 +198,7 @@ export const CopilotPanel: React.FC = () => {
       return;
     }
 
-    if (!hasUserGivenVoiceConsent()) {
+    if (!hasUserGivenVoiceConsent(effectiveProvider)) {
       setConsentModalOpen(true);
       return;
     }

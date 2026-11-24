@@ -302,21 +302,33 @@ export function isMediaRecorderSupported(): boolean {
 }
 
 export const VOICE_CONSENT_KEY = 'erp4u_voice_consent_given';
+export const VOICE_CONSENT_KEY_PREFIX = 'erp4u_voice_consent_given:';
 export const VOICE_DENIED_SESSION_KEY = 'erp4u_voice_denied_session';
 
-export function hasUserGivenVoiceConsent(): boolean {
+export function getVoiceConsentKey(provider: VoiceProvider = 'gemini'): string {
+  return `${VOICE_CONSENT_KEY_PREFIX}${provider}`;
+}
+
+export function hasUserGivenVoiceConsent(provider: VoiceProvider = 'gemini'): boolean {
   try {
     if (typeof localStorage !== 'undefined') {
-      return localStorage.getItem(VOICE_CONSENT_KEY) === 'true';
+      const specific = localStorage.getItem(getVoiceConsentKey(provider));
+      if (specific === 'true') {
+        return true;
+      }
+      // Khoá cũ: không coi khoá cũ là đồng ý cho browser; có thể coi là đồng ý gemini
+      if (provider === 'gemini') {
+        return localStorage.getItem(VOICE_CONSENT_KEY) === 'true';
+      }
     }
   } catch {}
   return false;
 }
 
-export function saveUserVoiceConsent(): void {
+export function saveUserVoiceConsent(provider: VoiceProvider = 'gemini'): void {
   try {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(VOICE_CONSENT_KEY, 'true');
+      localStorage.setItem(getVoiceConsentKey(provider), 'true');
     }
   } catch {}
 }
