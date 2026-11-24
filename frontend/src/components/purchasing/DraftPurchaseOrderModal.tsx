@@ -8,13 +8,16 @@ import {
   Table,
   Button,
   Alert,
+  DatePicker,
   message,
   Space,
   Typography,
 } from 'antd';
 import { RobotOutlined, PlusOutlined, DeleteOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { confirmDraft } from '../copilot/draftApi';
 import { mapDraftValidationErrors } from '../copilot/draftRoutes';
+import { buildPurchaseOrderDraftPayload } from '../copilot/draftPayloads';
 
 const { Text } = Typography;
 
@@ -45,6 +48,9 @@ export const DraftPurchaseOrderModal: React.FC<DraftPurchaseOrderModalProps> = (
         po_code: initialPayload.po_code || '',
         supplier_id: initialPayload.supplier_id || undefined,
         note: initialPayload.note || '',
+        expected_delivery_date: initialPayload.expected_delivery_date
+          ? dayjs(initialPayload.expected_delivery_date)
+          : undefined,
       });
 
       const rawItems = Array.isArray(initialPayload.items) ? initialPayload.items : [];
@@ -106,19 +112,10 @@ export const DraftPurchaseOrderModal: React.FC<DraftPurchaseOrderModalProps> = (
 
     setLoading(true);
     try {
-      const payload = {
-        po_code: values.po_code,
-        supplier_id: values.supplier_id,
-        note: values.note,
-        items: items.map((it) => ({
-          material_id: it.material_id,
-          product_id: it.product_id,
-          description: it.description,
-          quantity: Number(it.quantity) || 0,
-          unit_price: Number(it.unit_price) || 0,
-          note: it.note,
-        })),
-      };
+      const payload = buildPurchaseOrderDraftPayload({
+        ...values,
+        items,
+      });
 
       await confirmDraft(draftId, payload);
       message.success('Xác nhận tạo Đơn mua hàng thành công!');
@@ -258,6 +255,10 @@ export const DraftPurchaseOrderModal: React.FC<DraftPurchaseOrderModalProps> = (
             />
           </Form.Item>
         </div>
+
+        <Form.Item name="expected_delivery_date" label="Ngày giao dự kiến">
+          <DatePicker style={{ width: '100%' }} format="YYYY-MM-DD" placeholder="Chọn ngày giao dự kiến..." />
+        </Form.Item>
 
         <Form.Item name="note" label="Ghi chú đơn mua hàng">
           <Input.TextArea rows={2} placeholder="Ghi chú..." />

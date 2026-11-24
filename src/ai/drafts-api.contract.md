@@ -97,7 +97,7 @@ Backend triển khai ở repo cloud (P9c2, P9c3). Core (P9c1) khai báo entity, 
     "result_ref": {
       "entity": "sales_order",
       "id": 108,
-      "path": "/orders"
+      "path": "/sales?order=108"
     }
   }
   ```
@@ -151,117 +151,184 @@ Backend triển khai ở repo cloud (P9c2, P9c3). Core (P9c1) khai báo entity, 
 
 ---
 
+### 2.4. Bảng tổng hợp Đường dẫn Kết quả (`result_ref.path`)
+Liệt kê route **chi tiết** bản ghi có thật cho mỗi kind (route có query `?id=` cũng được), không có mới dùng route danh sách:
+
+| Loại nháp (`kind`) | Thực thể (`entity`) | Route chi tiết (`result_ref.path`) | Cơ chế hiển thị trên frontend |
+|---|---|---|---|
+| `quotation` | `sales_order` | `/sales?order=:id` (hoặc `/orders?order=:id`) | Mở trực tiếp modal chi tiết báo giá / đơn hàng (`CrmPage` / `SalesPage`) |
+| `task` | `task` | `/tasks?task=:id` | Mở trực tiếp modal cập nhật chi tiết công việc (`TasksPage`) |
+| `lead` | `customer` | `/sales?customer=:id` (hoặc `/customers`) | Mở trực tiếp drawer theo dõi / chăm sóc khách hàng tiềm năng (`CrmPage`) |
+| `purchase_order` | `purchase_order` | `/purchasing` | Trang danh sách Đơn mua hàng (chưa có query param mở modal chi tiết) |
+| `production_order` | `production_order` | `/planning` | Trang Kế hoạch & Điều độ sản xuất |
+| `email` | `customer` | `/customers` (hoặc `/sales?customer=:customer_id`) | Trang danh sách khách hàng / hồ sơ khách hàng đã gửi email |
+
+---
+
 ## 3. Cấu trúc Payload theo từng loại Nháp (`kind`)
 
 Payload của mỗi loại nháp tương thích hoàn toàn với body của API tạo thông thường của module đó:
 
 ### 3.1. `quotation` (Báo giá bán hàng)
 - **Gói:** `SALES` | **Quyền:** `SALES` `can_create`
+- **Form nguồn:** `SalesOrderDetail.tsx` (`frontend/src/components/SalesOrderDetail.tsx`)
 - **Body tạo thường:** `SalesService.createOrder({ ..., is_quotation: true })`
 - **Đường dẫn mở form:** `/sales?aiDraft=:id`
-- **Đường dẫn kết quả:** `result_ref.path` = `/orders` (hoặc `/sales`)
-- **Trường Payload:**
+- **Đường dẫn kết quả:** `result_ref.path` = `/sales?order=:id` (hoặc `/orders?order=:id`)
+- **Nguyên tắc dòng hàng:** Backend `SalesService.createOrder` lọc dòng theo `i.sku` (dòng không có `sku` bị bỏ qua). Dòng hàng BẮT BUỘC phải có `sku`.
+- **Trường Payload confirm (khớp chính xác SalesOrderDetail):**
   - `customer_id` *(number, bắt buộc)*: ID khách hàng hợp lệ (hoặc `-1` nếu là nội bộ).
-  - `order_date` *(string ISO/YYYY-MM-DD, tuỳ chọn)*: Ngày báo giá.
-  - `delivery_date` *(string ISO/YYYY-MM-DD, tuỳ chọn)*: Ngày dự kiến giao.
-  - `is_quotation` *(boolean, mặc định true)*: Đánh dấu là báo giá.
+  - `order_code` *(string, tuỳ chọn)*: Mã đơn báo giá (backend tự sinh theo mẫu `QUOTE-YYMM-XXXX` nếu để trống hoặc bắt đầu bằng `AUTO-`).
+  - `order_date` *(string YYYY-MM-DD, tuỳ chọn)*: Ngày báo giá.
+  - `delivery_date` *(string YYYY-MM-DD, tuỳ chọn)*: Ngày dự kiến giao.
+  - `is_quotation` *(boolean, bắt buộc/ép true)*: Đánh dấu là báo giá (backend ép giá trị `true`).
+  - `total_amount` *(number, tuỳ chọn)*: Tổng tiền ước tính của đơn báo giá.
   - `note` *(string, tuỳ chọn)*: Ghi chú đơn báo giá.
+  - `terms_content` *(string, tuỳ chọn)*: Điều khoản thanh toán & giao dịch.
+  - `discount_rate` *(number, tuỳ chọn)*: Tỷ lệ chiết khấu (%).
+  - `discount_amount` *(number, tuỳ chọn)*: Số tiền chiết khấu.
+  - `deposit_percent` *(number, tuỳ chọn)*: Tỷ lệ đặt cọc (%).
+  - `deposit_amount` *(number, tuỳ chọn)*: Số tiền đặt cọc.
+  - `shipping_fee` *(number, tuỳ chọn)*: Phí vận chuyển.
+  - `shipping_address` *(string, tuỳ chọn)*: Địa chỉ giao hàng.
+  - `vat_company_name` *(string, tuỳ chọn)*: Tên công ty xuất hóa đơn VAT.
+  - `vat_tax_code` *(string, tuỳ chọn)*: Mã số thuế xuất hóa đơn VAT.
+  - `vat_address` *(string, tuỳ chọn)*: Địa chỉ xuất hóa đơn VAT.
+  - `vat_rate` *(number, tuỳ chọn)*: Thuế suất VAT (0, 8, 10).
+  - `vat_email` *(string, tuỳ chọn)*: Email nhận hóa đơn điện tử.
+  - `vat_invoice_link` *(string, tuỳ chọn)*: Link tra cứu hóa đơn điện tử.
+  - `require_invoice` *(boolean, tuỳ chọn)*: Yêu cầu xuất hóa đơn VAT.
+  - `assigned_to_id` *(number, tuỳ chọn)*: ID nhân viên phụ trách.
+  - `contact_name` *(string, tuỳ chọn)*: Tên người liên hệ.
+  - `contact_phone` *(string, tuỳ chọn)*: Số điện thoại người liên hệ.
+  - `is_production_sample_approved` *(boolean, tuỳ chọn)*: Duyệt mẫu sản xuất.
+  - `status` *(string, tuỳ chọn)*: Backend bỏ qua/ép trạng thái `QUOTATION`.
   - `items` *(array, bắt buộc, tối thiểu 1 dòng)*:
-    - `product_id` *(number, bắt buộc)*: ID sản phẩm.
+    - `sku` *(string, bắt buộc)*: Mã SKU sản phẩm (SalesService lọc theo `i.sku`, không có sẽ bị bỏ).
     - `quantity` *(number, bắt buộc, > 0)*: Số lượng.
     - `unit_price` *(number, bắt buộc, >= 0)*: Đơn giá.
-    - `note` *(string, tuỳ chọn)*: Ghi chú dòng hàng.
-    - `_display` *(object, tuỳ chọn)*: `{ product_name, sku }` (chỉ hiển thị, bị lọc khi confirm).
-  - `_display` *(object, tuỳ chọn)*: `{ customer_name, customer_code }`.
+    - `total_price` *(number, tuỳ chọn)*: Thành tiền dòng hàng (Backend map vào `subtotal`).
+    - `vat_content` *(string, tuỳ chọn)*: Tên hàng hóa hiển thị trên hóa đơn VAT.
+    - `sample_image` *(string, tuỳ chọn)*: Link ảnh mẫu sản phẩm.
+    - `image_url` *(string, tuỳ chọn)*: Link ảnh mặt hàng.
+    - `price_ranges` *(any, tuỳ chọn)*: Khung giá sỉ theo số lượng.
+    - `customer_note` *(string, tuỳ chọn)*: Ghi chú dành cho khách hàng.
+    - `internal_note` *(string, tuỳ chọn)*: Ghi chú nội bộ.
+  - `_display` *(object, tuỳ chọn)*: `{ customer_name, customer_code }` (chỉ hiển thị, tự động lọc khi confirm).
 
 ---
 
 ### 3.2. `purchase_order` (Đơn mua hàng / PO)
 - **Gói:** `INVENTORY` | **Quyền:** `PURCHASE` `create`
+- **Form nguồn:** `DraftPurchaseOrderModal.tsx` (`frontend/src/components/purchasing/DraftPurchaseOrderModal.tsx`)
 - **Body tạo thường:** `PurchasingService.createPO(data)`
 - **Đường dẫn mở form:** `/purchasing?aiDraft=:id`
 - **Đường dẫn kết quả:** `result_ref.path` = `/purchasing`
-- **Trường Payload:**
-  - `supplier_id` *(number, tuỳ chọn/bắt buộc nếu xác định)*: ID nhà cung cấp.
-  - `po_code` *(string, tuỳ chọn)*: Mã PO (nếu để trống hệ thống tự sinh).
+- **Trường Payload confirm (chỉ các key backend nhận, KHÔNG chứa `warehouse_id`, `tax_rate`, `notes`):**
+  - `supplier_id` *(number, bắt buộc)*: ID nhà cung cấp.
+  - `po_code` *(string, tuỳ chọn)*: Mã PO (nếu để trống backend tự sinh).
   - `note` *(string, tuỳ chọn)*: Ghi chú đơn mua hàng.
-  - `items` *(array, bắt buộc)*:
+  - `expected_delivery_date` *(string YYYY-MM-DD, tuỳ chọn)*: Ngày dự kiến giao hàng.
+  - `items` *(array, bắt buộc, 1–100 dòng)*:
     - `material_id` *(number, tuỳ chọn)*: ID nguyên vật liệu (nếu mua NPL).
     - `product_id` *(number, tuỳ chọn)*: ID sản phẩm (nếu mua thành phẩm/gia công).
     - `description` *(string, tuỳ chọn)*: Diễn giải chi tiết mặt hàng.
     - `quantity` *(number, bắt buộc, > 0)*: Số lượng mua.
     - `unit_price` *(number, bắt buộc, >= 0)*: Đơn giá mua.
     - `note` *(string, tuỳ chọn)*: Ghi chú dòng.
-    - `_display` *(object, tuỳ chọn)*: `{ material_name, product_name }`.
-  - `_display` *(object, tuỳ chọn)*: `{ supplier_name }`.
+  - *(Lưu ý: Bỏ hoàn toàn `warehouse_id`, `tax_rate`, `notes` để đảm bảo khớp schema validate backend cloud).*
 
 ---
 
 ### 3.3. `production_order` (Lệnh sản xuất)
 - **Gói:** `PRODUCTION` | **Quyền:** `PRODUCTION` `create`
+- **Form nguồn:** `DraftProductionOrderModal.tsx` (`frontend/src/components/planning/DraftProductionOrderModal.tsx`) — Modal tạo **Lệnh sản xuất**, không tạo PFO.
 - **Body tạo thường:** `ProductionService.createOrder(data)`
-- **Đường dẫn mở form:** `/planning?aiDraft=:id`
+- **Đường dẫn mở form:** `/planning?action=create-production-order&aiDraft=:id` (không dùng route `create-pfo`)
 - **Đường dẫn kết quả:** `result_ref.path` = `/planning`
-- **Trường Payload:**
-  - `code` *(string, bắt buộc)*: Mã lệnh sản xuất.
+- **Trường Payload confirm (chỉ các key backend nhận, KHÔNG chứa `priority`, `note`):**
   - `product_id` *(number, bắt buộc)*: ID thành phẩm cần sản xuất.
   - `quantity` *(number, bắt buộc, > 0)*: Số lượng cần sản xuất.
-  - `pfo_id` *(number, tuỳ chọn)*: ID kế hoạch PFO liên quan.
-  - `so_code` *(string, tuỳ chọn)*: Mã đơn hàng bán hàng liên quan.
-  - `assigned_supplier_id` *(number, tuỳ chọn)*: ID xưởng / nhà cung cấp gia công.
+  - `code` *(string, tuỳ chọn/bắt buộc)*: Mã lệnh sản xuất (VD: `LSX-2026-001`).
   - `start_date` *(string ISO, tuỳ chọn)*: Ngày bắt đầu dự kiến.
-  - `due_date` *(string ISO, tuỳ chọn)*: Hạn hoàn thành.
-  - `_display` *(object, tuỳ chọn)*: `{ product_name, supplier_name }`.
+  - `due_date` *(string ISO, tuỳ chọn)*: Hạn hoàn thành dự kiến.
+  - `so_code` *(string, tuỳ chọn)*: Mã đơn hàng liên quan (sales order code).
+  - `pfo_id` *(number, tuỳ chọn)*: ID kế hoạch PFO liên quan.
+  - `assigned_supplier_id` *(number, tuỳ chọn)*: ID xưởng / đối tác gia công phụ trách.
+  - *(Lưu ý: Bỏ hoàn toàn `priority`, `note` để đảm bảo khớp schema validate backend cloud).*
 
 ---
 
 ### 3.4. `task` (Công việc)
 - **Gói:** `CORE` | **Quyền:** Đăng nhập (`@AuthOnly()`)
+- **Form nguồn:** Form tạo công việc trong `TasksPage.tsx` (`frontend/src/pages/TasksPage.tsx`)
 - **Body tạo thường:** `TasksService.create(data)`
 - **Đường dẫn mở form:** `/tasks?aiDraft=:id`
-- **Đường dẫn kết quả:** `result_ref.path` = `/tasks`
-- **Trường Payload:**
+- **Đường dẫn kết quả:** `result_ref.path` = `/tasks?task=:id`
+- **Trường Payload confirm (khớp chính xác form TasksPage):**
   - `title` *(string, bắt buộc, tối đa 255)*: Tiêu đề công việc.
   - `description` *(string, tuỳ chọn)*: Nội dung chi tiết công việc.
-  - `assignee_id` *(number, tuỳ chọn)*: ID nhân viên được giao.
+  - `priority` *(string, tuỳ chọn, 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT', mặc định 'MEDIUM')*: Mức độ ưu tiên.
+  - `status` *(string, tuỳ chọn, 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE', mặc định 'TODO')*: Trạng thái công việc.
+  - `project_id` *(number, tuỳ chọn)*: ID dự án liên quan.
+  - `milestone_id` *(number, tuỳ chọn)*: ID mốc tiến độ trong dự án.
+  - `assignee_id` *(number, tuỳ chọn)*: ID nhân viên được giao việc (chú ý: dùng `assignee_id`, không phải `assigned_user_id`).
   - `due_date` *(string ISO, tuỳ chọn)*: Hạn hoàn thành.
-  - `priority` *(string, tuỳ chọn, 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT')*: Mức độ ưu tiên.
-  - `reference_code` *(string, tuỳ chọn)*: Mã chứng từ tham chiếu (vd mã đơn SO, PO).
-  - `reference_type` *(string, tuỳ chọn, 'SALES' | 'PURCHASE' | 'PRODUCTION')*: Loại tham chiếu.
-  - `_display` *(object, tuỳ chọn)*: `{ assignee_name }`.
+  - `estimated_cost` *(number, tuỳ chọn)*: Chi phí dự toán (VNĐ).
+  - `actual_cost` *(number, tuỳ chọn)*: Chi phí thực tế (VNĐ).
+  - `cost_note` *(string, tuỳ chọn)*: Ghi chú chi phí.
+  - `creator_id` *(number, do hệ thống/form gán từ user đăng nhập)*.
+  - *(Lưu ý: Bỏ `reference_code`, `reference_type` vì form TasksPage không sử dụng).*
 
 ---
 
 ### 3.5. `lead` (Khách hàng tiềm năng)
 - **Gói:** `SALES` | **Quyền:** `SALES` `can_create`
+- **Form nguồn:** Form tạo khách hàng trong `CustomersPage.tsx` (`frontend/src/pages/CustomersPage.tsx`)
 - **Body tạo thường:** `CustomersService.create({ ..., type: 'LEAD' })`
 - **Đường dẫn mở form:** `/customers?aiDraft=:id`
-- **Đường dẫn kết quả:** `result_ref.path` = `/customers`
-- **Trường Payload:**
-  - `name` *(string, bắt buộc)*: Tên khách hàng / tổ chức tiềm năng.
-  - `type` *(string, cố định 'LEAD')*: Phân loại LEAD.
+- **Đường dẫn kết quả:** `result_ref.path` = `/sales?customer=:id` (hoặc `/customers`)
+- **Trường Payload confirm (khớp chính xác form CustomersPage):**
+  - `name` *(string, bắt buộc)*: Tên khách hàng / tổ chức.
+  - `code` *(string, tuỳ chọn)*: Mã khách hàng (backend tự sinh `KH-YYMM-XXXX` nếu để trống).
   - `phone` *(string, tuỳ chọn)*: Số điện thoại.
   - `email` *(string, tuỳ chọn)*: Email liên hệ.
-  - `address` *(string, tuỳ chọn)*: Địa chỉ.
-  - `lead_status` *(string, tuỳ chọn, 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'PROPOSAL' | 'WON' | 'LOST')*: Trạng thái chăm sóc Lead.
-  - `lead_source` *(string, tuỳ chọn)*: Nguồn Lead (Website, Facebook, Giới thiệu...).
-  - `potential_value` *(number, tuỳ chọn)*: Giá trị tiềm năng ước tính.
+  - `facebook` *(string, tuỳ chọn)*: Link Facebook.
+  - `website` *(string, tuỳ chọn)*: Link Website.
+  - `address` *(string, tuỳ chọn)*: Địa chỉ trụ sở chính.
+  - `province` *(string, tuỳ chọn)*: Tỉnh / Thành phố.
+  - `district` *(string, tuỳ chọn)*: Quận / Huyện.
+  - `parent_id` *(number, tuỳ chọn)*: ID công ty mẹ.
+  - `credit_limit` *(number, tuỳ chọn, mặc định 0)*: Hạn mức nợ.
+  - `type` *(string, cố định 'LEAD')*: Backend bỏ qua/ép giá trị 'LEAD'.
   - `assigned_to_id` *(number, tuỳ chọn)*: ID nhân viên phụ trách.
-  - `contacts` *(array, tuỳ chọn)*: Danh sách liên hệ ban đầu `[{ full_name, phone, email, job_title }]`.
+  - `contacts` *(array, tuỳ chọn)*: Danh sách liên hệ:
+    - `full_name` *(string, bắt buộc nếu có dòng)*: Họ tên liên hệ.
+    - `job_title` *(string, tuỳ chọn)*: Chức danh.
+    - `phone` *(string, tuỳ chọn)*: Số điện thoại / Email liên hệ.
+  - `legal_name` *(string, tuỳ chọn)*: Tên pháp nhân trên hóa đơn.
+  - `legal_address` *(string, tuỳ chọn)*: Địa chỉ pháp lý.
+  - `tax_code` *(string, tuỳ chọn)*: Mã số thuế (chú ý: dùng `tax_code`, không phải `tax_id`).
+  - `legal_representative` *(string, tuỳ chọn)*: Người đại diện pháp luật.
+  - `einvoice_email` *(string, tuỳ chọn)*: Email nhận hóa đơn điện tử.
+  - `delivery_addresses` *(array, tuỳ chọn)*: Danh sách chi nhánh / địa chỉ giao hàng:
+    - `name` *(string, bắt buộc nếu có dòng)*: Tên chi nhánh / kho.
+    - `address` *(string, bắt buộc nếu có dòng)*: Địa chỉ giao hàng.
 
 ---
 
 ### 3.6. `email` (Gửi email khách hàng)
 - **Gói:** `SALES` | **Quyền:** `SALES` `can_create`
+- **Form nguồn:** `CustomerEmailModal.tsx` (`frontend/src/components/crm/CustomerEmailModal.tsx`)
 - **Body tạo thường:** `EmailService` qua SMTP của tenant
 - **Đường dẫn mở form:** `/customers?aiDraft=:id`
-- **Đường dẫn kết quả:** `result_ref.path` = `/customers`
-- **Trường Payload:**
+- **Đường dẫn kết quả:** `result_ref.path` = `/customers` (hoặc `/sales?customer=:customer_id`)
+- **Trường Payload confirm:**
   - `customer_id` *(number, bắt buộc)*: ID khách hàng trong tenant.
   - `to` *(string, bắt buộc)*: Email người nhận. BẮT BUỘC phải khớp với email khách hàng hoặc một trong các liên hệ thuộc khách hàng đó.
   - `subject` *(string, bắt buộc, tối đa 200 ký tự)*: Tiêu đề email.
   - `body` *(string, bắt buộc, tối đa 10.000 ký tự)*: Nội dung text thuần của email (hệ thống tự động escape khi tạo bản gửi HTML).
-  - `_display` *(object, tuỳ chọn)*: `{ customer_name }`.
+  - `_display` *(object, tuỳ chọn)*: `{ customer_name }` (chỉ hiển thị, bị lọc khi confirm).
 
 ---
 

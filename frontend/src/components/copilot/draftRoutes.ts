@@ -2,6 +2,8 @@
  * Định nghĩa route và các hàm thuần tiện ích cho Nháp AI (P9c1)
  */
 
+export * from './draftPayloads.ts';
+
 export const DRAFT_KIND_LABELS: Record<string, string> = {
   quotation: 'Báo giá',
   purchase_order: 'Đơn mua hàng',
@@ -14,7 +16,7 @@ export const DRAFT_KIND_LABELS: Record<string, string> = {
 export const DRAFT_ROUTES: Record<string, (id: string) => string> = {
   quotation: (id: string) => `/sales?aiDraft=${encodeURIComponent(id)}`,
   purchase_order: (id: string) => `/purchasing?aiDraft=${encodeURIComponent(id)}`,
-  production_order: (id: string) => `/planning?aiDraft=${encodeURIComponent(id)}`,
+  production_order: (id: string) => `/planning?action=create-production-order&aiDraft=${encodeURIComponent(id)}`,
   task: (id: string) => `/tasks?aiDraft=${encodeURIComponent(id)}`,
   lead: (id: string) => `/customers?aiDraft=${encodeURIComponent(id)}`,
   email: (id: string) => `/customers?aiDraft=${encodeURIComponent(id)}`,

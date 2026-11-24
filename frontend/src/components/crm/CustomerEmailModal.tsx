@@ -4,6 +4,7 @@ import { MailOutlined, RobotOutlined, SendOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
 import { confirmDraft } from '../copilot/draftApi';
 import { mapDraftValidationErrors } from '../copilot/draftRoutes';
+import { buildEmailDraftPayload } from '../copilot/draftPayloads';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -111,12 +112,12 @@ export const CustomerEmailModal: React.FC<CustomerEmailModalProps> = ({
 
     setLoading(true);
     try {
-      const payload = {
+      const payload = buildEmailDraftPayload({
         customer_id: customerId,
         to: values.to,
         subject: values.subject,
         body: values.body,
-      };
+      });
 
       await confirmDraft(aiDraftId, payload);
       message.success('Đã gửi email thành công!');

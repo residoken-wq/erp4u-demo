@@ -17,6 +17,7 @@ import { RobotOutlined, DeploymentUnitOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { confirmDraft } from '../copilot/draftApi';
 import { mapDraftValidationErrors } from '../copilot/draftRoutes';
+import { buildProductionOrderDraftPayload } from '../copilot/draftPayloads';
 import api from '../../utils/api';
 
 const { RangePicker } = DatePicker;
@@ -78,16 +79,10 @@ export const DraftProductionOrderModal: React.FC<DraftProductionOrderModalProps>
 
     setLoading(true);
     try {
-      const payload = {
-        code: values.code,
-        product_id: values.product_id,
-        quantity: Number(values.quantity),
-        start_date: values.dateRange?.[0] ? values.dateRange[0].toISOString() : undefined,
-        due_date: values.dateRange?.[1] ? values.dateRange[1].toISOString() : undefined,
-        assigned_supplier_id: values.assigned_supplier_id || null,
-        so_code: values.so_code || null,
+      const payload = buildProductionOrderDraftPayload({
+        ...values,
         pfo_id: initialPayload?.pfo_id || null,
-      };
+      });
 
       await confirmDraft(draftId, payload);
       message.success('Xác nhận tạo Lệnh sản xuất thành công!');
