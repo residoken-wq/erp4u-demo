@@ -1,12 +1,12 @@
 # Bảng Kiểm Kê Phân Quyền Route (RBAC Route Inventory)
 
-> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-25T08:10:07.666Z
+> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-25T14:19:24.731Z
 
 ## Tổng quan theo tầng
 
 - **Tổng số route**: 548
-- **PERM** (Phân quyền chi tiết): 441
-- **AUTH** (Chỉ cần đăng nhập): 66
+- **PERM** (Phân quyền chi tiết): 449
+- **AUTH** (Chỉ cần đăng nhập): 58
 - **PUBLIC** (Công khai): 36
 - **APIKEY** (Xác thực qua API Key): 5
 - **LEGACY** (Decorator cũ @RequirePermission): 0
@@ -122,19 +122,19 @@
 | `DELETE` | `/hr/leaves/:id` | `PERM` | HR:delete | `HR` | [src/hr/hr.controller.ts:166](../src/hr/hr.controller.ts:166) |
 | `PUT` | `/hr/leaves/:id/approve` | `PERM` | HR:update | `HR` | [src/hr/hr.controller.ts:155](../src/hr/hr.controller.ts:155) |
 | `GET` | `/hr/me` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:38](../src/hr/hr-me.controller.ts:38) |
-| `GET` | `/hr/me/assets` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:158](../src/hr/hr-me.controller.ts:158) |
+| `GET` | `/hr/me/assets` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:143](../src/hr/hr-me.controller.ts:143) |
 | `GET` | `/hr/me/attendances` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:44](../src/hr/hr-me.controller.ts:44) |
-| `GET` | `/hr/me/attendances/:id` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:63](../src/hr/hr-me.controller.ts:63) |
-| `GET` | `/hr/me/balance` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:165](../src/hr/hr-me.controller.ts:165) |
-| `POST` | `/hr/me/check-in` | `AUTH` | selfOr(HR:create) | `HR` | [src/hr/hr-me.controller.ts:176](../src/hr/hr-me.controller.ts:176) |
-| `POST` | `/hr/me/check-out` | `AUTH` | selfOr(HR:create) | `HR` | [src/hr/hr-me.controller.ts:183](../src/hr/hr-me.controller.ts:183) |
-| `GET` | `/hr/me/leaves` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:77](../src/hr/hr-me.controller.ts:77) |
-| `POST` | `/hr/me/leaves` | `AUTH` | selfOr(HR:create) | `HR` | [src/hr/hr-me.controller.ts:106](../src/hr/hr-me.controller.ts:106) |
-| `GET` | `/hr/me/leaves/:id` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:92](../src/hr/hr-me.controller.ts:92) |
-| `GET` | `/hr/me/payslips` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:125](../src/hr/hr-me.controller.ts:125) |
-| `GET` | `/hr/me/payslips/:id` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:144](../src/hr/hr-me.controller.ts:144) |
-| `GET` | `/hr/me/reviews` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:190](../src/hr/hr-me.controller.ts:190) |
-| `POST` | `/hr/me/reviews/:id/submit` | `AUTH` | selfOr(HR:create) | `HR` | [src/hr/hr-me.controller.ts:197](../src/hr/hr-me.controller.ts:197) |
+| `GET` | `/hr/me/attendances/:id` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:59](../src/hr/hr-me.controller.ts:59) |
+| `GET` | `/hr/me/balance` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:150](../src/hr/hr-me.controller.ts:150) |
+| `POST` | `/hr/me/check-in` | `AUTH` | selfOr(HR:create) | `HR` | [src/hr/hr-me.controller.ts:161](../src/hr/hr-me.controller.ts:161) |
+| `POST` | `/hr/me/check-out` | `AUTH` | selfOr(HR:create) | `HR` | [src/hr/hr-me.controller.ts:168](../src/hr/hr-me.controller.ts:168) |
+| `GET` | `/hr/me/leaves` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:73](../src/hr/hr-me.controller.ts:73) |
+| `POST` | `/hr/me/leaves` | `AUTH` | selfOr(HR:create) | `HR` | [src/hr/hr-me.controller.ts:98](../src/hr/hr-me.controller.ts:98) |
+| `GET` | `/hr/me/leaves/:id` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:84](../src/hr/hr-me.controller.ts:84) |
+| `GET` | `/hr/me/payslips` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:114](../src/hr/hr-me.controller.ts:114) |
+| `GET` | `/hr/me/payslips/:id` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:129](../src/hr/hr-me.controller.ts:129) |
+| `GET` | `/hr/me/reviews` | `AUTH` | selfOr(HR:view) | `HR` | [src/hr/hr-me.controller.ts:175](../src/hr/hr-me.controller.ts:175) |
+| `POST` | `/hr/me/reviews/:id/submit` | `AUTH` | selfOr(HR:create) | `HR` | [src/hr/hr-me.controller.ts:182](../src/hr/hr-me.controller.ts:182) |
 | `GET` | `/hr/payslips` | `PERM` | HR:view | `HR` | [src/hr/hr.controller.ts:242](../src/hr/hr.controller.ts:242) |
 | `POST` | `/hr/payslips` | `PERM` | HR:create | `HR` | [src/hr/hr.controller.ts:257](../src/hr/hr.controller.ts:257) |
 | `DELETE` | `/hr/payslips/:id` | `PERM` | HR:delete | `HR` | [src/hr/hr.controller.ts:271](../src/hr/hr.controller.ts:271) |
@@ -296,48 +296,48 @@
 | `PUT` | `/production/steps/:stepId/status` | `PERM` | PRODUCTION:update | `PRODUCTION` | [src/production/production.controller.ts:49](../src/production/production.controller.ts:49) |
 | `GET` | `/production/work-orders/:id` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/production/production.controller.ts:43](../src/production/production.controller.ts:43) |
 | `GET` | `/production/work-orders/plan/:pfoId` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/production/production.controller.ts:37](../src/production/production.controller.ts:37) |
-| `GET` | `/products` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:49](../src/products/products.controller.ts:49) |
-| `POST` | `/products` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:56](../src/products/products.controller.ts:56) |
-| `DELETE` | `/products/:id` | `PERM` | PRODUCT:delete | `CORE` | [src/products/products.controller.ts:58](../src/products/products.controller.ts:58) |
-| `GET` | `/products/:id` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:52](../src/products/products.controller.ts:52) |
-| `PUT` | `/products/:id` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:57](../src/products/products.controller.ts:57) |
-| `POST` | `/products/:id/boms` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:94](../src/products/products.controller.ts:94) |
-| `POST` | `/products/:id/components` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:107](../src/products/products.controller.ts:107) |
-| `GET` | `/products/:id/logistics` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:72](../src/products/products.controller.ts:72) |
-| `POST` | `/products/:id/logistics` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:74](../src/products/products.controller.ts:74) |
-| `GET` | `/products/:id/pattern` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:78](../src/products/products.controller.ts:78) |
-| `POST` | `/products/:id/pattern` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:80](../src/products/products.controller.ts:80) |
-| `GET` | `/products/:id/routings` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:67](../src/products/products.controller.ts:67) |
-| `POST` | `/products/:id/routings` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:69](../src/products/products.controller.ts:69) |
-| `GET` | `/products/:id/sales-history` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:146](../src/products/products.controller.ts:146) |
-| `POST` | `/products/:id/sync-variants` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:97](../src/products/products.controller.ts:97) |
-| `GET` | `/products/:id/website-config` | `PERM` | PRODUCT:view | `WEBSITE` | [src/products/products.controller.ts:84](../src/products/products.controller.ts:84) |
-| `POST` | `/products/:id/website-config` | `PERM` | PRODUCT:update | `WEBSITE` | [src/products/products.controller.ts:87](../src/products/products.controller.ts:87) |
-| `GET` | `/products/:sku/boms` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:92](../src/products/products.controller.ts:92) |
-| `POST` | `/products/calculate-all-costs` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:140](../src/products/products.controller.ts:140) |
-| `GET` | `/products/calculate-cost/:sku` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:137](../src/products/products.controller.ts:137) |
-| `GET` | `/products/combo/:sku` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:100](../src/products/products.controller.ts:100) |
-| `POST` | `/products/combo/add` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:102](../src/products/products.controller.ts:102) |
-| `DELETE` | `/products/combo/item/:id` | `PERM` | PRODUCT:delete | `CORE` | [src/products/products.controller.ts:104](../src/products/products.controller.ts:104) |
-| `POST` | `/products/copy-bom` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:113](../src/products/products.controller.ts:113) |
-| `POST` | `/products/copy-logistics` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:125](../src/products/products.controller.ts:125) |
-| `POST` | `/products/copy-routings` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:119](../src/products/products.controller.ts:119) |
-| `POST` | `/products/copy-semi-finished` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:131](../src/products/products.controller.ts:131) |
-| `POST` | `/products/create-variant` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:61](../src/products/products.controller.ts:61) |
+| `GET` | `/products` | `PERM` | PRODUCT:view | PURCHASE:view | PRODUCTION:view | SALES:view | `CORE` | [src/products/products.controller.ts:49](../src/products/products.controller.ts:49) |
+| `POST` | `/products` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:77](../src/products/products.controller.ts:77) |
+| `DELETE` | `/products/:id` | `PERM` | PRODUCT:delete | `CORE` | [src/products/products.controller.ts:79](../src/products/products.controller.ts:79) |
+| `GET` | `/products/:id` | `PERM` | PRODUCT:view | PURCHASE:view | PRODUCTION:view | SALES:view | `CORE` | [src/products/products.controller.ts:63](../src/products/products.controller.ts:63) |
+| `PUT` | `/products/:id` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:78](../src/products/products.controller.ts:78) |
+| `POST` | `/products/:id/boms` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:124](../src/products/products.controller.ts:124) |
+| `POST` | `/products/:id/components` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:142](../src/products/products.controller.ts:142) |
+| `GET` | `/products/:id/logistics` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:97](../src/products/products.controller.ts:97) |
+| `POST` | `/products/:id/logistics` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:99](../src/products/products.controller.ts:99) |
+| `GET` | `/products/:id/pattern` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:103](../src/products/products.controller.ts:103) |
+| `POST` | `/products/:id/pattern` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:105](../src/products/products.controller.ts:105) |
+| `GET` | `/products/:id/routings` | `PERM` | PRODUCT:view | PRODUCTION:view | PURCHASE:view | `CORE` | [src/products/products.controller.ts:88](../src/products/products.controller.ts:88) |
+| `POST` | `/products/:id/routings` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:94](../src/products/products.controller.ts:94) |
+| `GET` | `/products/:id/sales-history` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:184](../src/products/products.controller.ts:184) |
+| `POST` | `/products/:id/sync-variants` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:127](../src/products/products.controller.ts:127) |
+| `GET` | `/products/:id/website-config` | `PERM` | PRODUCT:view | `WEBSITE` | [src/products/products.controller.ts:109](../src/products/products.controller.ts:109) |
+| `POST` | `/products/:id/website-config` | `PERM` | PRODUCT:update | `WEBSITE` | [src/products/products.controller.ts:112](../src/products/products.controller.ts:112) |
+| `GET` | `/products/:sku/boms` | `PERM` | PRODUCT:view | PURCHASE:view | PRODUCTION:view | SALES:view | `CORE` | [src/products/products.controller.ts:117](../src/products/products.controller.ts:117) |
+| `POST` | `/products/calculate-all-costs` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:178](../src/products/products.controller.ts:178) |
+| `GET` | `/products/calculate-cost/:sku` | `PERM` | PRODUCT:view | PRODUCTION:view | `CORE` | [src/products/products.controller.ts:172](../src/products/products.controller.ts:172) |
+| `GET` | `/products/combo/:sku` | `PERM` | PRODUCT:view | PURCHASE:view | PRODUCTION:view | SALES:view | `CORE` | [src/products/products.controller.ts:130](../src/products/products.controller.ts:130) |
+| `POST` | `/products/combo/add` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:137](../src/products/products.controller.ts:137) |
+| `DELETE` | `/products/combo/item/:id` | `PERM` | PRODUCT:delete | `CORE` | [src/products/products.controller.ts:139](../src/products/products.controller.ts:139) |
+| `POST` | `/products/copy-bom` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:148](../src/products/products.controller.ts:148) |
+| `POST` | `/products/copy-logistics` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:160](../src/products/products.controller.ts:160) |
+| `POST` | `/products/copy-routings` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:154](../src/products/products.controller.ts:154) |
+| `POST` | `/products/copy-semi-finished` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:166](../src/products/products.controller.ts:166) |
+| `POST` | `/products/create-variant` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:82](../src/products/products.controller.ts:82) |
 | `GET` | `/products/packing-specs` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:17](../src/products/products.controller.ts:17) |
 | `POST` | `/products/packing-specs` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:27](../src/products/products.controller.ts:27) |
 | `DELETE` | `/products/packing-specs/:id` | `PERM` | PRODUCT:delete | `CORE` | [src/products/products.controller.ts:41](../src/products/products.controller.ts:41) |
 | `PUT` | `/products/packing-specs/:id` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:34](../src/products/products.controller.ts:34) |
-| `GET` | `/projects` | `AUTH` | AUTH | `PROJECTS` | [src/projects/projects.controller.ts:14](../src/projects/projects.controller.ts:14) |
-| `POST` | `/projects` | `AUTH` | AUTH | `PROJECTS` | [src/projects/projects.controller.ts:26](../src/projects/projects.controller.ts:26) |
-| `DELETE` | `/projects/:id` | `AUTH` | AUTH | `PROJECTS` | [src/projects/projects.controller.ts:38](../src/projects/projects.controller.ts:38) |
-| `GET` | `/projects/:id` | `AUTH` | AUTH | `PROJECTS` | [src/projects/projects.controller.ts:20](../src/projects/projects.controller.ts:20) |
-| `PUT` | `/projects/:id` | `AUTH` | AUTH | `PROJECTS` | [src/projects/projects.controller.ts:32](../src/projects/projects.controller.ts:32) |
-| `GET` | `/projects/:id/cost-summary` | `AUTH` | AUTH | `PROJECTS` | [src/projects/projects.controller.ts:52](../src/projects/projects.controller.ts:52) |
-| `POST` | `/projects/:id/milestones` | `AUTH` | AUTH | `PROJECTS` | [src/projects/projects.controller.ts:59](../src/projects/projects.controller.ts:59) |
-| `POST` | `/projects/from-so/:soId` | `AUTH` | AUTH | `PROJECTS` | [src/projects/projects.controller.ts:45](../src/projects/projects.controller.ts:45) |
-| `DELETE` | `/projects/milestones/:milestoneId` | `AUTH` | AUTH | `PROJECTS` | [src/projects/projects.controller.ts:71](../src/projects/projects.controller.ts:71) |
-| `PUT` | `/projects/milestones/:milestoneId` | `AUTH` | AUTH | `PROJECTS` | [src/projects/projects.controller.ts:65](../src/projects/projects.controller.ts:65) |
+| `GET` | `/projects` | `PERM` | PROJECTS:view | `PROJECTS` | [src/projects/projects.controller.ts:34](../src/projects/projects.controller.ts:34) |
+| `POST` | `/projects` | `PERM` | PROJECTS:create | `PROJECTS` | [src/projects/projects.controller.ts:48](../src/projects/projects.controller.ts:48) |
+| `DELETE` | `/projects/:id` | `PERM` | PROJECTS:delete | `PROJECTS` | [src/projects/projects.controller.ts:62](../src/projects/projects.controller.ts:62) |
+| `GET` | `/projects/:id` | `PERM` | PROJECTS:view | `PROJECTS` | [src/projects/projects.controller.ts:41](../src/projects/projects.controller.ts:41) |
+| `PUT` | `/projects/:id` | `PERM` | PROJECTS:update | `PROJECTS` | [src/projects/projects.controller.ts:55](../src/projects/projects.controller.ts:55) |
+| `GET` | `/projects/:id/cost-summary` | `PERM` | PROJECTS:view | `PROJECTS` | [src/projects/projects.controller.ts:78](../src/projects/projects.controller.ts:78) |
+| `POST` | `/projects/:id/milestones` | `PERM` | PROJECTS:create | `PROJECTS` | [src/projects/projects.controller.ts:86](../src/projects/projects.controller.ts:86) |
+| `POST` | `/projects/from-so/:soId` | `PERM` | PROJECTS:create | `PROJECTS` | [src/projects/projects.controller.ts:70](../src/projects/projects.controller.ts:70) |
+| `DELETE` | `/projects/milestones/:milestoneId` | `PERM` | PROJECTS:delete | `PROJECTS` | [src/projects/projects.controller.ts:104](../src/projects/projects.controller.ts:104) |
+| `PUT` | `/projects/milestones/:milestoneId` | `PERM` | PROJECTS:update | `PROJECTS` | [src/projects/projects.controller.ts:93](../src/projects/projects.controller.ts:93) |
 | `GET` | `/proxy-image` | `AUTH` | AUTH | `CORE` | [src/app.controller.ts:41](../src/app.controller.ts:41) |
 | `POST` | `/public/analytics/ping` | `PUBLIC` | - | `MARKETING` | [src/analytics/analytics.controller.ts:30](../src/analytics/analytics.controller.ts:30) |
 | `GET` | `/public/analytics/stats` | `PERM` | CMS:view | `MARKETING` | [src/analytics/analytics.controller.ts:78](../src/analytics/analytics.controller.ts:78) |
@@ -522,13 +522,13 @@
 | `GET` | `/system/templates` | `PERM` | SYSTEM:view | SALES:view | `CORE` | [src/system/system.controller.ts:111](../src/system/system.controller.ts:111) |
 | `POST` | `/system/templates` | `PERM` | SYSTEM:create | `CORE` | [src/system/system.controller.ts:115](../src/system/system.controller.ts:115) |
 | `DELETE` | `/system/templates/:id` | `PERM` | SYSTEM:delete | `CORE` | [src/system/system.controller.ts:119](../src/system/system.controller.ts:119) |
-| `GET` | `/tasks` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:11](../src/tasks/tasks.controller.ts:11) |
-| `POST` | `/tasks` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:23](../src/tasks/tasks.controller.ts:23) |
-| `DELETE` | `/tasks/:id` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:27](../src/tasks/tasks.controller.ts:27) |
-| `PUT` | `/tasks/:id` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:25](../src/tasks/tasks.controller.ts:25) |
-| `GET` | `/tasks/:id/logs` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:42](../src/tasks/tasks.controller.ts:42) |
-| `POST` | `/tasks/:id/start-timer` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:30](../src/tasks/tasks.controller.ts:30) |
-| `POST` | `/tasks/:id/stop-timer` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:36](../src/tasks/tasks.controller.ts:36) |
+| `GET` | `/tasks` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:24](../src/tasks/tasks.controller.ts:24) |
+| `POST` | `/tasks` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:42](../src/tasks/tasks.controller.ts:42) |
+| `DELETE` | `/tasks/:id` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:54](../src/tasks/tasks.controller.ts:54) |
+| `PUT` | `/tasks/:id` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:48](../src/tasks/tasks.controller.ts:48) |
+| `GET` | `/tasks/:id/logs` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:74](../src/tasks/tasks.controller.ts:74) |
+| `POST` | `/tasks/:id/start-timer` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:60](../src/tasks/tasks.controller.ts:60) |
+| `POST` | `/tasks/:id/stop-timer` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:67](../src/tasks/tasks.controller.ts:67) |
 | `GET` | `/test` | `PUBLIC` | - | `CORE` | [src/app.controller.ts:16](../src/app.controller.ts:16) |
 | `POST` | `/upload/boms` | `PERM` | INVENTORY:create | PRODUCT:create | `CORE` | [src/upload/upload.controller.ts:147](../src/upload/upload.controller.ts:147) |
 | `POST` | `/upload/combos` | `PERM` | PRODUCT:create | `CORE` | [src/upload/upload.controller.ts:155](../src/upload/upload.controller.ts:155) |
@@ -553,14 +553,14 @@
 | `POST` | `/upload/watermark/config` | `PERM` | CMS:create | `CORE` | [src/upload/upload.controller.ts:214](../src/upload/upload.controller.ts:214) |
 | `POST` | `/upload/watermark/image` | `PERM` | CMS:create | `CORE` | [src/upload/upload.controller.ts:200](../src/upload/upload.controller.ts:200) |
 | `POST` | `/upload/watermark/regenerate` | `PERM` | CMS:create | `CORE` | [src/upload/upload.controller.ts:241](../src/upload/upload.controller.ts:241) |
-| `GET` | `/users` | `PERM` | USERS:view | `CORE` | [src/users/users.controller.ts:14](../src/users/users.controller.ts:14) |
-| `POST` | `/users` | `PERM` | USERS:create | `CORE` | [src/users/users.controller.ts:26](../src/users/users.controller.ts:26) |
-| `DELETE` | `/users/:id` | `PERM` | USERS:delete | `CORE` | [src/users/users.controller.ts:38](../src/users/users.controller.ts:38) |
-| `PUT` | `/users/:id` | `PERM` | USERS:update | `CORE` | [src/users/users.controller.ts:32](../src/users/users.controller.ts:32) |
-| `POST` | `/users/:id/change-password` | `AUTH` | AUTH | `CORE` | [src/users/users.controller.ts:44](../src/users/users.controller.ts:44) |
-| `GET` | `/users/groups` | `PERM` | USERS:view | `CORE` | [src/users/users.controller.ts:51](../src/users/users.controller.ts:51) |
-| `POST` | `/users/groups` | `PERM` | USERS:create | `CORE` | [src/users/users.controller.ts:63](../src/users/users.controller.ts:63) |
-| `GET` | `/users/groups/:id` | `PERM` | USERS:view | `CORE` | [src/users/users.controller.ts:57](../src/users/users.controller.ts:57) |
-| `POST` | `/users/groups/:id/permissions` | `PERM` | USERS:create | `CORE` | [src/users/users.controller.ts:70](../src/users/users.controller.ts:70) |
-| `POST` | `/users/groups/:id/update` | `PERM` | USERS:create | `CORE` | [src/users/users.controller.ts:77](../src/users/users.controller.ts:77) |
-| `GET` | `/users/online` | `PERM` | USERS:view | `CORE` | [src/users/users.controller.ts:20](../src/users/users.controller.ts:20) |
+| `GET` | `/users` | `AUTH` | AUTH | `CORE` | [src/users/users.controller.ts:37](../src/users/users.controller.ts:37) |
+| `POST` | `/users` | `PERM` | USERS:create | `CORE` | [src/users/users.controller.ts:69](../src/users/users.controller.ts:69) |
+| `DELETE` | `/users/:id` | `PERM` | USERS:delete | `CORE` | [src/users/users.controller.ts:83](../src/users/users.controller.ts:83) |
+| `PUT` | `/users/:id` | `PERM` | USERS:update | `CORE` | [src/users/users.controller.ts:76](../src/users/users.controller.ts:76) |
+| `POST` | `/users/:id/change-password` | `AUTH` | AUTH | `CORE` | [src/users/users.controller.ts:90](../src/users/users.controller.ts:90) |
+| `GET` | `/users/groups` | `PERM` | USERS:view | `CORE` | [src/users/users.controller.ts:102](../src/users/users.controller.ts:102) |
+| `POST` | `/users/groups` | `PERM` | USERS:create | `CORE` | [src/users/users.controller.ts:116](../src/users/users.controller.ts:116) |
+| `GET` | `/users/groups/:id` | `PERM` | USERS:view | `CORE` | [src/users/users.controller.ts:109](../src/users/users.controller.ts:109) |
+| `POST` | `/users/groups/:id/permissions` | `PERM` | USERS:create | `CORE` | [src/users/users.controller.ts:124](../src/users/users.controller.ts:124) |
+| `POST` | `/users/groups/:id/update` | `PERM` | USERS:create | `CORE` | [src/users/users.controller.ts:137](../src/users/users.controller.ts:137) |
+| `GET` | `/users/online` | `AUTH` | AUTH | `CORE` | [src/users/users.controller.ts:54](../src/users/users.controller.ts:54) |

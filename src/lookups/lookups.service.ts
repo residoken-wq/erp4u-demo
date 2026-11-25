@@ -66,9 +66,18 @@ const WAREHOUSES: WarehouseLookupItem[] = [
   { id: 'KHO_LOI', name: 'Kho hàng lỗi' },
 ];
 
-function sanitizeLimit(limit?: number): number {
-  if (!limit || isNaN(limit)) return 20;
-  return Math.min(Math.max(limit, 1), 50);
+function resolveTake(q?: string, limit?: number): number {
+  const hasQuery = Boolean(q && q.trim());
+  if (hasQuery) {
+    if (limit && !isNaN(limit)) {
+      return Math.min(Math.max(limit, 1), 50);
+    }
+    return 50;
+  }
+  if (limit && !isNaN(limit)) {
+    return Math.min(Math.max(limit, 1), 5000);
+  }
+  return 5000;
 }
 
 @Injectable()
@@ -91,7 +100,7 @@ export class LookupsService {
   ) {}
 
   async getUsers(q?: string, limit?: number): Promise<UserLookupItem[]> {
-    const take = sanitizeLimit(limit);
+    const take = resolveTake(q, limit);
     const qb = this.userRepo
       .createQueryBuilder('u')
       .select(['u.id', 'u.full_name', 'u.username'])
@@ -113,7 +122,7 @@ export class LookupsService {
   }
 
   async getProducts(q?: string, limit?: number): Promise<ProductLookupItem[]> {
-    const take = sanitizeLimit(limit);
+    const take = resolveTake(q, limit);
     const qb = this.productRepo
       .createQueryBuilder('p')
       .select(['p.id', 'p.sku', 'p.name', 'p.unit'])
@@ -137,7 +146,7 @@ export class LookupsService {
   }
 
   async getCustomers(q?: string, limit?: number): Promise<CustomerLookupItem[]> {
-    const take = sanitizeLimit(limit);
+    const take = resolveTake(q, limit);
     const qb = this.customerRepo
       .createQueryBuilder('c')
       .select(['c.id', 'c.code', 'c.name']);
@@ -162,7 +171,7 @@ export class LookupsService {
     limit?: number,
     type?: string,
   ): Promise<SupplierLookupItem[]> {
-    const take = sanitizeLimit(limit);
+    const take = resolveTake(q, limit);
     const qb = this.supplierRepo
       .createQueryBuilder('s')
       .select(['s.id', 's.code', 's.name', 's.type']);
@@ -188,7 +197,7 @@ export class LookupsService {
   }
 
   async getWarehouses(q?: string, limit?: number): Promise<WarehouseLookupItem[]> {
-    const take = sanitizeLimit(limit);
+    const take = resolveTake(q, limit);
     let list = WAREHOUSES;
     if (q && q.trim()) {
       const term = q.trim().toLowerCase();
@@ -202,7 +211,7 @@ export class LookupsService {
   }
 
   async getEmployees(q?: string, limit?: number): Promise<EmployeeLookupItem[]> {
-    const take = sanitizeLimit(limit);
+    const take = resolveTake(q, limit);
     const qb = this.employeeRepo
       .createQueryBuilder('e')
       .select(['e.id', 'e.full_name'])
@@ -224,7 +233,7 @@ export class LookupsService {
   }
 
   async getCategories(q?: string, limit?: number): Promise<CategoryLookupItem[]> {
-    const take = sanitizeLimit(limit);
+    const take = resolveTake(q, limit);
     const qb = this.categoryRepo.createQueryBuilder('c').select(['c.id', 'c.name']);
 
     if (q && q.trim()) {
@@ -240,7 +249,7 @@ export class LookupsService {
   }
 
   async getMaterials(q?: string, limit?: number): Promise<MaterialLookupItem[]> {
-    const take = sanitizeLimit(limit);
+    const take = resolveTake(q, limit);
     const qb = this.materialRepo
       .createQueryBuilder('m')
       .select(['m.id', 'm.code', 'm.name', 'm.unit']);

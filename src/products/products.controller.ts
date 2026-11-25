@@ -3,7 +3,7 @@ import { ProductsService } from './products.service';
 import { CreateVariantDto } from './dto/create-variant.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
-import { RequirePermission, AuthOnly, Perm } from '../auth/permissions.decorator';
+import { RequirePermission, RequireAnyPermission, AuthOnly, Perm, AnyPerm } from '../auth/permissions.decorator';
 import { CorePackage, RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
 
@@ -46,11 +46,32 @@ export class ProductsController {
   }
   // ---------------------------------------------
 
-  @RequirePermission('PRODUCT', 'can_view')
-  @Perm('PRODUCT', 'view')
+  @RequireAnyPermission(
+    ['PRODUCT', 'can_view'],
+    ['PURCHASE', 'can_view'],
+    ['PRODUCTION', 'can_view'],
+    ['SALES', 'can_view'],
+  )
+  @AnyPerm(
+    ['PRODUCT', 'view'],
+    ['PURCHASE', 'view'],
+    ['PRODUCTION', 'view'],
+    ['SALES', 'view'],
+  )
   @Get() findAll() { return this.service.findAll(); }
-  @RequirePermission('PRODUCT', 'can_view')
-  @Perm('PRODUCT', 'view')
+
+  @RequireAnyPermission(
+    ['PRODUCT', 'can_view'],
+    ['PURCHASE', 'can_view'],
+    ['PRODUCTION', 'can_view'],
+    ['SALES', 'can_view'],
+  )
+  @AnyPerm(
+    ['PRODUCT', 'view'],
+    ['PURCHASE', 'view'],
+    ['PRODUCTION', 'view'],
+    ['SALES', 'view'],
+  )
   @Get(':id') findOne(@Param('id') id: number) { return this.service.findOne(Number(id)); }
 
   @Perm('PRODUCT', 'create') @Post() @RequirePermission('PRODUCT', 'can_create') create(@Body() b: any) { return this.service.create(b); }
@@ -64,7 +85,11 @@ export class ProductsController {
     return this.service.createVariant(createVariantDto);
   }
 
-  @Perm('PRODUCT', 'view')
+  @AnyPerm(
+    ['PRODUCT', 'view'],
+    ['PRODUCTION', 'view'],
+    ['PURCHASE', 'view'],
+  )
   @Get(':id/routings') getRoutings(@Param('id') id: number) { return this.service.getRoutings(id); }
   @Perm('PRODUCT', 'update')
   @Post(':id/routings') saveRoutings(@Param('id') id: number, @Body() b: any) { return this.service.saveRoutings(id, b); }
@@ -89,7 +114,12 @@ export class ProductsController {
   @Post(':id/website-config') saveWebsiteConfig(@Param('id') id: number, @Body() b: any) { return this.service.saveWebsiteConfig(Number(id), b); }
   // --------------------------
 
-  @Perm('PRODUCT', 'view')
+  @AnyPerm(
+    ['PRODUCT', 'view'],
+    ['PURCHASE', 'view'],
+    ['PRODUCTION', 'view'],
+    ['SALES', 'view'],
+  )
   @Get(':sku/boms') getBoms(@Param('sku') sku: string) { return this.service.getBomByProductSku(sku); }
   @Perm('PRODUCT', 'update')
   @Post(':id/boms') saveBoms(@Param('id') id: number, @Body() b: any) { return this.service.saveBoms(Number(id), b); }
@@ -97,7 +127,12 @@ export class ProductsController {
   @Perm('PRODUCT', 'create')
   @Post(':id/sync-variants') syncVariants(@Param('id') id: number) { return this.service.syncToVariants(id); }
 
-  @Perm('PRODUCT', 'view')
+  @AnyPerm(
+    ['PRODUCT', 'view'],
+    ['PURCHASE', 'view'],
+    ['PRODUCTION', 'view'],
+    ['SALES', 'view'],
+  )
   @Get('combo/:sku') getCombo(@Param('sku') sku: string) { return this.service.getComboComponents(sku); }
   @Perm('PRODUCT', 'create')
   @Post('combo/add') addComboItem(@Body() body: any) { return this.service.addComponent(body.parentSku, body.childSku, Number(body.qty)); }
@@ -134,7 +169,10 @@ export class ProductsController {
     return this.service.copySemiFinished(body.sourceSku, body.targetSku);
   }
 
-  @Perm('PRODUCT', 'view')
+  @AnyPerm(
+    ['PRODUCT', 'view'],
+    ['PRODUCTION', 'view'],
+  )
   @Get('calculate-cost/:sku') calculateCost(@Param('sku') sku: string) { return this.service.calculateCostPrice(sku); }
 
   @Perm('PRODUCT', 'view')

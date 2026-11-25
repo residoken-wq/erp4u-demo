@@ -116,21 +116,24 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
       `INSERT INTO "tenant_a"."user_groups" ("id", "name", "description") VALUES
        (1, 'Admin', 'Admin group'),
        (3, 'Production Team', 'Production group'),
-       (4, 'Sales Team', 'Sales group')
+       (4, 'Sales Team', 'Sales group'),
+       (6, 'HR Team', 'HR manager group')
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
       `INSERT INTO "tenant_a"."group_permissions" ("group_id", "module_code", "can_view", "can_create", "can_update", "can_delete") VALUES
        (3, 'PRODUCTION', true, false, false, false),
        (3, 'SALES', true, false, false, false),
-       (4, 'SALES', true, false, false, false)
+       (4, 'SALES', true, false, false, false),
+       (6, 'HR', true, true, true, true)
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
       `INSERT INTO "tenant_a"."users" ("id", "username", "password", "full_name", "group_id", "is_active") VALUES
        (1, 'admin', '${passwordHash}', 'Admin User A', 1, true),
        (10, 'prod_user_a', '${passwordHash}', 'Prod User A', 3, true),
-       (11, 'sales_user_a', '${passwordHash}', 'Sales User A', 4, true)
+       (11, 'sales_user_a', '${passwordHash}', 'Sales User A', 4, true),
+       (12, 'hr_user_a', '${passwordHash}', 'HR User A', 6, true)
        ON CONFLICT DO NOTHING`,
     );
 
@@ -138,19 +141,22 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
     await adminDs.query(
       `INSERT INTO "tenant_a"."employees" ("id", "user_id", "full_name", "base_salary", "is_active") VALUES
        (100, 11, 'Sales User A Employee', 15000000, true),
-       (101, 10, 'Prod User A Employee', 18000000, true)
+       (101, 10, 'Prod User A Employee', 18000000, true),
+       (102, 12, 'HR User A Employee', 20000000, true)
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
       `INSERT INTO "tenant_a"."attendances" ("id", "employee_id", "date", "status") VALUES
        (1001, 100, CURRENT_DATE, 'PRESENT'),
-       (1002, 101, CURRENT_DATE, 'PRESENT')
+       (1002, 101, CURRENT_DATE, 'PRESENT'),
+       (1003, 102, CURRENT_DATE, 'PRESENT')
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
       `INSERT INTO "tenant_a"."payslips" ("id", "employee_id", "month", "year", "net_salary") VALUES
        (2001, 100, 11, 2026, 14000000),
-       (2002, 101, 11, 2026, 17000000)
+       (2002, 101, 11, 2026, 17000000),
+       (2003, 102, 11, 2026, 20000000)
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
@@ -166,6 +172,16 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
     await adminDs.query(
       `INSERT INTO "tenant_a"."suppliers" ("id", "uuid", "code", "name", "debt", "type") VALUES
        (501, 'c0000000-0000-0000-0000-000000000501', 'NCC-DEMO-01', 'Nha cung cap Demo 01', 20000000, 'LOGISTICS')
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."projects" ("id", "name", "code", "created_by_id", "status") VALUES
+       (3001, 'Du an Mau A', 'DA-01', 10, 'PLANNING')
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."tasks" ("id", "title", "creator_id", "assignee_id", "status", "priority") VALUES
+       (4001, 'Cong viec User 10', 10, 10, 'TODO', 'MEDIUM')
        ON CONFLICT DO NOTHING`,
     );
 
@@ -570,7 +586,7 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
         expect(resHrPayslips.status).toBe(403);
       });
 
-      it('employee without HR permission can view own attendances and payslips (200), but is blocked from others or company-wide (403)', async () => {
+      it('/hr/me tự xem 200 / người khác 403-404 (cả user có HR:view)', async () => {
         if (!dbAvailable) return;
 
         const tokenSalesA = jwtService.sign({
@@ -580,7 +596,14 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
           tid: 'tenant_a',
         });
 
-        // 1. Own attendances and payslips return 200
+        const tokenHrA = jwtService.sign({
+          sub: 12,
+          username: 'hr_user_a',
+          group_id: 6,
+          tid: 'tenant_a',
+        });
+
+        // 1. Regular staff viewing own attendances and payslips returns 200
         const resMyAttendances = await request(app.getHttpServer())
           .get('/api/hr/me/attendances')
           .set('X-Test-Tenant', 'tenant_a')
@@ -606,32 +629,111 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
         expect(resMyPayslipId.status).toBe(200);
         expect(Number(resMyPayslipId.body.id)).toBe(2001);
 
-        // 2. Accessing someone else's attendances or payslips via query returns 403
-        const resOtherAttQuery = await request(app.getHttpServer())
-          .get('/api/hr/me/attendances?employee_id=101')
-          .set('X-Test-Tenant', 'tenant_a')
-          .set('Authorization', `Bearer ${tokenSalesA}`);
-        expect(resOtherAttQuery.status).toBe(403);
-
-        const resOtherPayQuery = await request(app.getHttpServer())
-          .get('/api/hr/me/payslips?employee_id=101')
-          .set('X-Test-Tenant', 'tenant_a')
-          .set('Authorization', `Bearer ${tokenSalesA}`);
-        expect(resOtherPayQuery.status).toBe(403);
-
-        // 3. Accessing someone else's payslip by ID returns 403
+        // 2. Regular staff accessing someone else's payslip by ID returns 403
         const resOtherPayId = await request(app.getHttpServer())
           .get('/api/hr/me/payslips/2002')
           .set('X-Test-Tenant', 'tenant_a')
           .set('Authorization', `Bearer ${tokenSalesA}`);
         expect(resOtherPayId.status).toBe(403);
 
-        // 4. Company-wide list returns 403
+        // 3. User WITH HR:view calling /hr/me/payslips/:id of someone else STILL returns 403
+        const resHrUserOtherPay = await request(app.getHttpServer())
+          .get('/api/hr/me/payslips/2001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenHrA}`);
+        expect(resHrUserOtherPay.status).toBe(403);
+
+        // 4. User WITH HR:view calling own payslip via /hr/me returns 200
+        const resHrUserOwnPay = await request(app.getHttpServer())
+          .get('/api/hr/me/payslips/2003')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenHrA}`);
+        expect(resHrUserOwnPay.status).toBe(200);
+
+        // 5. Company-wide list returns 403 for staff without HR, 200 for HR user
         const resAllPayslips = await request(app.getHttpServer())
           .get('/api/hr/payslips')
           .set('X-Test-Tenant', 'tenant_a')
           .set('Authorization', `Bearer ${tokenSalesA}`);
         expect(resAllPayslips.status).toBe(403);
+      });
+
+      it('projects 403 không quyền', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        // User without PROJECTS permission calling /projects endpoints -> 403
+        const resGetProjects = await request(app.getHttpServer())
+          .get('/api/projects')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resGetProjects.status).toBe(403);
+
+        const resGetProjectDetail = await request(app.getHttpServer())
+          .get('/api/projects/3001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resGetProjectDetail.status).toBe(403);
+
+        const resCostSummary = await request(app.getHttpServer())
+          .get('/api/projects/3001/cost-summary')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resCostSummary.status).toBe(403);
+
+        const resDeleteProject = await request(app.getHttpServer())
+          .delete('/api/projects/3001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resDeleteProject.status).toBe(403);
+      });
+
+      it('tasks không sửa/xoá được task người khác', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        const tokenProdA = jwtService.sign({
+          sub: 10,
+          username: 'prod_user_a',
+          group_id: 3,
+          tid: 'tenant_a',
+        });
+
+        // User 11 tries to update task 4001 (created by user 10) -> 403
+        const resUpdate = await request(app.getHttpServer())
+          .put('/api/tasks/4001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`)
+          .send({ title: 'Hacked Title' });
+        expect(resUpdate.status).toBe(403);
+
+        // User 11 tries to delete task 4001 (created by user 10) -> 403
+        const resDelete = await request(app.getHttpServer())
+          .delete('/api/tasks/4001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resDelete.status).toBe(403);
+
+        // Creator (user 10) can update own task -> 200
+        const resOwnerUpdate = await request(app.getHttpServer())
+          .put('/api/tasks/4001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenProdA}`)
+          .send({ title: 'Updated By Creator' });
+        expect(resOwnerUpdate.status).toBe(200);
+        expect(resOwnerUpdate.body.title).toBe('Updated By Creator');
       });
     });
   });

@@ -160,4 +160,57 @@ describe('LookupsService (Unit Tests / D3 Minimal Cross-Module Lookups)', () => 
     expect((res[0] as any).phone).toBeUndefined();
     expect((res[0] as any).address).toBeUndefined();
   });
+
+  it('returns all active records (60 items) when q is empty (safe limit up to 5000)', async () => {
+    const sixtyProducts = Array.from({ length: 60 }, (_, i) => ({
+      id: i + 1,
+      sku: `SP-${String(i + 1).padStart(3, '0')}`,
+      name: `Sản phẩm ${i + 1}`,
+      unit: 'cái',
+    }));
+    let capturedTake = 0;
+    const qb: any = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      take: jest.fn().mockImplementation((limit: number) => {
+        capturedTake = limit;
+        return qb;
+      }),
+      getMany: jest.fn().mockImplementation(() => Promise.resolve(sixtyProducts.slice(0, capturedTake))),
+    };
+    mockProductRepo.createQueryBuilder.mockReturnValue(qb);
+
+    const res = await service.getProducts();
+    expect(capturedTake).toBe(5000);
+    expect(res.length).toBe(60);
+  });
+
+  it('limits result to <= 50 when q is provided', async () => {
+    const sixtyProducts = Array.from({ length: 60 }, (_, i) => ({
+      id: i + 1,
+      sku: `SP-${String(i + 1).padStart(3, '0')}`,
+      name: `Sản phẩm ${i + 1}`,
+      unit: 'cái',
+    }));
+    let capturedTake = 0;
+    const qb: any = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      take: jest.fn().mockImplementation((limit: number) => {
+        capturedTake = limit;
+        return qb;
+      }),
+      getMany: jest.fn().mockImplementation(() => Promise.resolve(sixtyProducts.slice(0, capturedTake))),
+    };
+    mockProductRepo.createQueryBuilder.mockReturnValue(qb);
+
+    const res = await service.getProducts('Sản phẩm');
+    expect(capturedTake).toBe(50);
+    expect(res.length).toBeLessThanOrEqual(50);
+    expect(res.length).toBe(50);
+  });
 });

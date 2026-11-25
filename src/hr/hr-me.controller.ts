@@ -45,14 +45,10 @@ export class HrMeController {
   @AuthOnly({ selfOr: { module: 'HR', action: 'view' } })
   async getMyAttendances(
     @Request() req: any,
-    @Query('employee_id') employeeId?: string,
     @Query('month') month?: string,
     @Query('year') year?: string,
   ) {
     const employee = await this.resolveMyEmployee(req);
-    if (req.rbacSelfOnly && employeeId && +employeeId !== employee.id) {
-      throw new ForbiddenException('Bạn chỉ có thể xem chấm công của chính mình');
-    }
     return this.hrService.findAttendances(
       employee.id,
       month ? +month : undefined,
@@ -68,7 +64,7 @@ export class HrMeController {
     if (!attendance) {
       throw new NotFoundException('Không tìm thấy bản ghi chấm công');
     }
-    if (req.rbacSelfOnly && attendance.employee_id !== employee.id) {
+    if (attendance.employee_id !== employee.id) {
       throw new ForbiddenException('Bạn chỉ có thể xem chấm công của chính mình');
     }
     return attendance;
@@ -78,13 +74,9 @@ export class HrMeController {
   @AuthOnly({ selfOr: { module: 'HR', action: 'view' } })
   async getMyLeaves(
     @Request() req: any,
-    @Query('employee_id') employeeId?: string,
     @Query('status') status?: LeaveStatus,
   ) {
     const employee = await this.resolveMyEmployee(req);
-    if (req.rbacSelfOnly && employeeId && +employeeId !== employee.id) {
-      throw new ForbiddenException('Bạn chỉ có thể xem nghỉ phép của chính mình');
-    }
     const leaves = await this.hrService.findAllLeaves(status);
     return leaves.filter((l: any) => l.employee_id === employee.id);
   }
@@ -97,7 +89,7 @@ export class HrMeController {
     if (!leave) {
       throw new NotFoundException('Không tìm thấy đơn nghỉ phép');
     }
-    if (req.rbacSelfOnly && leave.employee_id !== employee.id) {
+    if (leave.employee_id !== employee.id) {
       throw new ForbiddenException('Bạn chỉ có thể xem đơn nghỉ phép của chính mình');
     }
     return leave;
@@ -107,9 +99,6 @@ export class HrMeController {
   @AuthOnly({ selfOr: { module: 'HR', action: 'create' } })
   async createMyLeave(@Request() req: any, @Body() body: any) {
     const employee = await this.resolveMyEmployee(req);
-    if (req.rbacSelfOnly && body?.employee_id && +body.employee_id !== employee.id) {
-      throw new ForbiddenException('Bạn chỉ có thể tạo đơn nghỉ phép cho chính mình');
-    }
     const { type, leave_type, start_date, end_date, days, reason } = body || {};
     return this.hrService.createLeave({
       employee_id: employee.id,
@@ -126,14 +115,10 @@ export class HrMeController {
   @AuthOnly({ selfOr: { module: 'HR', action: 'view' } })
   async getMyPayslips(
     @Request() req: any,
-    @Query('employee_id') employeeId?: string,
     @Query('month') month?: string,
     @Query('year') year?: string,
   ) {
     const employee = await this.resolveMyEmployee(req);
-    if (req.rbacSelfOnly && employeeId && +employeeId !== employee.id) {
-      throw new ForbiddenException('Bạn chỉ có thể xem phiếu lương của chính mình');
-    }
     return this.hrService.findPayslips(
       employee.id,
       month ? +month : undefined,
@@ -149,7 +134,7 @@ export class HrMeController {
     if (!payslip) {
       throw new NotFoundException('Không tìm thấy phiếu lương');
     }
-    if (req.rbacSelfOnly && payslip.employee_id !== employee.id) {
+    if (payslip.employee_id !== employee.id) {
       throw new ForbiddenException('Bạn chỉ có thể xem phiếu lương của chính mình');
     }
     return payslip;

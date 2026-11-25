@@ -12,6 +12,9 @@ export const PERMISSION_KEY = 'required_permission';
 export const RequirePermission = (moduleCode: string, action: string) =>
     SetMetadata(PERMISSION_KEY, { moduleCode, action });
 
+export const RequireAnyPermission = (...pairs: [string, string][]) =>
+    SetMetadata(PERMISSION_KEY, { any: pairs.map(([moduleCode, action]) => ({ moduleCode, action })) });
+
 export const RBAC_KEY = 'rbac_rule';
 export type RbacRule =
   | { tier: 'AUTH'; selfOr?: { module: string; action: PermAction } }

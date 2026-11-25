@@ -84,7 +84,7 @@ const PurchasingPage: React.FC = () => {
 
     useEffect(() => {
         fetchData();
-        api.get(`/lookups/products`).then(res => setProducts(res.data)).catch(console.error);
+        api.get(`/products`).then(res => setProducts(res.data)).catch(console.error);
         api.get(`/lookups/suppliers`).then(res => setSuppliers(res.data)).catch(console.error);
         api.get(`/projects`).then(res => setProjects(res.data)).catch(console.error);
         api.get(`/system/company`).then(res => setCompanyConfig(res.data)).catch(console.error);
