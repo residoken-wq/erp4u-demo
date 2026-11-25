@@ -10,6 +10,7 @@ import { Employee } from '../hr/entities/employee.entity';
 import { Category } from '../categories/category.entity';
 import { Material } from '../materials/material.entity';
 import { Project } from '../projects/entities/project.entity';
+import { Task } from '../tasks/task.entity';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { Project } from '../projects/entities/project.entity';
       Category,
       Material,
       Project,
+      Task,
     ]),
   ],
   controllers: [LookupsController],

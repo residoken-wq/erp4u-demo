@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { BadRequestException } from '@nestjs/common';
 import { LookupsService } from '../lookups.service';
+import { LookupsController } from '../lookups.controller';
 import { User } from '../../users/entities/user.entity';
 import { Product } from '../../products/product.entity';
 import { Customer } from '../../customers/customer.entity';
@@ -9,6 +11,7 @@ import { Employee } from '../../hr/entities/employee.entity';
 import { Category } from '../../categories/category.entity';
 import { Material } from '../../materials/material.entity';
 import { Project } from '../../projects/entities/project.entity';
+import { Task } from '../../tasks/task.entity';
 
 describe('LookupsService (Unit Tests / D3 Minimal Cross-Module Lookups)', () => {
   let service: LookupsService;
@@ -33,6 +36,7 @@ describe('LookupsService (Unit Tests / D3 Minimal Cross-Module Lookups)', () => 
   let mockCategoryRepo: any;
   let mockMaterialRepo: any;
   let mockProjectRepo: any;
+  let mockTaskRepo: any;
 
   beforeEach(async () => {
     mockUserRepo = {
@@ -99,6 +103,23 @@ describe('LookupsService (Unit Tests / D3 Minimal Cross-Module Lookups)', () => 
       ),
     };
 
+    mockTaskRepo = {
+      createQueryBuilder: jest.fn().mockReturnValue(
+        createMockQueryBuilder([
+          {
+            id: 80,
+            title: 'Task Alpha 01',
+            project_id: 70,
+            estimated_cost: 1000000,
+            actual_cost: 500000,
+            estimated_hours: 8,
+            assignee_id: 1,
+            assignee: { id: 1, username: 'admin' },
+          },
+        ]),
+      ),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LookupsService,
@@ -110,6 +131,7 @@ describe('LookupsService (Unit Tests / D3 Minimal Cross-Module Lookups)', () => 
         { provide: getRepositoryToken(Category), useValue: mockCategoryRepo },
         { provide: getRepositoryToken(Material), useValue: mockMaterialRepo },
         { provide: getRepositoryToken(Project), useValue: mockProjectRepo },
+        { provide: getRepositoryToken(Task), useValue: mockTaskRepo },
       ],
     }).compile();
 
@@ -237,5 +259,28 @@ describe('LookupsService (Unit Tests / D3 Minimal Cross-Module Lookups)', () => 
     expect((res[0] as any).created_by_id).toBeUndefined();
     expect((res[0] as any).tasks).toBeUndefined();
     expect((res[0] as any).milestones).toBeUndefined();
+  });
+
+  it('getProjectTasks returns only allowed fields (id, title) without cost/hours/assignee', async () => {
+    const res = await service.getProjectTasks(70);
+    expect(res).toEqual([
+      { id: 80, title: 'Task Alpha 01' },
+    ]);
+    expect((res[0] as any).estimated_cost).toBeUndefined();
+    expect((res[0] as any).actual_cost).toBeUndefined();
+    expect((res[0] as any).estimated_hours).toBeUndefined();
+    expect((res[0] as any).assignee).toBeUndefined();
+    expect((res[0] as any).assignee_id).toBeUndefined();
+    expect((res[0] as any).project_id).toBeUndefined();
+  });
+
+  it('LookupsController.getProjectTasks requires valid project_id (missing/invalid -> 400)', () => {
+    const controller = new LookupsController(service);
+    expect(() => controller.getProjectTasks(undefined)).toThrow(BadRequestException);
+    expect(() => controller.getProjectTasks('')).toThrow(BadRequestException);
+    expect(() => controller.getProjectTasks('   ')).toThrow(BadRequestException);
+    expect(() => controller.getProjectTasks('abc')).toThrow(BadRequestException);
+    expect(() => controller.getProjectTasks('-1')).toThrow(BadRequestException);
+    expect(() => controller.getProjectTasks('0')).toThrow(BadRequestException);
   });
 });

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Project, ProjectStatus, ProjectType } from './entities/project.entity';
@@ -9,6 +9,8 @@ import { Transaction } from '../finance/transaction.entity';
 import { PurchaseOrder } from '../purchasing/entities/purchase-order.entity';
 import { SystemConfig } from '../system/system-config.entity';
 import { DEFAULT_SO_PROJECT_TEMPLATE } from '../system/system.service';
+import { PermissionCacheService } from '../auth/permission-cache.service';
+import { hasPermission } from '../auth/rbac-assert.helper';
 
 @Injectable()
 export class ProjectsService {
@@ -20,7 +22,16 @@ export class ProjectsService {
         @InjectRepository(Transaction) private transRepo: Repository<Transaction>,
         @InjectRepository(PurchaseOrder) private poRepo: Repository<PurchaseOrder>,
         @InjectRepository(SystemConfig) private configRepo: Repository<SystemConfig>,
+        @Optional()
+        @Inject(forwardRef(() => PermissionCacheService))
+        private readonly permCacheService?: PermissionCacheService,
     ) { }
+
+    private async canViewAllProjects(user: any): Promise<boolean> {
+        if (!user) return false;
+        if (user.username === 'admin') return true;
+        return hasPermission(user, this.permCacheService, 'PROJECTS', 'update');
+    }
 
     async findAll(user: any) {
         // Get all projects where user is manager, member, or assigned to a task
@@ -29,20 +40,22 @@ export class ProjectsService {
             order: { created_at: 'DESC' },
         });
 
+        const canViewAll = await this.canViewAllProjects(user);
+        if (canViewAll) {
+            return allProjects;
+        }
+
         return allProjects.filter(p => {
-            // Admin bypass
-            if (Number(user?.groupId) === 1) return true;
-            
             // Creator always sees the project
-            if (p.created_by_id === Number(user.id)) return true;
+            if (p.created_by_id === Number(user?.id)) return true;
             // Manager always sees the project
-            if (p.manager_id === Number(user.id)) return true;
+            if (p.manager_id === Number(user?.id)) return true;
             // Members see the project
-            if (p.members?.some(m => m.id === Number(user.id))) return true;
+            if (p.members?.some(m => m.id === Number(user?.id))) return true;
             // For SO_PROJECT: users assigned to any task see the project
-            if (p.tasks?.some(t => t.assignee_id === Number(user.id))) return true;
+            if (p.tasks?.some(t => t.assignee_id === Number(user?.id))) return true;
             // For SO_PROJECT: owner of the SO should always see it
-            if (p.sales_order?.assigned_to_id === Number(user.id)) return true;
+            if (p.sales_order?.assigned_to_id === Number(user?.id)) return true;
             
             return false;
         });
@@ -57,16 +70,19 @@ export class ProjectsService {
         });
         if (!project) throw new NotFoundException('Project not found');
 
-        // Access check: manager, member, or task assignee
-        if (user && Number(user.groupId) !== 1) { // Admin bypass
-            const isCreator = project.created_by_id === Number(user.id);
-            const isMember = project.members?.some(m => m.id === Number(user.id));
-            const isManager = project.manager_id === Number(user.id);
-            const isTaskAssignee = project.tasks?.some(t => t.assignee_id === Number(user.id));
-            const isSOOwner = project.sales_order?.assigned_to_id === Number(user.id);
+        // Access check: admin or PROJECTS:update bypasses ownership check; otherwise creator, manager, member, or task assignee
+        if (user) {
+            const canViewAll = await this.canViewAllProjects(user);
+            if (!canViewAll) {
+                const isCreator = project.created_by_id === Number(user.id);
+                const isMember = project.members?.some(m => m.id === Number(user.id));
+                const isManager = project.manager_id === Number(user.id);
+                const isTaskAssignee = project.tasks?.some(t => t.assignee_id === Number(user.id));
+                const isSOOwner = project.sales_order?.assigned_to_id === Number(user.id);
 
-            if (!isCreator && !isMember && !isManager && !isTaskAssignee && !isSOOwner) {
-                throw new NotFoundException('Project not found or access denied');
+                if (!isCreator && !isMember && !isManager && !isTaskAssignee && !isSOOwner) {
+                    throw new NotFoundException('Project not found or access denied');
+                }
             }
         }
 

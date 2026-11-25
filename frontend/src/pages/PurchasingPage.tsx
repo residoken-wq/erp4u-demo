@@ -61,6 +61,28 @@ const PurchasingPage: React.FC = () => {
     const [products, setProducts] = useState<any[]>([]); // All Products for Relinking
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [projects, setProjects] = useState<any[]>([]);
+    const [projectTasks, setProjectTasks] = useState<any[]>([]);
+
+    const loadProjectTasks = async (projectId?: number | string) => {
+        if (!projectId) {
+            setProjectTasks([]);
+            return;
+        }
+        try {
+            const res = await api.get(`/lookups/project-tasks?project_id=${projectId}`);
+            setProjectTasks(Array.isArray(res.data) ? res.data : []);
+        } catch {
+            setProjectTasks([]);
+        }
+    };
+
+    useEffect(() => {
+        if (currentPO?.project_id) {
+            loadProjectTasks(currentPO.project_id);
+        } else {
+            setProjectTasks([]);
+        }
+    }, [currentPO?.project_id]);
     const [companyConfig, setCompanyConfig] = useState<any>(null);
 
     // --- MỚI: Print Designs ---
@@ -350,6 +372,11 @@ const PurchasingPage: React.FC = () => {
             const poDetail = res.data;
 
             setCurrentPO(poDetail);
+            if (poDetail.project_id) {
+                loadProjectTasks(poDetail.project_id);
+            } else {
+                setProjectTasks([]);
+            }
 
             // --- POOLED PO: Lấy dữ liệu gộp từ child POs ---
             if (poDetail.type === 'POOLED') {
@@ -1205,7 +1232,7 @@ const PurchasingPage: React.FC = () => {
                                 value={currentPO?.task_id}
                                 onChange={(val) => setCurrentPO({ ...currentPO, task_id: val })}
                             >
-                                {currentPO?.project_id && projects.find(p => p.id === currentPO.project_id)?.tasks?.map((t: any) =>
+                                {projectTasks.map((t: any) =>
                                     <Select.Option key={t.id} value={t.id}>{t.title}</Select.Option>
                                 )}
                             </Select>

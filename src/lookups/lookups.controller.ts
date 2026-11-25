@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthOnly } from '../auth/permissions.decorator';
 import { CorePackage } from '../common/packages/requires-package.decorator';
@@ -58,5 +58,21 @@ export class LookupsController {
   @Get('projects')
   getProjects(@Query('q') q?: string, @Query('limit') limit?: string) {
     return this.lookupsService.getProjects(q, limit ? Number(limit) : undefined);
+  }
+
+  @Get('project-tasks')
+  getProjectTasks(
+    @Query('project_id') projectId?: string,
+    @Query('q') q?: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (!projectId || !projectId.trim() || isNaN(Number(projectId)) || Number(projectId) <= 0) {
+      throw new BadRequestException('project_id là bắt buộc');
+    }
+    return this.lookupsService.getProjectTasks(
+      Number(projectId),
+      q,
+      limit ? Number(limit) : undefined,
+    );
   }
 }

@@ -1,12 +1,12 @@
 # Bảng Kiểm Kê Phân Quyền Route (RBAC Route Inventory)
 
-> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-25T14:49:01.060Z
+> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-25T15:22:33.915Z
 
 ## Tổng quan theo tầng
 
-- **Tổng số route**: 549
+- **Tổng số route**: 550
 - **PERM** (Phân quyền chi tiết): 449
-- **AUTH** (Chỉ cần đăng nhập): 59
+- **AUTH** (Chỉ cần đăng nhập): 60
 - **PUBLIC** (Công khai): 36
 - **APIKEY** (Xác thực qua API Key): 5
 - **LEGACY** (Decorator cũ @RequirePermission): 0
@@ -216,6 +216,7 @@
 | `GET` | `/lookups/employees` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:43](../src/lookups/lookups.controller.ts:43) |
 | `GET` | `/lookups/materials` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:53](../src/lookups/lookups.controller.ts:53) |
 | `GET` | `/lookups/products` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:19](../src/lookups/lookups.controller.ts:19) |
+| `GET` | `/lookups/project-tasks` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:63](../src/lookups/lookups.controller.ts:63) |
 | `GET` | `/lookups/projects` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:58](../src/lookups/lookups.controller.ts:58) |
 | `GET` | `/lookups/suppliers` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:29](../src/lookups/lookups.controller.ts:29) |
 | `GET` | `/lookups/users` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:14](../src/lookups/lookups.controller.ts:14) |

@@ -76,6 +76,28 @@ const FinancePage: React.FC = () => {
     const isRetail = Form.useWatch('is_retail', formTrans); // <--- Watch checkbox Income
     const isOtherExpense = Form.useWatch('is_other_expense', formTrans); // <--- Watch checkbox Expense
     const selectedProjectId = Form.useWatch('project_id', formTrans);
+    const [projectTasks, setProjectTasks] = useState<any[]>([]);
+
+    const loadProjectTasks = async (projectId?: number | string) => {
+        if (!projectId) {
+            setProjectTasks([]);
+            return;
+        }
+        try {
+            const res = await api.get(`/lookups/project-tasks?project_id=${projectId}`);
+            setProjectTasks(Array.isArray(res.data) ? res.data : []);
+        } catch {
+            setProjectTasks([]);
+        }
+    };
+
+    useEffect(() => {
+        if (selectedProjectId) {
+            loadProjectTasks(selectedProjectId);
+        } else {
+            setProjectTasks([]);
+        }
+    }, [selectedProjectId]);
 
     // --- REPORT STATE ---
     const [reportData, setReportData] = useState<any>({ transactions: [], summary: { income: 0, expense: 0, profit: 0 } });
@@ -221,6 +243,11 @@ const FinancePage: React.FC = () => {
             is_retail: !custId && record.type === 'INCOME',
             is_other_expense: !supId && record.type === 'EXPENSE'
         });
+        if (record.project_id) {
+            loadProjectTasks(record.project_id);
+        } else {
+            setProjectTasks([]);
+        }
         setIsTransModalOpen(true);
     };
 
@@ -1460,7 +1487,7 @@ const FinancePage: React.FC = () => {
                             <Col span={12}>
                                 <Form.Item name="task_id" label="Công việc (Task)">
                                     <Select allowClear placeholder="Chọn công việc..." disabled={!selectedProjectId}>
-                                        {selectedProjectId && projects.find(p => p.id === selectedProjectId)?.tasks?.map((t: any) =>
+                                        {projectTasks.map((t: any) =>
                                             <Option key={t.id} value={t.id}>{t.title}</Option>
                                         )}
                                     </Select>

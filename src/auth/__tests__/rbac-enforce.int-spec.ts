@@ -122,6 +122,7 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
     );
     await adminDs.query(
       `INSERT INTO "tenant_a"."group_permissions" ("group_id", "module_code", "can_view", "can_create", "can_update", "can_delete") VALUES
+       (1, 'PROJECTS', true, false, false, false),
        (3, 'PRODUCTION', true, false, false, false),
        (3, 'SALES', true, false, false, false),
        (4, 'SALES', true, false, false, false),
@@ -133,7 +134,8 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
        (1, 'admin', '${passwordHash}', 'Admin User A', 1, true),
        (10, 'prod_user_a', '${passwordHash}', 'Prod User A', 3, true),
        (11, 'sales_user_a', '${passwordHash}', 'Sales User A', 4, true),
-       (12, 'hr_user_a', '${passwordHash}', 'HR User A', 6, true)
+       (12, 'hr_user_a', '${passwordHash}', 'HR User A', 6, true),
+       (13, 'group1_staff', '${passwordHash}', 'Group 1 Staff User', 1, true)
        ON CONFLICT DO NOTHING`,
     );
 
@@ -180,8 +182,9 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
-      `INSERT INTO "tenant_a"."tasks" ("id", "title", "creator_id", "assignee_id", "status", "priority") VALUES
-       (4001, 'Cong viec User 10', 10, 10, 'TODO', 'MEDIUM')
+      `INSERT INTO "tenant_a"."tasks" ("id", "title", "creator_id", "assignee_id", "project_id", "status", "priority", "estimated_cost", "actual_cost", "estimated_hours") VALUES
+       (4001, 'Cong viec User 10', 10, 10, NULL, 'TODO', 'MEDIUM', 0, 0, 0),
+       (4002, 'Cong viec Du an 3001', 10, 10, 3001, 'TODO', 'MEDIUM', 1000000, 500000, 8)
        ON CONFLICT DO NOTHING`,
     );
 
@@ -843,6 +846,105 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
           .set('Authorization', `Bearer ${tokenProdA}`);
         expect(resLogsOwner.status).toBe(200);
         expect(Array.isArray(resLogsOwner.body)).toBe(true);
+      });
+
+      it('user không có PROJECTS gọi /lookups/project-tasks -> 200 chỉ đúng { id, title }, thiếu project_id -> 400', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        // 1. Calling with valid project_id returns 200 with only id and title
+        const resTasks = await request(app.getHttpServer())
+          .get('/api/lookups/project-tasks?project_id=3001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+
+        expect(resTasks.status).toBe(200);
+        expect(Array.isArray(resTasks.body)).toBe(true);
+        expect(resTasks.body.length).toBeGreaterThan(0);
+
+        const taskItem = resTasks.body.find((t: any) => t.id === 4002);
+        expect(taskItem).toBeDefined();
+        expect(taskItem).toEqual({
+          id: 4002,
+          title: 'Cong viec Du an 3001',
+        });
+        expect((taskItem as any).estimated_cost).toBeUndefined();
+        expect((taskItem as any).actual_cost).toBeUndefined();
+        expect((taskItem as any).estimated_hours).toBeUndefined();
+        expect((taskItem as any).assignee).toBeUndefined();
+        expect((taskItem as any).assignee_id).toBeUndefined();
+        expect((taskItem as any).project_id).toBeUndefined();
+        expect((taskItem as any).priority).toBeUndefined();
+        expect((taskItem as any).status).toBeUndefined();
+
+        // 2. Missing project_id -> 400
+        const resMissing = await request(app.getHttpServer())
+          .get('/api/lookups/project-tasks')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resMissing.status).toBe(400);
+
+        // 3. Invalid project_id -> 400
+        const resInvalid = await request(app.getHttpServer())
+          .get('/api/lookups/project-tasks?project_id=abc')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resInvalid.status).toBe(400);
+      });
+
+      it('user thuộc nhóm id 1 nhưng không phải admin và không có PROJECTS:update -> không thấy dự án của người khác', async () => {
+        if (!dbAvailable) return;
+
+        const tokenGroup1Staff = jwtService.sign({
+          sub: 13,
+          username: 'group1_staff',
+          group_id: 1,
+          tid: 'tenant_a',
+        });
+
+        const tokenAdmin = jwtService.sign({
+          sub: 1,
+          username: 'admin',
+          group_id: 1,
+          tid: 'tenant_a',
+        });
+
+        // 1. group1_staff has PROJECTS:view so GET /projects returns 200, but cannot see project 3001 (created by user 10)
+        const resListStaff = await request(app.getHttpServer())
+          .get('/api/projects')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenGroup1Staff}`);
+        expect(resListStaff.status).toBe(200);
+        expect(Array.isArray(resListStaff.body)).toBe(true);
+        expect(resListStaff.body.some((p: any) => p.id === 3001)).toBe(false);
+
+        // 2. group1_staff accessing project 3001 directly returns 404 (access denied / not found)
+        const resDetailStaff = await request(app.getHttpServer())
+          .get('/api/projects/3001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenGroup1Staff}`);
+        expect(resDetailStaff.status).toBe(404);
+
+        // 3. admin (username === 'admin') sees project 3001
+        const resListAdmin = await request(app.getHttpServer())
+          .get('/api/projects')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenAdmin}`);
+        expect(resListAdmin.status).toBe(200);
+        expect(resListAdmin.body.some((p: any) => p.id === 3001)).toBe(true);
+
+        const resDetailAdmin = await request(app.getHttpServer())
+          .get('/api/projects/3001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenAdmin}`);
+        expect(resDetailAdmin.status).toBe(200);
+        expect(resDetailAdmin.body.id).toBe(3001);
       });
     });
   });

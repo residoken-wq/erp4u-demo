@@ -9,6 +9,7 @@ import { Employee } from '../hr/entities/employee.entity';
 import { Category } from '../categories/category.entity';
 import { Material } from '../materials/material.entity';
 import { Project } from '../projects/entities/project.entity';
+import { Task } from '../tasks/task.entity';
 
 export interface UserLookupItem {
   id: number;
@@ -68,6 +69,11 @@ export interface ProjectLookupItem {
   status?: string;
 }
 
+export interface ProjectTaskLookupItem {
+  id: number;
+  title: string;
+}
+
 const WAREHOUSES: WarehouseLookupItem[] = [
   { id: 'KHO_TP', name: 'Kho thành phẩm' },
   { id: 'KHO_BTP', name: 'Kho bán thành phẩm' },
@@ -108,6 +114,8 @@ export class LookupsService {
     private readonly materialRepo: Repository<Material>,
     @InjectRepository(Project)
     private readonly projectRepo: Repository<Project>,
+    @InjectRepository(Task)
+    private readonly taskRepo: Repository<Task>,
   ) {}
 
   async getUsers(q?: string, limit?: number): Promise<UserLookupItem[]> {
@@ -301,6 +309,31 @@ export class LookupsService {
       name: p.title,
       title: p.title,
       status: p.status,
+    }));
+  }
+
+  async getProjectTasks(
+    projectId: number,
+    q?: string,
+    limit?: number,
+  ): Promise<ProjectTaskLookupItem[]> {
+    const take = resolveTake(q, limit);
+    const qb = this.taskRepo
+      .createQueryBuilder('t')
+      .select(['t.id', 't.title'])
+      .where('t.project_id = :projectId', { projectId });
+
+    if (q && q.trim()) {
+      qb.andWhere('t.title ILIKE :q', {
+        q: `%${q.trim()}%`,
+      });
+    }
+
+    qb.orderBy('t.id', 'ASC').take(take);
+    const tasks = await qb.getMany();
+    return tasks.map((t) => ({
+      id: t.id,
+      title: t.title,
     }));
   }
 }
