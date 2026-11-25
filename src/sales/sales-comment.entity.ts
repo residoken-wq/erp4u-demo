@@ -39,4 +39,10 @@ export class SalesComment {
 
   @Column({ nullable: true })
   deleted_by: string; // Username of who deleted it
+
+  @Column({ type: 'int', nullable: true })
+  created_by_user_id: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  edited_at: Date;
 }

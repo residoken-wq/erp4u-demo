@@ -450,7 +450,7 @@ const SalesOrderDetail: React.FC<Props> = ({ open, onClose, onSuccess, initialDa
 
             const downloadImage = async (url: string) => {
                 try {
-                    const res = await api.get(`/proxy-image?url=${encodeURIComponent(url)}`, { responseType: 'arraybuffer' });
+                    const res = await api.get(`/public/proxy-image?url=${encodeURIComponent(url)}`, { responseType: 'arraybuffer' });
                     return res.data;
                 } catch (e) {
                     return null;

@@ -36,9 +36,9 @@ export class Announcement {
     @Column({ default: false })
     is_pinned: boolean;
 
-    // Target theo department (null = tất cả)
-    @Column({ type: 'simple-array', nullable: true })
-    target_departments: string[];
+    // Target theo user groups (null = tất cả)
+    @Column('int', { array: true, nullable: true })
+    target_group_ids: number[];
 
     @Index()
     @Column({ type: 'timestamp', nullable: true })

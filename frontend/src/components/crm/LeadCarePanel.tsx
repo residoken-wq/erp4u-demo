@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import SafeHtml from '../common/SafeHtml';
 import { List, Avatar, Button, Input, message, Tag, Spin, Empty, Divider, Tooltip } from 'antd';
 import { UserOutlined, RobotOutlined, SendOutlined, MessageOutlined, ShopOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
@@ -146,7 +147,7 @@ const LeadCarePanel: React.FC<LeadCarePanelProps> = ({ customerId, customerName 
                                                 </div>
                                             }
                                             description={
-                                                <div style={{ color: '#333', fontSize: 13 }} dangerouslySetInnerHTML={{ __html: item.content }} />
+                                                <SafeHtml style={{ color: '#333', fontSize: 13 }} html={item.content} />
                                             }
                                         />
                                     </List.Item>

@@ -117,22 +117,26 @@ export class SalesController {
 
     @Perm('SALES', 'create')
     @Post(':id/comment')
-    addComment(@Param('id') id: number, @Body() body: any) {
-        return this.s.addComment(id, body.content, body.sender, body.name, body.comment_type, body.mentioned_user_ids);
+    addComment(@Param('id') id: number, @Body() body: any, @Req() req: any) {
+        return this.s.addStaffComment(Number(id), body, req.user);
     }
 
     @Perm('SALES', 'update')
     @Put('comment/:id')
-    updateComment(@Param('id') id: number, @Body() body: any) { return this.s.updateComment(id, body.content); }
+    updateComment(@Param('id') id: number, @Body() body: any, @Req() req: any) {
+        return this.s.updateStaffComment(Number(id), body?.content, req.user);
+    }
 
     @Perm('SALES', 'create')
     @Post('comment/:id/toggle')
-    toggleComment(@Param('id') id: number) { return this.s.toggleCommentVisibility(id); }
+    toggleComment(@Param('id') id: number) {
+        return this.s.toggleCommentVisibility(Number(id));
+    }
 
     @Perm('SALES', 'delete')
     @Delete('comment/:id')
-    softDeleteComment(@Param('id') id: number, @Body() body: any) {
-        return this.s.softDeleteComment(id, body?.deletedBy || 'Khách hàng');
+    softDeleteComment(@Param('id') id: number, @Req() req: any) {
+        return this.s.softDeleteStaffComment(Number(id), req.user);
     }
 
     @Perm('SALES', 'view')

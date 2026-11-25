@@ -12,6 +12,8 @@ import { DESIGN_ORDER_HOOKS, DesignOrderHooks } from '../common/extension-points
 import { DemoModeService } from '../common/services/demo-mode.service';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { handleProxyImage } from '../common/security/proxy-image.util';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RateLimit, RateLimitGuard } from '../common/security/rate-limit';
 
 @Controller('public')
@@ -161,25 +163,16 @@ export class PublicController {
             }
         }
 
-        // --- ATTACH EMPLOYEE PHONE & EMAIL TO ASSIGNED_TO ---
+        // --- SANITIZE ASSIGNED_TO FOR PORTAL (id & full_name only) ---
         if (isDesignOrder && !quote.assigned_to) {
             quote.assigned_to = quote.sales_order?.assigned_to || quote.designer;
         }
 
         if (quote.assigned_to?.id) {
-            try {
-                const employee = await this.hrService.findEmployeeByUserId(quote.assigned_to.id);
-                if (employee) {
-                    if (employee.phone && !(quote.assigned_to as any).phone) {
-                        (quote.assigned_to as any).phone = employee.phone;
-                    }
-                    if (employee.user?.email && !(quote.assigned_to as any).email) {
-                        (quote.assigned_to as any).email = employee.user.email;
-                    }
-                }
-            } catch (e) {
-                // Ignore if HR module fails
-            }
+            quote.assigned_to = {
+                id: quote.assigned_to.id,
+                full_name: quote.assigned_to.full_name,
+            };
         }
 
         // --- LOG VIEW PORTAL ---
@@ -259,38 +252,21 @@ export class PublicController {
 
     @Public()
     @RequiresPackage(PackageKey.SALES)
-    @Post('portal/quote/:orderId/comment')
-    portalAddComment(@Param('orderId') orderId: number, @Body() body: any) {
-        return this.salesService.addComment(
-            Number(orderId),
-            body.content,
-            body.sender,
-            body.name,
-            body.comment_type,
-            body.mentioned_user_ids
-        );
+    @Post('portal/quote/:uuid/comment')
+    portalAddComment(@Param('uuid') uuid: string, @Body() body: any) {
+        return this.salesService.portalAddComment(uuid, body);
     }
 
     @Public()
     @RequiresPackage(PackageKey.SALES)
-    @Delete('portal/quote/comment/:commentId')
-    portalDeleteComment(@Param('commentId') commentId: number, @Body() body: any) {
-        return this.salesService.softDeleteComment(Number(commentId), body?.deletedBy || 'Khách hàng');
+    @Delete('portal/quote/:uuid/comment/:commentId')
+    portalDeleteComment(@Param('uuid') uuid: string, @Param('commentId') commentId: number) {
+        return this.salesService.portalDeleteComment(uuid, Number(commentId));
     }
 
-    @Public()
+    @UseGuards(JwtAuthGuard)
     @Get('proxy-image')
     async proxyImage(@Query('url') url: string, @Res() res: Response) {
-        if (!url) return res.status(400).send('Missing url');
-        try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Fetch failed');
-            res.set('Content-Type', response.headers.get('content-type') || 'image/jpeg');
-            res.set('Access-Control-Allow-Origin', '*');
-            const arrayBuffer = await response.arrayBuffer();
-            res.send(Buffer.from(arrayBuffer));
-        } catch (e) {
-            res.status(400).send('Error loading image');
-        }
+        return handleProxyImage(url, res);
     }
 }

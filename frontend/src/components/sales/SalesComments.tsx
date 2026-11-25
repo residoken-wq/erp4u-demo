@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import SafeHtml from '../common/SafeHtml';
 import { List, Avatar, Button, message, Tabs, Tag, Empty, Mentions } from 'antd';
 import { UserOutlined, MessageOutlined, EyeInvisibleOutlined, EyeOutlined, TeamOutlined, CustomerServiceOutlined, SendOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -28,6 +29,8 @@ interface Comment {
     mentioned_user_ids?: string;
     created_at: string;
     deleted_at?: string;
+    created_by_user_id?: number;
+    edited_at?: string;
 }
 
 interface SalesCommentsProps {
@@ -361,11 +364,12 @@ const SalesComments: React.FC<SalesCommentsProps> = ({ orderId, defaultTab, high
                                     </span>
                                     <span className="comment-time">
                                         {dayjs(item.created_at).format('DD/MM HH:mm')}
+                                        {item.edited_at && <span style={{ marginLeft: 6, fontStyle: 'italic', fontSize: 11, color: '#888' }}>(đã sửa)</span>}
                                     </span>
                                 </div>
-                                <div
+                                <SafeHtml
                                     className="comment-content"
-                                    dangerouslySetInnerHTML={{ __html: item.content }}
+                                    html={item.content}
                                 />
 
                                 {/* Show mentioned users */}
@@ -414,7 +418,7 @@ const SalesComments: React.FC<SalesCommentsProps> = ({ orderId, defaultTab, high
                                             {item.is_visible ? 'Hiện' : 'Ẩn'}
                                         </Button>
                                     )}
-                                    {item.sender_type === 'STAFF' && (
+                                    {item.sender_type === 'STAFF' && ((item.created_by_user_id && item.created_by_user_id === currentUser?.id) || currentUser?.username === 'admin') && (
                                         <Button type="link" size="small" onClick={() => handleEdit(item)}>
                                             Sửa
                                         </Button>

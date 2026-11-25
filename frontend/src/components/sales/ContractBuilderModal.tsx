@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import SafeHtml from '../common/SafeHtml';
 import { Modal, Form, Select, Button, Checkbox, Row, Col, Input, Divider, Card, AutoComplete, message, Spin } from 'antd';
 import { PrinterOutlined, ReloadOutlined, SaveOutlined, FileSyncOutlined, EyeOutlined, EyeInvisibleOutlined, SyncOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -763,7 +764,9 @@ const ContractBuilderModal: React.FC<Props> = ({ open, onCancel, onSuccess, init
                         </div>
                     )}
                     {(saving || sellerLoading) && <Spin spinning style={{position: 'absolute', top: '50%', left: '50%', zIndex: 10}}/>}
-                    <div
+                    <SafeHtml
+                        profile="rich"
+                        html={previewHtml}
                         style={{
                             background: 'white',
                             padding: '40px 60px',
@@ -771,7 +774,6 @@ const ContractBuilderModal: React.FC<Props> = ({ open, onCancel, onSuccess, init
                             boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
                             opacity: saving ? 0.6 : 1
                         }}
-                        dangerouslySetInnerHTML={{ __html: previewHtml }}
                     />
                 </Col>
             </Row>

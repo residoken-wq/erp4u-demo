@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import SafeHtml from '../components/common/SafeHtml';
 import { Card, Button, Avatar, Tag, Form, message, Typography, Divider, List, Input, Space, Tooltip, Spin, Modal } from 'antd';
 import { ArrowLeftOutlined, CommentOutlined, CheckCircleOutlined, DeleteOutlined, UserOutlined, ClockCircleOutlined, FlagOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -20,7 +21,6 @@ const DiscussionDetailPage: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
 
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    const isAdmin = currentUser.username === 'admin' || (currentUser.role === 'ADMIN');
 
     const fetchData = async () => {
         setLoading(true);
@@ -45,8 +45,7 @@ const DiscussionDetailPage: React.FC = () => {
         setSubmitting(true);
         try {
             await api.post(`/discussions/${id}/comments`, {
-                content: commentContent,
-                user_id: currentUser.id
+                content: commentContent
             });
             message.success('Đã gửi bình luận');
             setCommentContent('');
@@ -57,13 +56,13 @@ const DiscussionDetailPage: React.FC = () => {
         setSubmitting(false);
     };
 
-    const handleReview = async () => {
+    const handleTogglePin = async () => {
         try {
-            await api.put(`/discussions/${id}/review`);
-            message.success('Đã duyệt thảo luận');
+            await api.put(`/discussions/${id}/pin`, { pinned: !discussion.is_pinned });
+            message.success(discussion.is_pinned ? 'Đã bỏ ghim thảo luận' : 'Đã ghim thảo luận');
             fetchData();
         } catch (e) {
-            message.error('Duyệt thảo luận thất bại');
+            message.error('Thao tác ghim thất bại');
         }
     };
 
@@ -119,14 +118,20 @@ const DiscussionDetailPage: React.FC = () => {
                             <Title level={4} style={{ margin: 0 }}>{discussion.title}</Title>
                             {discussion.is_pinned && <Tooltip title="Ghim"><FlagOutlined style={{ color: '#f5222d' }} /></Tooltip>}
                             {discussion.type === 'ANNOUNCEMENT' && <Tag color="volcano">Thông báo</Tag>}
-                            {!discussion.is_reviewed && <Tag color="warning">Chưa duyệt</Tag>}
                             {discussion.group && <Tag color="blue">{discussion.group.name}</Tag>}
                         </div>
                         <Space>
-                            {isAdmin && !discussion.is_reviewed && (
-                                <Button type="primary" icon={<CheckCircleOutlined />} onClick={handleReview}>Duyệt</Button>
+                            {discussion.can_pin && (
+                                <Button
+                                    icon={<FlagOutlined />}
+                                    type={discussion.is_pinned ? 'primary' : 'default'}
+                                    danger={discussion.is_pinned}
+                                    onClick={handleTogglePin}
+                                >
+                                    {discussion.is_pinned ? 'Bỏ ghim' : 'Ghim'}
+                                </Button>
                             )}
-                            {(isAdmin || discussion.creator_id === currentUser.id) && (
+                            {discussion.can_delete && (
                                 <Button icon={<DeleteOutlined />} danger onClick={handleDeleteDiscussion}>Xóa</Button>
                             )}
                         </Space>
@@ -144,10 +149,10 @@ const DiscussionDetailPage: React.FC = () => {
 
                 <Divider style={{ margin: '12px 0' }} />
 
-                <div 
+                <SafeHtml 
                     className="ck-content"
                     style={{ minHeight: 150, padding: '10px 0' }}
-                    dangerouslySetInnerHTML={{ __html: discussion.content }} 
+                    html={discussion.content} 
                 />
             </Card>
 
@@ -164,11 +169,11 @@ const DiscussionDetailPage: React.FC = () => {
                                     <Avatar size="small" style={{ backgroundColor: '#87d068' }}>{item.user?.full_name?.charAt(0)}</Avatar>
                                     <div>
                                         <Text strong>{item.user?.full_name}</Text>
-                                        <div style={{ margin: '4px 0' }} dangerouslySetInnerHTML={{ __html: item.content }} />
+                                        <SafeHtml style={{ margin: '4px 0' }} html={item.content} />
                                         <Text type="secondary" style={{ fontSize: 11 }}>{dayjs(item.created_at).fromNow()}</Text>
                                     </div>
                                 </div>
-                                {(isAdmin || item.user_id === currentUser.id) && (
+                                {item.can_delete && (
                                     <Button 
                                         type="text" 
                                         size="small" 

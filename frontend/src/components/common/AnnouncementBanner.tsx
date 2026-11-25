@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SafeHtml from './SafeHtml';
 import { Alert, Button, Modal, List, Typography, Tag, Space, Badge } from 'antd';
 import { NotificationOutlined, CloseOutlined, CheckOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -116,8 +117,9 @@ const AnnouncementBanner: React.FC = () => {
                     key={a.id}
                     message={a.title}
                     description={
-                        <span
-                            dangerouslySetInnerHTML={{ __html: a.content.substring(0, 150) + '...' }}
+                        <SafeHtml
+                            as="span"
+                            html={a.content.substring(0, 150) + '...'}
                             style={{ cursor: 'pointer' }}
                             onClick={() => openDetail(a)}
                         />
@@ -192,8 +194,8 @@ const AnnouncementBanner: React.FC = () => {
                                 {dayjs(selectedAnnouncement.created_at).format('DD/MM/YYYY HH:mm')}
                             </span>
                         </Space>
-                        <div
-                            dangerouslySetInnerHTML={{ __html: selectedAnnouncement.content }}
+                        <SafeHtml
+                            html={selectedAnnouncement.content}
                             style={{ lineHeight: 1.8 }}
                         />
                         {(selectedAnnouncement as any).is_discussion && (

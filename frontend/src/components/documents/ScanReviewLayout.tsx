@@ -64,7 +64,7 @@ export const ScanReviewLayout: React.FC<ScanReviewLayoutProps> = ({
         setPreviewMode(mode);
 
         if (mode === 'text') {
-          // XML: đọc text thuần qua blob.text(), tuyệt đối không dùng iframe/object/dangerouslySetInnerHTML
+          // XML: đọc text thuần qua blob.text(), tuyệt đối không dùng iframe/object hay inner HTML
           URL.revokeObjectURL(url);
           currentBlobUrl = null;
           setBlobUrl(null);
