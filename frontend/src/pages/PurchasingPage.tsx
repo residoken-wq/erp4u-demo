@@ -86,7 +86,7 @@ const PurchasingPage: React.FC = () => {
         fetchData();
         api.get(`/products`).then(res => setProducts(res.data)).catch(console.error);
         api.get(`/lookups/suppliers`).then(res => setSuppliers(res.data)).catch(console.error);
-        api.get(`/projects`).then(res => setProjects(res.data)).catch(console.error);
+        api.get(`/lookups/projects`).then(res => setProjects(res.data)).catch(console.error);
         api.get(`/system/company`).then(res => setCompanyConfig(res.data)).catch(console.error);
         api.get(`/designs/print-designs`).then(res => setPrintDesigns(res.data)).catch(console.error);
     }, []);
@@ -1195,7 +1195,7 @@ const PurchasingPage: React.FC = () => {
                                 value={currentPO?.project_id}
                                 onChange={(val) => setCurrentPO({ ...currentPO, project_id: val, task_id: null })}
                             >
-                                {projects.map(p => <Select.Option key={p.id} value={p.id}>{p.title}</Select.Option>)}
+                                {projects.map(p => <Select.Option key={p.id} value={p.id}>{p.title || p.name}</Select.Option>)}
                             </Select>
                             <Select 
                                 allowClear 

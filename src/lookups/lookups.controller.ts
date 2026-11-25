@@ -54,4 +54,9 @@ export class LookupsController {
   getMaterials(@Query('q') q?: string, @Query('limit') limit?: string) {
     return this.lookupsService.getMaterials(q, limit ? Number(limit) : undefined);
   }
+
+  @Get('projects')
+  getProjects(@Query('q') q?: string, @Query('limit') limit?: string) {
+    return this.lookupsService.getProjects(q, limit ? Number(limit) : undefined);
+  }
 }

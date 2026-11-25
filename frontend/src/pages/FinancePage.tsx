@@ -105,7 +105,7 @@ const FinancePage: React.FC = () => {
                 api.get(`/finance/summary`),
                 api.get(`/lookups/customers`), // <--- Fetch Customers
                 api.get(`/lookups/suppliers`),  // <--- Fetch Suppliers
-                api.get(`/projects`),
+                api.get(`/lookups/projects`),
                 api.get(`/sales`)
             ]);
             setTransactions(Array.isArray(resTrans.data) ? resTrans.data : []);
@@ -1453,7 +1453,7 @@ const FinancePage: React.FC = () => {
                             <Col span={12}>
                                 <Form.Item name="project_id" label="Thuộc Dự án">
                                     <Select allowClear placeholder="Chọn dự án..." showSearch optionFilterProp="children" onChange={() => formTrans.setFieldsValue({ task_id: undefined })}>
-                                        {projects.map(p => <Option key={p.id} value={p.id}>{p.title}</Option>)}
+                                        {projects.map(p => <Option key={p.id} value={p.id}>{p.title || p.name}</Option>)}
                                     </Select>
                                 </Form.Item>
                             </Col>

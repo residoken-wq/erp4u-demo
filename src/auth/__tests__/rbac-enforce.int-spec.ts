@@ -735,5 +735,114 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
         expect(resOwnerUpdate.status).toBe(200);
         expect(resOwnerUpdate.body.title).toBe('Updated By Creator');
       });
+
+      it('user không có PROJECTS gọi /lookups/projects -> 200 chỉ đúng các khoá cho phép', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        // User without PROJECTS permission calls /lookups/projects -> 200
+        const resLookupsProjects = await request(app.getHttpServer())
+          .get('/api/lookups/projects')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+
+        expect(resLookupsProjects.status).toBe(200);
+        expect(Array.isArray(resLookupsProjects.body)).toBe(true);
+        expect(resLookupsProjects.body.length).toBeGreaterThan(0);
+
+        const projectItem = resLookupsProjects.body.find((p: any) => p.id === 3001);
+        expect(projectItem).toBeDefined();
+        expect(projectItem).toHaveProperty('id', 3001);
+        expect(projectItem).toHaveProperty('name', 'Du an Mau A');
+        expect(projectItem).toHaveProperty('title', 'Du an Mau A');
+        expect(projectItem).toHaveProperty('code');
+        expect(projectItem).toHaveProperty('status', 'PLANNING');
+
+        // Sensitive / unauthorized fields must NOT be present
+        expect(projectItem.budget).toBeUndefined();
+        expect(projectItem.cost).toBeUndefined();
+        expect(projectItem.sales_order).toBeUndefined();
+        expect(projectItem.sales_order_id).toBeUndefined();
+        expect(projectItem.customer).toBeUndefined();
+        expect(projectItem.manager).toBeUndefined();
+        expect(projectItem.manager_id).toBeUndefined();
+        expect(projectItem.created_by_id).toBeUndefined();
+        expect(projectItem.members).toBeUndefined();
+        expect(projectItem.tasks).toBeUndefined();
+        expect(projectItem.milestones).toBeUndefined();
+      });
+
+      it('staff gọi GET /tasks/:id/logs và start-timer task của người khác -> 403', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        const tokenProdA = jwtService.sign({
+          sub: 10,
+          username: 'prod_user_a',
+          group_id: 3,
+          tid: 'tenant_a',
+        });
+
+        // 1. Staff calls GET /tasks/:id/logs of another user's task -> 403
+        const resLogsOther = await request(app.getHttpServer())
+          .get('/api/tasks/4001/logs')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resLogsOther.status).toBe(403);
+
+        // 2. Staff calls POST /tasks/:id/start-timer of another user's task -> 403
+        const resStartTimerOther = await request(app.getHttpServer())
+          .post('/api/tasks/4001/start-timer')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resStartTimerOther.status).toBe(403);
+
+        // 3. Staff calls POST /tasks/:id/stop-timer of another user's task -> 403
+        const resStopTimerOther = await request(app.getHttpServer())
+          .post('/api/tasks/4001/stop-timer')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`)
+          .send({ description: 'Stopping other timer' });
+        expect(resStopTimerOther.status).toBe(403);
+
+        // 4. Non-existent task returns 404
+        const resNotFoundLogs = await request(app.getHttpServer())
+          .get('/api/tasks/99999/logs')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenProdA}`);
+        expect(resNotFoundLogs.status).toBe(404);
+
+        const resNotFoundTimer = await request(app.getHttpServer())
+          .post('/api/tasks/99999/start-timer')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenProdA}`);
+        expect(resNotFoundTimer.status).toBe(404);
+
+        // 5. Task creator/assignee can start timer and read logs
+        const resStartTimerOwner = await request(app.getHttpServer())
+          .post('/api/tasks/4001/start-timer')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenProdA}`);
+        expect([200, 201]).toContain(resStartTimerOwner.status);
+
+        const resLogsOwner = await request(app.getHttpServer())
+          .get('/api/tasks/4001/logs')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenProdA}`);
+        expect(resLogsOwner.status).toBe(200);
+        expect(Array.isArray(resLogsOwner.body)).toBe(true);
+      });
     });
   });

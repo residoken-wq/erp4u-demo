@@ -1,12 +1,12 @@
 # Bảng Kiểm Kê Phân Quyền Route (RBAC Route Inventory)
 
-> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-25T14:19:24.731Z
+> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-25T14:49:01.060Z
 
 ## Tổng quan theo tầng
 
-- **Tổng số route**: 548
+- **Tổng số route**: 549
 - **PERM** (Phân quyền chi tiết): 449
-- **AUTH** (Chỉ cần đăng nhập): 58
+- **AUTH** (Chỉ cần đăng nhập): 59
 - **PUBLIC** (Công khai): 36
 - **APIKEY** (Xác thực qua API Key): 5
 - **LEGACY** (Decorator cũ @RequirePermission): 0
@@ -216,6 +216,7 @@
 | `GET` | `/lookups/employees` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:43](../src/lookups/lookups.controller.ts:43) |
 | `GET` | `/lookups/materials` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:53](../src/lookups/lookups.controller.ts:53) |
 | `GET` | `/lookups/products` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:19](../src/lookups/lookups.controller.ts:19) |
+| `GET` | `/lookups/projects` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:58](../src/lookups/lookups.controller.ts:58) |
 | `GET` | `/lookups/suppliers` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:29](../src/lookups/lookups.controller.ts:29) |
 | `GET` | `/lookups/users` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:14](../src/lookups/lookups.controller.ts:14) |
 | `GET` | `/lookups/warehouses` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:38](../src/lookups/lookups.controller.ts:38) |
@@ -526,9 +527,9 @@
 | `POST` | `/tasks` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:42](../src/tasks/tasks.controller.ts:42) |
 | `DELETE` | `/tasks/:id` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:54](../src/tasks/tasks.controller.ts:54) |
 | `PUT` | `/tasks/:id` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:48](../src/tasks/tasks.controller.ts:48) |
-| `GET` | `/tasks/:id/logs` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:74](../src/tasks/tasks.controller.ts:74) |
+| `GET` | `/tasks/:id/logs` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:72](../src/tasks/tasks.controller.ts:72) |
 | `POST` | `/tasks/:id/start-timer` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:60](../src/tasks/tasks.controller.ts:60) |
-| `POST` | `/tasks/:id/stop-timer` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:67](../src/tasks/tasks.controller.ts:67) |
+| `POST` | `/tasks/:id/stop-timer` | `AUTH` | AUTH | `CORE` | [src/tasks/tasks.controller.ts:66](../src/tasks/tasks.controller.ts:66) |
 | `GET` | `/test` | `PUBLIC` | - | `CORE` | [src/app.controller.ts:16](../src/app.controller.ts:16) |
 | `POST` | `/upload/boms` | `PERM` | INVENTORY:create | PRODUCT:create | `CORE` | [src/upload/upload.controller.ts:147](../src/upload/upload.controller.ts:147) |
 | `POST` | `/upload/combos` | `PERM` | PRODUCT:create | `CORE` | [src/upload/upload.controller.ts:155](../src/upload/upload.controller.ts:155) |

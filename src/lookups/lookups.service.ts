@@ -8,6 +8,7 @@ import { Supplier } from '../suppliers/supplier.entity';
 import { Employee } from '../hr/entities/employee.entity';
 import { Category } from '../categories/category.entity';
 import { Material } from '../materials/material.entity';
+import { Project } from '../projects/entities/project.entity';
 
 export interface UserLookupItem {
   id: number;
@@ -59,6 +60,14 @@ export interface MaterialLookupItem {
   unit: string;
 }
 
+export interface ProjectLookupItem {
+  id: number;
+  code: string;
+  name: string;
+  title: string;
+  status?: string;
+}
+
 const WAREHOUSES: WarehouseLookupItem[] = [
   { id: 'KHO_TP', name: 'Kho thành phẩm' },
   { id: 'KHO_BTP', name: 'Kho bán thành phẩm' },
@@ -97,6 +106,8 @@ export class LookupsService {
     private readonly categoryRepo: Repository<Category>,
     @InjectRepository(Material)
     private readonly materialRepo: Repository<Material>,
+    @InjectRepository(Project)
+    private readonly projectRepo: Repository<Project>,
   ) {}
 
   async getUsers(q?: string, limit?: number): Promise<UserLookupItem[]> {
@@ -267,6 +278,29 @@ export class LookupsService {
       code: m.code || '',
       name: m.name,
       unit: m.unit || 'cái',
+    }));
+  }
+
+  async getProjects(q?: string, limit?: number): Promise<ProjectLookupItem[]> {
+    const take = resolveTake(q, limit);
+    const qb = this.projectRepo
+      .createQueryBuilder('p')
+      .select(['p.id', 'p.title', 'p.status']);
+
+    if (q && q.trim()) {
+      qb.where('p.title ILIKE :q', {
+        q: `%${q.trim()}%`,
+      });
+    }
+
+    qb.orderBy('p.title', 'ASC').take(take);
+    const projects = await qb.getMany();
+    return projects.map((p) => ({
+      id: p.id,
+      code: 'PRJ' + String(p.id).padStart(3, '0'),
+      name: p.title,
+      title: p.title,
+      status: p.status,
     }));
   }
 }

@@ -8,6 +8,7 @@ import { Supplier } from '../../suppliers/supplier.entity';
 import { Employee } from '../../hr/entities/employee.entity';
 import { Category } from '../../categories/category.entity';
 import { Material } from '../../materials/material.entity';
+import { Project } from '../../projects/entities/project.entity';
 
 describe('LookupsService (Unit Tests / D3 Minimal Cross-Module Lookups)', () => {
   let service: LookupsService;
@@ -31,6 +32,7 @@ describe('LookupsService (Unit Tests / D3 Minimal Cross-Module Lookups)', () => 
   let mockEmployeeRepo: any;
   let mockCategoryRepo: any;
   let mockMaterialRepo: any;
+  let mockProjectRepo: any;
 
   beforeEach(async () => {
     mockUserRepo = {
@@ -89,6 +91,14 @@ describe('LookupsService (Unit Tests / D3 Minimal Cross-Module Lookups)', () => 
       ),
     };
 
+    mockProjectRepo = {
+      createQueryBuilder: jest.fn().mockReturnValue(
+        createMockQueryBuilder([
+          { id: 70, title: 'Dự án Mẫu Alpha', status: 'ACTIVE' },
+        ]),
+      ),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LookupsService,
@@ -99,6 +109,7 @@ describe('LookupsService (Unit Tests / D3 Minimal Cross-Module Lookups)', () => 
         { provide: getRepositoryToken(Employee), useValue: mockEmployeeRepo },
         { provide: getRepositoryToken(Category), useValue: mockCategoryRepo },
         { provide: getRepositoryToken(Material), useValue: mockMaterialRepo },
+        { provide: getRepositoryToken(Project), useValue: mockProjectRepo },
       ],
     }).compile();
 
@@ -212,5 +223,19 @@ describe('LookupsService (Unit Tests / D3 Minimal Cross-Module Lookups)', () => 
     expect(capturedTake).toBe(50);
     expect(res.length).toBeLessThanOrEqual(50);
     expect(res.length).toBe(50);
+  });
+
+  it('getProjects returns only allowed fields (id, code, name, title, status) without cost/budget/tasks', async () => {
+    const res = await service.getProjects();
+    expect(res).toEqual([
+      { id: 70, code: 'PRJ070', name: 'Dự án Mẫu Alpha', title: 'Dự án Mẫu Alpha', status: 'ACTIVE' },
+    ]);
+    expect((res[0] as any).budget).toBeUndefined();
+    expect((res[0] as any).sales_order).toBeUndefined();
+    expect((res[0] as any).sales_order_id).toBeUndefined();
+    expect((res[0] as any).manager_id).toBeUndefined();
+    expect((res[0] as any).created_by_id).toBeUndefined();
+    expect((res[0] as any).tasks).toBeUndefined();
+    expect((res[0] as any).milestones).toBeUndefined();
   });
 });

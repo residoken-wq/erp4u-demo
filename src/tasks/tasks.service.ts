@@ -55,20 +55,14 @@ export class TasksService {
     ) { }
 
     private async canViewAllTasks(user: any): Promise<boolean> {
-        if (!user) return false;
-        if (user.username === 'admin' || Number(user.groupId || user.group_id) === 1) return true;
         return hasPermission(user, this.permCacheService, 'PROJECTS', 'view');
     }
 
     private async canUpdateAllTasks(user: any): Promise<boolean> {
-        if (!user) return false;
-        if (user.username === 'admin' || Number(user.groupId || user.group_id) === 1) return true;
         return hasPermission(user, this.permCacheService, 'PROJECTS', 'update');
     }
 
     private async canDeleteAllTasks(user: any): Promise<boolean> {
-        if (!user) return false;
-        if (user.username === 'admin' || Number(user.groupId || user.group_id) === 1) return true;
         return hasPermission(user, this.permCacheService, 'PROJECTS', 'delete');
     }
 
@@ -233,10 +227,24 @@ export class TasksService {
     }
 
     // --- TASK TIMER ---
-    async startTimer(taskId: number, userId: number) {
+    async startTimer(taskId: number, user: any) {
+        const task = await this.taskRepo.findOne({ where: { id: taskId } });
+        if (!task) {
+            throw new NotFoundException('Không tìm thấy công việc');
+        }
+
+        const userId = Number(user?.id || user?.userId || (typeof user === 'number' ? user : 0));
+        const canUpdateAll = await this.canUpdateAllTasks(user);
+        const isCreator = task.creator_id === userId;
+        const isAssignee = task.assignee_id === userId;
+
+        if (!canUpdateAll && !isCreator && !isAssignee) {
+            throw new ForbiddenException('Bạn chỉ có thể bấm giờ cho công việc do mình tạo hoặc được giao');
+        }
+
         // Check if there's already a running timer for this user on this task
         const running = await this.timeLogRepo.findOne({
-            where: { task_id: taskId, user_id: userId, end_time: IsNull() } // Need IsNull import
+            where: { task_id: taskId, user_id: userId, end_time: IsNull() }
         });
 
         if (running) return running; // Already running
@@ -249,7 +257,21 @@ export class TasksService {
         return this.timeLogRepo.save(log);
     }
 
-    async stopTimer(taskId: number, userId: number, description?: string) {
+    async stopTimer(taskId: number, user: any, description?: string) {
+        const task = await this.taskRepo.findOne({ where: { id: taskId } });
+        if (!task) {
+            throw new NotFoundException('Không tìm thấy công việc');
+        }
+
+        const userId = Number(user?.id || user?.userId || (typeof user === 'number' ? user : 0));
+        const canUpdateAll = await this.canUpdateAllTasks(user);
+        const isCreator = task.creator_id === userId;
+        const isAssignee = task.assignee_id === userId;
+
+        if (!canUpdateAll && !isCreator && !isAssignee) {
+            throw new ForbiddenException('Bạn chỉ có thể dừng bấm giờ cho công việc do mình tạo hoặc được giao');
+        }
+
         const running = await this.timeLogRepo.findOne({
             where: { task_id: taskId, user_id: userId, end_time: IsNull() }
         });
@@ -264,7 +286,23 @@ export class TasksService {
         return this.timeLogRepo.save(running);
     }
 
-    async getTaskLogs(taskId: number) {
+    async getTaskLogs(taskId: number, user?: any) {
+        const task = await this.taskRepo.findOne({ where: { id: taskId } });
+        if (!task) {
+            throw new NotFoundException('Không tìm thấy công việc');
+        }
+
+        if (user) {
+            const userId = Number(user?.id || user?.userId || (typeof user === 'number' ? user : 0));
+            const canViewAll = await this.canViewAllTasks(user);
+            const isCreator = task.creator_id === userId;
+            const isAssignee = task.assignee_id === userId;
+
+            if (!canViewAll && !isCreator && !isAssignee) {
+                throw new ForbiddenException('Bạn chỉ có thể xem nhật ký của công việc do mình tạo hoặc được giao');
+            }
+        }
+
         return this.timeLogRepo.find({
             where: { task_id: taskId },
             relations: ['user'],

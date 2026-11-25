@@ -60,20 +60,18 @@ export class TasksController {
   @AuthOnly()
   @Post(':id/start-timer')
   startTimer(@Param('id') id: number, @Req() req: any) {
-    const userId = Number(req.user?.id || req.user?.userId);
-    return this.s.startTimer(+id, userId);
+    return this.s.startTimer(+id, req.user);
   }
 
   @AuthOnly()
   @Post(':id/stop-timer')
   stopTimer(@Param('id') id: number, @Body() body: any, @Req() req: any) {
-    const userId = Number(req.user?.id || req.user?.userId);
-    return this.s.stopTimer(+id, userId, body?.description);
+    return this.s.stopTimer(+id, req.user, body?.description);
   }
 
   @AuthOnly()
   @Get(':id/logs')
-  getLogs(@Param('id') id: number) {
-    return this.s.getTaskLogs(+id);
+  getLogs(@Param('id') id: number, @Req() req: any) {
+    return this.s.getTaskLogs(+id, req.user);
   }
 }

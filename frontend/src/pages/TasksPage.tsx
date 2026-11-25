@@ -46,7 +46,7 @@ const TasksPage: React.FC = () => {
             const [resTasks, resUsers, resProjects] = await Promise.all([
                 api.get('/tasks'),
                 api.get('/lookups/users'),
-                api.get('/projects')
+                api.get('/lookups/projects')
             ]);
             setTasks(resTasks.data);
             setUsers(resUsers.data);
@@ -282,7 +282,7 @@ const TasksPage: React.FC = () => {
                                     setSelectedProject(val);
                                     form.setFieldsValue({ milestone_id: undefined });
                                 }}>
-                                    {projects.map(p => <Option key={p.id} value={p.id}>{p.title}</Option>)}
+                                    {projects.map(p => <Option key={p.id} value={p.id}>{p.title || p.name}</Option>)}
                                 </Select>
                             </Form.Item>
                         </Col>
