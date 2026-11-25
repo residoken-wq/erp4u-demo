@@ -629,6 +629,9 @@ export class SalesService {
     }
     // --- CUSTOMER PORTAL COMMENTS (SECURED BY UUID & RATE LIMITED) ---
     async portalAddComment(uuid: string, body: any) {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
+            throw new NotFoundException('Quote not found');
+        }
         const order = await this.orderRepo.findOne({
             where: { uuid },
             relations: ['customer']
@@ -677,6 +680,9 @@ export class SalesService {
     }
 
     async portalDeleteComment(uuid: string, commentId: number) {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
+            throw new NotFoundException('Quote not found');
+        }
         const order = await this.orderRepo.findOne({ where: { uuid } });
         if (!order) throw new NotFoundException('Quote not found');
 
@@ -977,6 +983,9 @@ export class SalesService {
         }
     }
     async getQuoteByUuid(uuid: string) {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
+            throw new NotFoundException('Quote not found');
+        }
         const order = await this.orderRepo.findOne({
             where: { uuid },
             relations: ['customer', 'customer.contacts', 'items', 'items.product', 'comments', 'deliveries', 'deliveries.items', 'assigned_to'],

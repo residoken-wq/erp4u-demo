@@ -18,10 +18,13 @@ export class InternalCommsSecurity1795317970000 implements MigrationInterface {
     );
 
     // 3. Migrate target_departments -> target_group_ids
-    const hasTargetDepartments = await queryRunner.hasColumn(
-      'announcements',
-      'target_departments',
+    const colCheck = await queryRunner.query(
+      `SELECT column_name FROM information_schema.columns 
+       WHERE table_name = 'announcements' 
+         AND column_name = 'target_departments' 
+         AND table_schema = ANY(current_schemas(false))`,
     );
+    const hasTargetDepartments = colCheck && colCheck.length > 0;
     if (hasTargetDepartments) {
       let groups: { id: number; name: string }[] = [];
       try {

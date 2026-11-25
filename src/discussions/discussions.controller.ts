@@ -9,6 +9,7 @@ import {
     Param,
     Query,
     Req,
+    UseGuards,
     UsePipes,
     ValidationPipe,
 } from '@nestjs/common';
@@ -19,9 +20,11 @@ import { CreateDiscussionDto } from './dto/create-discussion.dto';
 import { UpdateDiscussionDto } from './dto/update-discussion.dto';
 import { AddDiscussionCommentDto } from './dto/add-comment.dto';
 import { PinDiscussionDto } from './dto/pin-discussion.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('discussions')
 @RequiresPackage(PackageKey.PROJECTS)
+@UseGuards(JwtAuthGuard)
 @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
 export class DiscussionsController {
     constructor(private readonly service: DiscussionsService) { }
