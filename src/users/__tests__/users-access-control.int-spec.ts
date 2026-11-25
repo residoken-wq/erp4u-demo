@@ -138,6 +138,10 @@ describe('TASK H1 - UsersController Access Control & Privilege Escalation Harden
        ON CONFLICT DO NOTHING`,
     );
 
+    await adminDs.query(
+      `SELECT setval(pg_get_serial_sequence('"tenant_users_h1"."users"', 'id'), 100, true)`,
+    );
+
     // Default mode is SHADOW
     await adminDs.query(
       `INSERT INTO "tenant_users_h1"."system_configs" ("key", "value", "description") VALUES
@@ -282,7 +286,7 @@ describe('TASK H1 - UsersController Access Control & Privilege Escalation Harden
       .set('X-Test-Tenant', 'tenant_users_h1')
       .send({ username: 'staff_no_perm', password: 'brandNewPassword123!' });
     expect([200, 201]).toContain(resLogin.status);
-    expect(resLogin.body).toHaveProperty('token');
+    expect(resLogin.body).toHaveProperty('access_token');
   });
 
   it('User có USERS:update (không phải admin): đổi mật khẩu staff thường (200); đổi mật khẩu admin (403); đổi mật khẩu user cùng nhóm USERS:update (403)', async () => {
