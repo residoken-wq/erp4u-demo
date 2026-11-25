@@ -45,7 +45,7 @@ const TasksPage: React.FC = () => {
         try {
             const [resTasks, resUsers, resProjects] = await Promise.all([
                 api.get('/tasks'),
-                api.get('/users'),
+                api.get('/lookups/users'),
                 api.get('/projects')
             ]);
             setTasks(resTasks.data);

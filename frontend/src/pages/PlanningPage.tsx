@@ -63,7 +63,7 @@ const PlanningPage: React.FC = () => {
             const [resSuggest, resPfos, resSuppliers] = await Promise.all([
                 api.get('/planning/pfo/suggestions').catch(() => ({ data: [] })),
                 api.get('/planning').catch(() => ({ data: [] })),
-                api.get('/suppliers').catch(() => ({ data: [] }))
+                api.get('/lookups/suppliers').catch(() => ({ data: [] }))
             ]);
             setPendingOrders(Array.isArray(resSuggest.data) ? resSuggest.data : []);
             

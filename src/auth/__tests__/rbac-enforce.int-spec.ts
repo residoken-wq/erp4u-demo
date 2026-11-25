@@ -134,6 +134,41 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
        ON CONFLICT DO NOTHING`,
     );
 
+    // Seed HR employees, attendances, payslips and lookup fixtures for tenant_a
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."employees" ("id", "user_id", "full_name", "base_salary", "is_active") VALUES
+       (100, 11, 'Sales User A Employee', 15000000, true),
+       (101, 10, 'Prod User A Employee', 18000000, true)
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."attendances" ("id", "employee_id", "date", "status") VALUES
+       (1001, 100, CURRENT_DATE, 'PRESENT'),
+       (1002, 101, CURRENT_DATE, 'PRESENT')
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."payslips" ("id", "employee_id", "month", "year", "net_salary") VALUES
+       (2001, 100, 11, 2026, 14000000),
+       (2002, 101, 11, 2026, 17000000)
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."products" ("id", "sku", "name", "unit", "base_price", "cost_price", "is_active") VALUES
+       (301, 'SKU-DEMO-01', 'San pham Demo 01', 'cai', 100000, 70000, true)
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."customers" ("id", "code", "name", "credit_limit", "current_debt") VALUES
+       (401, 'KH-DEMO-01', 'Khach hang Demo 01', 50000000, 10000000)
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."suppliers" ("id", "uuid", "code", "name", "debt", "type") VALUES
+       (501, 'c0000000-0000-0000-0000-000000000501', 'NCC-DEMO-01', 'Nha cung cap Demo 01', 20000000, 'LOGISTICS')
+       ON CONFLICT DO NOTHING`,
+    );
+
     // Setup tenant_b:
     // Identical group_id = 3, but in tenant_b group 3 does NOT have SALES:view or PRODUCTION:view
     // Group 5 has SYSTEM:view (for testing staff with SYSTEM:view)
@@ -439,4 +474,164 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
       });
     }
   });
-});
+
+  describe('Lookups and selfOr HR self-service in ENFORCE mode (P12b1 D3 & D4)', () => {
+      it('user without HR/INVENTORY permissions can access /lookups/* with only permitted fields, but full endpoints return 403', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        // 1. Lookups return 200
+        const resUsers = await request(app.getHttpServer())
+          .get('/api/lookups/users')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resUsers.status).toBe(200);
+        expect(Array.isArray(resUsers.body)).toBe(true);
+        expect(resUsers.body.length).toBeGreaterThan(0);
+        expect(resUsers.body[0]).toHaveProperty('id');
+        expect(resUsers.body[0]).toHaveProperty('full_name');
+        expect(resUsers.body[0].password).toBeUndefined();
+
+        const resProducts = await request(app.getHttpServer())
+          .get('/api/lookups/products')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resProducts.status).toBe(200);
+        expect(Array.isArray(resProducts.body)).toBe(true);
+        expect(resProducts.body.length).toBeGreaterThan(0);
+        expect(resProducts.body[0]).toHaveProperty('sku');
+        expect(resProducts.body[0]).toHaveProperty('name');
+        expect(resProducts.body[0].base_price).toBeUndefined();
+        expect(resProducts.body[0].cost_price).toBeUndefined();
+
+        const resCustomers = await request(app.getHttpServer())
+          .get('/api/lookups/customers')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resCustomers.status).toBe(200);
+        expect(Array.isArray(resCustomers.body)).toBe(true);
+        expect(resCustomers.body.length).toBeGreaterThan(0);
+        expect(resCustomers.body[0]).toHaveProperty('code');
+        expect(resCustomers.body[0]).toHaveProperty('name');
+        expect(resCustomers.body[0].credit_limit).toBeUndefined();
+        expect(resCustomers.body[0].current_debt).toBeUndefined();
+
+        const resSuppliers = await request(app.getHttpServer())
+          .get('/api/lookups/suppliers')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resSuppliers.status).toBe(200);
+        expect(Array.isArray(resSuppliers.body)).toBe(true);
+        expect(resSuppliers.body.length).toBeGreaterThan(0);
+        expect(resSuppliers.body[0]).toHaveProperty('code');
+        expect(resSuppliers.body[0]).toHaveProperty('name');
+        expect(resSuppliers.body[0].debt).toBeUndefined();
+
+        const resEmployees = await request(app.getHttpServer())
+          .get('/api/lookups/employees')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resEmployees.status).toBe(200);
+        expect(Array.isArray(resEmployees.body)).toBe(true);
+        expect(resEmployees.body.length).toBeGreaterThan(0);
+        expect(resEmployees.body[0]).toHaveProperty('full_name');
+        expect(resEmployees.body[0].base_salary).toBeUndefined();
+
+        const resWarehouses = await request(app.getHttpServer())
+          .get('/api/lookups/warehouses')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resWarehouses.status).toBe(200);
+        expect(resWarehouses.body.length).toBe(4);
+
+        // 2. Full endpoints blocked (403) at ENFORCE
+        const resStocks = await request(app.getHttpServer())
+          .get('/api/inventory/stocks')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resStocks.status).toBe(403);
+
+        const resHrEmployees = await request(app.getHttpServer())
+          .get('/api/hr/employees')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resHrEmployees.status).toBe(403);
+
+        const resHrPayslips = await request(app.getHttpServer())
+          .get('/api/hr/payslips')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resHrPayslips.status).toBe(403);
+      });
+
+      it('employee without HR permission can view own attendances and payslips (200), but is blocked from others or company-wide (403)', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        // 1. Own attendances and payslips return 200
+        const resMyAttendances = await request(app.getHttpServer())
+          .get('/api/hr/me/attendances')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resMyAttendances.status).toBe(200);
+        expect(Array.isArray(resMyAttendances.body)).toBe(true);
+        expect(resMyAttendances.body.length).toBeGreaterThan(0);
+        expect(Number(resMyAttendances.body[0].employee_id)).toBe(100);
+
+        const resMyPayslips = await request(app.getHttpServer())
+          .get('/api/hr/me/payslips')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resMyPayslips.status).toBe(200);
+        expect(Array.isArray(resMyPayslips.body)).toBe(true);
+        expect(resMyPayslips.body.length).toBeGreaterThan(0);
+        expect(Number(resMyPayslips.body[0].employee_id)).toBe(100);
+
+        const resMyPayslipId = await request(app.getHttpServer())
+          .get('/api/hr/me/payslips/2001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resMyPayslipId.status).toBe(200);
+        expect(Number(resMyPayslipId.body.id)).toBe(2001);
+
+        // 2. Accessing someone else's attendances or payslips via query returns 403
+        const resOtherAttQuery = await request(app.getHttpServer())
+          .get('/api/hr/me/attendances?employee_id=101')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resOtherAttQuery.status).toBe(403);
+
+        const resOtherPayQuery = await request(app.getHttpServer())
+          .get('/api/hr/me/payslips?employee_id=101')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resOtherPayQuery.status).toBe(403);
+
+        // 3. Accessing someone else's payslip by ID returns 403
+        const resOtherPayId = await request(app.getHttpServer())
+          .get('/api/hr/me/payslips/2002')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resOtherPayId.status).toBe(403);
+
+        // 4. Company-wide list returns 403
+        const resAllPayslips = await request(app.getHttpServer())
+          .get('/api/hr/payslips')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resAllPayslips.status).toBe(403);
+      });
+    });
+  });

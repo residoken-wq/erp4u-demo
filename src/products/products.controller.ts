@@ -24,18 +24,21 @@ export class ProductsController {
     });
   }
 
+  @Perm('PRODUCT', 'create')
   @Post('packing-specs')
   @RequirePermission('PRODUCT', 'can_create')
   createPackingSpec(@Body() b: any) {
     return this.service.createPackingSpec(b);
   }
 
+  @Perm('PRODUCT', 'update')
   @Put('packing-specs/:id')
   @RequirePermission('PRODUCT', 'can_update')
   updatePackingSpec(@Param('id') id: number, @Body() b: any) {
     return this.service.updatePackingSpec(Number(id), b);
   }
 
+  @Perm('PRODUCT', 'delete')
   @Delete('packing-specs/:id')
   @RequirePermission('PRODUCT', 'can_delete')
   deletePackingSpec(@Param('id') id: number) {
@@ -50,9 +53,9 @@ export class ProductsController {
   @Perm('PRODUCT', 'view')
   @Get(':id') findOne(@Param('id') id: number) { return this.service.findOne(Number(id)); }
 
-  @Post() @RequirePermission('PRODUCT', 'can_create') create(@Body() b: any) { return this.service.create(b); }
-  @Put(':id') @RequirePermission('PRODUCT', 'can_update') update(@Param('id') id: number, @Body() b: any) { return this.service.update(id, b); }
-  @Delete(':id') @RequirePermission('PRODUCT', 'can_delete') remove(@Param('id') id: number) { return this.service.remove(id); }
+  @Perm('PRODUCT', 'create') @Post() @RequirePermission('PRODUCT', 'can_create') create(@Body() b: any) { return this.service.create(b); }
+  @Perm('PRODUCT', 'update') @Put(':id') @RequirePermission('PRODUCT', 'can_update') update(@Param('id') id: number, @Body() b: any) { return this.service.update(id, b); }
+  @Perm('PRODUCT', 'delete') @Delete(':id') @RequirePermission('PRODUCT', 'can_delete') remove(@Param('id') id: number) { return this.service.remove(id); }
 
 
   @Perm('PRODUCT', 'create')
@@ -140,6 +143,7 @@ export class ProductsController {
     return this.service.calculateAllCosts();
   }
 
+  @Perm('PRODUCT', 'view')
   @Get(':id/sales-history')
   @RequirePermission('PRODUCT', 'can_view')
   getSalesHistory(@Param('id') id: number) {

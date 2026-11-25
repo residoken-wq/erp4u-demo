@@ -12,12 +12,13 @@ import { PackageKey } from '../common/packages/package.registry';
 export class FinanceController {
   constructor(private readonly s: FinanceService) { }
 
-  @Get('summary') @RequirePermission('FINANCE', 'can_view') getSummary() { return this.s.getSummary(); }
-  @Get('categories') @RequirePermission('FINANCE', 'can_view') getCategories() { return this.s.getCategories(); }
-  @Post('categories') @RequirePermission('FINANCE', 'can_create') createCategory(@Body() b: any) { return this.s.createCategory(b); }
-  @Put('categories/:id') @RequirePermission('FINANCE', 'can_update') updateCategory(@Param('id') id: number, @Body() b: any) { return this.s.updateCategory(id, b); }
-  @Delete('categories/:id') @RequirePermission('FINANCE', 'can_delete') deleteCategory(@Param('id') id: number) { return this.s.deleteCategory(id); }
+  @Perm('FINANCE', 'view') @Get('summary') @RequirePermission('FINANCE', 'can_view') getSummary() { return this.s.getSummary(); }
+  @Perm('FINANCE', 'view') @Get('categories') @RequirePermission('FINANCE', 'can_view') getCategories() { return this.s.getCategories(); }
+  @Perm('FINANCE', 'create') @Post('categories') @RequirePermission('FINANCE', 'can_create') createCategory(@Body() b: any) { return this.s.createCategory(b); }
+  @Perm('FINANCE', 'update') @Put('categories/:id') @RequirePermission('FINANCE', 'can_update') updateCategory(@Param('id') id: number, @Body() b: any) { return this.s.updateCategory(id, b); }
+  @Perm('FINANCE', 'delete') @Delete('categories/:id') @RequirePermission('FINANCE', 'can_delete') deleteCategory(@Param('id') id: number) { return this.s.deleteCategory(id); }
 
+  @Perm('FINANCE', 'view')
   @Get('transactions')
   @RequirePermission('FINANCE', 'can_view')
   getTransactions(
@@ -27,10 +28,11 @@ export class FinanceController {
   ) {
     return this.s.getAllTransactions(month, type, status);
   }
-  @Post('transactions') @RequirePermission('FINANCE', 'can_create') createTransaction(@Body() b: any) { return this.s.createTransaction(b); }
-  @Put('transactions/:id') @RequirePermission('FINANCE', 'can_update') updateTransaction(@Param('id') id: number, @Body() b: any) { return this.s.updateTransaction(id, b); }
-  @Delete('transactions/:id') @RequirePermission('FINANCE', 'can_delete') deleteTransaction(@Param('id') id: number) { return this.s.deleteTransaction(id); }
+  @Perm('FINANCE', 'create') @Post('transactions') @RequirePermission('FINANCE', 'can_create') createTransaction(@Body() b: any) { return this.s.createTransaction(b); }
+  @Perm('FINANCE', 'update') @Put('transactions/:id') @RequirePermission('FINANCE', 'can_update') updateTransaction(@Param('id') id: number, @Body() b: any) { return this.s.updateTransaction(id, b); }
+  @Perm('FINANCE', 'delete') @Delete('transactions/:id') @RequirePermission('FINANCE', 'can_delete') deleteTransaction(@Param('id') id: number) { return this.s.deleteTransaction(id); }
 
+  @Perm('FINANCE', 'update')
   @Put('transactions/:id/approve')
   @RequirePermission('FINANCE', 'can_update')
   approveTransaction(
@@ -40,6 +42,7 @@ export class FinanceController {
     return this.s.approveTransaction(Number(id), body);
   }
 
+  @Perm('FINANCE', 'create')
   @Post('delivery-expense/:deliveryId')
   @RequirePermission('FINANCE', 'can_create')
   createDeliveryExpense(
@@ -49,6 +52,7 @@ export class FinanceController {
     return this.s.createOrUpdateDeliveryShippingExpense(Number(deliveryId), body);
   }
 
+  @Perm('FINANCE', 'create')
   @Post('delivery-expense/batch')
   @RequirePermission('FINANCE', 'can_create')
   createBatchDeliveryExpense(
@@ -64,6 +68,7 @@ export class FinanceController {
     return this.s.getFinancialReport(month, year);
   }
   
+  @Perm('FINANCE', 'view')
   @Get('so-profit')
   @RequirePermission('FINANCE', 'can_view')
   getSOProfit(@Query('month') month: string) {

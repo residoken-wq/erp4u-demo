@@ -17,7 +17,13 @@ export type RbacRule =
   | { tier: 'AUTH'; selfOr?: { module: string; action: PermAction } }
   | { tier: 'PERM'; any: { module: string; action: PermAction }[] };
 
-export const AuthOnly = () => SetMetadata(RBAC_KEY, { tier: 'AUTH' } as RbacRule);
+export const AuthOnly = (options?: { selfOr?: { module: string; action: PermAction } }) =>
+  SetMetadata(
+    RBAC_KEY,
+    options?.selfOr
+      ? ({ tier: 'AUTH', selfOr: options.selfOr } as RbacRule)
+      : ({ tier: 'AUTH' } as RbacRule),
+  );
 export const Perm = (module: string, action: PermAction) =>
   SetMetadata(RBAC_KEY, { tier: 'PERM', any: [{ module, action }] } as RbacRule);
 export const AnyPerm = (...pairs: [string, PermAction][]) =>

@@ -40,7 +40,7 @@ const QuickTaskModal: React.FC<QuickTaskModalProps> = ({ open, onClose, initialV
     }, [open, initialValues]);
 
     const fetchUsers = async () => {
-        try { const res = await api.get('/users'); setUsers(res.data); } catch (e) { }
+        try { const res = await api.get('/lookups/users'); setUsers(res.data); } catch (e) { }
     };
 
     const handleSave = async (values: any) => {

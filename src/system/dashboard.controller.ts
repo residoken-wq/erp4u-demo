@@ -1,4 +1,4 @@
-import { AuthOnly } from '../auth/permissions.decorator';
+import { Perm } from '../auth/permissions.decorator';
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
@@ -18,7 +18,7 @@ export class DashboardController {
         @InjectRepository(PurchaseOrder) private poRepo: Repository<PurchaseOrder>,
     ) { }
 
-    @AuthOnly()
+    @Perm('DASHBOARD', 'view')
     @Get('stats')
     async getStats() {
         // 1. Sales Stats

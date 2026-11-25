@@ -16,7 +16,7 @@ export class SuppliersController {
     return await this.s.create(b); // Dùng await
   }
 
-  @AuthOnly()
+  @AnyPerm(['INVENTORY', 'view'], ['PURCHASE', 'view'])
   @Get()
   async findAll() {
     return await this.s.findAll(); // Dùng await

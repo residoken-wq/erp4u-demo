@@ -36,19 +36,23 @@ export class HrMeController {
   }
 
   @Get()
-  @AuthOnly()
+  @AuthOnly({ selfOr: { module: 'HR', action: 'view' } })
   async getMyProfile(@Request() req: any) {
     return this.resolveMyEmployee(req);
   }
 
   @Get('attendances')
-  @AuthOnly()
+  @AuthOnly({ selfOr: { module: 'HR', action: 'view' } })
   async getMyAttendances(
     @Request() req: any,
+    @Query('employee_id') employeeId?: string,
     @Query('month') month?: string,
     @Query('year') year?: string,
   ) {
     const employee = await this.resolveMyEmployee(req);
+    if (req.rbacSelfOnly && employeeId && +employeeId !== employee.id) {
+      throw new ForbiddenException('Bạn chỉ có thể xem chấm công của chính mình');
+    }
     return this.hrService.findAttendances(
       employee.id,
       month ? +month : undefined,
@@ -56,68 +60,56 @@ export class HrMeController {
     );
   }
 
+  @Get('attendances/:id')
+  @AuthOnly({ selfOr: { module: 'HR', action: 'view' } })
+  async getMyAttendanceById(@Request() req: any, @Param('id') id: string) {
+    const employee = await this.resolveMyEmployee(req);
+    const attendance = await this.hrService.findOneAttendance(+id);
+    if (!attendance) {
+      throw new NotFoundException('Không tìm thấy bản ghi chấm công');
+    }
+    if (req.rbacSelfOnly && attendance.employee_id !== employee.id) {
+      throw new ForbiddenException('Bạn chỉ có thể xem chấm công của chính mình');
+    }
+    return attendance;
+  }
+
   @Get('leaves')
-  @AuthOnly()
+  @AuthOnly({ selfOr: { module: 'HR', action: 'view' } })
   async getMyLeaves(
     @Request() req: any,
+    @Query('employee_id') employeeId?: string,
     @Query('status') status?: LeaveStatus,
   ) {
     const employee = await this.resolveMyEmployee(req);
+    if (req.rbacSelfOnly && employeeId && +employeeId !== employee.id) {
+      throw new ForbiddenException('Bạn chỉ có thể xem nghỉ phép của chính mình');
+    }
     const leaves = await this.hrService.findAllLeaves(status);
     return leaves.filter((l: any) => l.employee_id === employee.id);
   }
 
-  @Get('payslips')
-  @AuthOnly()
-  async getMyPayslips(
-    @Request() req: any,
-    @Query('month') month?: string,
-    @Query('year') year?: string,
-  ) {
+  @Get('leaves/:id')
+  @AuthOnly({ selfOr: { module: 'HR', action: 'view' } })
+  async getMyLeaveById(@Request() req: any, @Param('id') id: string) {
     const employee = await this.resolveMyEmployee(req);
-    return this.hrService.findPayslips(
-      employee.id,
-      month ? +month : undefined,
-      year ? +year : undefined,
-    );
-  }
-
-  @Get('assets')
-  @AuthOnly()
-  async getMyAssets(@Request() req: any) {
-    const employee = await this.resolveMyEmployee(req);
-    return this.hrService.findAllAssets(employee.id);
-  }
-
-  @Get('balance')
-  @AuthOnly()
-  async getMyLeaveBalance(
-    @Request() req: any,
-    @Query('year') year?: string,
-  ) {
-    const employee = await this.resolveMyEmployee(req);
-    const y = year ? +year : new Date().getFullYear();
-    return this.hrService.getLeaveBalance(employee.id, y);
-  }
-
-  @Post('check-in')
-  @AuthOnly()
-  async checkIn(@Request() req: any) {
-    const employee = await this.resolveMyEmployee(req);
-    return this.hrService.checkIn(employee.id);
-  }
-
-  @Post('check-out')
-  @AuthOnly()
-  async checkOut(@Request() req: any) {
-    const employee = await this.resolveMyEmployee(req);
-    return this.hrService.checkOut(employee.id);
+    const leave = await this.hrService.findOneLeave(+id);
+    if (!leave) {
+      throw new NotFoundException('Không tìm thấy đơn nghỉ phép');
+    }
+    if (req.rbacSelfOnly && leave.employee_id !== employee.id) {
+      throw new ForbiddenException('Bạn chỉ có thể xem đơn nghỉ phép của chính mình');
+    }
+    return leave;
   }
 
   @Post('leaves')
-  @AuthOnly()
+  @AuthOnly({ selfOr: { module: 'HR', action: 'create' } })
   async createMyLeave(@Request() req: any, @Body() body: any) {
     const employee = await this.resolveMyEmployee(req);
+    if (req.rbacSelfOnly && body?.employee_id && +body.employee_id !== employee.id) {
+      throw new ForbiddenException('Bạn chỉ có thể tạo đơn nghỉ phép cho chính mình');
+    }
     const { type, leave_type, start_date, end_date, days, reason } = body || {};
     return this.hrService.createLeave({
       employee_id: employee.id,
@@ -130,15 +122,80 @@ export class HrMeController {
     });
   }
 
+  @Get('payslips')
+  @AuthOnly({ selfOr: { module: 'HR', action: 'view' } })
+  async getMyPayslips(
+    @Request() req: any,
+    @Query('employee_id') employeeId?: string,
+    @Query('month') month?: string,
+    @Query('year') year?: string,
+  ) {
+    const employee = await this.resolveMyEmployee(req);
+    if (req.rbacSelfOnly && employeeId && +employeeId !== employee.id) {
+      throw new ForbiddenException('Bạn chỉ có thể xem phiếu lương của chính mình');
+    }
+    return this.hrService.findPayslips(
+      employee.id,
+      month ? +month : undefined,
+      year ? +year : undefined,
+    );
+  }
+
+  @Get('payslips/:id')
+  @AuthOnly({ selfOr: { module: 'HR', action: 'view' } })
+  async getMyPayslipById(@Request() req: any, @Param('id') id: string) {
+    const employee = await this.resolveMyEmployee(req);
+    const payslip = await this.hrService.findOnePayslip(+id);
+    if (!payslip) {
+      throw new NotFoundException('Không tìm thấy phiếu lương');
+    }
+    if (req.rbacSelfOnly && payslip.employee_id !== employee.id) {
+      throw new ForbiddenException('Bạn chỉ có thể xem phiếu lương của chính mình');
+    }
+    return payslip;
+  }
+
+  @Get('assets')
+  @AuthOnly({ selfOr: { module: 'HR', action: 'view' } })
+  async getMyAssets(@Request() req: any) {
+    const employee = await this.resolveMyEmployee(req);
+    return this.hrService.findAllAssets(employee.id);
+  }
+
+  @Get('balance')
+  @AuthOnly({ selfOr: { module: 'HR', action: 'view' } })
+  async getMyLeaveBalance(
+    @Request() req: any,
+    @Query('year') year?: string,
+  ) {
+    const employee = await this.resolveMyEmployee(req);
+    const y = year ? +year : new Date().getFullYear();
+    return this.hrService.getLeaveBalance(employee.id, y);
+  }
+
+  @Post('check-in')
+  @AuthOnly({ selfOr: { module: 'HR', action: 'create' } })
+  async checkIn(@Request() req: any) {
+    const employee = await this.resolveMyEmployee(req);
+    return this.hrService.checkIn(employee.id);
+  }
+
+  @Post('check-out')
+  @AuthOnly({ selfOr: { module: 'HR', action: 'create' } })
+  async checkOut(@Request() req: any) {
+    const employee = await this.resolveMyEmployee(req);
+    return this.hrService.checkOut(employee.id);
+  }
+
   @Get('reviews')
-  @AuthOnly()
+  @AuthOnly({ selfOr: { module: 'HR', action: 'view' } })
   async getMyReviews(@Request() req: any) {
     const employee = await this.resolveMyEmployee(req);
     return this.hrService.findEmployeeReviews(employee.id);
   }
 
   @Post('reviews/:id/submit')
-  @AuthOnly()
+  @AuthOnly({ selfOr: { module: 'HR', action: 'create' } })
   async submitMyReview(
     @Request() req: any,
     @Param('id') id: string,

@@ -197,6 +197,10 @@ export class HrService {
         return this.attendanceRepo.save(attendance);
     }
 
+    async findOneAttendance(id: number) {
+        return this.attendanceRepo.findOne({ where: { id }, relations: ['employee'] });
+    }
+
     async updateAttendance(id: number, data: Partial<Attendance>) {
         await this.attendanceRepo.update(id, data);
         return this.attendanceRepo.findOne({ where: { id }, relations: ['employee'] });
@@ -204,6 +208,10 @@ export class HrService {
 
     async deleteAttendance(id: number) {
         return this.attendanceRepo.delete(id);
+    }
+
+    async findOneLeave(id: number) {
+        return this.leaveRepo.findOne({ where: { id }, relations: ['employee'] });
     }
 
     // ==================== LEAVE REQUEST ====================
@@ -428,6 +436,10 @@ export class HrService {
             return this.createPayslip({ ...merged, id });
         }
         await this.payslipRepo.update(id, data);
+        return this.payslipRepo.findOne({ where: { id }, relations: ['employee'] });
+    }
+
+    async findOnePayslip(id: number) {
         return this.payslipRepo.findOne({ where: { id }, relations: ['employee'] });
     }
 

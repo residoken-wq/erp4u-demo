@@ -45,7 +45,7 @@ export const DraftProductionOrderModal: React.FC<DraftProductionOrderModalProps>
 
   useEffect(() => {
     if (open) {
-      api.get('/products')
+      api.get('/lookups/products')
         .then((res) => {
           setProducts(Array.isArray(res.data) ? res.data : []);
         })

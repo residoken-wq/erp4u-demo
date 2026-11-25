@@ -276,7 +276,7 @@ const SalesDeliveries: React.FC<Props> = ({ order, products, customers = [], onS
 
     const fetchCarriers = async () => {
         try {
-            const res = await api.get(`/suppliers`);
+            const res = await api.get(`/lookups/suppliers`);
             const logistics = res.data?.filter((c: any) => c.type === 'LOGISTICS') || [];
             const hasGhtk = logistics.some((c: any) => c.code === 'GHTK' || (c.name || '').includes('GHTK') || (c.name || '').includes('Giao Hàng Tiết Kiệm'));
             if (!hasGhtk) {

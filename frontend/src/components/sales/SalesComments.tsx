@@ -95,7 +95,7 @@ const SalesComments: React.FC<SalesCommentsProps> = ({ orderId, defaultTab, high
     // Fetch users for mentions
     const fetchUsers = async () => {
         try {
-            const res = await api.get('/users');
+            const res = await api.get('/lookups/users');
             setUsers(res.data);
         } catch (e) {
             console.error('Failed to fetch users for mentions:', e);

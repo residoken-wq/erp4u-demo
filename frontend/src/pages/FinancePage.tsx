@@ -103,8 +103,8 @@ const FinancePage: React.FC = () => {
                 api.get(`/finance/transactions?month=${monthStr}`),
                 api.get(`/finance/categories`),
                 api.get(`/finance/summary`),
-                api.get(`/customers`), // <--- Fetch Customers
-                api.get(`/suppliers`),  // <--- Fetch Suppliers
+                api.get(`/lookups/customers`), // <--- Fetch Customers
+                api.get(`/lookups/suppliers`),  // <--- Fetch Suppliers
                 api.get(`/projects`),
                 api.get(`/sales`)
             ]);

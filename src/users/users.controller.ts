@@ -11,13 +11,13 @@ export class UsersController {
     constructor(private readonly service: UsersService) { }
 
     // --- USER APIs ---
-    @AuthOnly()
+    @Perm('USERS', 'view')
     @Get()
     getAll() {
         return this.service.getAllUsers();
     }
 
-    @AuthOnly()
+    @Perm('USERS', 'view')
     @Get('online')
     getOnline() {
         return this.service.getOnlineUsers();

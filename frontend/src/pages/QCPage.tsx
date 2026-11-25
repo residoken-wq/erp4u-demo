@@ -61,9 +61,9 @@ const QCPage: React.FC = () => {
             const [res, sumRes, supRes, poRes, usersRes] = await Promise.all([
                 api.get(`/qc`),
                 api.get(`/qc/summary`),
-                api.get(`/suppliers`),
+                api.get(`/lookups/suppliers`),
                 api.get(`/purchasing`),
-                api.get(`/users`)
+                api.get(`/lookups/users`)
             ]);
             setInspections(Array.isArray(res.data) ? res.data : []);
             setSummary(sumRes.data);

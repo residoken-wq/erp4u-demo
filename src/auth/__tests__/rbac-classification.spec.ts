@@ -28,6 +28,20 @@ describe('RBAC Route Classification CI Guard (SEC-3 / P12a)', () => {
     }
   });
 
+  it('allowlist must be empty (P12b1 D5 zero unclassified)', () => {
+    expect(RBAC_UNCLASSIFIED_ALLOWLIST).toHaveLength(0);
+  });
+
+  it('no routes in UNCLASSIFIED tier', () => {
+    const unclassifiedRoutes = routes.filter((r) => r.tier === 'UNCLASSIFIED');
+    expect(unclassifiedRoutes).toHaveLength(0);
+  });
+
+  it('no routes in LEGACY tier (all legacy routes have matching @Perm)', () => {
+    const legacyRoutes = routes.filter((r) => r.tier === 'LEGACY');
+    expect(legacyRoutes).toHaveLength(0);
+  });
+
   it('no dead entries in the allowlist (all allowlisted routes must exist and remain UNCLASSIFIED)', () => {
     for (const allowed of RBAC_UNCLASSIFIED_ALLOWLIST) {
       const found = routes.find(

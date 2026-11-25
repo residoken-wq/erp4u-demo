@@ -8,9 +8,9 @@ import { CorePackage } from '../common/packages/requires-package.decorator';
 export class CategoriesController {
   constructor(private readonly s: CategoriesService) {}
 
-  @AuthOnly()
+  @Perm('PRODUCT', 'view')
   @Get() findAll() { return this.s.findAll(); }
-  @AuthOnly()
+  @Perm('PRODUCT', 'view')
   @Get(':id') findOne(@Param('id') id: number) { return this.s.findOne(id); }
   @Perm('PRODUCT', 'create')
   @Post() create(@Body() b: any) { return this.s.create(b); }
