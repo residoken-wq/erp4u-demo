@@ -30,9 +30,6 @@ export class RbacGuard implements CanActivate {
     let mode: RbacMode = 'SHADOW';
     try {
       mode = await this.rbacModeService.get();
-      if (mode === 'OFF') {
-        return true;
-      }
 
       // 1. Check Public
       const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -143,7 +140,7 @@ export class RbacGuard implements CanActivate {
         return true;
       }
 
-      // ENFORCE (Phase 2 onwards)
+      // ENFORCE
       if (decision === 'DENY_NO_AUTH') {
         throw new UnauthorizedException('Yêu cầu xác thực tài khoản');
       }
@@ -159,10 +156,15 @@ export class RbacGuard implements CanActivate {
         throw err;
       }
       // Any internal error in SHADOW mode returns true gracefully
-      if (mode === 'SHADOW' || !mode) {
+      if (mode === 'SHADOW') {
+        console.error('[RbacGuard] Internal error in SHADOW mode (allowing):', err);
         return true;
       }
-      throw err;
+      // Fail closed in ENFORCE mode
+      console.error('[RbacGuard] Internal error in ENFORCE mode (fail closed):', err);
+      throw new ForbiddenException(
+        'Lỗi phân quyền hệ thống. Truy cập bị chặn để đảm bảo an toàn.',
+      );
     }
   }
 

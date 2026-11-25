@@ -20,6 +20,7 @@ import { User } from '../users/entities/user.entity';
 import { UserGroup } from '../users/entities/user-group.entity';
 import { SystemConfig } from '../system/system-config.entity';
 import { RbacAccessLog } from './entities/rbac-access-log.entity';
+import { ActivityLog } from '../system/entities/activity-log.entity';
 import { getJwtSecret } from '../common/security/secrets';
 
 @Module({
@@ -32,7 +33,14 @@ import { getJwtSecret } from '../common/security/secrets';
         signOptions: { expiresIn: '1d' }, // Token hết hạn sau 1 ngày
       }),
     }),
-    TypeOrmModule.forFeature([GroupPermission, User, UserGroup, SystemConfig, RbacAccessLog]),
+    TypeOrmModule.forFeature([
+      GroupPermission,
+      User,
+      UserGroup,
+      SystemConfig,
+      RbacAccessLog,
+      ActivityLog,
+    ]),
   ],
   providers: [
     AuthService,
