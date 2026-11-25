@@ -8,6 +8,7 @@ import { PermissionCacheService } from '../auth/permission-cache.service';
 import { DemoModeService } from '../common/services/demo-mode.service';
 import { UsageService } from '../common/packages/usage.service';
 import { UserQuotaService } from './user-quota.service';
+import { assertPermission } from '../auth/rbac-assert.helper';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -79,7 +80,33 @@ export class UsersService {
     return saved;
   }
 
-  async updateUser(id: number, data: any) {
+  async updateUser(id: number, data: any, actor?: any) {
+    const isActorAdmin = actor?.username === 'admin';
+    const isSelf = actor && Number(id) === Number(actor.id);
+
+    if (actor && !isActorAdmin) {
+      // 1. không được đổi username thành admin -> 403
+      if (data.username && typeof data.username === 'string' && data.username.toLowerCase() === 'admin') {
+        throw new ForbiddenException('Không thể đổi tên đăng nhập thành admin');
+      }
+      // 2. không được gán group_id cho chính mình (chặn tự nâng quyền) -> 403
+      if (isSelf && (data.group_id !== undefined || data.groupId !== undefined || data.group !== undefined)) {
+        throw new ForbiddenException('Không thể tự thay đổi nhóm quyền của chính mình');
+      }
+    }
+
+    // Bỏ qua các trường không cho phép trong body (password không được đổi qua route này)
+    const sanitizedData = { ...data };
+    delete sanitizedData.password;
+    delete sanitizedData.id;
+    if (sanitizedData.group) {
+      delete sanitizedData.group;
+    }
+    if (sanitizedData.groupId !== undefined && sanitizedData.group_id === undefined) {
+      sanitizedData.group_id = sanitizedData.groupId;
+      delete sanitizedData.groupId;
+    }
+
     const executeInManager = async (manager: EntityManager) => {
       const repo = manager.getRepository(User);
       const user = await repo.findOne({ where: { id } });
@@ -91,7 +118,12 @@ export class UsersService {
         }
       }
 
-      const isActivating = !user.is_active && data.is_active === true;
+      // người không phải admin không được sửa user admin -> 403
+      if (actor && !isActorAdmin && user.username === 'admin') {
+        throw new ForbiddenException('Không có quyền chỉnh sửa tài khoản admin');
+      }
+
+      const isActivating = !user.is_active && sanitizedData.is_active === true;
       if (isActivating) {
         if (this.dataSource?.options?.type === 'postgres') {
           try {
@@ -107,7 +139,7 @@ export class UsersService {
         }
       }
 
-      await repo.update(id, data);
+      await repo.update(id, sanitizedData);
       return repo.findOne({ where: { id }, relations: ['group'] });
     };
 
@@ -125,34 +157,93 @@ export class UsersService {
       }
     }
 
-    const isActivating = !user.is_active && data.is_active === true;
+    // người không phải admin không được sửa user admin -> 403
+    if (actor && !isActorAdmin && user.username === 'admin') {
+      throw new ForbiddenException('Không có quyền chỉnh sửa tài khoản admin');
+    }
+
+    const isActivating = !user.is_active && sanitizedData.is_active === true;
     if (isActivating && this.quotaService) {
       await this.quotaService.assertQuota();
     }
 
-    await this.userRepo.update(id, data);
+    await this.userRepo.update(id, sanitizedData);
     return this.userRepo.findOne({ where: { id }, relations: ['group'] });
   }
 
-  async deleteUser(id: number) {
+  async deleteUser(id: number, actor?: any) {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) return;
     if (this.demoModeService.isDemoMode() && this.demoModeService.isDemoUser(user.username)) {
       throw new ForbiddenException('Không được phép trên bản demo');
     }
+    if (user.username === 'admin') {
+      throw new ForbiddenException('Không thể xóa tài khoản admin');
+    }
     return this.userRepo.delete(id);
   }
 
-  async changePassword(id: number, newPass: string) {
-    const user = await this.userRepo.findOne({ where: { id } });
+  async changePassword(id: number, data: any, actor?: any) {
+    let user: User | null = null;
+    if (typeof this.userRepo.createQueryBuilder === 'function') {
+      user = await this.userRepo.createQueryBuilder('user')
+        .addSelect('user.password')
+        .leftJoinAndSelect('user.group', 'group')
+        .where('user.id = :id', { id })
+        .getOne();
+    } else {
+      user = await this.userRepo.findOne({ where: { id } });
+    }
     if (!user) throw new NotFoundException('User not found');
 
     if (this.demoModeService.isDemoMode() && this.demoModeService.isDemoUser(user.username)) {
       throw new ForbiddenException('Không được phép trên bản demo');
     }
 
+    const newPass = typeof data === 'string' ? data : data?.password;
+    const currentPass = typeof data === 'object' ? data?.current_password : undefined;
+
+    if (!newPass || typeof newPass !== 'string' || newPass.length < 8) {
+      throw new BadRequestException('Mật khẩu mới phải có ít nhất 8 ký tự');
+    }
+
+    if (actor) {
+      const isSelf = Number(id) === Number(actor.id);
+      const isActorAdmin = actor.username === 'admin';
+
+      if (isSelf) {
+        if (!currentPass || typeof currentPass !== 'string') {
+          throw new BadRequestException('Vui lòng nhập mật khẩu hiện tại');
+        }
+        const matches = user.password && (await bcrypt.compare(currentPass, user.password));
+        if (!matches) {
+          throw new BadRequestException('Mật khẩu hiện tại không chính xác');
+        }
+      } else {
+        await assertPermission(actor, this.permCacheService, 'USERS', 'update');
+
+        if (user.username === 'admin' && !isActorAdmin) {
+          throw new ForbiddenException('Không có quyền đổi mật khẩu của tài khoản admin');
+        }
+
+        if (!isActorAdmin) {
+          const targetGroupId = user.group_id || user.group?.id;
+          if (targetGroupId && this.permCacheService) {
+            const hasUsersUpdate = await this.permCacheService.hasAny(targetGroupId, [
+              { module: 'USERS', action: 'update' },
+            ]);
+            if (hasUsersUpdate) {
+              throw new ForbiddenException('Không có quyền đổi mật khẩu của tài khoản quản trị người dùng');
+            }
+          }
+        }
+      }
+    }
+
     user.password = await bcrypt.hash(newPass, 10);
-    return this.userRepo.save(user);
+    const saved = await this.userRepo.save(user);
+    delete (saved as any).password;
+    return saved;
   }
 
   async getOnlineUsers() {

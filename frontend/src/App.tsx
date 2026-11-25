@@ -168,7 +168,10 @@ const AppShell: React.FC<AppShellProps> = ({
 
     const handleChangePass = async (values: any) => {
         try {
-            await api.post(`/users/${currentUser?.id}/change-password`, { password: values.password });
+            await api.post(`/users/${currentUser?.id}/change-password`, {
+                current_password: values.current_password,
+                password: values.password,
+            });
             message.success('Đổi mật khẩu thành công');
             setIsChangePassOpen(false);
             passForm.resetFields();
@@ -705,16 +708,29 @@ const AppShell: React.FC<AppShellProps> = ({
             <Modal
                 title={`Đổi mật khẩu: ${currentUser?.username}`}
                 open={isChangePassOpen}
-                onCancel={() => setIsChangePassOpen(false)}
+                onCancel={() => {
+                    setIsChangePassOpen(false);
+                    passForm.resetFields();
+                }}
                 onOk={() => passForm.submit()}
             >
                 <Form form={passForm} layout="vertical" onFinish={handleChangePass}>
                     <Form.Item
+                        name="current_password"
+                        label="Mật khẩu hiện tại"
+                        rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại' }]}
+                    >
+                        <Input.Password placeholder="Nhập mật khẩu hiện tại..." />
+                    </Form.Item>
+                    <Form.Item
                         name="password"
                         label="Mật khẩu mới"
-                        rules={[{ required: true, message: 'Vui lòng nhập mật khẩu mới' }]}
+                        rules={[
+                            { required: true, message: 'Vui lòng nhập mật khẩu mới' },
+                            { min: 8, message: 'Mật khẩu mới phải có ít nhất 8 ký tự' },
+                        ]}
                     >
-                        <Input.Password placeholder="Nhập mật khẩu mới..." />
+                        <Input.Password placeholder="Nhập mật khẩu mới (tối thiểu 8 ký tự)..." />
                     </Form.Item>
                 </Form>
             </Modal>
