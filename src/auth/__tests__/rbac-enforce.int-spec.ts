@@ -175,8 +175,8 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
-      `INSERT INTO "tenant_a"."projects" ("id", "name", "code", "created_by_id", "status") VALUES
-       (3001, 'Du an Mau A', 'DA-01', 10, 'PLANNING')
+      `INSERT INTO "tenant_a"."projects" ("id", "title", "created_by_id", "status") VALUES
+       (3001, 'Du an Mau A', 10, 'PLANNING')
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
