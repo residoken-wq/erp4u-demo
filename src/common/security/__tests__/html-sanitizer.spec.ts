@@ -57,6 +57,16 @@ describe('HTML Sanitizer (Server)', () => {
     expect(clean).toContain('<td>Data</td>');
   });
 
+  it('allows classes only with ql- and ck- prefixes for editor alignment and indenting', () => {
+    const input = '<p class="ql-align-center ck-editor evil-class test">Hello</p><span class="ql-indent-1 normal-class">World</span>';
+    const clean = sanitizeHtmlContent(input);
+    expect(clean).toContain('class="ql-align-center ck-editor"');
+    expect(clean).toContain('class="ql-indent-1"');
+    expect(clean).not.toContain('evil-class');
+    expect(clean).not.toContain('normal-class');
+    expect(clean).not.toContain('test');
+  });
+
   it('handles empty or null inputs gracefully', () => {
     expect(sanitizeHtmlContent('')).toBe('');
     expect(sanitizeHtmlContent(null)).toBe('');

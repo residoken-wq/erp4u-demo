@@ -113,6 +113,12 @@ export class DiscussionsService {
             throw new BadRequestException('Nội dung không được để trống');
         }
 
+        const isMod = await this.isModerator(user);
+        const userGroupId = user?.groupId || user?.group_id;
+        if (!isMod && dto.group_id && dto.group_id !== userGroupId) {
+            throw new ForbiddenException('Bạn không thể tạo thảo luận trong nhóm khác');
+        }
+
         const discussion = this.repo.create({
             title: dto.title.trim(),
             content: cleanContent,

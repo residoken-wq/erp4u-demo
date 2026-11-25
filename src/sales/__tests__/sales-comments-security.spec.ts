@@ -147,6 +147,14 @@ describe('Sales Comments & Customer Portal Security (Task P11a)', () => {
 
   describe('getQuoteByUuid filtering', () => {
     it('filters out INTERNAL comments, strips mentioned_user_ids, sanitizes assigned_to and customer CRM fields', async () => {
+      const mockHrService = {
+        findEmployeeByUserId: jest.fn().mockResolvedValueOnce({
+          phone: '0900000001',
+          user: { email: 'assigned@example.com' },
+        }),
+      };
+      (service as any).hrService = mockHrService;
+
       const rawOrder = {
         id: 1,
         uuid: 'test-uuid',
@@ -157,6 +165,8 @@ describe('Sales Comments & Customer Portal Security (Task P11a)', () => {
           full_name: 'Nhân viên A',
           email: 'secret@example.com',
           ip_address: '1.2.3.4',
+          group: { name: 'Admin' },
+          username: 'admin',
         },
         customer: {
           id: 10,
@@ -181,9 +191,17 @@ describe('Sales Comments & Customer Portal Security (Task P11a)', () => {
       expect(quote.comments.map((c: any) => c.id)).toEqual([1, 3]);
       expect(quote.comments[1]).not.toHaveProperty('mentioned_user_ids');
 
-      // assigned_to: only id and full_name
-      expect(quote.assigned_to).toEqual({ id: 5, full_name: 'Nhân viên A' });
-      expect(quote.assigned_to.email).toBeUndefined();
+      // assigned_to: exactly 4 keys: id, full_name, phone, email
+      expect(quote.assigned_to).toEqual({
+        id: 5,
+        full_name: 'Nhân viên A',
+        phone: '0900000001',
+        email: 'assigned@example.com',
+      });
+      expect(Object.keys(quote.assigned_to).sort()).toEqual(['email', 'full_name', 'id', 'phone']);
+      expect(quote.assigned_to.ip_address).toBeUndefined();
+      expect(quote.assigned_to.group).toBeUndefined();
+      expect(quote.assigned_to.username).toBeUndefined();
 
       // customer: CRM fields stripped
       expect(quote.customer.portrait_notes).toBeUndefined();

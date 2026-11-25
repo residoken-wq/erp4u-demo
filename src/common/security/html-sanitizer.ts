@@ -14,6 +14,9 @@ export const SANITIZER_OPTIONS: sanitizeHtml.IOptions = {
     th: ['colspan', 'rowspan'],
     td: ['colspan', 'rowspan'],
   },
+  allowedClasses: {
+    '*': [/^ql-/, /^ck-/],
+  },
   allowedSchemes: ['http', 'https', 'mailto'],
   allowedSchemesByTag: {
     img: ['http', 'https'],
@@ -66,6 +69,7 @@ export const SANITIZER_OPTIONS: sanitizeHtml.IOptions = {
  * Sanitize user-provided HTML content on write.
  * Strips script, svg, style, on* attributes, javascript: and data: URIs.
  * Allowlist: p br b strong i em u s ul ol li h1-h4 blockquote pre code span table thead tbody tr th td a img.
+ * Classes are restricted to Quill ('ql-') and CKEditor ('ck-') prefixes.
  */
 export function sanitizeHtmlContent(content: string | null | undefined): string {
   if (!content) return '';

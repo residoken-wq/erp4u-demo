@@ -163,15 +163,28 @@ export class PublicController {
             }
         }
 
-        // --- SANITIZE ASSIGNED_TO FOR PORTAL (id & full_name only) ---
+        // --- SANITIZE ASSIGNED_TO FOR PORTAL ({ id, full_name, phone, email } only) ---
         if (isDesignOrder && !quote.assigned_to) {
             quote.assigned_to = quote.sales_order?.assigned_to || quote.designer;
         }
 
         if (quote.assigned_to?.id) {
+            let phone: string | null = (quote.assigned_to as any).phone || null;
+            let email: string | null = (quote.assigned_to as any).email || null;
+            try {
+                const employee = await this.hrService.findEmployeeByUserId(quote.assigned_to.id);
+                if (employee) {
+                    if (employee.phone) phone = employee.phone;
+                    if (employee.user?.email) email = employee.user.email;
+                }
+            } catch (e) {
+                // Ignore if HR module fails
+            }
             quote.assigned_to = {
                 id: quote.assigned_to.id,
                 full_name: quote.assigned_to.full_name,
+                phone: phone || null,
+                email: email || null,
             };
         }
 

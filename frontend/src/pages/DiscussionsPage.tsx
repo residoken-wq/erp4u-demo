@@ -22,6 +22,12 @@ const DiscussionsPage: React.FC = () => {
     const [activeGroupId, setActiveGroupId] = useState<string>('ALL');
 
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const userGroupId = currentUser.groupId || currentUser.group_id;
+    const isModerator = currentUser.username === 'admin' || !!(currentUser.permissions || []).find((p: any) => p.module_code === 'SYSTEM' && (p.can_update === true || p.can_update === 1));
+
+    const visibleGroups = isModerator
+        ? groups
+        : groups.filter(g => Number(g.id) === Number(userGroupId));
 
     const fetchData = async () => {
         setLoading(true);
@@ -75,7 +81,7 @@ const DiscussionsPage: React.FC = () => {
                     items={[
                         { key: 'ALL', label: 'All Topics' },
                         { key: 'PUBLIC', label: 'General / Public' },
-                        ...groups.map(g => ({ key: String(g.id), label: g.name }))
+                        ...visibleGroups.map(g => ({ key: String(g.id), label: g.name }))
                     ]}
                 />
 
@@ -135,7 +141,7 @@ const DiscussionsPage: React.FC = () => {
                     <div style={{ display: 'flex', gap: 20 }}>
                         <Form.Item name="group_id" label="Nhóm (Tùy chọn)" style={{ flex: 1 }}>
                             <Select allowClear placeholder="Chọn nhóm hoặc để trống (Công khai)">
-                                {groups.map(g => <Option key={g.id} value={g.id}>{g.name}</Option>)}
+                                {visibleGroups.map(g => <Option key={g.id} value={g.id}>{g.name}</Option>)}
                             </Select>
                         </Form.Item>
                     </div>

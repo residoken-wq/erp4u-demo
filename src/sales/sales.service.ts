@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger, BadRequestException, Optional, Inject, HttpStatus, HttpException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, BadRequestException, Optional, Inject, HttpStatus, HttpException, ForbiddenException, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, MoreThanOrEqual, In } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -28,6 +28,7 @@ import { SalesTarget } from './sales-target.entity';
 import { Customer } from '../customers/customer.entity';
 import { ProjectsService } from '../projects/projects.service';
 import { Promotion } from './promotion.entity';
+import { HrService } from '../hr/hr.service';
 import { EasyInvoiceService } from './easyinvoice.service';
 import { EmailService } from '../common/services/email.service';
 import { buildPortalQuoteUrl } from '../common/utils/url.util';
@@ -100,6 +101,9 @@ export class SalesService {
         @Optional()
         @Inject(TENANT_REGISTRY)
         private readonly tenantRegistry?: TenantRegistry,
+        @Optional()
+        @Inject(forwardRef(() => HrService))
+        private readonly hrService?: HrService,
     ) { }
 
 
@@ -778,10 +782,6 @@ export class SalesService {
         return this.commentRepo.save(comment);
     }
 
-    async addComment(orderId: number, content: string, sender: 'STAFF' | 'CUSTOMER', name?: string, commentType: 'CUSTOMER' | 'INTERNAL' = 'CUSTOMER', mentionedUserIds?: string) {
-        return this.addStaffComment(orderId, { content, comment_type: commentType, mentioned_user_ids: mentionedUserIds }, { full_name: name });
-    }
-
     // Filter out deleted comments (deleted_at is null means not deleted)
     async getComments(orderId: number) {
         return this.commentRepo.find({
@@ -828,14 +828,6 @@ export class SalesService {
         comment.deleted_at = new Date();
         comment.deleted_by = user?.full_name || user?.username || 'Nhân viên';
         comment.content = `[Đã thu hồi] ${comment.content}`;
-        return this.commentRepo.save(comment);
-    }
-
-    async updateComment(id: number, content: string) {
-        const comment = await this.commentRepo.findOne({ where: { id } });
-        if (!comment) throw new NotFoundException('Comment not found');
-        comment.content = sanitizeHtmlContent(content);
-        comment.edited_at = new Date();
         return this.commentRepo.save(comment);
     }
     
@@ -994,11 +986,26 @@ export class SalesService {
                 });
         }
 
-        // assigned_to: only return id and full_name (no email, ip, group)
+        // assigned_to: restore { id, full_name, phone, email } from HR employee profile (exactly 4 keys)
         if (order.assigned_to) {
+            let phone: string | null = (order.assigned_to as any).phone || null;
+            let email: string | null = (order.assigned_to as any).email || null;
+            if (this.hrService) {
+                try {
+                    const emp = await this.hrService.findEmployeeByUserId(order.assigned_to.id);
+                    if (emp) {
+                        if (emp.phone) phone = emp.phone;
+                        if (emp.user?.email) email = emp.user.email;
+                    }
+                } catch {
+                    // Ignore if HR lookup fails
+                }
+            }
             order.assigned_to = {
                 id: order.assigned_to.id,
                 full_name: order.assigned_to.full_name,
+                phone: phone || null,
+                email: email || null,
             } as any;
         }
 

@@ -83,6 +83,31 @@ describe('Discussions Security & Permissions (Task P11a)', () => {
       expect(res.id).toBe(1);
       expect(res.can_pin).toBe(true);
     });
+
+    it('non-moderator creating discussion in another group returns 403', async () => {
+      mockPermCache.hasAny.mockResolvedValue(false);
+      const user = { id: 10, username: 'userX', groupId: 1 };
+      await expect(
+        service.create({ title: 'Topic', content: 'Hello', group_id: 2 }, user),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('non-moderator creating discussion in own group or public succeeds', async () => {
+      mockPermCache.hasAny.mockResolvedValue(false);
+      const user = { id: 10, username: 'userX', groupId: 1 };
+
+      const publicRes = await service.create({ title: 'Public Topic', content: 'Hello', group_id: null as any }, user);
+      expect(publicRes).toBeDefined();
+
+      const groupRes = await service.create({ title: 'Group 1 Topic', content: 'Hello', group_id: 1 }, user);
+      expect(groupRes).toBeDefined();
+    });
+
+    it('moderator can create discussion in any group', async () => {
+      const admin = { id: 99, username: 'admin' };
+      const res = await service.create({ title: 'Admin in Group 2', content: 'Hello', group_id: 2 }, admin);
+      expect(res).toBeDefined();
+    });
   });
 
   describe('Ownership and Permissions on Edit/Delete/Pin', () => {

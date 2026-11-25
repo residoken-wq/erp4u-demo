@@ -2,12 +2,13 @@ import { AuthOnly, Perm } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { AnnouncementsService } from './announcements.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
 import { AnnouncementType } from './announcement.entity';
 import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('announcements')
 @CorePackage()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class AnnouncementsController {
     constructor(private readonly service: AnnouncementsService) { }
 
