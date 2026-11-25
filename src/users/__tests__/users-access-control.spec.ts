@@ -68,27 +68,95 @@ describe('UsersAccessControl (Unit Test)', () => {
     const staffNoPerm = { id: 2, username: 'staff1', groupId: 2 };
     const adminUser = { id: 1, username: 'admin', groupId: 1 };
 
-    it('getAll: rejects user without USERS:view (403), allows admin (200)', async () => {
-      permCacheService.hasAny.mockResolvedValue(false);
-      await expect(controller.getAll({ user: staffNoPerm })).rejects.toThrow(ForbiddenException);
+    it('getAll: allows user without USERS:view with sanitized data (no email/ip/last_login/phone), allows admin and user with USERS:view with full data', async () => {
+      const fullUsers = [
+        {
+          id: 1,
+          username: 'admin',
+          full_name: 'Admin User',
+          email: 'admin@example.com',
+          ip_address: '1.2.3.4',
+          last_login: new Date(),
+          is_active: true,
+          group: { id: 1, name: 'Admin', description: 'Admin group' },
+        },
+      ];
+      mockUserRepo.find.mockResolvedValue(fullUsers);
 
-      mockUserRepo.find.mockResolvedValue([{ id: 1, username: 'admin' }]);
+      // 1. Staff without USERS:view -> 200, only { id, username, full_name, is_active, group: { id, name } }
+      permCacheService.hasAny.mockResolvedValue(false);
+      const resStaff = await controller.getAll({ user: staffNoPerm });
+      expect(resStaff).toHaveLength(1);
+      expect(resStaff[0]).toEqual({
+        id: 1,
+        username: 'admin',
+        full_name: 'Admin User',
+        is_active: true,
+        group: { id: 1, name: 'Admin' },
+      });
+      expect(resStaff[0]).not.toHaveProperty('email');
+      expect(resStaff[0]).not.toHaveProperty('ip_address');
+      expect(resStaff[0]).not.toHaveProperty('last_login');
+      expect(resStaff[0]).not.toHaveProperty('phone');
+
+      // 2. User with USERS:view -> 200, full data
+      const staffWithView = { id: 3, username: 'staff_view', groupId: 3 };
+      permCacheService.hasAny.mockResolvedValue(true);
+      const resWithView = await controller.getAll({ user: staffWithView });
+      expect(resWithView).toEqual(fullUsers);
+      expect(resWithView[0]).toHaveProperty('email');
+      expect(resWithView[0]).toHaveProperty('ip_address');
+
+      // 3. Admin -> 200, full data
       const resAdmin = await controller.getAll({ user: adminUser });
-      expect(resAdmin).toHaveLength(1);
+      expect(resAdmin).toEqual(fullUsers);
+      expect(resAdmin[0]).toHaveProperty('email');
+      expect(resAdmin[0]).toHaveProperty('ip_address');
     });
 
-    it('getOnline: rejects user without USERS:view (403), allows admin', async () => {
-      permCacheService.hasAny.mockResolvedValue(false);
-      await expect(controller.getOnline({ user: staffNoPerm })).rejects.toThrow(ForbiddenException);
-
+    it('getOnline: allows user without USERS:view with sanitized data (only id, username, full_name), allows admin and user with USERS:view with full data', async () => {
+      const fullOnlineUsers = [
+        {
+          id: 1,
+          username: 'admin',
+          full_name: 'Admin User',
+          email: 'admin@example.com',
+          ip_address: '1.2.3.4',
+          last_activity_at: new Date(),
+          group: { id: 1, name: 'Admin' },
+        },
+      ];
       mockUserRepo.createQueryBuilder.mockReturnValue({
         leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([]),
+        getMany: jest.fn().mockResolvedValue(fullOnlineUsers),
       });
-      const res = await controller.getOnline({ user: adminUser });
-      expect(res).toEqual([]);
+
+      // 1. Staff without USERS:view -> 200, only { id, username, full_name }
+      permCacheService.hasAny.mockResolvedValue(false);
+      const resStaff = await controller.getOnline({ user: staffNoPerm });
+      expect(resStaff).toHaveLength(1);
+      expect(resStaff[0]).toEqual({
+        id: 1,
+        username: 'admin',
+        full_name: 'Admin User',
+      });
+      expect(resStaff[0]).not.toHaveProperty('email');
+      expect(resStaff[0]).not.toHaveProperty('ip_address');
+      expect(resStaff[0]).not.toHaveProperty('last_activity_at');
+      expect(resStaff[0]).not.toHaveProperty('group');
+
+      // 2. User with USERS:view -> 200, full data
+      const staffWithView = { id: 3, username: 'staff_view', groupId: 3 };
+      permCacheService.hasAny.mockResolvedValue(true);
+      const resWithView = await controller.getOnline({ user: staffWithView });
+      expect(resWithView).toEqual(fullOnlineUsers);
+      expect(resWithView[0]).toHaveProperty('email');
+
+      // 3. Admin -> 200, full data
+      const resAdmin = await controller.getOnline({ user: adminUser });
+      expect(resAdmin).toEqual(fullOnlineUsers);
     });
 
     it('create: rejects user without USERS:create (403)', async () => {

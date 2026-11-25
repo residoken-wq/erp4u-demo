@@ -19,7 +19,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from './users.service';
 import { CorePackage } from '../common/packages/requires-package.decorator';
 import { PermissionCacheService } from '../auth/permission-cache.service';
-import { assertPermission } from '../auth/rbac-assert.helper';
+import { assertPermission, hasPermission } from '../auth/rbac-assert.helper';
 
 @Controller('users')
 @CorePackage()
@@ -33,18 +33,37 @@ export class UsersController {
   ) {}
 
   // --- USER APIs ---
-  @Perm('USERS', 'view')
+  // P12b chuyển các màn hình sang /lookups/users
+  @AuthOnly()
   @Get()
   async getAll(@Req() req: any) {
-    await assertPermission(req?.user, this.permCacheService, 'USERS', 'view');
-    return this.service.getAllUsers();
+    const hasFullView = await hasPermission(req?.user, this.permCacheService, 'USERS', 'view');
+    const users = await this.service.getAllUsers();
+    if (hasFullView) {
+      return users;
+    }
+    return users.map((u: any) => ({
+      id: u.id,
+      username: u.username,
+      full_name: u.full_name,
+      is_active: u.is_active,
+      group: u.group ? { id: u.group.id, name: u.group.name } : null,
+    }));
   }
 
-  @Perm('USERS', 'view')
+  @AuthOnly()
   @Get('online')
   async getOnline(@Req() req: any) {
-    await assertPermission(req?.user, this.permCacheService, 'USERS', 'view');
-    return this.service.getOnlineUsers();
+    const hasFullView = await hasPermission(req?.user, this.permCacheService, 'USERS', 'view');
+    const onlineUsers = await this.service.getOnlineUsers();
+    if (hasFullView) {
+      return onlineUsers;
+    }
+    return onlineUsers.map((u: any) => ({
+      id: u.id,
+      username: u.username,
+      full_name: u.full_name,
+    }));
   }
 
   @Perm('USERS', 'create')
