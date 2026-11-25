@@ -10,6 +10,8 @@ import { Funnel, Area, Pie } from '@ant-design/plots';
 import api from '../utils/api';
 import dayjs from 'dayjs';
 import useMobile from '../hooks/useMobile';
+import { brandChartPalette, brandColors } from '../theme/brand';
+import { formatFunnelLabel } from '../utils/chartHelpers';
 
 const { RangePicker } = DatePicker;
 
@@ -130,9 +132,11 @@ const SalesStrategyDashboard: React.FC = () => {
                                 yField="count"
                                 height={250}
                                 legend={false}
-                                color={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']}
-                                conversionTag={false}
-                                label={{ style: { fill: '#fff', fontWeight: 600 } }}
+                                scale={{ color: { range: brandChartPalette } }}
+                                label={{
+                                    text: (d: any) => formatFunnelLabel(d),
+                                    style: { fill: '#fff', fontWeight: 600, fontSize: 12 },
+                                }}
                             />
                         ) : <Empty description="Chưa có dữ liệu" />}
                     </Col>
@@ -326,13 +330,21 @@ const SalesStrategyDashboard: React.FC = () => {
                         xField="month"
                         yField="value"
                         colorField="type"
-                        scale={{ color: { range: ['#10b981', '#3b82f6'] } }}
+                        scale={{ color: { range: [brandColors.mintDark, brandColors.navy] } }}
                         height={isMobile ? 250 : 320}
                         style={{ fillOpacity: 0.25 }}
                         axis={{
                             y: { labelFormatter: (v: number) => fmtVND(v) },
                         }}
                         legend={{ color: { position: 'top' } }}
+                        tooltip={{
+                            items: [
+                                (d: any) => ({
+                                    name: d.type,
+                                    value: fmtVND(Number(d.value) || 0),
+                                }),
+                            ],
+                        }}
                     />
                 ) : <Empty description="Chưa có dữ liệu" />}
             </Card>
@@ -374,7 +386,15 @@ const SalesStrategyDashboard: React.FC = () => {
                                 height={250}
                                 label={{ text: 'type', position: 'outside', style: { fontSize: 11 } }}
                                 legend={false}
-                                color={['#ef4444', '#f97316', '#eab308', '#6366f1', '#ec4899', '#8b5cf6']}
+                                scale={{ color: { range: brandChartPalette } }}
+                                tooltip={{
+                                    items: [
+                                        (d: any) => ({
+                                            name: d.type,
+                                            value: `${d.value} deal`,
+                                        }),
+                                    ],
+                                }}
                             />
                             <div style={{ textAlign: 'center', marginTop: 8 }}>
                                 <Statistic

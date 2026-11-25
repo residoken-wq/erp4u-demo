@@ -10,6 +10,8 @@ import { Column, Funnel, Area } from '@ant-design/plots';
 import api from '../utils/api';
 import dayjs from 'dayjs';
 import useMobile from '../hooks/useMobile';
+import { brandChartPalette, brandColors } from '../theme/brand';
+import { buildFunnelStages, formatFunnelLabel } from '../utils/chartHelpers';
 
 const { RangePicker } = DatePicker;
 
@@ -171,19 +173,21 @@ const BodDashboard: React.FC = () => {
                         yField="count"
                         colorField="type"
                         stack
-                        color={['#10b981', '#e5e7eb']}
+                        scale={{ color: { range: [brandColors.mintDark, '#e5e7eb'] } }}
                         height={isMobile ? 250 : 300}
-                        label={{ position: 'middle', style: { fill: '#fff', fontWeight: 600 } }}
+                        label={{ text: 'count', position: 'middle', style: { fill: '#fff', fontWeight: 600 } }}
                         tooltip={{
-                            formatter: (datum: any) => {
-                                const src = funnelData.find((f: any) => f.sourceLabel === datum.source);
-                                return {
-                                    name: datum.type,
-                                    value: `${datum.count} (GT TB: ${fmtFullVND(src?.avgOrderValue || 0)})`,
-                                };
-                            },
+                            items: [
+                                (d: any) => {
+                                    const src = funnelData.find((f: any) => f.sourceLabel === d.source);
+                                    return {
+                                        name: d.type,
+                                        value: `${d.count} (GT TB: ${fmtFullVND(src?.avgOrderValue || 0)})`,
+                                    };
+                                },
+                            ],
                         }}
-                        legend={{ position: 'top' }}
+                        legend={{ color: { position: 'top' } }}
                     />
                 ) : <Empty description="Chưa có dữ liệu nguồn Lead" />}
                 <div style={{ marginTop: 12, fontSize: 12, color: '#666', fontStyle: 'italic' }}>
@@ -196,24 +200,16 @@ const BodDashboard: React.FC = () => {
     // === CONVERSION FUNNEL ===
     const ConversionFunnel = () => {
         const kpi = data?.kpi || {};
-        const funnel = kpi.funnelStages || {};
-
-        const stages = [
-            { stage: 'Lead Mới', count: funnel.new || 0 },
-            { stage: 'Tiềm Năng', count: funnel.qualified || 0 },
-            { stage: 'Đã Liên Hệ', count: funnel.contacted || 0 },
-            { stage: 'Duyệt Mẫu SX', count: funnel.sample_approved || 0 },
-            { stage: 'Đàm Phán / BG', count: funnel.negotiation || 0 },
-            { stage: 'Thành Công (WON)', count: funnel.won || 0 },
-        ];
+        const stages = buildFunnelStages(kpi);
+        const hasData = stages.some((s) => s.count > 0);
 
         return (
             <Card
-                title={<span><FunnelPlotOutlined style={{ color: '#3b82f6' }} /> Phễu Chuyển Đổi</span>}
+                title={<span><FunnelPlotOutlined style={{ color: brandColors.navy }} /> Phễu Chuyển Đổi</span>}
                 bordered={false}
                 style={{ borderRadius: 16, height: '100%' }}
             >
-                {stages[0].count > 0 ? (
+                {hasData ? (
                     <Funnel
                         data={stages}
                         xField="stage"
@@ -221,11 +217,10 @@ const BodDashboard: React.FC = () => {
                         height={isMobile ? 250 : 300}
                         legend={false}
                         label={{
-                            formatter: (datum: any) => `${datum.stage}\n${datum.count}`,
+                            text: (d: any) => formatFunnelLabel(d),
                             style: { fill: '#fff', fontWeight: 600, fontSize: 12 },
                         }}
-                        color={['#3b82f6', '#60a5fa', '#f59e0b', '#f97316', '#10b981']}
-                        conversionTag={false}
+                        scale={{ color: { range: brandChartPalette } }}
                     />
                 ) : <Empty description="Chưa có dữ liệu phễu" />}
             </Card>
@@ -328,13 +323,21 @@ const BodDashboard: React.FC = () => {
                         xField="month"
                         yField="value"
                         colorField="type"
-                        scale={{ color: { range: ['#10b981', '#3b82f6'] } }}
+                        scale={{ color: { range: [brandColors.mintDark, brandColors.navy] } }}
                         height={isMobile ? 250 : 300}
                         style={{ fillOpacity: 0.25 }}
                         axis={{
                             y: { labelFormatter: (v: number) => fmtVND(v) },
                         }}
                         legend={{ color: { position: 'top' } }}
+                        tooltip={{
+                            items: [
+                                (d: any) => ({
+                                    name: d.type,
+                                    value: fmtVND(Number(d.value) || 0),
+                                }),
+                            ],
+                        }}
                     />
                 ) : <Empty description="Chưa có dữ liệu dự báo" />}
                 <div style={{ marginTop: 8, fontSize: 12, color: '#888', fontStyle: 'italic' }}>
@@ -365,18 +368,20 @@ const BodDashboard: React.FC = () => {
                         yField="value"
                         colorField="type"
                         group
-                        color={['#3b82f6', '#10b981']}
+                        scale={{ color: { range: [brandColors.navy, brandColors.mintDark] } }}
                         height={isMobile ? 250 : 320}
                         axis={{
                             y: { labelFormatter: (v: number) => fmtVND(v) },
                         }}
-                        legend={{ position: 'top' }}
+                        legend={{ color: { position: 'top' } }}
                         label={false}
                         tooltip={{
-                            formatter: (datum: any) => ({
-                                name: datum.type,
-                                value: fmtFullVND(datum.value),
-                            }),
+                            items: [
+                                (d: any) => ({
+                                    name: d.type,
+                                    value: fmtVND(Number(d.value) || 0),
+                                }),
+                            ],
                         }}
                     />
                 ) : <Empty description="Chưa có dữ liệu" />}

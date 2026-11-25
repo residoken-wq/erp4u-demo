@@ -180,27 +180,27 @@ const CashFlowDashboard: React.FC = () => {
                         xField="date"
                         yField="value"
                         colorField="type"
-                        color={({ type }: { type: string }) => type === 'Thu' ? '#52c41a' : '#f5222d'}
+                        scale={{ color: { domain: ['Thu', 'Chi'], range: ['#52c41a', '#f5222d'] } }}
                         height={300}
                         smooth
                         point={{ size: 3 }}
-                        xAxis={{
-                            label: {
-                                formatter: (v: string) => dayjs(v).format('DD/MM'),
+                        axis={{
+                            x: {
+                                labelFormatter: (v: string) => dayjs(v).format('DD/MM'),
                             },
-                        }}
-                        yAxis={{
-                            label: {
-                                formatter: (v: string) => `${(Number(v) / 1000000).toFixed(0)}M`,
+                            y: {
+                                labelFormatter: (v: number) => `${(Number(v) / 1000000).toFixed(0)}M`,
                             },
                         }}
                         tooltip={{
-                            formatter: (datum: { type: string; value: number }) => ({
-                                name: datum.type,
-                                value: `${Number(datum.value).toLocaleString()}đ`,
-                            }),
+                            items: [
+                                (d: any) => ({
+                                    name: d.type,
+                                    value: `${Number(d.value).toLocaleString('vi-VN')}đ`,
+                                }),
+                            ],
                         }}
-                        legend={{ position: 'top' }}
+                        legend={{ color: { position: 'top' } }}
                     />
                 ) : (
                     <Empty description="Không có dữ liệu" />
