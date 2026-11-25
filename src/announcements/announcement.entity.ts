@@ -36,10 +36,6 @@ export class Announcement {
     @Column({ default: false })
     is_pinned: boolean;
 
-    // Target theo department (null = tất cả)
-    @Column({ type: 'simple-array', nullable: true })
-    target_departments: string[];
-
     @Index()
     @Column({ type: 'timestamp', nullable: true })
     start_date: Date;
@@ -60,4 +56,8 @@ export class Announcement {
 
     @UpdateDateColumn()
     updated_at: Date;
+
+    // Target theo user groups (null = tất cả)
+    @Column('int', { array: true, nullable: true })
+    target_group_ids: number[];
 }

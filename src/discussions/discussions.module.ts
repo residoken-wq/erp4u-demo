@@ -4,14 +4,17 @@ import { Discussion } from './entities/discussion.entity';
 import { DiscussionComment } from './entities/discussion-comment.entity';
 import { DiscussionsController } from './discussions.controller';
 import { DiscussionsService } from './discussions.service';
-import { Notification } from '../notifications/notification.entity';
+import { AuthModule } from '../auth/auth.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Discussion, DiscussionComment, Notification])
+        TypeOrmModule.forFeature([Discussion, DiscussionComment]),
+        AuthModule,
+        NotificationsModule,
     ],
     controllers: [DiscussionsController],
     providers: [DiscussionsService],
-    exports: [DiscussionsService]
+    exports: [DiscussionsService],
 })
 export class DiscussionsModule { }

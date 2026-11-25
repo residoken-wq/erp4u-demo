@@ -11,6 +11,7 @@ import { SalesComment } from '../sales/sales-comment.entity';
 import { SalesOrder } from '../sales/sales-order.entity';
 import { ProductionFulfillmentOrder } from '../planning/pfo.entity';
 import { PortalSession } from '../public/entities/portal-session.entity';
+import { sanitizeHtmlContent } from '../common/security/html-sanitizer';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -373,9 +374,14 @@ export class CustomersService {
         const customer = await this.customerRepo.findOne({ where: { id: customerId } });
         if (!customer) throw new NotFoundException('Khách hàng không tồn tại');
 
+        const cleanContent = sanitizeHtmlContent(content).trim();
+        if (!cleanContent) {
+            throw new BadRequestException('Nội dung không được để trống');
+        }
+
         const comment = this.commentRepo.create({
             customer: customer,
-            content,
+            content: cleanContent,
             sender_type: senderType,
             sender_name: senderName,
             comment_type: (commentType as any) || 'CUSTOMER',

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import SafeHtml from '../components/common/SafeHtml';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Spin, Result, Button, message, Modal, Steps, Typography, List, Input, Avatar, Row, Col, Card, Descriptions, Divider, Table, Space, Tag, Empty, Dropdown, Watermark } from 'antd';
@@ -182,9 +183,15 @@ const PortalQuotePage: React.FC = () => {
     const handleSendComment = async () => {
         if (!commentText) return;
         try {
-            await axios.post(`${API_URL}/public/portal/quote/${data.id}/comment`, { content: commentText, sender: 'CUSTOMER', name: data.customer_name || 'Khách hàng' });
+            await axios.post(`${API_URL}/public/portal/quote/${uuid}/comment`, { content: commentText, name: data?.customer_name || 'Khách hàng' });
             setCommentText(''); fetchQuote(); message.success('Đã gửi tin nhắn');
-        } catch (e) { }
+        } catch (e: any) {
+            if (e?.response?.status === 429) {
+                message.error('Quá nhiều bình luận. Giới hạn 20 bình luận/giờ.');
+            } else {
+                message.error('Gửi tin nhắn thất bại');
+            }
+        }
     };
 
     // --- PRINT ORDER: A4 Portrait XÁC NHẬN ĐƠN ĐẶT HÀNG ---
@@ -671,7 +678,7 @@ const PortalQuotePage: React.FC = () => {
             okButtonProps: { danger: true },
             onOk: async () => {
                 try {
-                    await axios.delete(`${API_URL}/public/portal/quote/comment/${commentId}`, { data: { deletedBy: data.customer_name || 'Khách hàng' } });
+                    await axios.delete(`${API_URL}/public/portal/quote/${uuid}/comment/${commentId}`);
                     message.success('Đã thu hồi tin nhắn');
                     fetchQuote();
                 } catch (e) { message.error('Không thể thu hồi tin nhắn'); }
@@ -932,7 +939,7 @@ const PortalQuotePage: React.FC = () => {
                             ) : (
                                 <div style={{ background: '#fff', padding: '4px 0' }}>
                                     {/<\/?[a-z][\s\S]*>/i.test(customerDesc) ? (
-                                        <div className="html-desc-container" dangerouslySetInnerHTML={{ __html: customerDesc }} style={{ fontSize: 13, color: '#666', lineHeight: 1.5 }} />
+                                        <SafeHtml profile="rich" className="html-desc-container" html={customerDesc} style={{ fontSize: 13, color: '#666', lineHeight: 1.5 }} />
                                     ) : (
                                         customerDesc.split('\n').map((line: string, idx: number) => {
                                             const cleanLine = line.trim();
@@ -1298,7 +1305,7 @@ const PortalQuotePage: React.FC = () => {
                                                         {item.product?.customer_description && (
                                                             <div style={{ background: '#f9f9f9', padding: '8px 10px', borderRadius: 8, fontSize: 12, color: '#595959', marginBottom: 12, border: '1px solid #f0f0f0', overflow: 'hidden' }}>
                                                                 {/<\/?[a-z][\s\S]*>/i.test(item.product.customer_description) ? (
-                                                                    <div className="html-desc-container" dangerouslySetInnerHTML={{ __html: item.product.customer_description }} style={{ lineHeight: 1.5 }} />
+                                                                    <SafeHtml profile="rich" className="html-desc-container" html={item.product.customer_description} style={{ lineHeight: 1.5 }} />
                                                                 ) : (
                                                                     item.product.customer_description.split('\n').map((line: string, idx: number) => {
                                                                         const cleanLine = line.trim();
@@ -1538,18 +1545,22 @@ const PortalQuotePage: React.FC = () => {
                                     </Button>
                                 }
                             >
-                                <div style={{
-                                    background: '#fff',
-                                    padding: isMobile ? '15px' : '40px 60px',
-                                    maxHeight: '600px',
-                                    overflowY: 'auto',
-                                    border: '1px solid #d9d9d9',
-                                    borderRadius: 8,
-                                    fontFamily: '"Times New Roman", Times, serif',
-                                    fontSize: '12pt',
-                                    lineHeight: 1.5,
-                                    color: '#000'
-                                }} dangerouslySetInnerHTML={{ __html: fixContractImageUrls(data.contract_html) }} />
+                                <SafeHtml
+                                    profile="rich"
+                                    html={fixContractImageUrls(data.contract_html)}
+                                    style={{
+                                        background: '#fff',
+                                        padding: isMobile ? '15px' : '40px 60px',
+                                        maxHeight: '600px',
+                                        overflowY: 'auto',
+                                        border: '1px solid #d9d9d9',
+                                        borderRadius: 8,
+                                        fontFamily: '"Times New Roman", Times, serif',
+                                        fontSize: '12pt',
+                                        lineHeight: 1.5,
+                                        color: '#000'
+                                    }}
+                                />
                             </Card>
                         </Col>
                     </Row>
@@ -1575,7 +1586,7 @@ const PortalQuotePage: React.FC = () => {
                                                 color: '#333',
                                                 position: 'relative'
                                             }}>
-                                                <div dangerouslySetInnerHTML={{ __html: item.content }} />
+                                                <SafeHtml html={item.content} />
                                                 {item.sender_type === 'CUSTOMER' && (
                                                     <Button
                                                         type="text"

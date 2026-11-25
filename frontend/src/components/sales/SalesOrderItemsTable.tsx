@@ -8,6 +8,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { getGoogleDriveImageUrl } from '../../utils/googleDrive';
 import { cleanComboDescription } from '../../utils/productDescription';
 import ImageLinkCell from './ImageLinkCell';
+import SafeHtml from '../common/SafeHtml';
 
 interface RowProps extends React.HTMLAttributes<HTMLTableRowElement> {
     'data-row-key': string;
@@ -233,7 +234,7 @@ const SalesOrderItemsTable: React.FC<Props> = ({
                                     marginTop: isCombo ? 4 : 0
                                 }}>
                                     {displayDesc ? (
-                                        <div dangerouslySetInnerHTML={{ __html: displayDesc }} />
+                                        <SafeHtml profile="rich" html={displayDesc} />
                                     ) : (
                                         'Chưa có mô tả'
                                     )}
@@ -389,7 +390,7 @@ const SalesOrderItemsTable: React.FC<Props> = ({
                                             {isCombo && <Tag color="purple" style={{ fontSize: 10, marginRight: 4, marginBottom: 4 }}><GiftOutlined /> Combo</Tag>}
                                             <div style={{ fontSize: 11, color: '#666', fontStyle: 'italic', whiteSpace: 'pre-wrap', marginTop: isCombo ? 4 : 0 }}>
                                                 {displayDesc ? (
-                                                    <div dangerouslySetInnerHTML={{ __html: displayDesc }} />
+                                                    <SafeHtml profile="rich" html={displayDesc} />
                                                 ) : null}
                                             </div>
                                         </div>

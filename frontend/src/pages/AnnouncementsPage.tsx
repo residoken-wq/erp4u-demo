@@ -21,7 +21,7 @@ interface Announcement {
     priority: 'LOW' | 'NORMAL' | 'HIGH';
     is_active: boolean;
     is_pinned: boolean;
-    target_departments: string[] | null;
+    target_group_ids: number[] | null;
     start_date: string | null;
     end_date: string | null;
     created_by: number;
@@ -42,12 +42,9 @@ const PRIORITY_LABELS: Record<string, string> = {
     HIGH: 'Cao'
 };
 
-const DEPARTMENTS = [
-    'Kinh doanh', 'Sản xuất', 'Kế toán', 'Nhân sự', 'Kho vận', 'Marketing', 'IT', 'Ban giám đốc'
-];
-
 const AnnouncementsPage: React.FC = () => {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [groups, setGroups] = useState<{ id: number; name: string }[]>([]);
     const [loading, setLoading] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Announcement | null>(null);
@@ -56,8 +53,12 @@ const AnnouncementsPage: React.FC = () => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const res = await api.get('/announcements');
+            const [res, groupsRes] = await Promise.all([
+                api.get('/announcements'),
+                api.get('/users/groups').catch(() => ({ data: [] }))
+            ]);
             setAnnouncements(res.data);
+            setGroups(groupsRes.data || []);
         } catch (e) {
             console.error(e);
             message.error('Không thể tải danh sách thông báo');
@@ -77,7 +78,7 @@ const AnnouncementsPage: React.FC = () => {
             priority: 'NORMAL',
             is_active: true,
             is_pinned: false,
-            target_departments: []
+            target_group_ids: []
         });
         setModalOpen(true);
     };
@@ -89,7 +90,7 @@ const AnnouncementsPage: React.FC = () => {
             dateRange: record.start_date && record.end_date
                 ? [dayjs(record.start_date), dayjs(record.end_date)]
                 : undefined,
-            target_departments: record.target_departments || []
+            target_group_ids: record.target_group_ids || []
         });
         setModalOpen(true);
     };
@@ -104,7 +105,7 @@ const AnnouncementsPage: React.FC = () => {
                 priority: values.priority,
                 is_active: values.is_active,
                 is_pinned: values.is_pinned,
-                target_departments: values.target_departments?.length > 0 ? values.target_departments : null,
+                target_group_ids: values.target_group_ids?.length > 0 ? values.target_group_ids : null,
                 start_date: values.dateRange?.[0]?.toISOString() || null,
                 end_date: values.dateRange?.[1]?.toISOString() || null
             };
@@ -187,10 +188,15 @@ const AnnouncementsPage: React.FC = () => {
             render: (priority: string) => PRIORITY_LABELS[priority]
         },
         {
-            title: 'Phòng ban',
-            dataIndex: 'target_departments',
-            width: 150,
-            render: (depts: string[] | null) => depts?.length ? depts.join(', ') : <em>Tất cả</em>
+            title: 'Nhóm mục tiêu',
+            dataIndex: 'target_group_ids',
+            width: 180,
+            render: (groupIds: number[] | null) => {
+                if (!groupIds || groupIds.length === 0) return <em>Tất cả</em>;
+                const groupMap = new Map(groups.map(g => [g.id, g.name]));
+                const names = groupIds.map(id => groupMap.get(id) || `Nhóm #${id}`);
+                return names.join(', ');
+            }
         },
         {
             title: 'Hiệu lực',
@@ -299,14 +305,14 @@ const AnnouncementsPage: React.FC = () => {
                         </Form.Item>
                     </Space>
 
-                    <Form.Item name="target_departments" label="Phòng ban mục tiêu (để trống = tất cả)">
+                    <Form.Item name="target_group_ids" label="Nhóm người dùng mục tiêu (để trống = tất cả)">
                         <Select
                             mode="multiple"
-                            placeholder="Chọn phòng ban..."
+                            placeholder="Chọn nhóm người dùng..."
                             allowClear
                             style={{ width: '100%' }}
                         >
-                            {DEPARTMENTS.map(d => <Option key={d} value={d}>{d}</Option>)}
+                            {groups.map(g => <Option key={g.id} value={g.id}>{g.name}</Option>)}
                         </Select>
                     </Form.Item>
 

@@ -1,4 +1,4 @@
-import { Injectable, Logger, Optional, Inject } from '@nestjs/common';
+import { Injectable, Logger, Optional, Inject, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from './notification.entity';
@@ -80,11 +80,12 @@ export class NotificationsService {
         });
     }
 
-    async markAsRead(id: number) {
-        const notification = await this.repo.findOne({ where: { id } });
-        if (notification) {
-            await this.repo.update(id, { is_read: true });
+    async markAsRead(id: number, userId: number) {
+        const notification = await this.repo.findOne({ where: { id, user_id: userId } });
+        if (!notification) {
+            throw new NotFoundException('Notification not found');
         }
+        await this.repo.update({ id, user_id: userId }, { is_read: true });
         return { success: true };
     }
 

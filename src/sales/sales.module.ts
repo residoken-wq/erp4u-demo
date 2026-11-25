@@ -34,6 +34,7 @@ import { Promotion } from './promotion.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { Customer } from '../customers/customer.entity';
 import { AuthModule } from '../auth/auth.module';
+import { HrModule } from '../hr/hr.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { AuthModule } from '../auth/auth.module';
     NotificationsModule,
     ProjectsModule,
     forwardRef(() => FinanceModule),
+    forwardRef(() => HrModule),
     AuthModule,
     HttpModule
   ],

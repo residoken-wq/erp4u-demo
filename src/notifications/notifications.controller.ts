@@ -15,8 +15,9 @@ export class NotificationsController {
     }
 
     @Post(':id/read')
-    read(@Param('id') id: number) {
-        return this.service.markAsRead(id);
+    read(@Param('id') id: string, @Request() req: any) {
+        const userId = req.user.id || req.user.userId;
+        return this.service.markAsRead(Number(id), userId);
     }
 
     @Post('read-all')

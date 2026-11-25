@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GroupPermission } from '../users/entities/group-permission.entity';
@@ -55,6 +55,40 @@ export class PermissionCacheService {
       }
     }
     return false;
+  }
+
+  async assertPermission(user: any, module: string, action: PermAction): Promise<void> {
+    if (!user) {
+      throw new ForbiddenException('Access denied');
+    }
+    if (user.username === 'admin') {
+      return;
+    }
+    const groupId = user.groupId || user.group_id;
+    if (!groupId) {
+      throw new ForbiddenException(`Quyền ${module}:${action} bị từ chối`);
+    }
+    const allowed = await this.hasAny(groupId, [{ module, action }]);
+    if (!allowed) {
+      throw new ForbiddenException(`Quyền ${module}:${action} bị từ chối`);
+    }
+  }
+
+  async assertAnyPermission(user: any, perms: { module: string; action: PermAction }[]): Promise<void> {
+    if (!user) {
+      throw new ForbiddenException('Access denied');
+    }
+    if (user.username === 'admin') {
+      return;
+    }
+    const groupId = user.groupId || user.group_id;
+    if (!groupId) {
+      throw new ForbiddenException('Access denied');
+    }
+    const allowed = await this.hasAny(groupId, perms);
+    if (!allowed) {
+      throw new ForbiddenException('Access denied');
+    }
   }
 
   invalidateGroup(groupId?: number): void {

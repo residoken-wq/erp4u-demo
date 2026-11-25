@@ -1,0 +1,16 @@
+import { IsNotEmpty, IsOptional, IsString, MaxLength, IsInt } from 'class-validator';
+
+export class CreateDiscussionDto {
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(200)
+  title: string;
+
+  @IsNotEmpty()
+  @IsString()
+  content: string;
+
+  @IsOptional()
+  @IsInt()
+  group_id?: number;
+}

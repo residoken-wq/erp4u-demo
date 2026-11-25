@@ -22,6 +22,12 @@ const DiscussionsPage: React.FC = () => {
     const [activeGroupId, setActiveGroupId] = useState<string>('ALL');
 
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const userGroupId = currentUser.groupId || currentUser.group_id;
+    const isModerator = currentUser.username === 'admin' || !!(currentUser.permissions || []).find((p: any) => p.module_code === 'SYSTEM' && (p.can_update === true || p.can_update === 1));
+
+    const visibleGroups = isModerator
+        ? groups
+        : groups.filter(g => Number(g.id) === Number(userGroupId));
 
     const fetchData = async () => {
         setLoading(true);
@@ -41,8 +47,8 @@ const DiscussionsPage: React.FC = () => {
     const handleCreate = async (values: any) => {
         try {
             const payload = {
-                ...values,
-                creator_id: currentUser.id,
+                title: values.title,
+                content: values.content,
                 group_id: values.group_id ? values.group_id : null // null means public
             };
             await api.post('/discussions', payload);
@@ -75,7 +81,7 @@ const DiscussionsPage: React.FC = () => {
                     items={[
                         { key: 'ALL', label: 'All Topics' },
                         { key: 'PUBLIC', label: 'General / Public' },
-                        ...groups.map(g => ({ key: String(g.id), label: g.name }))
+                        ...visibleGroups.map(g => ({ key: String(g.id), label: g.name }))
                     ]}
                 />
 
@@ -98,7 +104,6 @@ const DiscussionsPage: React.FC = () => {
                                         <a href="#" onClick={(e) => { e.preventDefault(); navigate(`/workspace/discussions/${item.id}`); }}>{item.title}</a>
                                         {item.is_pinned && <FlagOutlined style={{ color: '#f5222d' }} />}
                                         {item.type === 'ANNOUNCEMENT' && <Tag color="volcano">Thông báo</Tag>}
-                                        {!item.is_reviewed && <Tag color="warning">Chưa duyệt</Tag>}
                                     </Space>
                                 }
                                 description={
@@ -125,7 +130,7 @@ const DiscussionsPage: React.FC = () => {
                     form={form} 
                     layout="vertical" 
                     onFinish={handleCreate}
-                    initialValues={{ type: 'GENERAL', is_pinned: false }}
+                    initialValues={{ group_id: null }}
                 >
                     <Form.Item name="title" label="Tiêu đề" rules={[{ required: true }]}><Input placeholder="Nhập tiêu đề thảo luận..." /></Form.Item>
                     
@@ -136,22 +141,9 @@ const DiscussionsPage: React.FC = () => {
                     <div style={{ display: 'flex', gap: 20 }}>
                         <Form.Item name="group_id" label="Nhóm (Tùy chọn)" style={{ flex: 1 }}>
                             <Select allowClear placeholder="Chọn nhóm hoặc để trống (Công khai)">
-                                {groups.map(g => <Option key={g.id} value={g.id}>{g.name}</Option>)}
+                                {visibleGroups.map(g => <Option key={g.id} value={g.id}>{g.name}</Option>)}
                             </Select>
                         </Form.Item>
-                        
-                        <Form.Item name="type" label="Loại" style={{ width: 150 }}>
-                            <Select>
-                                <Option value="GENERAL">Thường</Option>
-                                <Option value="ANNOUNCEMENT">Thông báo</Option>
-                            </Select>
-                        </Form.Item>
-
-                        {(currentUser.username === 'admin' || currentUser.role === 'ADMIN') && (
-                            <Form.Item name="is_pinned" label="Ghim" valuePropName="checked" style={{ width: 100 }}>
-                                <Switch />
-                            </Form.Item>
-                        )}
                     </div>
                 </Form>
             </Modal>

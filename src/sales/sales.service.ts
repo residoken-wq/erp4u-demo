@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, Logger, BadRequestException, Optional, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, BadRequestException, Optional, Inject, HttpStatus, HttpException, ForbiddenException, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
+import { Repository, LessThan, MoreThanOrEqual, In } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ENTITLEMENT_PROVIDER, EntitlementProvider } from '../common/packages/entitlement-provider.interface';
 import { PackageKey } from '../common/packages/package.registry';
@@ -28,9 +28,13 @@ import { SalesTarget } from './sales-target.entity';
 import { Customer } from '../customers/customer.entity';
 import { ProjectsService } from '../projects/projects.service';
 import { Promotion } from './promotion.entity';
+import { HrService } from '../hr/hr.service';
 import { EasyInvoiceService } from './easyinvoice.service';
 import { EmailService } from '../common/services/email.service';
 import { buildPortalQuoteUrl } from '../common/utils/url.util';
+import { sanitizeHtmlContent } from '../common/security/html-sanitizer';
+import { PermissionCacheService } from '../auth/permission-cache.service';
+import { assertPermission, assertAnyPermission } from '../auth/rbac-assert.helper';
 // --- CHECKLIST TEMPLATES ---
 const CHECKLIST_TEMPLATES: Record<string, Array<{ code: string; name: string; sort: number }>> = {
     QUOTATION: [
@@ -99,6 +103,11 @@ export class SalesService {
         @Optional()
         @Inject(TENANT_REGISTRY)
         private readonly tenantRegistry?: TenantRegistry,
+        @Optional()
+        @Inject(forwardRef(() => HrService))
+        private readonly hrService?: HrService,
+        @Optional()
+        private readonly permCache?: PermissionCacheService,
     ) { }
 
 
@@ -618,40 +627,192 @@ export class SalesService {
         await this.syncChecklistWithStatus(saved.id, saved.status);
         return saved;
     }
-    async addComment(orderId: number, content: string, sender: 'STAFF' | 'CUSTOMER', name?: string, commentType: 'CUSTOMER' | 'INTERNAL' = 'CUSTOMER', mentionedUserIds?: string) {
-        const order = await this.orderRepo.findOne({ where: { id: orderId } });
-        if (!order) throw new NotFoundException();
+    // --- CUSTOMER PORTAL COMMENTS (SECURED BY UUID & RATE LIMITED) ---
+    async portalAddComment(uuid: string, body: any) {
+        let order: SalesOrder | null = null;
+        try {
+            order = await this.orderRepo.findOne({
+                where: { uuid },
+                relations: ['customer']
+            });
+        } catch (err: any) {
+            if (err?.code === '22P02' || String(err?.message).includes('invalid input syntax for type uuid')) {
+                throw new NotFoundException('Quote not found');
+            }
+            throw err;
+        }
+        if (!order) throw new NotFoundException('Quote not found');
+
+        // Rate limit: 20 comments / hour / order counted in DB
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const hourlyCount = await this.commentRepo.count({
+            where: {
+                order: { id: order.id },
+                sender_type: 'CUSTOMER',
+                created_at: MoreThanOrEqual(oneHourAgo)
+            }
+        });
+        if (hourlyCount >= 20) {
+            throw new HttpException('Quá nhiều bình luận. Giới hạn 20 bình luận/giờ.', HttpStatus.TOO_MANY_REQUESTS);
+        }
+
+        let name = (body?.name || '').trim();
+        if (name.length > 100) name = name.substring(0, 100);
+        if (!name) name = order.customer?.name || order.customer_name || 'Khách hàng';
+
+        const rawContent = (body?.content || '').trim();
+        const cleanContent = sanitizeHtmlContent(rawContent).trim();
+        if (!cleanContent) {
+            throw new BadRequestException('Nội dung bình luận không được để trống');
+        }
+        if (cleanContent.length > 5000) {
+            throw new BadRequestException('Nội dung bình luận tối đa 5000 ký tự');
+        }
+
         const comment = this.commentRepo.create({
             order,
-            content,
-            sender_type: sender,
+            content: cleanContent,
+            sender_type: 'CUSTOMER',
             sender_name: name,
-            comment_type: commentType,
-            mentioned_user_ids: mentionedUserIds,
-            is_visible: commentType === 'CUSTOMER' // Internal comments are hidden on Portal
+            comment_type: 'CUSTOMER',
+            is_visible: true,
+            mentioned_user_ids: undefined,
         });
-        const savedComment = await this.commentRepo.save(comment);
 
-        // Create notifications for @mentioned users (INTERNAL comments only)
-        if (mentionedUserIds && commentType === 'INTERNAL') {
-            const userIds = mentionedUserIds.split(',').filter(id => id.trim());
-            for (const userId of userIds) {
+        const saved = await this.commentRepo.save(comment);
+        const { mentioned_user_ids, ...rest } = saved;
+        return rest;
+    }
+
+    async portalDeleteComment(uuid: string, commentId: number) {
+        let order: SalesOrder | null = null;
+        try {
+            order = await this.orderRepo.findOne({ where: { uuid } });
+        } catch (err: any) {
+            if (err?.code === '22P02' || String(err?.message).includes('invalid input syntax for type uuid')) {
+                throw new NotFoundException('Quote not found');
+            }
+            throw err;
+        }
+        if (!order) throw new NotFoundException('Quote not found');
+
+        const comment = await this.commentRepo.findOne({
+            where: { id: commentId, order: { id: order.id } }
+        });
+        if (!comment || comment.sender_type !== 'CUSTOMER') {
+            throw new NotFoundException('Comment not found');
+        }
+
+        comment.deleted_at = new Date();
+        comment.deleted_by = 'Khách hàng';
+        comment.content = `[Đã thu hồi] ${comment.content}`;
+        await this.commentRepo.save(comment);
+        return { success: true };
+    }
+
+    // --- STAFF COMMENTS ---
+    async addStaffComment(orderId: number, body: any, user: any) {
+        if (user) {
+            await assertPermission(user, this.permCache, 'SALES', 'create');
+        }
+        const order = await this.orderRepo.findOne({ where: { id: orderId } });
+        if (!order) throw new NotFoundException('Order not found');
+
+        if (body.comment_type !== 'CUSTOMER' && body.comment_type !== 'INTERNAL') {
+            throw new BadRequestException('comment_type phải là CUSTOMER hoặc INTERNAL');
+        }
+
+        const rawContent = (body.content || '').trim();
+        const cleanContent = sanitizeHtmlContent(rawContent).trim();
+        if (!cleanContent) {
+            throw new BadRequestException('Nội dung không được để trống');
+        }
+
+        let validMentionedIds: string | undefined = undefined;
+        if (body.mentioned_user_ids && body.comment_type === 'INTERNAL') {
+            const rawIds = String(body.mentioned_user_ids)
+                .split(',')
+                .map(s => parseInt(s.trim(), 10))
+                .filter(n => !isNaN(n) && n > 0);
+
+            if (rawIds.length > 0) {
+                const activeUsers = await this.userRepo.find({
+                    where: { id: In(rawIds), is_active: true },
+                    select: ['id']
+                });
+                const activeIdSet = new Set(activeUsers.map(u => u.id));
+                const filtered = rawIds.filter(id => activeIdSet.has(id));
+                if (filtered.length > 0) {
+                    validMentionedIds = filtered.join(',');
+                }
+            }
+        }
+
+        const comment = this.commentRepo.create({
+            order,
+            content: cleanContent,
+            sender_type: 'STAFF',
+            sender_name: user?.full_name || user?.username || 'Nhân viên',
+            created_by_user_id: user?.id || user?.userId,
+            comment_type: body.comment_type,
+            mentioned_user_ids: validMentionedIds,
+            is_visible: body.comment_type === 'CUSTOMER'
+        });
+
+        const saved = await this.commentRepo.save(comment);
+
+        if (validMentionedIds) {
+            for (const idStr of validMentionedIds.split(',')) {
+                const targetUserId = parseInt(idStr, 10);
                 await this.notificationsService.create({
-                    user_id: parseInt(userId, 10),
-                    title: `${name || 'Nhân viên'} đã nhắc đến bạn`,
-                    message: `Trong đơn hàng ${order.order_code}: ${content.replace(/<[^>]*>/g, '').substring(0, 100)}...`,
+                    user_id: targetUserId,
+                    title: `${comment.sender_name} đã nhắc đến bạn`,
+                    message: `Trong đơn hàng ${order.order_code}: ${cleanContent.replace(/<[^>]*>/g, '').substring(0, 100)}...`,
                     type: 'INFO',
-                    link: order.status === 'QUOTATION' ? `/sales?order=${order.id}&tab=INTERNAL&highlight=comment-${savedComment.id}` : `/orders?order=${order.id}&tab=INTERNAL&highlight=comment-${savedComment.id}`,
+                    link: order.status === 'QUOTATION'
+                        ? `/sales?order=${order.id}&tab=INTERNAL&highlight=comment-${saved.id}`
+                        : `/orders?order=${order.id}&tab=INTERNAL&highlight=comment-${saved.id}`,
                     is_read: false
                 });
             }
         }
 
-        return savedComment;
+        return saved;
+    }
+
+    async updateStaffComment(id: number, content: string, user: any) {
+        if (user) {
+            await assertPermission(user, this.permCache, 'SALES', 'update');
+        }
+        const comment = await this.commentRepo.findOne({ where: { id } });
+        if (!comment) throw new NotFoundException('Comment not found');
+
+        if (comment.sender_type === 'CUSTOMER') {
+            throw new ForbiddenException('Không thể sửa bình luận của khách hàng');
+        }
+
+        const isAdmin = user?.username === 'admin';
+        const isOwner = comment.created_by_user_id && comment.created_by_user_id === (user?.id || user?.userId);
+
+        if (!isAdmin && !isOwner) {
+            throw new ForbiddenException('Bạn không có quyền sửa bình luận này');
+        }
+
+        const cleanContent = sanitizeHtmlContent(content || '').trim();
+        if (!cleanContent) {
+            throw new BadRequestException('Nội dung không được để trống');
+        }
+
+        comment.content = cleanContent;
+        comment.edited_at = new Date();
+        return this.commentRepo.save(comment);
     }
 
     // Filter out deleted comments (deleted_at is null means not deleted)
-    async getComments(orderId: number) {
+    async getComments(orderId: number, user?: any) {
+        if (user) {
+            await assertPermission(user, this.permCache, 'SALES', 'view');
+        }
         return this.commentRepo.find({
             where: { order: { id: orderId }, deleted_at: null as any },
             order: { created_at: 'ASC' }
@@ -666,12 +827,22 @@ export class SalesService {
         });
     }
 
-    async toggleCommentVisibility(id: number) {
-        const comment = await this.commentRepo.findOne({ where: { id } });
-        if (comment) {
-            comment.is_visible = !comment.is_visible;
-            return this.commentRepo.save(comment);
+    async toggleCommentVisibility(id: number, user?: any) {
+        if (user) {
+            await assertAnyPermission(user, this.permCache, [
+                { module: 'SALES', action: 'update' },
+                { module: 'SALES', action: 'create' },
+            ]);
         }
+        const comment = await this.commentRepo.findOne({ where: { id } });
+        if (!comment) throw new NotFoundException('Comment not found');
+
+        if (comment.comment_type !== 'CUSTOMER') {
+            throw new BadRequestException('Chỉ có thể ẩn/hiện bình luận loại CUSTOMER');
+        }
+
+        comment.is_visible = !comment.is_visible;
+        return this.commentRepo.save(comment);
     }
 
     // Soft delete: mark as deleted but keep in database
@@ -681,14 +852,20 @@ export class SalesService {
 
         comment.deleted_at = new Date();
         comment.deleted_by = deletedBy;
-        comment.content = `[Đã thu hồi] ${comment.content}`; // Prefix for record keeping
+        comment.content = `[Đã thu hồi] ${comment.content}`;
         return this.commentRepo.save(comment);
     }
 
-    async updateComment(id: number, content: string) {
+    async softDeleteStaffComment(id: number, user: any) {
+        if (user) {
+            await assertPermission(user, this.permCache, 'SALES', 'delete');
+        }
         const comment = await this.commentRepo.findOne({ where: { id } });
         if (!comment) throw new NotFoundException('Comment not found');
-        comment.content = content;
+
+        comment.deleted_at = new Date();
+        comment.deleted_by = user?.full_name || user?.username || 'Nhân viên';
+        comment.content = `[Đã thu hồi] ${comment.content}`;
         return this.commentRepo.save(comment);
     }
     
@@ -816,11 +993,19 @@ export class SalesService {
         }
     }
     async getQuoteByUuid(uuid: string) {
-        const order = await this.orderRepo.findOne({
-            where: { uuid },
-            relations: ['customer', 'customer.contacts', 'items', 'items.product', 'comments', 'deliveries', 'deliveries.items', 'assigned_to'],
-            order: { items: { position: 'ASC' } }
-        });
+        let order: SalesOrder | null = null;
+        try {
+            order = await this.orderRepo.findOne({
+                where: { uuid },
+                relations: ['customer', 'customer.contacts', 'items', 'items.product', 'comments', 'deliveries', 'deliveries.items', 'assigned_to'],
+                order: { items: { position: 'ASC' } }
+            });
+        } catch (err: any) {
+            if (err?.code === '22P02' || String(err?.message).includes('invalid input syntax for type uuid')) {
+                throw new NotFoundException('Quote not found');
+            }
+            throw err;
+        }
         if (!order) throw new NotFoundException('Quote not found');
 
         // FIX: Ensure product relationship for items if missing (for legacy data)
@@ -835,9 +1020,50 @@ export class SalesService {
             await this.productsService.populateComboDescriptions(order.items);
         }
 
-        // Filter out deleted comments for Portal View (Manual filter because relations loading ignores where condition)
+        // Filter out deleted and internal comments for Portal View:
+        // Only comments that are not deleted AND (sender_type === 'CUSTOMER' || (comment_type === 'CUSTOMER' && is_visible))
+        // And strip mentioned_user_ids
         if (order.comments) {
-            order.comments = order.comments.filter(c => !c.deleted_at);
+            order.comments = order.comments
+                .filter(c => !c.deleted_at && (c.sender_type === 'CUSTOMER' || (c.comment_type === 'CUSTOMER' && c.is_visible)))
+                .map(c => {
+                    const { mentioned_user_ids, ...rest } = c;
+                    return rest as SalesComment;
+                });
+        }
+
+        // assigned_to: restore { id, full_name, phone, email } from HR employee profile (exactly 4 keys)
+        if (order.assigned_to) {
+            let phone: string | null = (order.assigned_to as any).phone || null;
+            let email: string | null = (order.assigned_to as any).email || null;
+            if (this.hrService) {
+                try {
+                    const emp = await this.hrService.findEmployeeByUserId(order.assigned_to.id);
+                    if (emp) {
+                        if (emp.phone) phone = emp.phone;
+                        if (emp.user?.email) email = emp.user.email;
+                    }
+                } catch {
+                    // Ignore if HR lookup fails
+                }
+            }
+            order.assigned_to = {
+                id: order.assigned_to.id,
+                full_name: order.assigned_to.full_name,
+                phone: phone || null,
+                email: email || null,
+            } as any;
+        }
+
+        // Sanitize customer object: strip internal CRM notes & credit metrics
+        if (order.customer) {
+            delete (order.customer as any).portrait_notes;
+            delete (order.customer as any).bod_follow_up;
+            delete (order.customer as any).history;
+            delete (order.customer as any).potential_value;
+            delete (order.customer as any).credit_limit;
+            delete (order.customer as any).current_debt;
+            delete (order.customer as any).credit_balance;
         }
 
         // Fetch Payments manually

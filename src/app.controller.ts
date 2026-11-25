@@ -1,8 +1,11 @@
 import { Public } from './auth/public.decorator';
-import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Get, ServiceUnavailableException, Query, Res, UseGuards } from '@nestjs/common';
+import { Response } from 'express';
 import { DataSource } from 'typeorm';
 import { CorePackage } from './common/packages/requires-package.decorator';
 import { DEFAULT_TENANT_CONTEXT, TenantContext } from './common/tenancy/tenant-context';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { handleProxyImage } from './common/security/proxy-image.util';
 
 @Controller()
 @CorePackage()
@@ -31,5 +34,11 @@ export class AppController {
         } catch {
             throw new ServiceUnavailableException({ status: 'error' });
         }
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('proxy-image')
+    async proxyImage(@Query('url') url: string, @Res() res: Response) {
+        return handleProxyImage(url, res);
     }
 }

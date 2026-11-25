@@ -13,22 +13,23 @@ export class AnnouncementsController {
 
     // ==================== ADMIN ENDPOINTS ====================
 
-    @AuthOnly()
+    @Perm('USERS', 'view')
     @Get()
     findAll(
+        @Request() req: any,
         @Query('type') type?: AnnouncementType,
         @Query('is_active') isActive?: string,
     ) {
         return this.service.findAll({
             type,
             is_active: isActive !== undefined ? isActive === 'true' : undefined
-        });
+        }, req.user);
     }
 
-    @AuthOnly()
+    @Perm('USERS', 'view')
     @Get(':id')
-    findOne(@Param('id') id: string) {
-        return this.service.findOne(+id);
+    findOne(@Param('id') id: string, @Request() req: any) {
+        return this.service.findOne(+id, req.user);
     }
 
     @Perm('USERS', 'create')
@@ -36,70 +37,76 @@ export class AnnouncementsController {
     create(@Body() data: any, @Request() req: any) {
         return this.service.create({
             ...data,
-            created_by: req.user.userId
-        });
+            created_by: req.user.userId || req.user.id
+        }, req.user);
     }
 
     @Perm('USERS', 'update')
     @Put(':id')
-    update(@Param('id') id: string, @Body() data: any) {
-        return this.service.update(+id, data);
+    update(@Param('id') id: string, @Body() data: any, @Request() req: any) {
+        return this.service.update(+id, data, req.user);
     }
 
     @Perm('USERS', 'delete')
     @Delete(':id')
-    delete(@Param('id') id: string) {
-        return this.service.delete(+id);
+    delete(@Param('id') id: string, @Request() req: any) {
+        return this.service.delete(+id, req.user);
     }
 
     // ==================== EMPLOYEE ENDPOINTS ====================
 
     /**
-     * Lấy announcements đang hiệu lực cho user hiện tại
+     * Lấy announcements đang hiệu lực cho user hiện tại (lọc theo group của token)
      */
     @AuthOnly()
     @Get('user/active')
     findActiveForCurrentUser(@Request() req: any) {
-        // Lấy department từ user profile nếu có
-        const userDepartment = req.user.department;
-        return this.service.findActiveForUser(req.user.userId, userDepartment);
+        const userId = req.user.userId || req.user.id;
+        const groupId = req.user.groupId;
+        return this.service.findActiveForUser(userId, groupId);
     }
 
     /**
-     * Lấy announcements chưa đọc cho user hiện tại
+     * Lấy announcements chưa đọc cho user hiện tại (lọc theo group của token)
      */
     @AuthOnly()
     @Get('user/unread')
     findUnreadForCurrentUser(@Request() req: any) {
-        const userDepartment = req.user.department;
-        return this.service.findUnreadForUser(req.user.userId, userDepartment);
+        const userId = req.user.userId || req.user.id;
+        const groupId = req.user.groupId;
+        return this.service.findUnreadForUser(userId, groupId);
     }
 
     /**
-     * Đếm số announcements chưa đọc
+     * Đếm số announcements chưa đọc (lọc theo group của token)
      */
     @AuthOnly()
     @Get('user/unread-count')
     getUnreadCount(@Request() req: any) {
-        const userDepartment = req.user.department;
-        return this.service.getUnreadCount(req.user.userId, userDepartment);
+        const userId = req.user.userId || req.user.id;
+        const groupId = req.user.groupId;
+        return this.service.getUnreadCount(userId, groupId);
     }
 
     /**
-     * Đánh dấu announcement đã đọc
+     * Đánh dấu announcement đã đọc (@AuthOnly)
      */
-    @Perm('USERS', 'create')
+    @AuthOnly()
     @Post(':id/read')
     markAsRead(@Param('id') id: string, @Request() req: any) {
-        return this.service.markAsRead(+id, req.user.userId);
+        const userId = req.user.userId || req.user.id;
+        const groupId = req.user.groupId;
+        return this.service.markAsRead(+id, userId, groupId);
     }
 
     /**
-     * Đánh dấu tất cả announcements đã đọc
+     * Đánh dấu tất cả announcements đã đọc (@AuthOnly)
      */
-    @Perm('USERS', 'create')
+    @AuthOnly()
     @Post('user/read-all')
     markAllAsRead(@Request() req: any) {
-        return this.service.markAllAsRead(req.user.userId);
+        const userId = req.user.userId || req.user.id;
+        const groupId = req.user.groupId;
+        return this.service.markAllAsRead(userId, groupId);
     }
 }
