@@ -16,6 +16,9 @@ import { InternalCommsSecurity1795317970000 } from '../../../database/migrations
 const TEST_SCHEMA = 'tenant_internal_comms';
 const TEST_TENANT: TenantContext = { tenantId: TEST_SCHEMA, schema: TEST_SCHEMA };
 
+const hasDbConfig = Boolean(process.env.CI || process.env.DB_HOST || process.env.DATABASE_URL);
+const describeSuite = hasDbConfig ? describe : describe.skip;
+
 async function runMigrationsForSchema(schema: string): Promise<void> {
   const ds = new DataSource(
     buildDataSourceOptions(process.env, {
@@ -38,13 +41,12 @@ async function runMigrationsForSchema(schema: string): Promise<void> {
   }
 }
 
-describe('Internal Communications Security (Integration - Real DB & Migrations)', () => {
+describeSuite('Internal Communications Security (Integration - Real DB & Migrations)', () => {
   jest.setTimeout(120_000);
 
   let adminDs: DataSource | null = null;
   let app: INestApplication | null = null;
   let jwtService: JwtService | null = null;
-  let isDbAvailable = false;
 
   const headerTenantResolver: TenantResolver = {
     async resolve(req: Request): Promise<TenantContext> {
@@ -116,11 +118,13 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
       `);
 
       // Seed Group Permissions:
-      // Group 3 has SYSTEM:update (Moderator) and USERS:view
+      // Group 3 has SYSTEM:update (Moderator), USERS:view/create/update/delete, and SALES:view/create/update/delete
+      // Group 1 has PROJECTS only (NO USERS, NO SALES permissions)
       await adminDs.query(`
         INSERT INTO "${TEST_SCHEMA}"."group_permissions" ("group_id", "module_code", "can_view", "can_create", "can_update", "can_delete") VALUES
         (3, 'SYSTEM', true, true, true, true),
         (3, 'USERS', true, true, true, true),
+        (3, 'SALES', true, true, true, true),
         (3, 'PROJECTS', true, true, true, true),
         (1, 'PROJECTS', true, true, true, true),
         (2, 'PROJECTS', true, true, true, true)
@@ -134,9 +138,9 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
       // User 1: admin (username: admin)
       // User 2: staff A (group 1)
       // User 3: staff B (group 1)
-      // User 4: staff X (group 1)
+      // User 4: staff X (group 1) - lacks USERS and SALES permissions
       // User 5: staff Y (group 2)
-      // User 6: moderator (group 3, SYSTEM:update)
+      // User 6: moderator (group 3, SYSTEM:update, USERS and SALES permissions)
       await adminDs.query(`
         INSERT INTO "${TEST_SCHEMA}"."users" ("id", "username", "password", "full_name", "group_id", "is_active") VALUES
         (1, 'admin', '${hash}', 'Quản trị viên', 3, true),
@@ -149,9 +153,10 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
       `);
 
       // Seed Employee record for staff A (user_id = 2) to test assigned_to contact restoration
+      // Real schema: ("id", "user_id", "phone", "full_name", "is_active")
       await adminDs.query(`
-        INSERT INTO "${TEST_SCHEMA}"."employees" ("id", "user_id", "phone", "first_name", "last_name", "status") VALUES
-        (101, 2, '0900000001', 'Nhân viên', 'A', 'ACTIVE')
+        INSERT INTO "${TEST_SCHEMA}"."employees" ("id", "user_id", "phone", "full_name", "is_active") VALUES
+        (101, 2, '0900000001', 'Nhân viên A', true)
         ON CONFLICT DO NOTHING;
       `);
 
@@ -167,11 +172,11 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
         (1, 'int-quote-uuid-001', 'SO-INT-001', 1, 2, 'QUOTATION', 1000000)
         ON CONFLICT DO NOTHING;
       `);
-
-      isDbAvailable = true;
     } catch (err: any) {
+      if (hasDbConfig) {
+        throw err;
+      }
       console.warn('Skipping Postgres DB integration test suite (no local postgres available):', err.message);
-      isDbAvailable = false;
     }
   });
 
@@ -189,24 +194,20 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
 
   describe('1. Cổng khách hàng (Customer Portal)', () => {
     it('route theo id cũ trả về 404', async () => {
-      if (!isDbAvailable || !app) return;
-
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .post('/api/public/portal/quote/1/comment')
         .set('x-test-tenant', TEST_SCHEMA)
         .send({ content: 'Test comment' })
         .expect(404);
 
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .delete('/api/public/portal/quote/comment/1')
         .set('x-test-tenant', TEST_SCHEMA)
         .expect(404);
     });
 
     it('POST theo uuid ép sender_type=CUSTOMER, comment_type=CUSTOMER, bỏ qua mentioned_user_ids và không tạo thông báo', async () => {
-      if (!isDbAvailable || !app) return;
-
-      const postRes = await request(app.getHttpServer())
+      const postRes = await request(app!.getHttpServer())
         .post('/api/public/portal/quote/int-quote-uuid-001/comment')
         .set('x-test-tenant', TEST_SCHEMA)
         .send({
@@ -239,8 +240,6 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
     });
 
     it('lần bình luận thứ 21 trong giờ bị giới hạn tần suất 429', async () => {
-      if (!isDbAvailable || !app) return;
-
       // Seed 19 more comments so total is 20 in the last hour
       for (let i = 0; i < 19; i++) {
         await adminDs!.query(
@@ -250,7 +249,7 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
       }
 
       // 21st comment attempt must fail with 429
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .post('/api/public/portal/quote/int-quote-uuid-001/comment')
         .set('x-test-tenant', TEST_SCHEMA)
         .send({ content: '21st comment in hour' });
@@ -259,8 +258,6 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
     });
 
     it('DELETE bình luận của STAFF qua uuid trả về 404', async () => {
-      if (!isDbAvailable || !app) return;
-
       const staffComment = await adminDs!.query(
         `INSERT INTO "${TEST_SCHEMA}"."sales_comments" ("order_id", "content", "sender_type", "comment_type", "is_visible", "created_at") VALUES
          (1, 'Staff private comment', 'STAFF', 'INTERNAL', false, NOW()) RETURNING id`,
@@ -268,16 +265,14 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
       const staffCommentId = staffComment[0].id;
 
       // Attempt customer deletion on staff comment
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .delete(`/api/public/portal/quote/int-quote-uuid-001/comment/${staffCommentId}`)
         .set('x-test-tenant', TEST_SCHEMA)
         .expect(404);
     });
 
     it('GET portal theo uuid không chứa bình luận INTERNAL, không chứa mentioned_user_ids, và assigned_to chỉ có đúng 4 keys', async () => {
-      if (!isDbAvailable || !app) return;
-
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .get('/api/public/portal/quote/int-quote-uuid-001')
         .set('x-test-tenant', TEST_SCHEMA)
         .expect(200);
@@ -308,11 +303,9 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
     let discAId: number;
 
     it('user nhóm X xem hoặc bình luận thảo luận nhóm Y trả về 404', async () => {
-      if (!isDbAvailable || !app) return;
-
       // User 5 (staff_y, group 2) creates discussion in Group 2 (Group Y)
       const tokenY = createToken({ id: 5, username: 'staff_y', full_name: 'Nhân viên Nhóm Y', group_id: 2 });
-      const createY = await request(app.getHttpServer())
+      const createY = await request(app!.getHttpServer())
         .post('/api/discussions')
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenY}`)
@@ -328,13 +321,13 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
       // User 4 (staff_x, group 1) attempts to view or comment -> 404
       const tokenX = createToken({ id: 4, username: 'staff_x', full_name: 'Nhân viên Nhóm X', group_id: 1 });
 
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .get(`/api/discussions/${discGroupYId}`)
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenX}`)
         .expect(404);
 
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .post(`/api/discussions/${discGroupYId}/comments`)
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenX}`)
@@ -343,10 +336,8 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
     });
 
     it('người không phải moderator tạo thảo luận vào nhóm khác trả về 403', async () => {
-      if (!isDbAvailable || !app) return;
-
       const tokenX = createToken({ id: 4, username: 'staff_x', full_name: 'Nhân viên Nhóm X', group_id: 1 });
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .post('/api/discussions')
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenX}`)
@@ -359,10 +350,8 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
     });
 
     it('body creator_id giả bị bỏ qua, lấy đúng token user id', async () => {
-      if (!isDbAvailable || !app) return;
-
       const tokenA = createToken({ id: 2, username: 'staff_a', full_name: 'Nhân viên A', group_id: 1 });
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .post('/api/discussions')
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenA}`)
@@ -378,18 +367,16 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
     });
 
     it('User B sửa hoặc xóa thảo luận của User A trả về 403', async () => {
-      if (!isDbAvailable || !app) return;
-
       const tokenB = createToken({ id: 3, username: 'staff_b', full_name: 'Nhân viên B', group_id: 1 });
 
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .put(`/api/discussions/${discAId}`)
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenB}`)
         .send({ title: 'User B unauthorized edit' })
         .expect(403);
 
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .delete(`/api/discussions/${discAId}`)
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenB}`)
@@ -397,19 +384,17 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
     });
 
     it('Moderator (SYSTEM:update) sửa thảo luận và ghim thảo luận trả về 200', async () => {
-      if (!isDbAvailable || !app) return;
-
       // User 6 has group 3 which has SYSTEM:update
       const tokenMod = createToken({ id: 6, username: 'mod_user', full_name: 'Moderator Hệ thống', group_id: 3 });
 
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .put(`/api/discussions/${discAId}`)
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenMod}`)
         .send({ title: 'Moderator updated title' })
         .expect(200);
 
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .put(`/api/discussions/${discAId}/pin`)
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenMod}`)
@@ -423,8 +408,6 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
     let annGroup2Id: number;
 
     it('lọc :groupId = ANY(target_group_ids) trên Postgres đúng', async () => {
-      if (!isDbAvailable || !app) return;
-
       // Insert announcements:
       // Ann 1: targeted to Group 1
       // Ann 2: targeted to Group 2
@@ -442,7 +425,7 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
 
       // User in Group 1 calls active announcements
       const tokenX = createToken({ id: 4, username: 'staff_x', full_name: 'Nhân viên Nhóm X', group_id: 1 });
-      const res = await request(app.getHttpServer())
+      const res = await request(app!.getHttpServer())
         .get('/api/announcements/user/active')
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenX}`)
@@ -454,33 +437,27 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
     });
 
     it('đánh dấu đọc thông báo của nhóm khác trả về 404', async () => {
-      if (!isDbAvailable || !app) return;
-
       const tokenX = createToken({ id: 4, username: 'staff_x', full_name: 'Nhân viên Nhóm X', group_id: 1 });
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .post(`/api/announcements/${annGroup2Id}/read`)
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenX}`)
         .expect(404);
     });
 
-    it('nhân viên không có quyền USERS:create đánh dấu đọc thông báo nhóm mình trả về 200', async () => {
-      if (!isDbAvailable || !app) return;
-
+    it('nhân viên không có quyền USERS:create đánh dấu đọc thông báo nhóm mình trả về 201', async () => {
       const tokenX = createToken({ id: 4, username: 'staff_x', full_name: 'Nhân viên Nhóm X', group_id: 1 });
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .post(`/api/announcements/${annGroup1Id}/read`)
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenX}`)
         .expect(201);
     });
 
-    it('GET /announcements quản trị không có USERS:view trả về 403', async () => {
-      if (!isDbAvailable || !app) return;
-
+    it('GET /announcements quản trị không có USERS:view trả về 403; có USERS:view hoặc admin trả về 200', async () => {
       // User 4 (staff_x, group 1) lacks USERS:view
       const tokenX = createToken({ id: 4, username: 'staff_x', full_name: 'Nhân viên Nhóm X', group_id: 1 });
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .get('/api/announcements')
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenX}`)
@@ -488,24 +465,97 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
 
       // Moderator (group 3) has USERS:view -> 200
       const tokenMod = createToken({ id: 6, username: 'mod_user', full_name: 'Moderator Hệ thống', group_id: 3 });
-      await request(app.getHttpServer())
+      await request(app!.getHttpServer())
         .get('/api/announcements')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenMod}`)
+        .expect(200);
+
+      // Admin -> 200
+      const tokenAdmin = createToken({ id: 1, username: 'admin', full_name: 'Quản trị viên', group_id: 3 });
+      await request(app!.getHttpServer())
+        .get('/api/announcements')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .expect(200);
+    });
+
+    it('POST /announcements không có USERS:create trả về 403; có USERS:create hoặc admin trả về 201', async () => {
+      const tokenX = createToken({ id: 4, username: 'staff_x', full_name: 'Nhân viên Nhóm X', group_id: 1 });
+      await request(app!.getHttpServer())
+        .post('/api/announcements')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenX}`)
+        .send({ title: 'Unauthorized Ann', content: 'Test' })
+        .expect(403);
+
+      const tokenMod = createToken({ id: 6, username: 'mod_user', full_name: 'Moderator Hệ thống', group_id: 3 });
+      await request(app!.getHttpServer())
+        .post('/api/announcements')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenMod}`)
+        .send({ title: 'Authorized Ann', content: 'Test' })
+        .expect(201);
+    });
+  });
+
+  describe('4. Chat đơn hàng phía nhân viên (Sales Comments)', () => {
+    it('staff không có SALES:create gửi chat đơn hàng trả về 403; có SALES:create hoặc admin trả về 201', async () => {
+      // User 4 (staff_x, group 1) lacks SALES:create
+      const tokenX = createToken({ id: 4, username: 'staff_x', full_name: 'Nhân viên Nhóm X', group_id: 1 });
+      await request(app!.getHttpServer())
+        .post('/api/sales/1/comment')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenX}`)
+        .send({ content: 'Nhân viên chat', comment_type: 'INTERNAL' })
+        .expect(403);
+
+      // Moderator (group 3) has SALES:create -> 201
+      const tokenMod = createToken({ id: 6, username: 'mod_user', full_name: 'Moderator Hệ thống', group_id: 3 });
+      const createRes = await request(app!.getHttpServer())
+        .post('/api/sales/1/comment')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenMod}`)
+        .send({ content: 'Mod chat', comment_type: 'INTERNAL' })
+        .expect(201);
+
+      expect(createRes.body.sender_type).toBe('STAFF');
+
+      // Admin -> 201
+      const tokenAdmin = createToken({ id: 1, username: 'admin', full_name: 'Quản trị viên', group_id: 3 });
+      await request(app!.getHttpServer())
+        .post('/api/sales/1/comment')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({ content: 'Admin chat', comment_type: 'INTERNAL' })
+        .expect(201);
+    });
+
+    it('staff không có SALES:view xem bình luận đơn hàng trả về 403; có SALES:view trả về 200', async () => {
+      const tokenX = createToken({ id: 4, username: 'staff_x', full_name: 'Nhân viên Nhóm X', group_id: 1 });
+      await request(app!.getHttpServer())
+        .get('/api/sales/1/comments')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenX}`)
+        .expect(403);
+
+      const tokenMod = createToken({ id: 6, username: 'mod_user', full_name: 'Moderator Hệ thống', group_id: 3 });
+      await request(app!.getHttpServer())
+        .get('/api/sales/1/comments')
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenMod}`)
         .expect(200);
     });
   });
 
-  describe('4. Migration 1795317970000 Data Parity & Department Mapping', () => {
+  describe('5. Migration 1795317970000 Data Parity & Department Mapping', () => {
     it('ánh xạ target_departments: khớp tên nhóm (không phân biệt hoa/thường) -> target_group_ids đúng; không khớp -> is_active=false', async () => {
-      if (!isDbAvailable || !adminDs) return;
-
       const MIGRATION_SCHEMA = 'tenant_mig_check';
-      await adminDs.query(`DROP SCHEMA IF EXISTS "${MIGRATION_SCHEMA}" CASCADE`);
-      await adminDs.query(`CREATE SCHEMA "${MIGRATION_SCHEMA}"`);
+      await adminDs!.query(`DROP SCHEMA IF EXISTS "${MIGRATION_SCHEMA}" CASCADE`);
+      await adminDs!.query(`CREATE SCHEMA "${MIGRATION_SCHEMA}"`);
 
       // Create base tables before migration 1795317970000
-      await adminDs.query(`
+      await adminDs!.query(`
         CREATE TABLE "${MIGRATION_SCHEMA}"."user_groups" (
           id SERIAL PRIMARY KEY,
           name VARCHAR(100) NOT NULL
@@ -532,7 +582,7 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
       `);
 
       const migration = new InternalCommsSecurity1795317970000();
-      const qr = adminDs.createQueryRunner();
+      const qr = adminDs!.createQueryRunner();
       try {
         await qr.connect();
         await qr.query(`SET search_path TO "${MIGRATION_SCHEMA}", public`);
@@ -542,21 +592,21 @@ describe('Internal Communications Security (Integration - Real DB & Migrations)'
       }
 
       // Verify announcement 1: matched group 1
-      const a1 = await adminDs.query(`SELECT * FROM "${MIGRATION_SCHEMA}"."announcements" WHERE id = 1`);
+      const a1 = await adminDs!.query(`SELECT * FROM "${MIGRATION_SCHEMA}"."announcements" WHERE id = 1`);
       expect(a1[0].target_group_ids).toEqual([1]);
       expect(a1[0].is_active).toBe(true);
 
       // Verify announcement 2: matched group 2
-      const a2 = await adminDs.query(`SELECT * FROM "${MIGRATION_SCHEMA}"."announcements" WHERE id = 2`);
+      const a2 = await adminDs!.query(`SELECT * FROM "${MIGRATION_SCHEMA}"."announcements" WHERE id = 2`);
       expect(a2[0].target_group_ids).toEqual([2]);
       expect(a2[0].is_active).toBe(true);
 
       // Verify announcement 3: unmatched -> is_active = false
-      const a3 = await adminDs.query(`SELECT * FROM "${MIGRATION_SCHEMA}"."announcements" WHERE id = 3`);
+      const a3 = await adminDs!.query(`SELECT * FROM "${MIGRATION_SCHEMA}"."announcements" WHERE id = 3`);
       expect(a3[0].is_active).toBe(false);
 
       // Cleanup schema
-      await adminDs.query(`DROP SCHEMA IF EXISTS "${MIGRATION_SCHEMA}" CASCADE`);
+      await adminDs!.query(`DROP SCHEMA IF EXISTS "${MIGRATION_SCHEMA}" CASCADE`);
     });
   });
 });

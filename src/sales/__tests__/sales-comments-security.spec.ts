@@ -10,6 +10,7 @@ describe('Sales Comments & Customer Portal Security (Task P11a)', () => {
   let mockProductsService: any;
   let mockTransRepo: any;
   let mockSystemService: any;
+  let mockPermCache: any;
 
   beforeEach(() => {
     mockOrderRepo = {
@@ -39,6 +40,9 @@ describe('Sales Comments & Customer Portal Security (Task P11a)', () => {
     mockSystemService = {
       logAction: jest.fn(),
     };
+    mockPermCache = {
+      hasAny: jest.fn().mockResolvedValue(true),
+    };
 
     service = new SalesService(
       mockOrderRepo,
@@ -64,6 +68,10 @@ describe('Sales Comments & Customer Portal Security (Task P11a)', () => {
       {} as any,
       {} as any,
       {} as any,
+      undefined,
+      undefined,
+      undefined,
+      mockPermCache,
     );
   });
 
@@ -247,7 +255,7 @@ describe('Sales Comments & Customer Portal Security (Task P11a)', () => {
       };
       mockCommentRepo.findOne.mockResolvedValue(comment);
 
-      const userA = { id: 100, username: 'userA' };
+      const userA = { id: 100, username: 'userA', groupId: 1 };
       await service.updateStaffComment(10, 'Edited content', userA);
 
       expect(comment.content).toBe('Edited content');
@@ -269,7 +277,7 @@ describe('Sales Comments & Customer Portal Security (Task P11a)', () => {
       // User 2 is active, user 99 does not exist, user 3 is inactive
       mockUserRepo.find.mockResolvedValueOnce([{ id: 2 }]);
 
-      const staffUser = { id: 10, full_name: 'Staff A' };
+      const staffUser = { id: 10, full_name: 'Staff A', groupId: 1 };
       await service.addStaffComment(
         1,
         {
@@ -285,6 +293,64 @@ describe('Sales Comments & Customer Portal Security (Task P11a)', () => {
           mentioned_user_ids: '2',
         }),
       );
+    });
+
+    describe('Explicit SALES Permissions (Task P11a-r3)', () => {
+      it('admin bypasses permission checks for sales comment operations', async () => {
+        mockOrderRepo.findOne.mockResolvedValue({ id: 1, order_code: 'SO-01' });
+        mockCommentRepo.findOne.mockResolvedValue({
+          id: 10,
+          sender_type: 'STAFF',
+          created_by_user_id: 1,
+          comment_type: 'CUSTOMER',
+          is_visible: true,
+        });
+
+        const admin = { id: 1, username: 'admin' };
+        await service.getComments(1, admin);
+        await service.addStaffComment(1, { content: 'Admin chat', comment_type: 'INTERNAL' }, admin);
+        await service.updateStaffComment(10, 'Admin edit', admin);
+        await service.toggleCommentVisibility(10, admin);
+        await service.softDeleteStaffComment(10, admin);
+
+        expect(mockPermCache.hasAny).not.toHaveBeenCalled();
+      });
+
+      it('rejects addStaffComment with 403 when user lacks SALES:create', async () => {
+        mockPermCache.hasAny.mockResolvedValue(false);
+        const staff = { id: 2, username: 'staff', groupId: 1 };
+
+        await expect(
+          service.addStaffComment(1, { content: 'Chat', comment_type: 'INTERNAL' }, staff),
+        ).rejects.toThrow(ForbiddenException);
+        expect(mockPermCache.hasAny).toHaveBeenCalledWith(1, [{ module: 'SALES', action: 'create' }]);
+      });
+
+      it('rejects updateStaffComment with 403 when user lacks SALES:update', async () => {
+        mockPermCache.hasAny.mockResolvedValue(false);
+        const staff = { id: 2, username: 'staff', groupId: 1 };
+
+        await expect(service.updateStaffComment(10, 'Edit', staff)).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(mockPermCache.hasAny).toHaveBeenCalledWith(1, [{ module: 'SALES', action: 'update' }]);
+      });
+
+      it('rejects getComments with 403 when user lacks SALES:view', async () => {
+        mockPermCache.hasAny.mockResolvedValue(false);
+        const staff = { id: 2, username: 'staff', groupId: 1 };
+
+        await expect(service.getComments(1, staff)).rejects.toThrow(ForbiddenException);
+        expect(mockPermCache.hasAny).toHaveBeenCalledWith(1, [{ module: 'SALES', action: 'view' }]);
+      });
+
+      it('rejects softDeleteStaffComment with 403 when user lacks SALES:delete', async () => {
+        mockPermCache.hasAny.mockResolvedValue(false);
+        const staff = { id: 2, username: 'staff', groupId: 1 };
+
+        await expect(service.softDeleteStaffComment(10, staff)).rejects.toThrow(ForbiddenException);
+        expect(mockPermCache.hasAny).toHaveBeenCalledWith(1, [{ module: 'SALES', action: 'delete' }]);
+      });
     });
   });
 });

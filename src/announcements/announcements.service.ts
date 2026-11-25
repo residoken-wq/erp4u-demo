@@ -1,20 +1,26 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Announcement, AnnouncementType } from './announcement.entity';
 import { AnnouncementRead } from './announcement-read.entity';
 import { sanitizeHtmlContent } from '../common/security/html-sanitizer';
+import { PermissionCacheService } from '../auth/permission-cache.service';
+import { assertPermission } from '../auth/rbac-assert.helper';
 
 @Injectable()
 export class AnnouncementsService {
     constructor(
         @InjectRepository(Announcement) private announcementRepo: Repository<Announcement>,
         @InjectRepository(AnnouncementRead) private readRepo: Repository<AnnouncementRead>,
+        @Optional() private readonly permCache?: PermissionCacheService,
     ) { }
 
     // ==================== ADMIN FUNCTIONS ====================
 
-    async findAll(options?: { type?: AnnouncementType; is_active?: boolean }) {
+    async findAll(options?: { type?: AnnouncementType; is_active?: boolean }, user?: any) {
+        if (user) {
+            await assertPermission(user, this.permCache, 'USERS', 'view');
+        }
         const where: any = {};
         if (options?.type) where.type = options.type;
         if (options?.is_active !== undefined) where.is_active = options.is_active;
@@ -26,14 +32,20 @@ export class AnnouncementsService {
         });
     }
 
-    async findOne(id: number) {
+    async findOne(id: number, user?: any) {
+        if (user) {
+            await assertPermission(user, this.permCache, 'USERS', 'view');
+        }
         return this.announcementRepo.findOne({
             where: { id },
             relations: ['creator']
         });
     }
 
-    async create(data: Partial<Announcement>) {
+    async create(data: Partial<Announcement>, user?: any) {
+        if (user) {
+            await assertPermission(user, this.permCache, 'USERS', 'create');
+        }
         if (data.content) {
             data.content = sanitizeHtmlContent(data.content);
         }
@@ -41,7 +53,10 @@ export class AnnouncementsService {
         return this.announcementRepo.save(announcement);
     }
 
-    async update(id: number, data: Partial<Announcement>) {
+    async update(id: number, data: Partial<Announcement>, user?: any) {
+        if (user) {
+            await assertPermission(user, this.permCache, 'USERS', 'update');
+        }
         if (data.content) {
             data.content = sanitizeHtmlContent(data.content);
         }
@@ -49,7 +64,10 @@ export class AnnouncementsService {
         return this.findOne(id);
     }
 
-    async delete(id: number) {
+    async delete(id: number, user?: any) {
+        if (user) {
+            await assertPermission(user, this.permCache, 'USERS', 'delete');
+        }
         await this.announcementRepo.delete(id);
         return { success: true };
     }

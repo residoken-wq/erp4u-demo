@@ -1,11 +1,12 @@
 import { AnnouncementsService } from '../announcements.service';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
 
 describe('Announcements Security & Group Targeting (Task P11a)', () => {
   let service: AnnouncementsService;
   let mockAnnouncementRepo: any;
   let mockReadRepo: any;
   let mockQueryBuilder: any;
+  let mockPermCache: any;
 
   beforeEach(() => {
     mockQueryBuilder = {
@@ -21,8 +22,8 @@ describe('Announcements Security & Group Targeting (Task P11a)', () => {
 
     mockAnnouncementRepo = {
       createQueryBuilder: jest.fn(() => mockQueryBuilder),
-      find: jest.fn(),
-      findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue({ id: 1 }),
       create: jest.fn((d) => ({ ...d })),
       save: jest.fn(async (d) => ({ id: 1, ...d })),
       update: jest.fn(async () => ({ affected: 1 })),
@@ -36,7 +37,11 @@ describe('Announcements Security & Group Targeting (Task P11a)', () => {
       save: jest.fn(async (d) => d),
     };
 
-    service = new AnnouncementsService(mockAnnouncementRepo, mockReadRepo);
+    mockPermCache = {
+      hasAny: jest.fn().mockResolvedValue(true),
+    };
+
+    service = new AnnouncementsService(mockAnnouncementRepo, mockReadRepo, mockPermCache);
   });
 
   describe('Group Targeting Filter', () => {
@@ -105,6 +110,70 @@ describe('Announcements Security & Group Targeting (Task P11a)', () => {
           content: '<b>Bold</b>',
         }),
       );
+    });
+  });
+
+  describe('Explicit Permission Enforcement (Task P11a-r3)', () => {
+    it('admin bypasses permission checks on all admin endpoints', async () => {
+      const adminUser = { id: 1, username: 'admin' };
+
+      await service.findAll({}, adminUser);
+      await service.findOne(1, adminUser);
+      await service.create({ title: 'Admin Notice', content: 'Test' }, adminUser);
+      await service.update(1, { title: 'Admin Update' }, adminUser);
+      await service.delete(1, adminUser);
+
+      expect(mockPermCache.hasAny).not.toHaveBeenCalled();
+    });
+
+    it('rejects findAll and findOne with 403 when user lacks USERS:view', async () => {
+      mockPermCache.hasAny.mockResolvedValue(false);
+      const staffUser = { id: 2, username: 'staff', groupId: 1 };
+
+      await expect(service.findAll({}, staffUser)).rejects.toThrow(ForbiddenException);
+      await expect(service.findOne(1, staffUser)).rejects.toThrow(ForbiddenException);
+      expect(mockPermCache.hasAny).toHaveBeenCalledWith(1, [{ module: 'USERS', action: 'view' }]);
+    });
+
+    it('rejects create with 403 when user lacks USERS:create', async () => {
+      mockPermCache.hasAny.mockResolvedValue(false);
+      const staffUser = { id: 2, username: 'staff', groupId: 1 };
+
+      await expect(
+        service.create({ title: 'Notice', content: 'Content' }, staffUser),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockPermCache.hasAny).toHaveBeenCalledWith(1, [{ module: 'USERS', action: 'create' }]);
+    });
+
+    it('rejects update with 403 when user lacks USERS:update', async () => {
+      mockPermCache.hasAny.mockResolvedValue(false);
+      const staffUser = { id: 2, username: 'staff', groupId: 1 };
+
+      await expect(service.update(1, { title: 'Updated' }, staffUser)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(mockPermCache.hasAny).toHaveBeenCalledWith(1, [{ module: 'USERS', action: 'update' }]);
+    });
+
+    it('rejects delete with 403 when user lacks USERS:delete', async () => {
+      mockPermCache.hasAny.mockResolvedValue(false);
+      const staffUser = { id: 2, username: 'staff', groupId: 1 };
+
+      await expect(service.delete(1, staffUser)).rejects.toThrow(ForbiddenException);
+      expect(mockPermCache.hasAny).toHaveBeenCalledWith(1, [{ module: 'USERS', action: 'delete' }]);
+    });
+
+    it('allows actions when user group has the respective permission', async () => {
+      mockPermCache.hasAny.mockResolvedValue(true);
+      const staffUser = { id: 2, username: 'staff', groupId: 1 };
+
+      await expect(service.findAll({}, staffUser)).resolves.toBeDefined();
+      await expect(service.findOne(1, staffUser)).resolves.toBeDefined();
+      await expect(
+        service.create({ title: 'Notice', content: 'Content' }, staffUser),
+      ).resolves.toBeDefined();
+      await expect(service.update(1, { title: 'Updated' }, staffUser)).resolves.toBeDefined();
+      await expect(service.delete(1, staffUser)).resolves.toBeDefined();
     });
   });
 });

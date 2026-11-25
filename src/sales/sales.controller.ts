@@ -113,7 +113,7 @@ export class SalesController {
 
     @Perm('SALES', 'view')
     @Get(':id/comments')
-    getComments(@Param('id') id: number) { return this.s.getComments(id); }
+    getComments(@Param('id') id: number, @Req() req: any) { return this.s.getComments(id, req.user); }
 
     @Perm('SALES', 'create')
     @Post(':id/comment')
@@ -129,8 +129,8 @@ export class SalesController {
 
     @Perm('SALES', 'create')
     @Post('comment/:id/toggle')
-    toggleComment(@Param('id') id: number) {
-        return this.s.toggleCommentVisibility(Number(id));
+    toggleComment(@Param('id') id: number, @Req() req: any) {
+        return this.s.toggleCommentVisibility(Number(id), req.user);
     }
 
     @Perm('SALES', 'delete')

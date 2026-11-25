@@ -33,6 +33,8 @@ import { EasyInvoiceService } from './easyinvoice.service';
 import { EmailService } from '../common/services/email.service';
 import { buildPortalQuoteUrl } from '../common/utils/url.util';
 import { sanitizeHtmlContent } from '../common/security/html-sanitizer';
+import { PermissionCacheService } from '../auth/permission-cache.service';
+import { assertPermission, assertAnyPermission } from '../auth/rbac-assert.helper';
 // --- CHECKLIST TEMPLATES ---
 const CHECKLIST_TEMPLATES: Record<string, Array<{ code: string; name: string; sort: number }>> = {
     QUOTATION: [
@@ -104,6 +106,8 @@ export class SalesService {
         @Optional()
         @Inject(forwardRef(() => HrService))
         private readonly hrService?: HrService,
+        @Optional()
+        private readonly permCache?: PermissionCacheService,
     ) { }
 
 
@@ -692,6 +696,9 @@ export class SalesService {
 
     // --- STAFF COMMENTS ---
     async addStaffComment(orderId: number, body: any, user: any) {
+        if (user) {
+            await assertPermission(user, this.permCache, 'SALES', 'create');
+        }
         const order = await this.orderRepo.findOne({ where: { id: orderId } });
         if (!order) throw new NotFoundException('Order not found');
 
@@ -758,6 +765,9 @@ export class SalesService {
     }
 
     async updateStaffComment(id: number, content: string, user: any) {
+        if (user) {
+            await assertPermission(user, this.permCache, 'SALES', 'update');
+        }
         const comment = await this.commentRepo.findOne({ where: { id } });
         if (!comment) throw new NotFoundException('Comment not found');
 
@@ -783,7 +793,10 @@ export class SalesService {
     }
 
     // Filter out deleted comments (deleted_at is null means not deleted)
-    async getComments(orderId: number) {
+    async getComments(orderId: number, user?: any) {
+        if (user) {
+            await assertPermission(user, this.permCache, 'SALES', 'view');
+        }
         return this.commentRepo.find({
             where: { order: { id: orderId }, deleted_at: null as any },
             order: { created_at: 'ASC' }
@@ -798,7 +811,13 @@ export class SalesService {
         });
     }
 
-    async toggleCommentVisibility(id: number) {
+    async toggleCommentVisibility(id: number, user?: any) {
+        if (user) {
+            await assertAnyPermission(user, this.permCache, [
+                { module: 'SALES', action: 'update' },
+                { module: 'SALES', action: 'create' },
+            ]);
+        }
         const comment = await this.commentRepo.findOne({ where: { id } });
         if (!comment) throw new NotFoundException('Comment not found');
 
@@ -822,6 +841,9 @@ export class SalesService {
     }
 
     async softDeleteStaffComment(id: number, user: any) {
+        if (user) {
+            await assertPermission(user, this.permCache, 'SALES', 'delete');
+        }
         const comment = await this.commentRepo.findOne({ where: { id } });
         if (!comment) throw new NotFoundException('Comment not found');
 

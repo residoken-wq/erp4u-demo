@@ -2,13 +2,12 @@ import { AuthOnly, Perm } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { AnnouncementsService } from './announcements.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/permissions.guard';
 import { AnnouncementType } from './announcement.entity';
 import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('announcements')
 @CorePackage()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard)
 export class AnnouncementsController {
     constructor(private readonly service: AnnouncementsService) { }
 
@@ -17,19 +16,20 @@ export class AnnouncementsController {
     @Perm('USERS', 'view')
     @Get()
     findAll(
+        @Request() req: any,
         @Query('type') type?: AnnouncementType,
         @Query('is_active') isActive?: string,
     ) {
         return this.service.findAll({
             type,
             is_active: isActive !== undefined ? isActive === 'true' : undefined
-        });
+        }, req.user);
     }
 
     @Perm('USERS', 'view')
     @Get(':id')
-    findOne(@Param('id') id: string) {
-        return this.service.findOne(+id);
+    findOne(@Param('id') id: string, @Request() req: any) {
+        return this.service.findOne(+id, req.user);
     }
 
     @Perm('USERS', 'create')
@@ -38,19 +38,19 @@ export class AnnouncementsController {
         return this.service.create({
             ...data,
             created_by: req.user.userId || req.user.id
-        });
+        }, req.user);
     }
 
     @Perm('USERS', 'update')
     @Put(':id')
-    update(@Param('id') id: string, @Body() data: any) {
-        return this.service.update(+id, data);
+    update(@Param('id') id: string, @Body() data: any, @Request() req: any) {
+        return this.service.update(+id, data, req.user);
     }
 
     @Perm('USERS', 'delete')
     @Delete(':id')
-    delete(@Param('id') id: string) {
-        return this.service.delete(+id);
+    delete(@Param('id') id: string, @Request() req: any) {
+        return this.service.delete(+id, req.user);
     }
 
     // ==================== EMPLOYEE ENDPOINTS ====================
