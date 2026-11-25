@@ -629,13 +629,18 @@ export class SalesService {
     }
     // --- CUSTOMER PORTAL COMMENTS (SECURED BY UUID & RATE LIMITED) ---
     async portalAddComment(uuid: string, body: any) {
-        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
-            throw new NotFoundException('Quote not found');
+        let order: SalesOrder | null = null;
+        try {
+            order = await this.orderRepo.findOne({
+                where: { uuid },
+                relations: ['customer']
+            });
+        } catch (err: any) {
+            if (err?.code === '22P02' || String(err?.message).includes('invalid input syntax for type uuid')) {
+                throw new NotFoundException('Quote not found');
+            }
+            throw err;
         }
-        const order = await this.orderRepo.findOne({
-            where: { uuid },
-            relations: ['customer']
-        });
         if (!order) throw new NotFoundException('Quote not found');
 
         // Rate limit: 20 comments / hour / order counted in DB
@@ -680,10 +685,15 @@ export class SalesService {
     }
 
     async portalDeleteComment(uuid: string, commentId: number) {
-        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
-            throw new NotFoundException('Quote not found');
+        let order: SalesOrder | null = null;
+        try {
+            order = await this.orderRepo.findOne({ where: { uuid } });
+        } catch (err: any) {
+            if (err?.code === '22P02' || String(err?.message).includes('invalid input syntax for type uuid')) {
+                throw new NotFoundException('Quote not found');
+            }
+            throw err;
         }
-        const order = await this.orderRepo.findOne({ where: { uuid } });
         if (!order) throw new NotFoundException('Quote not found');
 
         const comment = await this.commentRepo.findOne({
@@ -983,14 +993,19 @@ export class SalesService {
         }
     }
     async getQuoteByUuid(uuid: string) {
-        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
-            throw new NotFoundException('Quote not found');
+        let order: SalesOrder | null = null;
+        try {
+            order = await this.orderRepo.findOne({
+                where: { uuid },
+                relations: ['customer', 'customer.contacts', 'items', 'items.product', 'comments', 'deliveries', 'deliveries.items', 'assigned_to'],
+                order: { items: { position: 'ASC' } }
+            });
+        } catch (err: any) {
+            if (err?.code === '22P02' || String(err?.message).includes('invalid input syntax for type uuid')) {
+                throw new NotFoundException('Quote not found');
+            }
+            throw err;
         }
-        const order = await this.orderRepo.findOne({
-            where: { uuid },
-            relations: ['customer', 'customer.contacts', 'items', 'items.product', 'comments', 'deliveries', 'deliveries.items', 'assigned_to'],
-            order: { items: { position: 'ASC' } }
-        });
         if (!order) throw new NotFoundException('Quote not found');
 
         // FIX: Ensure product relationship for items if missing (for legacy data)
