@@ -1,6 +1,6 @@
 # Bảng Kiểm Kê Phân Quyền Route (RBAC Route Inventory)
 
-> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-25T06:59:09.709Z
+> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-25T07:24:05.371Z
 
 ## Tổng quan theo tầng
 
@@ -35,10 +35,10 @@
 | `GET` | `/auth/me` | `AUTH` | AUTH | `CORE` | [src/auth/auth.controller.ts:79](../src/auth/auth.controller.ts:79) |
 | `GET` | `/auth/permission-catalog` | `AUTH` | AUTH | `CORE` | [src/auth/auth.controller.ts:72](../src/auth/auth.controller.ts:72) |
 | `GET` | `/auth/rbac/mode` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:28](../src/auth/rbac.controller.ts:28) |
-| `PUT` | `/auth/rbac/mode` | `PERM` | SYSTEM:update | `CORE` | [src/auth/rbac.controller.ts:34](../src/auth/rbac.controller.ts:34) |
-| `GET` | `/auth/rbac/readiness` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:42](../src/auth/rbac.controller.ts:42) |
-| `GET` | `/auth/rbac/report` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:66](../src/auth/rbac.controller.ts:66) |
-| `GET` | `/auth/rbac/unclassified` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:76](../src/auth/rbac.controller.ts:76) |
+| `PUT` | `/auth/rbac/mode` | `PERM` | SYSTEM:update | `CORE` | [src/auth/rbac.controller.ts:35](../src/auth/rbac.controller.ts:35) |
+| `GET` | `/auth/rbac/readiness` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:43](../src/auth/rbac.controller.ts:43) |
+| `GET` | `/auth/rbac/report` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:51](../src/auth/rbac.controller.ts:51) |
+| `GET` | `/auth/rbac/unclassified` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:63](../src/auth/rbac.controller.ts:63) |
 | `GET` | `/categories` | `AUTH` | AUTH | `CORE` | [src/categories/categories.controller.ts:11](../src/categories/categories.controller.ts:11) |
 | `POST` | `/categories` | `PERM` | PRODUCT:create | `CORE` | [src/categories/categories.controller.ts:15](../src/categories/categories.controller.ts:15) |
 | `DELETE` | `/categories/:id` | `PERM` | PRODUCT:delete | `CORE` | [src/categories/categories.controller.ts:21](../src/categories/categories.controller.ts:21) |
@@ -380,10 +380,10 @@
 | `GET` | `/qc/summary` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/qc/qc.controller.ts:35](../src/qc/qc.controller.ts:35) |
 | `GET` | `/qc/supplier/:id/report` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/qc/qc.controller.ts:41](../src/qc/qc.controller.ts:41) |
 | `GET` | `/rbac/mode` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:28](../src/auth/rbac.controller.ts:28) |
-| `PUT` | `/rbac/mode` | `PERM` | SYSTEM:update | `CORE` | [src/auth/rbac.controller.ts:34](../src/auth/rbac.controller.ts:34) |
-| `GET` | `/rbac/readiness` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:42](../src/auth/rbac.controller.ts:42) |
-| `GET` | `/rbac/report` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:66](../src/auth/rbac.controller.ts:66) |
-| `GET` | `/rbac/unclassified` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:76](../src/auth/rbac.controller.ts:76) |
+| `PUT` | `/rbac/mode` | `PERM` | SYSTEM:update | `CORE` | [src/auth/rbac.controller.ts:35](../src/auth/rbac.controller.ts:35) |
+| `GET` | `/rbac/readiness` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:43](../src/auth/rbac.controller.ts:43) |
+| `GET` | `/rbac/report` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:51](../src/auth/rbac.controller.ts:51) |
+| `GET` | `/rbac/unclassified` | `PERM` | SYSTEM:view | `CORE` | [src/auth/rbac.controller.ts:63](../src/auth/rbac.controller.ts:63) |
 | `GET` | `/sales` | `LEGACY` | SALES:view | `SALES` | [src/sales/sales.controller.ts:250](../src/sales/sales.controller.ts:250) |
 | `POST` | `/sales` | `LEGACY` | SALES:create | `SALES` | [src/sales/sales.controller.ts:246](../src/sales/sales.controller.ts:246) |
 | `GET` | `/sales/:code/payment-history` | `PERM` | SALES:view | `SALES` | [src/sales/sales.controller.ts:164](../src/sales/sales.controller.ts:164) |

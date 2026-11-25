@@ -12,6 +12,7 @@ import { SystemConfig } from '../system/system-config.entity';
 import { ActivityLog } from '../system/entities/activity-log.entity';
 import { TenantContext } from '../common/tenancy/tenant-context';
 import { PermissionCacheService } from './permission-cache.service';
+import { assertPermission } from './rbac-assert.helper';
 
 export type RbacMode = 'SHADOW' | 'ENFORCE';
 
@@ -89,12 +90,15 @@ export class RbacModeService {
       } else {
         mode = 'SHADOW';
       }
+      this.cache.set(tId, { mode, fetchedAt: now });
+      return mode;
     } catch (e) {
-      mode = 'SHADOW';
+      console.error(`[RBAC] Lỗi khi truy vấn chế độ RBAC cho tenant "${tId}":`, e);
+      if (cached) {
+        return cached.mode;
+      }
+      return 'SHADOW';
     }
-
-    this.cache.set(tId, { mode, fetchedAt: now });
-    return mode;
   }
 
   async get(): Promise<RbacMode> {
@@ -125,23 +129,13 @@ export class RbacModeService {
 
     // Explicit authorization check: admin (exact match) or SYSTEM:update
     const userInfo = typeof user === 'string' ? { username: user } : (user || {});
-    const isAdmin = userInfo.username === 'admin';
-    let hasSystemUpdate = false;
-
-    if (!isAdmin) {
-      const groupId = userInfo.groupId || userInfo.group_id;
-      if (groupId && this.permCacheService) {
-        hasSystemUpdate = await this.permCacheService.hasAny(groupId, [
-          { module: 'SYSTEM', action: 'update' },
-        ]);
-      }
-    }
-
-    if (!isAdmin && !hasSystemUpdate) {
-      throw new ForbiddenException(
-        'Chỉ admin hoặc nhóm có quyền SYSTEM:update mới có thể thay đổi chế độ RBAC',
-      );
-    }
+    await assertPermission(
+      userInfo,
+      this.permCacheService,
+      'SYSTEM',
+      'update',
+      'Chỉ admin hoặc nhóm có quyền SYSTEM:update mới có thể thay đổi chế độ RBAC',
+    );
 
     const tId = TenantContext.current().tenantId;
     const oldMode = await this.getTenantMode(tId);

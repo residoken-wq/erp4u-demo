@@ -91,8 +91,9 @@ const RbacLogPage: React.FC = () => {
     // Current user & permissions check
     const userStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user') : null;
     const currentUser = userStr ? JSON.parse(userStr) : null;
+    const isAdmin = currentUser?.username === 'admin';
     const canManageRbac =
-        currentUser?.username === 'admin' ||
+        isAdmin ||
         (currentUser?.permissions || []).some(
             (p: any) => p.module_code === 'SYSTEM' && (p.can_update === true || p.can_update === 1)
         );
@@ -204,8 +205,10 @@ const RbacLogPage: React.FC = () => {
     useEffect(() => {
         fetchMode();
         fetchReadiness(readinessDays);
-        fetchReports();
-    }, [fetchMode, fetchReadiness, readinessDays, fetchReports]);
+        if (isAdmin) {
+            fetchReports();
+        }
+    }, [fetchMode, fetchReadiness, readinessDays, fetchReports, isAdmin]);
 
     // Handle Switch to ENFORCE (with typing confirmation)
     const handleConfirmEnforce = async () => {
@@ -762,7 +765,7 @@ const RbacLogPage: React.FC = () => {
                                 </div>
                             )
                         },
-                        {
+                        ...(isAdmin ? [{
                             key: 'report',
                             label: '🛡️ Báo cáo Quyền (Tổng hợp)',
                             children: (
@@ -824,7 +827,7 @@ const RbacLogPage: React.FC = () => {
                                     />
                                 </div>
                             )
-                        },
+                        }] : []),
                         {
                             key: 'unclassified',
                             label: '⚠️ Route chưa phân loại',
@@ -863,6 +866,8 @@ const RbacLogPage: React.FC = () => {
                     onChange={(activeKey) => {
                         if (activeKey === 'readiness' && !readinessData) {
                             fetchReadiness(readinessDays);
+                        } else if (activeKey === 'report' && isAdmin && reports.length === 0) {
+                            fetchReports();
                         } else if (activeKey === 'unclassified' && unclassified.length === 0) {
                             fetchUnclassified();
                         }

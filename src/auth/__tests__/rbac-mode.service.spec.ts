@@ -174,4 +174,55 @@ describe('RbacModeService', () => {
       service.setMode('ENFORCE', { username: 'regular_user', groupId: 5 }),
     ).rejects.toThrow(ForbiddenException);
   });
+
+  it('when DB query fails and cache exists with ENFORCE, returns ENFORCE without overwriting cache', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    configRepo.findOne.mockResolvedValueOnce({ key: 'RBAC_MODE', value: 'ENFORCE' } as any);
+
+    // Initial successful read caches ENFORCE
+    const mode1 = await service.getTenantMode('tenant_error_test');
+    expect(mode1).toBe('ENFORCE');
+
+    // Simulate TTL expiration by advancing Date.now
+    const realDateNow = Date.now;
+    try {
+      Date.now = () => realDateNow() + 60 * 1000;
+
+      // DB query throws error
+      const dbError = new Error('DB connection failed');
+      configRepo.findOne.mockRejectedValueOnce(dbError);
+
+      const mode2 = await service.getTenantMode('tenant_error_test');
+      expect(mode2).toBe('ENFORCE');
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('tenant_error_test'),
+        dbError,
+      );
+    } finally {
+      Date.now = realDateNow;
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('when DB query fails with no cache, returns SHADOW, logs error with tenant, and re-queries DB on next read', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const dbError = new Error('DB connection refused');
+    configRepo.findOne.mockRejectedValueOnce(dbError);
+
+    // Read without cache when DB fails
+    const mode1 = await service.getTenantMode('tenant_uncached_error');
+    expect(mode1).toBe('SHADOW');
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('tenant_uncached_error'),
+      dbError,
+    );
+
+    // Next read succeeds with ENFORCE
+    configRepo.findOne.mockResolvedValueOnce({ key: 'RBAC_MODE', value: 'ENFORCE' } as any);
+    const mode2 = await service.getTenantMode('tenant_uncached_error');
+    expect(mode2).toBe('ENFORCE');
+    expect(configRepo.findOne).toHaveBeenCalledTimes(2);
+
+    errorSpy.mockRestore();
+  });
 });

@@ -136,16 +136,24 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
 
     // Setup tenant_b:
     // Identical group_id = 3, but in tenant_b group 3 does NOT have SALES:view or PRODUCTION:view
+    // Group 5 has SYSTEM:view (for testing staff with SYSTEM:view)
     await adminDs.query(
       `INSERT INTO "tenant_b"."user_groups" ("id", "name", "description") VALUES
        (1, 'Admin', 'Admin group'),
-       (3, 'Guest Team', 'Guest group with no permissions')
+       (3, 'Guest Team', 'Guest group with no permissions'),
+       (5, 'System Viewer Team', 'Has SYSTEM:view')
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_b"."group_permissions" ("group_id", "module_code", "can_view", "can_create", "can_update", "can_delete") VALUES
+       (5, 'SYSTEM', true, false, false, false)
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
       `INSERT INTO "tenant_b"."users" ("id", "username", "password", "full_name", "group_id", "is_active") VALUES
        (1, 'admin', '${passwordHash}', 'Admin User B', 1, true),
-       (20, 'guest_user_b', '${passwordHash}', 'Guest User B', 3, true)
+       (20, 'guest_user_b', '${passwordHash}', 'Guest User B', 3, true),
+       (21, 'system_viewer_b', '${passwordHash}', 'System Viewer B', 5, true)
        ON CONFLICT DO NOTHING`,
     );
 
@@ -318,6 +326,117 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
       expect(r).not.toHaveProperty('ips');
       expect(r).toHaveProperty('would_deny');
       expect(r).toHaveProperty('distinct_users');
+    }
+  });
+
+  describe('RbacController Explicit Access Control in SHADOW mode (/auth/rbac and /rbac)', () => {
+    const prefixes = ['/api/auth/rbac', '/api/rbac'];
+
+    for (const prefix of prefixes) {
+      describe(`Route prefix: ${prefix}`, () => {
+        it(`staff WITHOUT SYSTEM:view is blocked (403) from report, unclassified, mode, readiness, and PUT mode`, async () => {
+          if (!dbAvailable) return;
+
+          const tokenGuest = jwtService.sign({
+            sub: 20,
+            username: 'guest_user_b',
+            group_id: 3,
+            tid: 'tenant_b',
+          });
+
+          // GET report -> 403
+          const resReport = await request(app.getHttpServer())
+            .get(`${prefix}/report`)
+            .set('X-Test-Tenant', 'tenant_b')
+            .set('Authorization', `Bearer ${tokenGuest}`);
+          expect(resReport.status).toBe(403);
+
+          // GET unclassified -> 403
+          const resUnclass = await request(app.getHttpServer())
+            .get(`${prefix}/unclassified`)
+            .set('X-Test-Tenant', 'tenant_b')
+            .set('Authorization', `Bearer ${tokenGuest}`);
+          expect(resUnclass.status).toBe(403);
+
+          // GET mode -> 403
+          const resMode = await request(app.getHttpServer())
+            .get(`${prefix}/mode`)
+            .set('X-Test-Tenant', 'tenant_b')
+            .set('Authorization', `Bearer ${tokenGuest}`);
+          expect(resMode.status).toBe(403);
+
+          // GET readiness -> 403
+          const resReadiness = await request(app.getHttpServer())
+            .get(`${prefix}/readiness`)
+            .set('X-Test-Tenant', 'tenant_b')
+            .set('Authorization', `Bearer ${tokenGuest}`);
+          expect(resReadiness.status).toBe(403);
+
+          // PUT mode -> 403
+          const resPutMode = await request(app.getHttpServer())
+            .put(`${prefix}/mode`)
+            .set('X-Test-Tenant', 'tenant_b')
+            .set('Authorization', `Bearer ${tokenGuest}`)
+            .send({ mode: 'ENFORCE' });
+          expect(resPutMode.status).toBe(403);
+        });
+
+        it(`staff WITH SYSTEM:view (non-admin) can access readiness, mode, unclassified (200), but is blocked from report (403)`, async () => {
+          if (!dbAvailable) return;
+
+          const tokenSystemView = jwtService.sign({
+            sub: 21,
+            username: 'system_viewer_b',
+            group_id: 5,
+            tid: 'tenant_b',
+          });
+
+          // GET readiness -> 200
+          const resReadiness = await request(app.getHttpServer())
+            .get(`${prefix}/readiness`)
+            .set('X-Test-Tenant', 'tenant_b')
+            .set('Authorization', `Bearer ${tokenSystemView}`);
+          expect(resReadiness.status).toBe(200);
+
+          // GET mode -> 200
+          const resMode = await request(app.getHttpServer())
+            .get(`${prefix}/mode`)
+            .set('X-Test-Tenant', 'tenant_b')
+            .set('Authorization', `Bearer ${tokenSystemView}`);
+          expect(resMode.status).toBe(200);
+
+          // GET unclassified -> 200
+          const resUnclass = await request(app.getHttpServer())
+            .get(`${prefix}/unclassified`)
+            .set('X-Test-Tenant', 'tenant_b')
+            .set('Authorization', `Bearer ${tokenSystemView}`);
+          expect(resUnclass.status).toBe(200);
+
+          // GET report -> 403 (admin only)
+          const resReport = await request(app.getHttpServer())
+            .get(`${prefix}/report`)
+            .set('X-Test-Tenant', 'tenant_b')
+            .set('Authorization', `Bearer ${tokenSystemView}`);
+          expect(resReport.status).toBe(403);
+        });
+
+        it(`admin can access report (200)`, async () => {
+          if (!dbAvailable) return;
+
+          const tokenAdmin = jwtService.sign({
+            sub: 1,
+            username: 'admin',
+            group_id: 1,
+            tid: 'tenant_b',
+          });
+
+          const resReport = await request(app.getHttpServer())
+            .get(`${prefix}/report`)
+            .set('X-Test-Tenant', 'tenant_b')
+            .set('Authorization', `Bearer ${tokenAdmin}`);
+          expect(resReport.status).toBe(200);
+        });
+      });
     }
   });
 });
