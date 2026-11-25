@@ -15,6 +15,7 @@ import { InternalCommsSecurity1795317970000 } from '../../../database/migrations
 
 const TEST_SCHEMA = 'tenant_internal_comms';
 const TEST_TENANT: TenantContext = { tenantId: TEST_SCHEMA, schema: TEST_SCHEMA };
+const TEST_QUOTE_UUID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
 const hasDbConfig = Boolean(process.env.CI || process.env.DB_HOST || process.env.DATABASE_URL);
 const describeSuite = hasDbConfig ? describe : describe.skip;
@@ -169,7 +170,7 @@ describeSuite('Internal Communications Security (Integration - Real DB & Migrati
 
       await adminDs.query(`
         INSERT INTO "${TEST_SCHEMA}"."sales_orders" ("id", "uuid", "order_code", "customer_id", "assigned_to_id", "status", "total_amount") VALUES
-        (1, 'int-quote-uuid-001', 'SO-INT-001', 1, 2, 'QUOTATION', 1000000)
+        (1, '${TEST_QUOTE_UUID}', 'SO-INT-001', 1, 2, 'QUOTATION', 1000000)
         ON CONFLICT DO NOTHING;
       `);
     } catch (err: any) {
@@ -208,7 +209,7 @@ describeSuite('Internal Communications Security (Integration - Real DB & Migrati
 
     it('POST theo uuid ép sender_type=CUSTOMER, comment_type=CUSTOMER, bỏ qua mentioned_user_ids và không tạo thông báo', async () => {
       const postRes = await request(app!.getHttpServer())
-        .post('/api/public/portal/quote/int-quote-uuid-001/comment')
+        .post(`/api/public/portal/quote/${TEST_QUOTE_UUID}/comment`)
         .set('x-test-tenant', TEST_SCHEMA)
         .send({
           sender: 'STAFF',
@@ -250,7 +251,7 @@ describeSuite('Internal Communications Security (Integration - Real DB & Migrati
 
       // 21st comment attempt must fail with 429
       const res = await request(app!.getHttpServer())
-        .post('/api/public/portal/quote/int-quote-uuid-001/comment')
+        .post(`/api/public/portal/quote/${TEST_QUOTE_UUID}/comment`)
         .set('x-test-tenant', TEST_SCHEMA)
         .send({ content: '21st comment in hour' });
 
@@ -266,14 +267,14 @@ describeSuite('Internal Communications Security (Integration - Real DB & Migrati
 
       // Attempt customer deletion on staff comment
       await request(app!.getHttpServer())
-        .delete(`/api/public/portal/quote/int-quote-uuid-001/comment/${staffCommentId}`)
+        .delete(`/api/public/portal/quote/${TEST_QUOTE_UUID}/comment/${staffCommentId}`)
         .set('x-test-tenant', TEST_SCHEMA)
         .expect(404);
     });
 
     it('GET portal theo uuid không chứa bình luận INTERNAL, không chứa mentioned_user_ids, và assigned_to chỉ có đúng 4 keys', async () => {
       const res = await request(app!.getHttpServer())
-        .get('/api/public/portal/quote/int-quote-uuid-001')
+        .get(`/api/public/portal/quote/${TEST_QUOTE_UUID}`)
         .set('x-test-tenant', TEST_SCHEMA)
         .expect(200);
 
