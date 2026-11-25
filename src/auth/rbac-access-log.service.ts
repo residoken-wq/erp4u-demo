@@ -38,6 +38,7 @@ export class RbacAccessLogService implements OnModuleInit {
           );
           CREATE INDEX IF NOT EXISTS idx_rbac_access_logs_created_at ON rbac_access_logs (created_at);
           CREATE INDEX IF NOT EXISTS idx_rbac_access_logs_route_decision ON rbac_access_logs (route, decision);
+          CREATE INDEX IF NOT EXISTS idx_rbac_access_logs_readiness ON rbac_access_logs (created_at, decision, method, route);
         `);
       });
     } catch (e) {
@@ -120,6 +121,68 @@ export class RbacAccessLogService implements OnModuleInit {
         }
       });
     }
+  }
+
+  async getReadiness(days: number = 7) {
+    const daysNum = Math.min(Math.max(Number(days) || 7, 1), 30);
+    const since = new Date(Date.now() - daysNum * 24 * 60 * 60 * 1000);
+
+    const routesQuery = this.logRepo
+      .createQueryBuilder('log')
+      .select('log.method', 'method')
+      .addSelect('log.route', 'route')
+      .addSelect('log.required', 'required')
+      .addSelect(
+        "COUNT(CASE WHEN log.decision = 'DENY_NO_PERM' THEN 1 END)::int",
+        'would_deny',
+      )
+      .addSelect('COUNT(DISTINCT log.user_id)::int', 'distinct_users')
+      .addSelect('MAX(log.created_at)', 'last_seen')
+      .where('log.created_at >= :since', { since })
+      .groupBy('log.method')
+      .addGroupBy('log.route')
+      .addGroupBy('log.required')
+      .having("COUNT(CASE WHEN log.decision = 'DENY_NO_PERM' THEN 1 END) > 0")
+      .orderBy('would_deny', 'DESC')
+      .addOrderBy('last_seen', 'DESC')
+      .limit(1000);
+
+    const routes = await routesQuery.getRawMany();
+
+    const unclassifiedQuery = this.logRepo
+      .createQueryBuilder('log')
+      .select('log.route', 'route')
+      .addSelect('log.method', 'method')
+      .addSelect('COUNT(*)::int', 'hit_count')
+      .addSelect('MIN(log.created_at)', 'first_seen')
+      .addSelect('MAX(log.created_at)', 'last_seen')
+      .where('log.created_at >= :since', { since })
+      .andWhere("log.decision = 'UNCLASSIFIED'")
+      .groupBy('log.route')
+      .addGroupBy('log.method')
+      .orderBy('hit_count', 'DESC')
+      .limit(1000);
+
+    const unclassifiedRoutes = await unclassifiedQuery.getRawMany();
+
+    return {
+      days: daysNum,
+      routes: routes.map((r) => ({
+        method: r.method,
+        route: r.route,
+        required: r.required || null,
+        would_deny: Number(r.would_deny || 0),
+        distinct_users: Number(r.distinct_users || 0),
+        last_seen: r.last_seen,
+      })),
+      unclassified_routes: unclassifiedRoutes.map((u) => ({
+        method: u.method,
+        route: u.route,
+        hit_count: Number(u.hit_count || 0),
+        first_seen: u.first_seen,
+        last_seen: u.last_seen,
+      })),
+    };
   }
 
   async getReport(from?: string, to?: string, decision?: string) {

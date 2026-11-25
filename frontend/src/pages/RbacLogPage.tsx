@@ -1,18 +1,20 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-    Card, Tabs, Table, Tag, Segmented, Button, DatePicker, Select,
-    Space, Tooltip, Modal, message, Typography, Row, Col, Alert, Badge
+    Card, Tabs, Table, Tag, Button, DatePicker, Select, Input,
+    Space, Modal, message, Typography, Row, Col, Alert, Badge
 } from 'antd';
 import {
     SafetyCertificateOutlined, ReloadOutlined, DownloadOutlined,
-    ExclamationCircleOutlined, InfoCircleOutlined
+    ExclamationCircleOutlined, InfoCircleOutlined, CheckCircleOutlined,
+    WarningOutlined, PoweroffOutlined
 } from '@ant-design/icons';
 import api from '../utils/api';
 import dayjs from 'dayjs';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import { brandColors } from '../theme/brand';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
 
 interface RbacReportItem {
@@ -34,6 +36,21 @@ interface UnclassifiedRouteItem {
     last_seen: string;
 }
 
+interface ReadinessRouteItem {
+    method: string;
+    route: string;
+    required: string | null;
+    would_deny: number;
+    distinct_users: number;
+    last_seen: string;
+}
+
+interface ReadinessData {
+    days: number;
+    routes: ReadinessRouteItem[];
+    unclassified_routes: UnclassifiedRouteItem[];
+}
+
 const METHOD_COLORS: Record<string, string> = {
     GET: 'blue',
     POST: 'green',
@@ -53,7 +70,7 @@ const parseRequired = (requiredStr: string | null) => {
             };
         }
     } catch {
-        // Fallback for non-JSON format
+        // Fallback
     }
     if (requiredStr.includes(':')) {
         const [mod, act] = requiredStr.split(':');
@@ -71,11 +88,35 @@ const formatIps = (ips: string[] | string | null): string => {
 };
 
 const RbacLogPage: React.FC = () => {
+    // Current user & permissions check
+    const userStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user') : null;
+    const currentUser = userStr ? JSON.parse(userStr) : null;
+    const isAdmin = currentUser?.username === 'admin';
+    const canManageRbac =
+        isAdmin ||
+        (currentUser?.permissions || []).some(
+            (p: any) => p.module_code === 'SYSTEM' && (p.can_update === true || p.can_update === 1)
+        );
+
     // RBAC Mode
-    const [currentMode, setCurrentMode] = useState<string>('SHADOW');
+    const [modeInfo, setModeInfo] = useState<{ mode: string; effective_mode: string; forced: boolean }>({
+        mode: 'SHADOW',
+        effective_mode: 'SHADOW',
+        forced: false,
+    });
     const [modeLoading, setModeLoading] = useState(false);
 
-    // Reports (Tab 1 - Aggregated)
+    // Enforce Modal state
+    const [enforceModalVisible, setEnforceModalVisible] = useState(false);
+    const [enforceInputText, setEnforceInputText] = useState('');
+    const [enforceUpdating, setEnforceUpdating] = useState(false);
+
+    // Readiness (Tab 1 - Sẵn sàng bật thực thi)
+    const [readinessData, setReadinessData] = useState<ReadinessData | null>(null);
+    const [readinessDays, setReadinessDays] = useState<number>(7);
+    const [readinessLoading, setReadinessLoading] = useState(false);
+
+    // Reports (Tab 2 - Aggregated)
     const [reports, setReports] = useState<RbacReportItem[]>([]);
     const [reportsLoading, setReportsLoading] = useState(false);
     const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
@@ -84,7 +125,7 @@ const RbacLogPage: React.FC = () => {
     ]);
     const [decisionFilter, setDecisionFilter] = useState<string>('ALL');
 
-    // Unclassified (Tab 2)
+    // Unclassified (Tab 3)
     const [unclassified, setUnclassified] = useState<UnclassifiedRouteItem[]>([]);
     const [unclassifiedLoading, setUnclassifiedLoading] = useState(false);
 
@@ -93,13 +134,33 @@ const RbacLogPage: React.FC = () => {
         setModeLoading(true);
         try {
             const res = await api.get('/auth/rbac/mode');
-            if (res.data?.mode) {
-                setCurrentMode(res.data.mode);
+            if (res.data) {
+                setModeInfo({
+                    mode: res.data.mode || 'SHADOW',
+                    effective_mode: res.data.effective_mode || res.data.mode || 'SHADOW',
+                    forced: !!res.data.forced,
+                });
             }
         } catch (err: any) {
             console.error('Lỗi tải chế độ RBAC:', err);
         } finally {
             setModeLoading(false);
+        }
+    }, []);
+
+    // Fetch Readiness
+    const fetchReadiness = useCallback(async (days: number = 7) => {
+        setReadinessLoading(true);
+        try {
+            const res = await api.get('/auth/rbac/readiness', { params: { days } });
+            if (res.data) {
+                setReadinessData(res.data);
+            }
+        } catch (err: any) {
+            console.error('Lỗi tải báo cáo sẵn sàng:', err);
+            message.error(err.response?.data?.message || 'Không thể tải báo cáo sẵn sàng bật thực thi');
+        } finally {
+            setReadinessLoading(false);
         }
     }, []);
 
@@ -143,33 +204,78 @@ const RbacLogPage: React.FC = () => {
 
     useEffect(() => {
         fetchMode();
-        fetchReports();
-    }, [fetchMode, fetchReports]);
+        fetchReadiness(readinessDays);
+        if (isAdmin) {
+            fetchReports();
+        }
+    }, [fetchMode, fetchReadiness, readinessDays, fetchReports, isAdmin]);
 
-    const handleModeChange = (newMode: string) => {
-        if (newMode === currentMode) return;
+    // Handle Switch to ENFORCE (with typing confirmation)
+    const handleConfirmEnforce = async () => {
+        if (enforceInputText.trim() !== 'ENFORCE') {
+            message.warning('Vui lòng gõ chính xác "ENFORCE" để xác nhận');
+            return;
+        }
 
+        setEnforceUpdating(true);
+        try {
+            const res = await api.put('/auth/rbac/mode', { mode: 'ENFORCE' });
+            if (res.data) {
+                setModeInfo({
+                    mode: res.data.mode || 'ENFORCE',
+                    effective_mode: res.data.effective_mode || res.data.mode || 'ENFORCE',
+                    forced: !!res.data.forced,
+                });
+            }
+            message.success('Đã kích hoạt chế độ THỰC THI (ENFORCE) thành công');
+            setEnforceModalVisible(false);
+            setEnforceInputText('');
+            fetchReadiness(readinessDays);
+        } catch (err: any) {
+            message.error(err.response?.data?.message || 'Không thể đổi chế độ sang ENFORCE');
+        } finally {
+            setEnforceUpdating(false);
+        }
+    };
+
+    // Handle Switch to SHADOW
+    const handleSwitchToShadow = () => {
         Modal.confirm({
-            title: `Xác nhận đổi chế độ RBAC sang [${newMode}]?`,
-            icon: <ExclamationCircleOutlined />,
-            content: newMode === 'OFF'
-                ? 'Ở chế độ OFF, hệ thống sẽ bỏ qua kiểm tra quyền RBAC đối với mọi request.'
-                : 'Ở chế độ SHADOW, hệ thống sẽ ghi log các vi phạm quyền mà không chặn request của người dùng.',
-            okText: 'Xác nhận',
+            title: 'Xác nhận chuyển về chế độ GHI LOG (SHADOW)?',
+            icon: <ExclamationCircleOutlined style={{ color: brandColors.orange }} />,
+            content: (
+                <div>
+                    <Paragraph>
+                        Hệ thống sẽ chuyển về chế độ <b>SHADOW</b>:
+                    </Paragraph>
+                    <Paragraph type="secondary">
+                        Các truy cập thiếu quyền vẫn được tiếp tục và ghi nhận vào nhật ký kiểm tra mà không chặn thao tác của người dùng.
+                    </Paragraph>
+                </div>
+            ),
+            okText: 'Xác nhận về SHADOW',
             cancelText: 'Hủy',
+            okButtonProps: { style: { backgroundColor: brandColors.navy, borderColor: brandColors.navy } },
             onOk: async () => {
                 try {
-                    const res = await api.put('/auth/rbac/mode', { mode: newMode });
-                    setCurrentMode(res.data.mode);
-                    message.success(`Đã chuyển RBAC sang chế độ ${res.data.mode}`);
-                } catch (e: any) {
-                    message.error(e.response?.data?.message || 'Không thể đổi chế độ RBAC');
+                    const res = await api.put('/auth/rbac/mode', { mode: 'SHADOW' });
+                    if (res.data) {
+                        setModeInfo({
+                            mode: res.data.mode || 'SHADOW',
+                            effective_mode: res.data.effective_mode || res.data.mode || 'SHADOW',
+                            forced: !!res.data.forced,
+                        });
+                    }
+                    message.success('Đã chuyển hệ thống về chế độ SHADOW');
+                    fetchReadiness(readinessDays);
+                } catch (err: any) {
+                    message.error(err.response?.data?.message || 'Không thể đổi chế độ sang SHADOW');
                 }
             }
         });
     };
 
-    // Export to Excel (Aggregated columns matching spec A3)
+    // Export to Excel
     const handleExportExcel = async () => {
         try {
             const workbook = new ExcelJS.Workbook();
@@ -186,12 +292,11 @@ const RbacLogPage: React.FC = () => {
                 { header: 'Danh sách IP', key: 'ips', width: 30 },
             ];
 
-            // Header styling
             worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
             worksheet.getRow(1).fill = {
                 type: 'pattern',
                 pattern: 'solid',
-                fgColor: { argb: 'FF1890FF' }
+                fgColor: { argb: 'FF272F72' }
             };
 
             reports.forEach(item => {
@@ -216,20 +321,95 @@ const RbacLogPage: React.FC = () => {
         }
     };
 
-    const getModeBadge = (mode: string) => {
-        switch (mode) {
-            case 'OFF':
-                return <Tag color="default" style={{ fontSize: 13, padding: '4px 10px' }}>OFF (Không kiểm tra)</Tag>;
-            case 'SHADOW':
-                return <Tag color="warning" style={{ fontSize: 13, padding: '4px 10px' }}>SHADOW (Ghi log vi phạm, không chặn)</Tag>;
-            case 'ENFORCE':
-                return <Tag color="success" style={{ fontSize: 13, padding: '4px 10px' }}>ENFORCE (Chặn truy cập trái phép)</Tag>;
-            default:
-                return <Tag>{mode}</Tag>;
+    const getModeBadge = (effectiveMode: string, forced: boolean) => {
+        if (effectiveMode === 'ENFORCE') {
+            return (
+                <Tag color="error" style={{ fontSize: 13, padding: '4px 12px', fontWeight: 600 }}>
+                    <CheckCircleOutlined /> ENFORCE (Đang chặn truy cập trái phép)
+                </Tag>
+            );
         }
+        return (
+            <Tag color="warning" style={{ fontSize: 13, padding: '4px 12px', fontWeight: 600 }}>
+                <WarningOutlined /> SHADOW (Ghi log vi phạm, không chặn)
+            </Tag>
+        );
     };
 
-    // Columns: Method, Route, Quyền cần, User, Số lần, Lần cuối, IP (A3)
+    // Columns: Readiness Report
+    const readinessColumns = [
+        {
+            title: 'Phương thức',
+            dataIndex: 'method',
+            key: 'method',
+            width: 110,
+            render: (method: string) => (
+                <Tag color={METHOD_COLORS[method] || 'default'}>{method}</Tag>
+            )
+        },
+        {
+            title: 'Đường dẫn (Route)',
+            dataIndex: 'route',
+            key: 'route',
+            render: (route: string) => (
+                <code style={{ background: '#f5f5f5', padding: '2px 6px', borderRadius: 4 }}>{route}</code>
+            )
+        },
+        {
+            title: 'Quyền yêu cầu',
+            dataIndex: 'required',
+            key: 'required',
+            width: 200,
+            render: (reqStr: string | null) => {
+                if (!reqStr) return <span style={{ color: '#999' }}>-</span>;
+                const { module, action } = parseRequired(reqStr);
+                if (module === '-') return <Tag>{reqStr}</Tag>;
+                return (
+                    <Space size={4}>
+                        <Tag color="cyan">{module}</Tag>
+                        <Tag>{action}</Tag>
+                    </Space>
+                );
+            }
+        },
+        {
+            title: 'Số lần sẽ bị chặn',
+            dataIndex: 'would_deny',
+            key: 'would_deny',
+            width: 170,
+            sorter: (a: ReadinessRouteItem, b: ReadinessRouteItem) => a.would_deny - b.would_deny,
+            render: (val: number) => (
+                <Badge
+                    count={val}
+                    overflowCount={99999}
+                    style={{ backgroundColor: brandColors.orange, fontSize: 13 }}
+                />
+            )
+        },
+        {
+            title: 'Số người dùng ảnh hưởng',
+            dataIndex: 'distinct_users',
+            key: 'distinct_users',
+            width: 190,
+            sorter: (a: ReadinessRouteItem, b: ReadinessRouteItem) => a.distinct_users - b.distinct_users,
+            render: (val: number) => (
+                <Badge
+                    count={val}
+                    overflowCount={99999}
+                    style={{ backgroundColor: brandColors.navy, fontSize: 13 }}
+                />
+            )
+        },
+        {
+            title: 'Lần cuối xuất hiện',
+            dataIndex: 'last_seen',
+            key: 'last_seen',
+            width: 180,
+            render: (val: string) => val ? dayjs(val).format('YYYY-MM-DD HH:mm:ss') : '-'
+        }
+    ];
+
+    // Columns: General Report
     const reportColumns = [
         {
             title: 'Phương thức',
@@ -303,7 +483,7 @@ const RbacLogPage: React.FC = () => {
             width: 110,
             sorter: (a: RbacReportItem, b: RbacReportItem) => a.count - b.count,
             render: (count: number) => (
-                <Badge count={count} overflowCount={99999} style={{ backgroundColor: '#108ee9' }} />
+                <Badge count={count} overflowCount={99999} style={{ backgroundColor: brandColors.navy }} />
             )
         },
         {
@@ -369,53 +549,223 @@ const RbacLogPage: React.FC = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Header / Mode Status */}
-            <Card>
+            <Card style={{ borderRadius: 12 }}>
                 <Row align="middle" justify="space-between" gutter={[16, 16]}>
                     <Col>
                         <Space align="center" size={12}>
-                            <SafetyCertificateOutlined style={{ fontSize: 28, color: '#272F72' }} />
+                            <SafetyCertificateOutlined style={{ fontSize: 32, color: brandColors.navy }} />
                             <div>
-                                <Title level={4} style={{ margin: 0 }}>Quản trị Phân quyền RBAC & Nhật ký Truy cập</Title>
-                                <Text type="secondary">Giám sát và kiểm soát phân quyền hệ thống</Text>
+                                <Title level={4} style={{ margin: 0, color: brandColors.navy }}>
+                                    Quản trị Phân quyền RBAC & Kiểm soát Thực thi
+                                </Title>
+                                <Text type="secondary">
+                                    Giám sát lưu lượng, đánh giá an toàn và kiểm soát chế độ phân quyền toàn hệ thống
+                                </Text>
                             </div>
                         </Space>
                     </Col>
                     <Col>
-                        <Space align="center" size={16}>
-                            <Space size={6}>
-                                <Text strong>Chế độ hiện tại:</Text>
-                                {getModeBadge(currentMode)}
+                        <Space align="center" size={16} wrap>
+                            <Space size={8}>
+                                <Text strong>Chế độ hiệu lực:</Text>
+                                {getModeBadge(modeInfo.effective_mode, modeInfo.forced)}
                             </Space>
 
-                            <Segmented
-                                options={[
-                                    { label: 'OFF', value: 'OFF' },
-                                    { label: 'SHADOW', value: 'SHADOW' },
-                                    {
-                                        label: (
-                                            <Tooltip title="Mở ở Phase 2">
-                                                <span style={{ color: '#bbb' }}>ENFORCE</span>
-                                            </Tooltip>
-                                        ),
-                                        value: 'ENFORCE',
-                                        disabled: true
-                                    }
-                                ]}
-                                value={currentMode}
-                                onChange={(val) => handleModeChange(val as string)}
-                                disabled={modeLoading}
-                            />
+                            {canManageRbac && (
+                                <Space size={8}>
+                                    {modeInfo.effective_mode === 'SHADOW' ? (
+                                        <Button
+                                            type="primary"
+                                            icon={<SafetyCertificateOutlined />}
+                                            style={{
+                                                backgroundColor: brandColors.orange,
+                                                borderColor: brandColors.orange,
+                                                fontWeight: 600,
+                                            }}
+                                            onClick={() => {
+                                                setEnforceInputText('');
+                                                setEnforceModalVisible(true);
+                                            }}
+                                            disabled={modeLoading || modeInfo.forced}
+                                        >
+                                            Bật thực thi (ENFORCE)
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            icon={<PoweroffOutlined />}
+                                            onClick={handleSwitchToShadow}
+                                            disabled={modeLoading || modeInfo.forced}
+                                        >
+                                            Về chế độ ghi log (SHADOW)
+                                        </Button>
+                                    )}
+                                </Space>
+                            )}
                         </Space>
                     </Col>
                 </Row>
+
+                {modeInfo.forced && (
+                    <Alert
+                        type="warning"
+                        showIcon
+                        icon={<WarningOutlined />}
+                        message="Chế độ RBAC đang bị ghi đè bởi máy chủ"
+                        description="Biến môi trường RBAC_FORCE_MODE đang có hiệu lực. Mọi thay đổi chế độ từ giao diện người dùng sẽ chỉ có hiệu lực sau khi biến môi trường máy chủ được gỡ bỏ."
+                        style={{ marginTop: 16 }}
+                    />
+                )}
             </Card>
 
+            {/* Modal Xác nhận bật ENFORCE */}
+            <Modal
+                title={
+                    <Space>
+                        <ExclamationCircleOutlined style={{ color: brandColors.orange, fontSize: 22 }} />
+                        <span>Xác nhận kích hoạt chế độ THỰC THI (ENFORCE)</span>
+                    </Space>
+                }
+                open={enforceModalVisible}
+                onCancel={() => {
+                    setEnforceModalVisible(false);
+                    setEnforceInputText('');
+                }}
+                footer={[
+                    <Button key="cancel" onClick={() => setEnforceModalVisible(false)}>
+                        Hủy
+                    </Button>,
+                    <Button
+                        key="confirm"
+                        type="primary"
+                        danger
+                        style={{
+                            backgroundColor: enforceInputText.trim() === 'ENFORCE' ? brandColors.orange : undefined,
+                            borderColor: enforceInputText.trim() === 'ENFORCE' ? brandColors.orange : undefined,
+                        }}
+                        loading={enforceUpdating}
+                        disabled={enforceInputText.trim() !== 'ENFORCE'}
+                        onClick={handleConfirmEnforce}
+                    >
+                        Xác nhận bật ENFORCE
+                    </Button>
+                ]}
+            >
+                <div style={{ marginTop: 12 }}>
+                    <Alert
+                        type="error"
+                        showIcon
+                        message="LƯU Ý QUAN TRỌNG VỀ HẬU QUẢ"
+                        description={
+                            <div>
+                                <Paragraph style={{ margin: '8px 0 4px 0' }}>
+                                    Khi kích hoạt chế độ <b>ENFORCE</b>, hệ thống sẽ thực thi chặn truy cập đối với tất cả yêu cầu không hợp lệ:
+                                </Paragraph>
+                                <ul style={{ paddingLeft: 20, margin: 0 }}>
+                                    <li>Yêu cầu thiếu token đăng nhập: trả về mã lỗi <b>401 (Unauthorized)</b>.</li>
+                                    <li>Yêu cầu tài khoản không có quyền trong nhóm: trả về mã lỗi <b>403 (Forbidden)</b>.</li>
+                                </ul>
+                                <Paragraph style={{ margin: '8px 0 0 0' }}>
+                                    Người dùng không được cấp quyền sẽ bị từ chối truy cập ngay lập tức.
+                                </Paragraph>
+                            </div>
+                        }
+                        style={{ marginBottom: 16 }}
+                    />
+
+                    <Paragraph strong>
+                        Để đảm bảo bạn đã đọc rõ cảnh báo trên, vui lòng nhập chữ <code>ENFORCE</code> vào ô bên dưới:
+                    </Paragraph>
+                    <Input
+                        placeholder="Gõ ENFORCE để xác nhận"
+                        value={enforceInputText}
+                        onChange={(e) => setEnforceInputText(e.target.value)}
+                        autoFocus
+                    />
+                </div>
+            </Modal>
+
             {/* Tabs */}
-            <Card>
+            <Card style={{ borderRadius: 12 }}>
                 <Tabs
-                    defaultActiveKey="report"
+                    defaultActiveKey="readiness"
                     items={[
                         {
+                            key: 'readiness',
+                            label: '🎯 Sẵn sàng bật thực thi',
+                            children: (
+                                <div>
+                                    <Alert
+                                        type="info"
+                                        showIcon
+                                        icon={<InfoCircleOutlined />}
+                                        message="Đánh giá mức độ sẵn sàng chuyển sang ENFORCE"
+                                        description="Bảng thống kê tổng hợp các API đã phát sinh vi phạm quyền (DENY_NO_PERM) trong chế độ SHADOW. Nếu số lần sẽ bị chặn và số người dùng ảnh hưởng về 0 (hoặc là các truy cập bất thường hợp lý), hệ thống đã an toàn để bật chế độ ENFORCE."
+                                        style={{ marginBottom: 16 }}
+                                    />
+
+                                    <Row justify="space-between" align="middle" style={{ marginBottom: 16 }} gutter={[12, 12]}>
+                                        <Col>
+                                            <Space wrap>
+                                                <Text strong>Khoảng thời gian khảo sát:</Text>
+                                                <Select
+                                                    value={readinessDays}
+                                                    onChange={(val) => {
+                                                        setReadinessDays(val);
+                                                        fetchReadiness(val);
+                                                    }}
+                                                    style={{ width: 150 }}
+                                                    options={[
+                                                        { label: '7 ngày qua', value: 7 },
+                                                        { label: '14 ngày qua', value: 14 },
+                                                        { label: '30 ngày qua', value: 30 },
+                                                    ]}
+                                                />
+                                                <Button
+                                                    icon={<ReloadOutlined />}
+                                                    onClick={() => fetchReadiness(readinessDays)}
+                                                    loading={readinessLoading}
+                                                >
+                                                    Làm mới
+                                                </Button>
+                                            </Space>
+                                        </Col>
+                                        <Col>
+                                            <Text type="secondary">
+                                                Tổng số route sẽ bị ảnh hưởng: <b>{readinessData?.routes?.length || 0}</b>
+                                            </Text>
+                                        </Col>
+                                    </Row>
+
+                                    <Table
+                                        dataSource={readinessData?.routes || []}
+                                        columns={readinessColumns}
+                                        rowKey={(r) => `${r.method}_${r.route}_${r.required || 'none'}`}
+                                        loading={readinessLoading}
+                                        pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50'] }}
+                                        scroll={{ x: 900 }}
+                                        locale={{
+                                            emptyText: 'Tuyệt vời! Không có route nào phát sinh vi phạm quyền trong thời gian khảo sát.'
+                                        }}
+                                    />
+
+                                    {readinessData?.unclassified_routes && readinessData.unclassified_routes.length > 0 && (
+                                        <div style={{ marginTop: 24 }}>
+                                            <Title level={5} style={{ color: brandColors.orange }}>
+                                                ⚠️ Route chưa phân loại đã nhận request trong {readinessDays} ngày qua ({readinessData.unclassified_routes.length})
+                                            </Title>
+                                            <Table
+                                                dataSource={readinessData.unclassified_routes}
+                                                columns={unclassifiedColumns}
+                                                rowKey={(r) => `${r.method}_${r.route}`}
+                                                size="small"
+                                                pagination={{ pageSize: 10 }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        },
+                        ...(isAdmin ? [{
                             key: 'report',
                             label: '🛡️ Báo cáo Quyền (Tổng hợp)',
                             children: (
@@ -442,7 +792,7 @@ const RbacLogPage: React.FC = () => {
                                                         { label: 'ALLOW (Hợp lệ)', value: 'ALLOW' },
                                                         { label: 'DENY_NO_AUTH (Chưa đăng nhập)', value: 'DENY_NO_AUTH' },
                                                         { label: 'DENY_NO_PERM (Thiếu quyền)', value: 'DENY_NO_PERM' },
-                                                        { label: 'UNCLASSIFIED (Chưa phân hạng)', value: 'UNCLASSIFIED' },
+                                                        { label: 'UNCLASSIFIED (Chưa phân loại)', value: 'UNCLASSIFIED' },
                                                     ]}
                                                 />
                                                 <Button
@@ -460,6 +810,7 @@ const RbacLogPage: React.FC = () => {
                                                 icon={<DownloadOutlined />}
                                                 onClick={handleExportExcel}
                                                 disabled={reports.length === 0}
+                                                style={{ backgroundColor: brandColors.navy, borderColor: brandColors.navy }}
                                             >
                                                 Xuất Excel ({reports.length} dòng tổng hợp)
                                             </Button>
@@ -476,17 +827,17 @@ const RbacLogPage: React.FC = () => {
                                     />
                                 </div>
                             )
-                        },
+                        }] : []),
                         {
                             key: 'unclassified',
-                            label: '⚠️ Route chưa phân hạng',
+                            label: '⚠️ Route chưa phân loại',
                             children: (
                                 <div>
                                     <Alert
                                         type="info"
                                         showIcon
                                         icon={<InfoCircleOutlined />}
-                                        message="Các route chưa phân hạng"
+                                        message="Các route chưa phân loại"
                                         description="Danh sách các API đã nhận request nhưng chưa được khai báo decorator phân quyền (@Perm, @AnyPerm, @AuthOnly, @Public). Cần phân loại các route này trước khi kích hoạt ENFORCE."
                                         style={{ marginBottom: 16 }}
                                     />
@@ -513,7 +864,11 @@ const RbacLogPage: React.FC = () => {
                         }
                     ]}
                     onChange={(activeKey) => {
-                        if (activeKey === 'unclassified' && unclassified.length === 0) {
+                        if (activeKey === 'readiness' && !readinessData) {
+                            fetchReadiness(readinessDays);
+                        } else if (activeKey === 'report' && isAdmin && reports.length === 0) {
+                            fetchReports();
+                        } else if (activeKey === 'unclassified' && unclassified.length === 0) {
                             fetchUnclassified();
                         }
                     }}

@@ -16,6 +16,7 @@
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:int": "jest --testRegex \".*\\.int-spec\\.ts$\" --runInBand",
+    "rbac:inventory": "ts-node scripts/rbac-inventory.ts",
     "seed": "ts-node src/database/seeds/seed-runner.ts",
     "seed:reset": "ts-node src/database/seeds/seed-runner.ts --reset",
     "migration:generate": "typeorm-ts-node-commonjs -d src/database/data-source.ts migration:generate",
