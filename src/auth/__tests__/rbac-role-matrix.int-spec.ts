@@ -186,7 +186,8 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
     );
     await adminDs.query(
       `INSERT INTO "tenant_matrix"."employees" ("id", "user_id", "full_name", "base_salary", "is_active") VALUES
-       (401, 7, 'Nhan vien Matrix HR', 15000000, true)
+       (401, 7, 'Nhan vien Matrix HR', 15000000, true),
+       (402, 1, 'Quan tri vien HR', 20000000, true)
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
