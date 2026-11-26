@@ -13,6 +13,12 @@ export class DefaultGroupsSeedService implements TenantSeeder {
   constructor(private readonly dataSource: DataSource) {}
 
   async seed(): Promise<void> {
+    // In test environment, skip automatic boot seeding unless explicitly enabled,
+    // so that integration test suites with custom fixtures are not affected.
+    if (process.env.NODE_ENV === 'test' && process.env.SEED_DEFAULT_GROUPS !== 'true') {
+      return;
+    }
+
     const groupRepo = this.dataSource.getRepository(UserGroup);
     const permRepo = this.dataSource.getRepository(GroupPermission);
 

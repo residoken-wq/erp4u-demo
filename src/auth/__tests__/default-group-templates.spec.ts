@@ -138,4 +138,44 @@ describe('Default Group Templates Unit Tests (P12b2 D3)', () => {
       expect(p.view_cost_price).toBe(true);
     }
   });
+
+  describe('DefaultGroupsSeedService', () => {
+    it('skips when NODE_ENV is test and SEED_DEFAULT_GROUPS is unset', async () => {
+      const { DefaultGroupsSeedService } = await import('../default-groups-seed.service');
+      const mockDs = {
+        getRepository: jest.fn(),
+      } as any;
+      const service = new DefaultGroupsSeedService(mockDs);
+      await service.seed();
+      expect(mockDs.getRepository).not.toHaveBeenCalled();
+    });
+
+    it('seeds when SEED_DEFAULT_GROUPS is true and groups count is 0', async () => {
+      process.env.SEED_DEFAULT_GROUPS = 'true';
+      try {
+        const { DefaultGroupsSeedService } = await import('../default-groups-seed.service');
+        const mockGroupRepo = {
+          count: jest.fn().mockResolvedValue(0),
+          create: jest.fn().mockImplementation((d) => ({ ...d, id: 99 })),
+          save: jest.fn().mockImplementation((g) => Promise.resolve(g)),
+        };
+        const mockPermRepo = {
+          create: jest.fn().mockImplementation((p) => p),
+          save: jest.fn().mockResolvedValue([]),
+        };
+        const mockDs = {
+          getRepository: jest.fn().mockImplementation((entity) => {
+            if (entity.name === 'UserGroup') return mockGroupRepo;
+            return mockPermRepo;
+          }),
+        } as any;
+        const service = new DefaultGroupsSeedService(mockDs);
+        await service.seed();
+        expect(mockGroupRepo.count).toHaveBeenCalled();
+        expect(mockGroupRepo.save).toHaveBeenCalledTimes(DEFAULT_GROUP_TEMPLATES.length);
+      } finally {
+        delete process.env.SEED_DEFAULT_GROUPS;
+      }
+    });
+  });
 });
