@@ -1854,8 +1854,8 @@ const PurchasingPage: React.FC = () => {
                                                     style={{ width: '100%', minWidth: 400 }}
                                                     value={r.print_design_id || r.print_design?.id}
                                                     onDropdownVisibleChange={(open) => {
-                                                        if (open) {
-                                                            api.get(`/designs/print-designs`).then(res => setPrintDesigns(res.data)).catch(console.error);
+                                                        if (open && canViewDesign) {
+                                                            api.get(`/designs/print-designs`).then(res => setPrintDesigns(res.data)).catch(() => ({ data: [] }));
                                                         }
                                                     }}
                                                     onChange={(val) => {

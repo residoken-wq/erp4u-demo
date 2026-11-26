@@ -170,8 +170,8 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
 
     // Seed minimal fixtures so that GET endpoints return 200 without DB relations errors
     await adminDs.query(
-      `INSERT INTO "tenant_matrix"."products" ("id", "sku", "name", "unit", "base_price", "cost_price", "is_active") VALUES
-       (101, 'SKU-MTRX-01', 'San pham Matrix 01', 'cai', 100000, 70000, true)
+      `INSERT INTO "tenant_matrix"."products" ("id", "sku", "name", "unit", "base_price", "cost_price", "profit_margin", "is_active") VALUES
+       (101, 'SKU-MTRX-01', 'San pham Matrix 01', 'cai', 100000, 70000, 30.00, true)
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
@@ -378,6 +378,8 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
         '/api/inventory/shipping-carriers',
         '/api/inventory/goods-issue',
         '/api/materials',
+        '/api/products',
+        '/api/products/101',
         '/api/system/dashboard/stats',
         '/api/tasks',
         '/api/auth/me',
@@ -630,6 +632,136 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
 
         expect(res.status).toBe(200);
       }
+    });
+
+    describe('Cost Price Visibility Verification at ENFORCE (P12b2-r3)', () => {
+      it('user nhóm Kinh doanh (view_cost_price = false) gọi GET /products -> không có khoá cost_price, profit_margin', async () => {
+        if (!dbAvailable) return;
+
+        const token = jwtService.sign({
+          sub: 2,
+          username: 'user_sales',
+          group_id: 2,
+          tid: 'tenant_matrix',
+        });
+
+        const res = await request(app.getHttpServer())
+          .get('/api/products')
+          .set('X-Test-Tenant', 'tenant_matrix')
+          .set('Authorization', `Bearer ${token}`);
+
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+        expect(res.body.length).toBeGreaterThan(0);
+        for (const prod of res.body) {
+          expect(prod).not.toHaveProperty('cost_price');
+          expect(prod).not.toHaveProperty('profit_margin');
+          expect('cost_price' in prod).toBe(false);
+          expect('profit_margin' in prod).toBe(false);
+        }
+
+        const resOne = await request(app.getHttpServer())
+          .get('/api/products/101')
+          .set('X-Test-Tenant', 'tenant_matrix')
+          .set('Authorization', `Bearer ${token}`);
+
+        expect(resOne.status).toBe(200);
+        expect(resOne.body).not.toHaveProperty('cost_price');
+        expect(resOne.body).not.toHaveProperty('profit_margin');
+        expect('cost_price' in resOne.body).toBe(false);
+        expect('profit_margin' in resOne.body).toBe(false);
+      });
+
+      it('user nhóm Kế toán (có view_cost_price = true) gọi GET /products -> có khoá cost_price, profit_margin', async () => {
+        if (!dbAvailable) return;
+
+        const token = jwtService.sign({
+          sub: 6,
+          username: 'user_accounting',
+          group_id: 6,
+          tid: 'tenant_matrix',
+        });
+
+        const res = await request(app.getHttpServer())
+          .get('/api/products')
+          .set('X-Test-Tenant', 'tenant_matrix')
+          .set('Authorization', `Bearer ${token}`);
+
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+        expect(res.body.length).toBeGreaterThan(0);
+        const prod = res.body.find((p: any) => p.id === 101);
+        expect(prod).toBeDefined();
+        expect(prod).toHaveProperty('cost_price');
+        expect(prod).toHaveProperty('profit_margin');
+        expect('cost_price' in prod).toBe(true);
+        expect('profit_margin' in prod).toBe(true);
+        expect(Number(prod.cost_price)).toBe(70000);
+
+        const resOne = await request(app.getHttpServer())
+          .get('/api/products/101')
+          .set('X-Test-Tenant', 'tenant_matrix')
+          .set('Authorization', `Bearer ${token}`);
+
+        expect(resOne.status).toBe(200);
+        expect(resOne.body).toHaveProperty('cost_price');
+        expect(resOne.body).toHaveProperty('profit_margin');
+        expect('cost_price' in resOne.body).toBe(true);
+        expect('profit_margin' in resOne.body).toBe(true);
+        expect(Number(resOne.body.cost_price)).toBe(70000);
+      });
+
+      it('user nhóm Kho (view_cost_price = false) gọi GET /products -> 200 nhưng không có cost_price, profit_margin', async () => {
+        if (!dbAvailable) return;
+
+        const token = jwtService.sign({
+          sub: 3,
+          username: 'user_warehouse',
+          group_id: 3,
+          tid: 'tenant_matrix',
+        });
+
+        const res = await request(app.getHttpServer())
+          .get('/api/products')
+          .set('X-Test-Tenant', 'tenant_matrix')
+          .set('Authorization', `Bearer ${token}`);
+
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+        expect(res.body.length).toBeGreaterThan(0);
+        for (const prod of res.body) {
+          expect(prod).not.toHaveProperty('cost_price');
+          expect(prod).not.toHaveProperty('profit_margin');
+          expect('cost_price' in prod).toBe(false);
+          expect('profit_margin' in prod).toBe(false);
+        }
+      });
+
+      it('Superadmin (username === "admin") gọi GET /products -> có khoá cost_price, profit_margin', async () => {
+        if (!dbAvailable) return;
+
+        const token = jwtService.sign({
+          sub: 8,
+          username: 'admin',
+          group_id: 1,
+          tid: 'tenant_matrix',
+        });
+
+        const res = await request(app.getHttpServer())
+          .get('/api/products')
+          .set('X-Test-Tenant', 'tenant_matrix')
+          .set('Authorization', `Bearer ${token}`);
+
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+        expect(res.body.length).toBeGreaterThan(0);
+        const prod = res.body.find((p: any) => p.id === 101);
+        expect(prod).toBeDefined();
+        expect(prod).toHaveProperty('cost_price');
+        expect(prod).toHaveProperty('profit_margin');
+        expect('cost_price' in prod).toBe(true);
+        expect('profit_margin' in prod).toBe(true);
+      });
     });
   });
 });

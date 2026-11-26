@@ -48,7 +48,7 @@ const CategoriesPage: React.FC = () => {
       { title: 'Kích thước', dataIndex: 'size' },
       { 
           title: '% Biên Lợi Nhuận (Mong muốn)', dataIndex: 'profit_margin', align: 'center' as const,
-          render: (v:any) => <span style={{color: '#272F72', fontWeight:'bold', fontSize:16}}>{v}%</span>
+          render: (v:any) => v != null && !isNaN(Number(v)) ? <span style={{color: '#272F72', fontWeight:'bold', fontSize:16}}>{v}%</span> : '—'
       },
       { 
           title: '', key: 'act', align: 'right' as const, width: 140,

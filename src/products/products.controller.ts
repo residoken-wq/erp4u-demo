@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateVariantDto } from './dto/create-variant.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -6,12 +6,17 @@ import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermission, RequireAnyPermission, AuthOnly, Perm, AnyPerm } from '../auth/permissions.decorator';
 import { CorePackage, RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { PermissionCacheService } from '../auth/permission-cache.service';
+import { stripCostPrice } from './cost-filter.helper';
 
 @Controller('products')
 @CorePackage()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ProductsController {
-  constructor(private readonly service: ProductsService) { }
+  constructor(
+    private readonly service: ProductsService,
+    private readonly permCacheService: PermissionCacheService,
+  ) { }
 
   // --- API PACKING SPECS (QUY CÁCH ĐÓNG GÓI) ---
   @RequirePermission('PRODUCT', 'can_view')
@@ -51,28 +56,61 @@ export class ProductsController {
     ['PURCHASE', 'can_view'],
     ['PRODUCTION', 'can_view'],
     ['SALES', 'can_view'],
+    ['INVENTORY', 'can_view'],
   )
   @AnyPerm(
     ['PRODUCT', 'view'],
     ['PURCHASE', 'view'],
     ['PRODUCTION', 'view'],
     ['SALES', 'view'],
+    ['INVENTORY', 'view'],
   )
-  @Get() findAll() { return this.service.findAll(); }
+  @Get()
+  async findAll(@Req() req?: any) {
+    const products = await this.service.findAll();
+    const canViewCost = await this.permCacheService.canViewCostPrice(req?.user, [
+      'PRODUCT',
+      'PURCHASE',
+      'PRODUCTION',
+      'SALES',
+      'INVENTORY',
+    ]);
+    if (!canViewCost) {
+      return stripCostPrice(products);
+    }
+    return products;
+  }
 
   @RequireAnyPermission(
     ['PRODUCT', 'can_view'],
     ['PURCHASE', 'can_view'],
     ['PRODUCTION', 'can_view'],
     ['SALES', 'can_view'],
+    ['INVENTORY', 'can_view'],
   )
   @AnyPerm(
     ['PRODUCT', 'view'],
     ['PURCHASE', 'view'],
     ['PRODUCTION', 'view'],
     ['SALES', 'view'],
+    ['INVENTORY', 'view'],
   )
-  @Get(':id') findOne(@Param('id') id: number) { return this.service.findOne(Number(id)); }
+  @Get(':id')
+  async findOne(@Param('id') id: number, @Req() req?: any) {
+    const product = await this.service.findOne(Number(id));
+    if (!product) return product;
+    const canViewCost = await this.permCacheService.canViewCostPrice(req?.user, [
+      'PRODUCT',
+      'PURCHASE',
+      'PRODUCTION',
+      'SALES',
+      'INVENTORY',
+    ]);
+    if (!canViewCost) {
+      return stripCostPrice(product);
+    }
+    return product;
+  }
 
   @Perm('PRODUCT', 'create') @Post() @RequirePermission('PRODUCT', 'can_create') create(@Body() b: any) { return this.service.create(b); }
   @Perm('PRODUCT', 'update') @Put(':id') @RequirePermission('PRODUCT', 'can_update') update(@Param('id') id: number, @Body() b: any) { return this.service.update(id, b); }
@@ -119,26 +157,70 @@ export class ProductsController {
   @Post(':id/website-config') saveWebsiteConfig(@Param('id') id: number, @Body() b: any) { return this.service.saveWebsiteConfig(Number(id), b); }
   // --------------------------
 
+  @RequireAnyPermission(
+    ['PRODUCT', 'can_view'],
+    ['PURCHASE', 'can_view'],
+    ['PRODUCTION', 'can_view'],
+    ['SALES', 'can_view'],
+    ['INVENTORY', 'can_view'],
+  )
   @AnyPerm(
     ['PRODUCT', 'view'],
     ['PURCHASE', 'view'],
     ['PRODUCTION', 'view'],
     ['SALES', 'view'],
+    ['INVENTORY', 'view'],
   )
-  @Get(':sku/boms') getBoms(@Param('sku') sku: string) { return this.service.getBomByProductSku(sku); }
+  @Get(':sku/boms')
+  async getBoms(@Param('sku') sku: string, @Req() req?: any) {
+    const boms = await this.service.getBomByProductSku(sku);
+    const canViewCost = await this.permCacheService.canViewCostPrice(req?.user, [
+      'PRODUCT',
+      'PURCHASE',
+      'PRODUCTION',
+      'SALES',
+      'INVENTORY',
+    ]);
+    if (!canViewCost) {
+      return stripCostPrice(boms);
+    }
+    return boms;
+  }
   @Perm('PRODUCT', 'update')
   @Post(':id/boms') saveBoms(@Param('id') id: number, @Body() b: any) { return this.service.saveBoms(Number(id), b); }
 
   @Perm('PRODUCT', 'create')
   @Post(':id/sync-variants') syncVariants(@Param('id') id: number) { return this.service.syncToVariants(id); }
 
+  @RequireAnyPermission(
+    ['PRODUCT', 'can_view'],
+    ['PURCHASE', 'can_view'],
+    ['PRODUCTION', 'can_view'],
+    ['SALES', 'can_view'],
+    ['INVENTORY', 'can_view'],
+  )
   @AnyPerm(
     ['PRODUCT', 'view'],
     ['PURCHASE', 'view'],
     ['PRODUCTION', 'view'],
     ['SALES', 'view'],
+    ['INVENTORY', 'view'],
   )
-  @Get('combo/:sku') getCombo(@Param('sku') sku: string) { return this.service.getComboComponents(sku); }
+  @Get('combo/:sku')
+  async getCombo(@Param('sku') sku: string, @Req() req?: any) {
+    const combo = await this.service.getComboComponents(sku);
+    const canViewCost = await this.permCacheService.canViewCostPrice(req?.user, [
+      'PRODUCT',
+      'PURCHASE',
+      'PRODUCTION',
+      'SALES',
+      'INVENTORY',
+    ]);
+    if (!canViewCost) {
+      return stripCostPrice(combo);
+    }
+    return combo;
+  }
   @Perm('PRODUCT', 'create')
   @Post('combo/add') addComboItem(@Body() body: any) { return this.service.addComponent(body.parentSku, body.childSku, Number(body.qty)); }
   @Perm('PRODUCT', 'delete')

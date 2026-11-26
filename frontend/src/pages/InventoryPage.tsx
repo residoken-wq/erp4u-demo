@@ -104,7 +104,7 @@ const InventoryPage: React.FC = () => {
     const adjustmentType = Form.useWatch('type', form);
     const itemType = Form.useWatch('itemType', form);
 
-    const { canCreate, canUpdate, canDelete } = usePermission('INVENTORY');
+    const { canCreate, canUpdate, canDelete, canViewCost } = usePermission('INVENTORY');
     const { canView: canViewPurchasing } = usePermission('PURCHASE');
     const { canView: canViewPlanning } = usePermission('PRODUCTION');
 
@@ -112,7 +112,7 @@ const InventoryPage: React.FC = () => {
         setLoading(true);
         try {
             const [pRes, mRes, sRes, hRes, grRes, dRes, cdRes, cRes, giRes, supRes, poRes, pfoRes] = await Promise.all([
-                api.get('/lookups/products').catch(() => ({ data: [] })),
+                api.get('/products').catch(() => ({ data: [] })),
                 api.get('/materials').catch(() => ({ data: [] })),
                 api.get('/inventory/stocks'),
                 api.get('/inventory/history').catch(() => ({ data: [] })),
@@ -790,7 +790,7 @@ const InventoryPage: React.FC = () => {
                     ) : (
                         <Space>
                             <Tag color="gold" style={{ fontSize: 14, padding: '5px 10px' }}>
-                                Tổng giá trị: <b>{filteredMasterData.reduce((sum, item) => sum + (Number(item.quantity_in_stock || 0) * Number(item.cost_price || item.cost_per_unit || 0)), 0).toLocaleString()} ₫</b>
+                                Tổng giá trị: <b>{canViewCost ? `${filteredMasterData.reduce((sum, item) => sum + (Number(item.quantity_in_stock || 0) * Number(item.cost_price || item.cost_per_unit || 0)), 0).toLocaleString()} ₫` : '—'}</b>
                             </Tag>
                             <Divider type="vertical" />
                             <Input.Search
