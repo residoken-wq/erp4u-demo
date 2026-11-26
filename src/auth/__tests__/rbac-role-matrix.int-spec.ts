@@ -206,7 +206,8 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
     );
     await adminDs.query(
       `INSERT INTO "tenant_matrix"."purchase_orders" ("id", "uuid", "po_code", "supplier_id", "type", "status") VALUES
-       (801, 'd0000000-0000-0000-0000-000000000801', 'PO-MTRX-01', 301, 'MATERIAL', 'DRAFT')
+       (801, 'd0000000-0000-0000-0000-000000000801', 'PO-MTRX-01', 301, 'MATERIAL', 'DRAFT'),
+       (802, 'd0000000-0000-0000-0000-000000000802', 'PO-MTRX-POOLED-01', 301, 'POOLED', 'DRAFT')
        ON CONFLICT DO NOTHING`,
     );
 
@@ -276,7 +277,7 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
         '/api/purchasing',
         '/api/purchasing/801',
         '/api/purchasing/available-for-pooling',
-        '/api/purchasing/pooled/801/aggregate',
+        '/api/purchasing/pooled/802/aggregate',
         '/api/inventory/stocks',
         '/api/inventory/history',
         '/api/inventory/goods-receipt/pending',
@@ -406,7 +407,7 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
         '/api/purchasing',
         '/api/purchasing/801',
         '/api/purchasing/available-for-pooling',
-        '/api/purchasing/pooled/801/aggregate',
+        '/api/purchasing/pooled/802/aggregate',
         '/api/inventory/goods-receipt/po/801',
         '/api/planning/pfo/701',
         '/api/products',
@@ -564,6 +565,9 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
             .set('X-Test-Tenant', 'tenant_matrix')
             .set('Authorization', `Bearer ${token}`);
 
+          if (![200, 204].includes(res.status)) {
+            console.error(`[FAIL] Role [${testRole.roleName}] GET ${endpoint} returned ${res.status}:`, res.body);
+          }
           expect(res.status).not.toBe(403);
           expect([200, 204]).toContain(res.status);
         }
