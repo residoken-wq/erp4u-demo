@@ -9,7 +9,7 @@ import { PackageKey } from '../common/packages/package.registry';
 export class MaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
 
-  @AuthOnly()
+  @Perm('INVENTORY', 'view')
   @Get()
   findAll() { return this.materialsService.findAll(); }
 

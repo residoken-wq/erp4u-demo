@@ -41,7 +41,7 @@ const SalesStrategyDashboard: React.FC = () => {
                         productType: productTypeFilter,
                     }
                 }),
-                api.get('/users'),
+                api.get('/lookups/users'),
             ]);
             setData(analyticsRes.data);
             setUsers(usersRes.data || []);

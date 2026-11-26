@@ -9,7 +9,7 @@ import { PackageKey } from '../common/packages/package.registry';
 export class ProcessesController {
   constructor(private readonly s: ProcessesService) {}
 
-  @AuthOnly()
+  @Perm('PRODUCTION', 'view')
   @Get() findAll() { return this.s.findAll(); }
   @Perm('PRODUCTION', 'create')
   @Post() create(@Body() b: any) { return this.s.create(b); }

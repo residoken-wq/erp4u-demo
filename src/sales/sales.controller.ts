@@ -19,14 +19,17 @@ export class SalesController {
     // 1. CÁC API TĨNH (STATIC ROUTES) - ĐẶT LÊN ĐẦU ĐỂ TRÁNH CONFLICT
     // ============================================================
 
+    @Perm('SALES', 'create')
     @Post('price-lists')
     @RequirePermission('SALES', 'can_create')
     createPriceList(@Body() body: any) { return this.s.createPriceList(body); }
 
+    @Perm('SALES', 'view')
     @Get('price-lists')
     @RequirePermission('SALES', 'can_view')
     getAllPriceLists() { return this.s.getAllPriceLists(); }
 
+    @Perm('SALES', 'create')
     @Post('price-lists/:id/rules')
     @RequirePermission('SALES', 'can_create')
     createRule(@Param('id') id: number, @Body() body: any) { return this.s.createPriceListRule(id, body); }
@@ -46,6 +49,7 @@ export class SalesController {
     getAllSamples() { return this.s.sampleRepo.find({ order: { created_at: 'DESC' } }); }
 
     // --- ANALYTICS DASHBOARD ---
+    @Perm('SALES', 'view')
     @Get('analytics')
     @RequirePermission('SALES', 'can_view')
     getAnalytics(@Query() query: any) {
@@ -57,6 +61,7 @@ export class SalesController {
         });
     }
 
+    @Perm('SALES', 'view')
     @Post('analytics/push-reminder')
     @RequirePermission('SALES', 'can_view')
     pushReminder(@Body() body: any) {
@@ -64,12 +69,14 @@ export class SalesController {
     }
 
     // --- SALES TARGETS ---
+    @Perm('SALES', 'view')
     @Get('targets')
     @RequirePermission('SALES', 'can_view')
     getTargets(@Query('year') year: number) {
         return this.s.getTargets(Number(year) || new Date().getFullYear());
     }
 
+    @Perm('SALES', 'update')
     @Post('targets')
     @RequirePermission('SALES', 'can_update')
     upsertTarget(@Body() body: any) {
@@ -91,16 +98,19 @@ export class SalesController {
         return this.s.getActivePromotionsForCustomer(Number(customerId));
     }
 
+    @Perm('SALES', 'create')
     @Post('promotions')
     @RequirePermission('SALES', 'can_create')
     createPromotion(@Body() body: any) { return this.s.createPromotion(body); }
 
+    @Perm('SALES', 'update')
     @Put('promotions/:id')
     @RequirePermission('SALES', 'can_update')
     updatePromotion(@Param('id') id: number, @Body() body: any) {
         return this.s.updatePromotion(Number(id), body);
     }
 
+    @Perm('SALES', 'delete')
     @Delete('promotions/:id')
     @RequirePermission('SALES', 'can_delete')
     deletePromotion(@Param('id') id: number) {
@@ -166,36 +176,42 @@ export class SalesController {
     getPaymentHistory(@Param('code') code: string) { return this.s.getPaymentHistory(code); }
 
     // --- EASYINVOICE APIS ---
+    @Perm('SALES', 'update')
     @Post(':id/issue-vat-invoice')
     @RequirePermission('SALES', 'can_update')
     issueVatInvoice(@Param('id') id: number, @Body() body?: { items?: any[] }) {
         return this.s.issueVatInvoice(Number(id), body);
     }
 
+    @Perm('SALES', 'view')
     @Get(':id/vat-invoice-status')
     @RequirePermission('SALES', 'can_view')
     getVatInvoiceStatus(@Param('id') id: number, @Query('ikey') ikey?: string) {
         return this.s.getVatInvoiceStatus(Number(id), ikey);
     }
 
+    @Perm('SALES', 'view')
     @Get(':id/vat-invoice-preview')
     @RequirePermission('SALES', 'can_view')
     previewVatInvoice(@Param('id') id: number, @Query('ikey') ikey?: string) {
         return this.s.previewVatInvoice(Number(id), ikey);
     }
 
+    @Perm('SALES', 'update')
     @Post(':id/vat-invoice-email')
     @RequirePermission('SALES', 'can_update')
     sendVatInvoiceEmail(@Param('id') id: number, @Body() body: { email: string; ikey?: string }) {
         return this.s.sendVatInvoiceEmail(Number(id), body.email, body.ikey);
     }
 
+    @Perm('SALES', 'update')
     @Delete(':id/vat-invoice/:ikey')
     @RequirePermission('SALES', 'can_update')
     deleteDraftVatInvoice(@Param('id') id: number, @Param('ikey') ikey: string) {
         return this.s.deleteDraftVatInvoice(Number(id), ikey);
     }
 
+    @Perm('SALES', 'view')
     @Get(':id/easyinvoice-pdf')
     @RequirePermission('SALES', 'can_view')
     async downloadEasyInvoicePdf(@Param('id') id: number, @Query('ikey') ikey: string, @Res() res: Response) {
@@ -243,10 +259,12 @@ export class SalesController {
     // 3. API ĐƠN HÀNG (DYNAMIC ROUTES)
     // ============================================================
 
+    @Perm('SALES', 'create')
     @Post()
     @RequirePermission('SALES', 'can_create')
     create(@Body() b: any) { return this.s.createOrder(b); }
 
+    @Perm('SALES', 'view')
     @Get()
     @RequirePermission('SALES', 'can_view')
     findAll() { return this.s.findAll(); }
@@ -261,6 +279,7 @@ export class SalesController {
     }
 
     // --- QUAN TRỌNG: FIX LỖI 404 CANNOT PUT ---
+    @Perm('SALES', 'update')
     @Put(':id')
     @RequirePermission('SALES', 'can_update')
     update(@Param('id') id: number, @Body() b: any) {
@@ -319,6 +338,7 @@ export class SalesController {
     }
 
     // --- DELETE ORDER (Only SO_PENDING status allowed) ---
+    @Perm('SALES', 'delete')
     @Delete(':id')
     @RequirePermission('SALES', 'can_delete')
     deleteOrder(@Param('id') id: number, @Query('cascade') cascade?: boolean) {

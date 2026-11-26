@@ -3,7 +3,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } fro
 import { SystemService } from './system.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
-import { RequirePermission, Perm, AuthOnly } from '../auth/permissions.decorator';
+import { RequirePermission, Perm, AnyPerm, AuthOnly } from '../auth/permissions.decorator';
 import { CorePackage } from '../common/packages/requires-package.decorator';
 
 @Controller('system')
@@ -62,6 +62,7 @@ export class SystemController {
 
     @UseGuards(JwtAuthGuard, PermissionsGuard)
     @RequirePermission('USERS', 'can_view')
+    @Perm('USERS', 'view')
     @Get('logs')
     getLogs(@Query('limit') limit?: string) {
         const parsedLimit = limit ? Math.min(Math.max(parseInt(limit, 10) || 5, 1), 100) : 100;
@@ -71,6 +72,7 @@ export class SystemController {
     // --- API TOKENS ---
     @UseGuards(JwtAuthGuard, PermissionsGuard)
     @RequirePermission('USERS', 'can_view')
+    @Perm('USERS', 'view')
     @Get('api-tokens')
     getApiTokens() {
         return this.s.listApiTokens();
@@ -78,6 +80,7 @@ export class SystemController {
 
     @UseGuards(JwtAuthGuard, PermissionsGuard)
     @RequirePermission('USERS', 'can_create')
+    @Perm('USERS', 'create')
     @Post('api-tokens')
     createApiToken(@Body() body: { name: string; permissions: string[] }) {
         return this.s.generateApiToken(body.name, body.permissions);
@@ -85,6 +88,7 @@ export class SystemController {
 
     @UseGuards(JwtAuthGuard, PermissionsGuard)
     @RequirePermission('USERS', 'can_delete')
+    @Perm('USERS', 'delete')
     @Delete('api-tokens/:id')
     revokeApiToken(@Param('id') id: number) {
         return this.s.revokeApiToken(id);
@@ -104,7 +108,7 @@ export class SystemController {
     }
 
     // --- CONTRACT TEMPLATES ---
-    @AuthOnly()
+    @AnyPerm(['SYSTEM', 'view'], ['SALES', 'view'])
     @Get('templates')
     getTemplates() { return this.s.getTemplates(); }
 
@@ -117,7 +121,7 @@ export class SystemController {
     deleteTemplate(@Param('id') id: number) { return this.s.deleteTemplate(id); }
 
     // --- EMAIL TEMPLATES ---
-    @AuthOnly()
+    @Perm('SYSTEM', 'view')
     @Get('email-templates')
     getEmailTemplates() { return this.s.getEmailTemplates(); }
 
@@ -148,7 +152,7 @@ export class SystemController {
     saveAboutConfig(@Body() body: any) { return this.s.saveAboutConfig(body); }
 
     // --- SO PROJECT TEMPLATE ---
-    @AuthOnly()
+    @Perm('SYSTEM', 'view')
     @Get('so-project-template')
     getSOProjectTemplate() { return this.s.getSOProjectTemplate(); }
 

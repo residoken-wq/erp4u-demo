@@ -121,7 +121,7 @@ export const ChatbotConfigTab: React.FC = () => {
       const [configRes, statusRes, usersRes] = await Promise.all([
         api.get('/chatbot/admin/config'),
         api.get('/chatbot/admin/status').catch(() => ({ data: null })),
-        api.get('/users').catch(() => ({ data: [] })),
+        api.get('/lookups/users').catch(() => ({ data: [] })),
       ]);
 
       const config = configRes.data;

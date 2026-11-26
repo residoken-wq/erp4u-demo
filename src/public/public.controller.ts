@@ -1,4 +1,5 @@
 import { Public } from '../auth/public.decorator';
+import { AuthOnly } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Delete, Body, Param, Query, HttpException, HttpStatus, Req, Res, Inject, Optional, Logger, UseGuards } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -277,6 +278,8 @@ export class PublicController {
         return this.salesService.portalDeleteComment(uuid, Number(commentId));
     }
 
+    // Route proxy-image trong PublicController có JwtAuthGuard bảo vệ chống SSRF abuse từ bên ngoài, chỉ người dùng đã xác thực mới được gọi
+    @AuthOnly()
     @UseGuards(JwtAuthGuard)
     @Get('proxy-image')
     async proxyImage(@Query('url') url: string, @Res() res: Response) {

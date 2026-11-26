@@ -34,6 +34,7 @@ import { DiscussionsModule } from './discussions/discussions.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SystemModule } from './system/system.module';
 import { PublicModule } from './public/public.module';
+import { LookupsModule } from './lookups/lookups.module';
 import { HrModule } from './hr/hr.module';
 import { EncryptionModule } from './common/encryption/encryption.module';
 import { MarketingModule } from './marketing/marketing.module';
@@ -232,6 +233,7 @@ export class Erp4uCoreModule implements OnModuleInit {
         PlanningModule,
         ProcessesModule,
         CategoriesModule,
+        LookupsModule,
         PublicModule,
         HrModule,
         MarketingModule, // Marketing campaigns, segments, automation

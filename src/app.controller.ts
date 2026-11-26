@@ -1,4 +1,5 @@
 import { Public } from './auth/public.decorator';
+import { AuthOnly } from './auth/permissions.decorator';
 import { Controller, Get, ServiceUnavailableException, Query, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { DataSource } from 'typeorm';
@@ -36,6 +37,8 @@ export class AppController {
         }
     }
 
+    // Route proxy-image có JwtAuthGuard bảo vệ chống SSRF abuse từ bên ngoài, chỉ người dùng đã xác thực mới được gọi
+    @AuthOnly()
     @UseGuards(JwtAuthGuard)
     @Get('proxy-image')
     async proxyImage(@Query('url') url: string, @Res() res: Response) {

@@ -20,6 +20,7 @@ export const PERMISSION_MODULES: PermissionModule[] = [
   { code: 'DASHBOARD', name: 'Tổng quan', group: 'Chung' },
   { code: 'PRODUCT', name: 'Quản lý Sản phẩm', group: 'Nghiệp vụ' },
   { code: 'SALES', name: 'Bán hàng (Sales/CRM)', group: 'Nghiệp vụ' },
+  { code: 'PROJECTS', name: 'Dự án', group: 'Nghiệp vụ' },
   { code: 'MARKETING', name: 'Marketing & Kênh bán (Social/TikTok)', group: 'Nghiệp vụ' },
   { code: 'INVENTORY', name: 'Kho & Tồn kho', group: 'Nghiệp vụ' },
   { code: 'PURCHASE', name: 'Mua hàng (PO)', group: 'Nghiệp vụ' },

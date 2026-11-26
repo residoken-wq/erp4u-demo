@@ -118,7 +118,7 @@ const CrmPage: React.FC = () => {
                 api.get('/customers').catch(e => ({ data: [] })),
                 api.get('/sales').catch(e => ({ data: [] })),
                 api.get('/products').catch(e => ({ data: [] })),
-                api.get('/users').catch(e => ({ data: [] }))
+                api.get('/lookups/users').catch(e => ({ data: [] }))
             ]);
 
             // Customers

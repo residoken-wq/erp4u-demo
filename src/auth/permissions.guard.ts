@@ -17,8 +17,10 @@ export class PermissionsGuard implements CanActivate {
     ) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
-        // 1. Đọc metadata từ decorator @RequirePermission
-        const requirement = this.reflector.getAllAndOverride<{ moduleCode: string; action: string }>(PERMISSION_KEY, [
+        // 1. Đọc metadata từ decorator @RequirePermission hoặc @RequireAnyPermission
+        const requirement = this.reflector.getAllAndOverride<
+            { moduleCode: string; action: string } | { any: { moduleCode: string; action: string }[] }
+        >(PERMISSION_KEY, [
             context.getHandler(),
             context.getClass(),
         ]);
@@ -48,7 +50,26 @@ export class PermissionsGuard implements CanActivate {
         }
 
         // 5. Query permission từ DB
-        const { moduleCode, action } = requirement;
+        if ('any' in requirement && Array.isArray((requirement as any).any)) {
+            const pairs: { moduleCode: string; action: string }[] = (requirement as any).any;
+            const perms = await this.permRepo.find({
+                where: {
+                    group_id: groupId,
+                },
+            });
+            const hasAny = pairs.some(({ moduleCode, action }) => {
+                const p = perms.find((item) => item.module_code === moduleCode);
+                return p && Boolean(p[action as keyof GroupPermission]);
+            });
+            if (!hasAny) {
+                throw new ForbiddenException(
+                    `Bạn không có quyền truy cập sản phẩm. Cần một trong các quyền: ${pairs.map((p) => `${p.moduleCode}:${p.action}`).join(', ')}`,
+                );
+            }
+            return true;
+        }
+
+        const { moduleCode, action } = requirement as { moduleCode: string; action: string };
         const perm = await this.permRepo.findOne({
             where: {
                 group_id: groupId,

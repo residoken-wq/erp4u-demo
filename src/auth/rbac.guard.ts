@@ -80,7 +80,7 @@ export class RbacGuard implements CanActivate {
       const user = this.verifyBearer(req);
 
       // 5. Decision
-      let decision: 'ALLOW' | 'DENY_NO_AUTH' | 'DENY_NO_PERM' = 'ALLOW';
+      let decision: 'ALLOW' | 'DENY_NO_AUTH' | 'DENY_NO_PERM' | 'ALLOW_SELF' = 'ALLOW';
       let failedModule = '';
       let failedAction = '';
 
@@ -88,6 +88,7 @@ export class RbacGuard implements CanActivate {
         decision = 'DENY_NO_AUTH';
       } else if (user.username === 'admin') {
         decision = 'ALLOW';
+        req.rbacSelfOnly = false;
       } else if (rule.tier === 'PERM') {
         const hasPerm = await this.permCacheService.hasAny(user.groupId, rule.any);
         if (!hasPerm) {
@@ -97,11 +98,21 @@ export class RbacGuard implements CanActivate {
             failedAction = rule.any[0].action;
           }
         }
+      } else if (rule.tier === 'AUTH' && rule.selfOr) {
+        const hasPerm = await this.permCacheService.hasAny(user.groupId, [rule.selfOr]);
+        if (!hasPerm) {
+          decision = 'ALLOW_SELF';
+          req.rbacSelfOnly = true;
+        } else {
+          req.rbacSelfOnly = false;
+        }
       }
 
       // 6. Record log if not ALLOW or unclassified
       let logDecision: string | null = null;
-      if (decision !== 'ALLOW') {
+      if (decision === 'ALLOW_SELF') {
+        logDecision = 'ALLOW_SELF';
+      } else if (decision !== 'ALLOW') {
         logDecision = decision;
       } else if (!classified) {
         logDecision = 'UNCLASSIFIED';
@@ -111,6 +122,8 @@ export class RbacGuard implements CanActivate {
         let requiredStr: string | null = null;
         if (rule.tier === 'PERM') {
           requiredStr = rule.any.map((r) => `${r.module}:${r.action}`).join(' | ');
+        } else if (rule.selfOr) {
+          requiredStr = `selfOr(${rule.selfOr.module}:${rule.selfOr.action})`;
         } else {
           requiredStr = 'AUTH';
         }

@@ -306,30 +306,35 @@ export class HrController {
 
     // ==================== RECRUITMENT ====================
 
+    @Perm('HR', 'view')
     @Get('recruitment/jobs')
     @RequirePermission('HR', 'can_view')
     findAllJobs() {
         return this.hrService.findAllJobs();
     }
 
+    @Perm('HR', 'create')
     @Post('recruitment/jobs')
     @RequirePermission('HR', 'can_create')
     createJob(@Body() data: any) {
         return this.hrService.createJob(data);
     }
 
+    @Perm('HR', 'update')
     @Put('recruitment/jobs/:id')
     @RequirePermission('HR', 'can_update')
     updateJob(@Param('id') id: string, @Body() data: any) {
         return this.hrService.updateJob(+id, data);
     }
 
+    @Perm('HR', 'delete')
     @Delete('recruitment/jobs/:id')
     @RequirePermission('HR', 'can_delete')
     deleteJob(@Param('id') id: string) {
         return this.hrService.deleteJob(+id);
     }
 
+    @Perm('HR', 'create')
     @Post('recruitment/jobs/parse-requirements')
     @RequirePermission('HR', 'can_create')
     parseRequirements(@Body('description') description: string) {
@@ -339,48 +344,56 @@ export class HrController {
         return this.hrService.parseJDCompetencies(description);
     }
 
+    @Perm('HR', 'view')
     @Get('recruitment/candidates')
     @RequirePermission('HR', 'can_view')
     findCandidates(@Query('job_id') jobId?: string) {
         return this.hrService.findCandidates(jobId ? +jobId : undefined);
     }
 
+    @Perm('HR', 'create')
     @Post('recruitment/candidates')
     @RequirePermission('HR', 'can_create')
     createCandidate(@Body() data: any) {
         return this.hrService.createCandidate(data);
     }
 
+    @Perm('HR', 'update')
     @Put('recruitment/candidates/:id')
     @RequirePermission('HR', 'can_update')
     updateCandidate(@Param('id') id: string, @Body() data: any) {
         return this.hrService.updateCandidate(+id, data);
     }
 
+    @Perm('HR', 'delete')
     @Delete('recruitment/candidates/:id')
     @RequirePermission('HR', 'can_delete')
     deleteCandidate(@Param('id') id: string) {
         return this.hrService.deleteCandidate(+id);
     }
 
+    @Perm('HR', 'update')
     @Post('recruitment/candidates/:id/send-assessment')
     @RequirePermission('HR', 'can_update')
     sendAssessment(@Param('id') id: string, @Body('questions') questions: any[]) {
         return this.hrService.createAssessment(+id, questions);
     }
 
+    @Perm('HR', 'update')
     @Post('recruitment/candidates/:id/generate-questions')
     @RequirePermission('HR', 'can_update')
     generateQuestions(@Param('id') id: string) {
         return this.hrService.generateAIQuestions(+id);
     }
 
+    @Perm('HR', 'view')
     @Get('recruitment/assessments/:candidateId')
     @RequirePermission('HR', 'can_view')
     getAssessment(@Param('candidateId') candidateId: string) {
         return this.hrService.getAssessmentByCandidate(+candidateId);
     }
     
+    @Perm('HR', 'update')
     @Post('recruitment/assessments/:id/evaluate')
     @RequirePermission('HR', 'can_update')
     evaluateAssessment(@Param('id') id: string) {
@@ -409,24 +422,28 @@ export class HrController {
         return this.hrService.rejectAssessment(+id, req.user, body?.reason);
     }
 
+    @Perm('HR', 'view')
     @Get('recruitment/interviews')
     @RequirePermission('HR', 'can_view')
     findInterviews(@Query('candidate_id') candidateId?: string) {
         return this.hrService.findInterviews(candidateId ? +candidateId : undefined);
     }
 
+    @Perm('HR', 'create')
     @Post('recruitment/interviews')
     @RequirePermission('HR', 'can_create')
     createInterview(@Body() data: any) {
         return this.hrService.createInterview(data);
     }
 
+    @Perm('HR', 'update')
     @Put('recruitment/interviews/:id')
     @RequirePermission('HR', 'can_update')
     updateInterview(@Param('id') id: string, @Body() data: any) {
         return this.hrService.updateInterview(+id, data);
     }
 
+    @Perm('HR', 'delete')
     @Delete('recruitment/interviews/:id')
     @RequirePermission('HR', 'can_delete')
     deleteInterview(@Param('id') id: string) {

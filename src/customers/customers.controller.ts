@@ -12,8 +12,8 @@ import { CorePackage } from '../common/packages/requires-package.decorator';
 export class CustomersController {
   constructor(private readonly s: CustomersService) { }
 
-  @Post() @RequirePermission('SALES', 'can_create') create(@Body() b: any) { return this.s.create(b); }
-  @Get() @RequirePermission('SALES', 'can_view') findAll(
+  @Perm('SALES', 'create') @Post() @RequirePermission('SALES', 'can_create') create(@Body() b: any) { return this.s.create(b); }
+  @Perm('SALES', 'view') @Get() @RequirePermission('SALES', 'can_view') findAll(
     @Query('type') type?: CustomerType,
     @Query('limit') limit?: string,
     @Query('compact') compact?: string,
@@ -24,10 +24,11 @@ export class CustomersController {
       compact: compact === 'true',
     });
   }
-  @Get(':id') @RequirePermission('SALES', 'can_view') findOne(@Param('id') id: number) { return this.s.findOne(id); }
-  @Put(':id') @RequirePermission('SALES', 'can_update') update(@Param('id') id: number, @Body() b: any) { return this.s.update(id, b); }
-  @Delete(':id') @RequirePermission('SALES', 'can_delete') remove(@Param('id') id: number) { return this.s.remove(id); }
+  @Perm('SALES', 'view') @Get(':id') @RequirePermission('SALES', 'can_view') findOne(@Param('id') id: number) { return this.s.findOne(id); }
+  @Perm('SALES', 'update') @Put(':id') @RequirePermission('SALES', 'can_update') update(@Param('id') id: number, @Body() b: any) { return this.s.update(id, b); }
+  @Perm('SALES', 'delete') @Delete(':id') @RequirePermission('SALES', 'can_delete') remove(@Param('id') id: number) { return this.s.remove(id); }
 
+  @Perm('SALES', 'view')
   @Post(':id/impersonate')
   @RequirePermission('SALES', 'can_view')
   async impersonate(@Param('id') id: number) {

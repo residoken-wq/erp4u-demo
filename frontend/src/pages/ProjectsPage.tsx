@@ -50,7 +50,7 @@ const ProjectsPage: React.FC = () => {
         try {
             const [resProjects, resUsers] = await Promise.all([
                 api.get('/projects'),
-                api.get('/users')
+                api.get('/lookups/users')
             ]);
             setProjects(resProjects.data);
             setManagers(resUsers.data);

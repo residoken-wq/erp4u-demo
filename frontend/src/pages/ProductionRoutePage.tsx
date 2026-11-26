@@ -24,7 +24,7 @@ const ProductionRoutePage: React.FC = () => {
         const prods = Array.isArray(resProd.data) ? resProd.data.filter((p:any) => !p.category?.includes('Combo')) : [];
         setProducts(prods);
 
-        const resSupp = await api.get('/suppliers');
+        const resSupp = await api.get('/lookups/suppliers');
         const manu = Array.isArray(resSupp.data) ? resSupp.data.filter((s:any) => s.type !== 'MATERIAL') : [];
         setManufacturers(manu.map((m:any) => ({ label: m.name, value: m.id })));
     } catch(e) {}

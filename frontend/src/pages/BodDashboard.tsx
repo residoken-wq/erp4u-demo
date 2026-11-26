@@ -38,7 +38,7 @@ const BodDashboard: React.FC = () => {
                         assignedToId: salesRepFilter,
                     }
                 }),
-                api.get('/users'),
+                api.get('/lookups/users'),
             ]);
             setData(analyticsRes.data);
             setUsers(usersRes.data || []);

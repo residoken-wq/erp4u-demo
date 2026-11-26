@@ -1,4 +1,12 @@
-import { Injectable, Logger, Optional, Inject } from '@nestjs/common';
+import {
+    Injectable,
+    Logger,
+    Optional,
+    Inject,
+    NotFoundException,
+    ForbiddenException,
+    forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, IsNull } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -7,6 +15,28 @@ import { TaskTimeLog } from './task-time-log.entity';
 import { Notification } from '../notifications/notification.entity';
 import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../common/tenancy/tenant-context';
 import { TENANT_REGISTRY, TenantRegistry } from '../common/tenancy/tenant-registry.interface';
+import { PermissionCacheService } from '../auth/permission-cache.service';
+import { hasPermission } from '../auth/rbac-assert.helper';
+
+export const ALLOWED_TASK_FIELDS = [
+    'title',
+    'description',
+    'status',
+    'priority',
+    'start_date',
+    'due_date',
+    'is_reminded',
+    'reference_code',
+    'reference_type',
+    'project_id',
+    'milestone_id',
+    'estimated_hours',
+    'estimated_cost',
+    'actual_cost',
+    'cost_note',
+    'department',
+    'assignee_id',
+];
 
 @Injectable()
 export class TasksService {
@@ -19,15 +49,40 @@ export class TasksService {
         @Optional()
         @Inject(TENANT_REGISTRY)
         private readonly tenantRegistry?: TenantRegistry,
+        @Optional()
+        @Inject(forwardRef(() => PermissionCacheService))
+        private readonly permCacheService?: PermissionCacheService,
     ) { }
 
-    async findAll(filters?: { assignee_id?: number; status_not?: string; limit?: number }) {
+    private async canViewAllTasks(user: any): Promise<boolean> {
+        return hasPermission(user, this.permCacheService, 'PROJECTS', 'view');
+    }
+
+    private async canUpdateAllTasks(user: any): Promise<boolean> {
+        return hasPermission(user, this.permCacheService, 'PROJECTS', 'update');
+    }
+
+    private async canDeleteAllTasks(user: any): Promise<boolean> {
+        return hasPermission(user, this.permCacheService, 'PROJECTS', 'delete');
+    }
+
+    async findAll(
+        filters?: { assignee_id?: number; status_not?: string; limit?: number },
+        user?: any,
+    ) {
         const query = this.taskRepo.createQueryBuilder('task')
             .leftJoinAndSelect('task.assignee', 'assignee')
             .leftJoinAndSelect('task.creator', 'creator')
             .leftJoinAndSelect('task.project', 'project')
             .leftJoinAndSelect('task.milestone', 'milestone')
             .orderBy('task.created_at', 'DESC');
+
+        const canSeeAll = await this.canViewAllTasks(user);
+        const userId = Number(user?.id || user?.userId || 0);
+
+        if (!canSeeAll) {
+            query.andWhere('(task.creator_id = :userId OR task.assignee_id = :userId)', { userId });
+        }
 
         if (filters?.assignee_id) {
             query.andWhere('(task.assignee_id = :assignee_id OR task.creator_id = :assignee_id)', { assignee_id: filters.assignee_id });
@@ -42,8 +97,19 @@ export class TasksService {
         return query.getMany();
     }
 
-    async create(data: any) {
-        const newTask = this.taskRepo.create(data);
+    async create(data: any, user?: any) {
+        const userId = Number(user?.id || user?.userId || 0);
+        const sanitized: any = {};
+        for (const field of ALLOWED_TASK_FIELDS) {
+            if (data[field] !== undefined) {
+                sanitized[field] = data[field];
+            }
+        }
+        if (userId) {
+            sanitized.creator_id = userId;
+        }
+
+        const newTask = this.taskRepo.create(sanitized);
         const task = await this.taskRepo.save(newTask) as unknown as Task;
 
         // Notify assignee when assigned
@@ -62,43 +128,63 @@ export class TasksService {
         return task;
     }
 
-    async update(id: number, data: any) {
+    async update(id: number, data: any, user?: any) {
         const oldTask = await this.taskRepo.findOne({ where: { id }, relations: ['assignee', 'creator'] });
+        if (!oldTask) {
+            throw new NotFoundException('Không tìm thấy công việc');
+        }
+
+        const userId = Number(user?.id || user?.userId || 0);
+        const canUpdateAll = await this.canUpdateAllTasks(user);
+        const isCreator = oldTask.creator_id === userId;
+        const isAssignee = oldTask.assignee_id === userId;
+
+        if (!canUpdateAll && !isCreator && !isAssignee) {
+            throw new ForbiddenException('Bạn chỉ có thể chỉnh sửa công việc do mình tạo hoặc được giao');
+        }
+
+        const sanitized: any = {};
+        for (const field of ALLOWED_TASK_FIELDS) {
+            if (data[field] !== undefined) {
+                sanitized[field] = data[field];
+            }
+        }
+
         const oldStatus = oldTask?.status;
         const oldAssigneeId = oldTask?.assignee_id;
 
-        await this.taskRepo.update(id, data);
+        await this.taskRepo.update(id, sanitized);
         const updatedTask = await this.taskRepo.findOne({ where: { id }, relations: ['assignee', 'creator', 'project', 'milestone'] });
 
         // Notify if assignee changed
-        if (data.assignee_id && data.assignee_id !== oldAssigneeId && data.assignee_id !== updatedTask?.creator_id) {
+        if (sanitized.assignee_id && sanitized.assignee_id !== oldAssigneeId && sanitized.assignee_id !== updatedTask?.creator_id) {
             await this.notiRepo.save({
                 title: '📋 Bạn được giao việc mới',
                 message: `Công việc "${updatedTask?.title}" đã được giao cho bạn.`,
                 type: 'INFO',
-                user_id: data.assignee_id,
+                user_id: sanitized.assignee_id,
                 link: `/tasks?task=${id}&highlight=task-${id}`,
                 is_read: false
             });
-            this.logger.log(`Notified User ${data.assignee_id} about reassigned Task ${id}`);
+            this.logger.log(`Notified User ${sanitized.assignee_id} about reassigned Task ${id}`);
         }
 
         // Notify on status change
-        if (data.status && data.status !== oldStatus) {
+        if (sanitized.status && sanitized.status !== oldStatus) {
             const statusLabels: Record<string, string> = {
                 TODO: 'Chờ xử lý',
                 IN_PROGRESS: 'Đang thực hiện',
                 REVIEW: 'Chờ duyệt',
                 DONE: 'Hoàn thành'
             };
-            const statusLabel = statusLabels[data.status] || data.status;
+            const statusLabel = statusLabels[sanitized.status] || sanitized.status;
 
             // Notify creator (if different from who changed it)
             if (updatedTask?.creator_id && updatedTask.creator_id !== updatedTask.assignee_id) {
                 await this.notiRepo.save({
                     title: '🔄 Cập nhật trạng thái công việc',
                     message: `Công việc "${updatedTask.title}" đã chuyển sang: ${statusLabel}`,
-                    type: data.status === 'DONE' ? 'SUCCESS' : 'INFO',
+                    type: sanitized.status === 'DONE' ? 'SUCCESS' : 'INFO',
                     user_id: updatedTask.creator_id,
                     link: `/tasks?task=${id}&highlight=task-${id}`,
                     is_read: false
@@ -111,7 +197,7 @@ export class TasksService {
                 await this.notiRepo.save({
                     title: '🔄 Cập nhật trạng thái công việc',
                     message: `Công việc "${updatedTask.title}" đã chuyển sang: ${statusLabel}`,
-                    type: data.status === 'DONE' ? 'SUCCESS' : 'INFO',
+                    type: sanitized.status === 'DONE' ? 'SUCCESS' : 'INFO',
                     user_id: updatedTask.assignee_id,
                     link: `/tasks?task=${id}&highlight=task-${id}`,
                     is_read: false
@@ -123,13 +209,42 @@ export class TasksService {
         return updatedTask;
     }
 
-    async remove(id: number) { return this.taskRepo.delete(id); }
+    async remove(id: number, user?: any) {
+        const oldTask = await this.taskRepo.findOne({ where: { id } });
+        if (!oldTask) {
+            throw new NotFoundException('Không tìm thấy công việc');
+        }
+
+        const userId = Number(user?.id || user?.userId || 0);
+        const canDeleteAll = await this.canDeleteAllTasks(user);
+        const isCreator = oldTask.creator_id === userId;
+
+        if (!canDeleteAll && !isCreator) {
+            throw new ForbiddenException('Chỉ người tạo mới có quyền xóa công việc này');
+        }
+
+        return this.taskRepo.delete(id);
+    }
 
     // --- TASK TIMER ---
-    async startTimer(taskId: number, userId: number) {
+    async startTimer(taskId: number, user: any) {
+        const task = await this.taskRepo.findOne({ where: { id: taskId } });
+        if (!task) {
+            throw new NotFoundException('Không tìm thấy công việc');
+        }
+
+        const userId = Number(user?.id || user?.userId || (typeof user === 'number' ? user : 0));
+        const canUpdateAll = await this.canUpdateAllTasks(user);
+        const isCreator = task.creator_id === userId;
+        const isAssignee = task.assignee_id === userId;
+
+        if (!canUpdateAll && !isCreator && !isAssignee) {
+            throw new ForbiddenException('Bạn chỉ có thể bấm giờ cho công việc do mình tạo hoặc được giao');
+        }
+
         // Check if there's already a running timer for this user on this task
         const running = await this.timeLogRepo.findOne({
-            where: { task_id: taskId, user_id: userId, end_time: IsNull() } // Need IsNull import
+            where: { task_id: taskId, user_id: userId, end_time: IsNull() }
         });
 
         if (running) return running; // Already running
@@ -142,7 +257,21 @@ export class TasksService {
         return this.timeLogRepo.save(log);
     }
 
-    async stopTimer(taskId: number, userId: number, description?: string) {
+    async stopTimer(taskId: number, user: any, description?: string) {
+        const task = await this.taskRepo.findOne({ where: { id: taskId } });
+        if (!task) {
+            throw new NotFoundException('Không tìm thấy công việc');
+        }
+
+        const userId = Number(user?.id || user?.userId || (typeof user === 'number' ? user : 0));
+        const canUpdateAll = await this.canUpdateAllTasks(user);
+        const isCreator = task.creator_id === userId;
+        const isAssignee = task.assignee_id === userId;
+
+        if (!canUpdateAll && !isCreator && !isAssignee) {
+            throw new ForbiddenException('Bạn chỉ có thể dừng bấm giờ cho công việc do mình tạo hoặc được giao');
+        }
+
         const running = await this.timeLogRepo.findOne({
             where: { task_id: taskId, user_id: userId, end_time: IsNull() }
         });
@@ -157,7 +286,23 @@ export class TasksService {
         return this.timeLogRepo.save(running);
     }
 
-    async getTaskLogs(taskId: number) {
+    async getTaskLogs(taskId: number, user?: any) {
+        const task = await this.taskRepo.findOne({ where: { id: taskId } });
+        if (!task) {
+            throw new NotFoundException('Không tìm thấy công việc');
+        }
+
+        if (user) {
+            const userId = Number(user?.id || user?.userId || (typeof user === 'number' ? user : 0));
+            const canViewAll = await this.canViewAllTasks(user);
+            const isCreator = task.creator_id === userId;
+            const isAssignee = task.assignee_id === userId;
+
+            if (!canViewAll && !isCreator && !isAssignee) {
+                throw new ForbiddenException('Bạn chỉ có thể xem nhật ký của công việc do mình tạo hoặc được giao');
+            }
+        }
+
         return this.timeLogRepo.find({
             where: { task_id: taskId },
             relations: ['user'],

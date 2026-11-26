@@ -126,7 +126,7 @@ const SalesPage: React.FC = () => {
                 api.get('/sales').catch(e => ({ data: [] })),
                 api.get('/products').catch(e => ({ data: [] })),
                 api.get('/customers').catch(e => ({ data: [] })),
-                api.get('/users').catch(e => ({ data: [] }))
+                api.get('/lookups/users').catch(e => ({ data: [] }))
             ]);
 
             setData(Array.isArray(resSales.data) ? resSales.data : []);

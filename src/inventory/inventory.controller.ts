@@ -13,15 +13,18 @@ import { PackageKey } from '../common/packages/package.registry';
 export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) { }
 
+  @Perm('INVENTORY', 'view')
   @Get('history')
   @RequirePermission('INVENTORY', 'can_view')
   async getHistory() { return this.inventoryService.getHistory(); }
 
   // API lấy chi tiết tồn kho (để Frontend map vào bảng)
+  @Perm('INVENTORY', 'view')
   @Get('stocks')
   @RequirePermission('INVENTORY', 'can_view')
   async getStocks() { return this.inventoryService.getAllStocks(); }
 
+  @Perm('INVENTORY', 'create')
   @Post('adjust')
   @RequirePermission('INVENTORY', 'can_create')
   @UsePipes(new ValidationPipe())
@@ -39,6 +42,7 @@ export class InventoryController {
   }
 
   // API Reset tồn kho (Dành cho Dev/Admin)
+  @Perm('INVENTORY', 'delete')
   @Post('reset')
   @RequirePermission('INVENTORY', 'can_delete')
   async reset() {
@@ -145,12 +149,14 @@ export class InventoryController {
   // --- GOODS ISSUE (PHIẾU XUẤT KHO) API ---
   // ===========================================
 
+  @Perm('INVENTORY', 'create')
   @Post('goods-issue')
   @RequirePermission('INVENTORY', 'can_create')
   async createGoodsIssue(@Body() body: any) {
     return this.inventoryService.createGoodsIssue(body);
   }
 
+  @Perm('INVENTORY', 'create')
   @Put('goods-issue/:id')
   @RequirePermission('INVENTORY', 'can_create')
   async updateGoodsIssue(@Param('id') id: string, @Body() body: any) {
@@ -196,6 +202,7 @@ export class InventoryController {
     return this.inventoryService.markGoodsIssueDelivered(Number(id));
   }
 
+  @Perm('INVENTORY', 'delete')
   @Delete('goods-issue/:id')
   @RequirePermission('INVENTORY', 'can_delete')
   async deleteGoodsIssue(@Param('id') id: string) {

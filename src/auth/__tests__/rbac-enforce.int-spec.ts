@@ -116,21 +116,75 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
       `INSERT INTO "tenant_a"."user_groups" ("id", "name", "description") VALUES
        (1, 'Admin', 'Admin group'),
        (3, 'Production Team', 'Production group'),
-       (4, 'Sales Team', 'Sales group')
+       (4, 'Sales Team', 'Sales group'),
+       (6, 'HR Team', 'HR manager group')
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
       `INSERT INTO "tenant_a"."group_permissions" ("group_id", "module_code", "can_view", "can_create", "can_update", "can_delete") VALUES
+       (1, 'PROJECTS', true, false, false, false),
        (3, 'PRODUCTION', true, false, false, false),
        (3, 'SALES', true, false, false, false),
-       (4, 'SALES', true, false, false, false)
+       (4, 'SALES', true, false, false, false),
+       (6, 'HR', true, true, true, true)
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
       `INSERT INTO "tenant_a"."users" ("id", "username", "password", "full_name", "group_id", "is_active") VALUES
        (1, 'admin', '${passwordHash}', 'Admin User A', 1, true),
        (10, 'prod_user_a', '${passwordHash}', 'Prod User A', 3, true),
-       (11, 'sales_user_a', '${passwordHash}', 'Sales User A', 4, true)
+       (11, 'sales_user_a', '${passwordHash}', 'Sales User A', 4, true),
+       (12, 'hr_user_a', '${passwordHash}', 'HR User A', 6, true),
+       (13, 'group1_staff', '${passwordHash}', 'Group 1 Staff User', 1, true)
+       ON CONFLICT DO NOTHING`,
+    );
+
+    // Seed HR employees, attendances, payslips and lookup fixtures for tenant_a
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."employees" ("id", "user_id", "full_name", "base_salary", "is_active") VALUES
+       (100, 11, 'Sales User A Employee', 15000000, true),
+       (101, 10, 'Prod User A Employee', 18000000, true),
+       (102, 12, 'HR User A Employee', 20000000, true)
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."attendances" ("id", "employee_id", "date", "status") VALUES
+       (1001, 100, CURRENT_DATE, 'PRESENT'),
+       (1002, 101, CURRENT_DATE, 'PRESENT'),
+       (1003, 102, CURRENT_DATE, 'PRESENT')
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."payslips" ("id", "employee_id", "month", "year", "net_salary") VALUES
+       (2001, 100, 11, 2026, 14000000),
+       (2002, 101, 11, 2026, 17000000),
+       (2003, 102, 11, 2026, 20000000)
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."products" ("id", "sku", "name", "unit", "base_price", "cost_price", "is_active") VALUES
+       (301, 'SKU-DEMO-01', 'San pham Demo 01', 'cai', 100000, 70000, true)
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."customers" ("id", "code", "name", "credit_limit", "current_debt") VALUES
+       (401, 'KH-DEMO-01', 'Khach hang Demo 01', 50000000, 10000000)
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."suppliers" ("id", "uuid", "code", "name", "debt", "type") VALUES
+       (501, 'c0000000-0000-0000-0000-000000000501', 'NCC-DEMO-01', 'Nha cung cap Demo 01', 20000000, 'LOGISTICS')
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."projects" ("id", "title", "created_by_id", "status") VALUES
+       (3001, 'Du an Mau A', 10, 'PLANNING')
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_a"."tasks" ("id", "title", "creator_id", "assignee_id", "project_id", "status", "priority", "estimated_cost", "actual_cost", "estimated_hours") VALUES
+       (4001, 'Cong viec User 10', 10, 10, NULL, 'TODO', 'MEDIUM', 0, 0, 0),
+       (4002, 'Cong viec Du an 3001', 10, 10, 3001, 'TODO', 'MEDIUM', 1000000, 500000, 8)
        ON CONFLICT DO NOTHING`,
     );
 
@@ -439,4 +493,458 @@ describe('RBAC Enforce & Multi-Tenant Isolation (P12a Integration)', () => {
       });
     }
   });
-});
+
+  describe('Lookups and selfOr HR self-service in ENFORCE mode (P12b1 D3 & D4)', () => {
+      it('user without HR/INVENTORY permissions can access /lookups/* with only permitted fields, but full endpoints return 403', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        // 1. Lookups return 200
+        const resUsers = await request(app.getHttpServer())
+          .get('/api/lookups/users')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resUsers.status).toBe(200);
+        expect(Array.isArray(resUsers.body)).toBe(true);
+        expect(resUsers.body.length).toBeGreaterThan(0);
+        expect(resUsers.body[0]).toHaveProperty('id');
+        expect(resUsers.body[0]).toHaveProperty('full_name');
+        expect(resUsers.body[0].password).toBeUndefined();
+
+        const resProducts = await request(app.getHttpServer())
+          .get('/api/lookups/products')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resProducts.status).toBe(200);
+        expect(Array.isArray(resProducts.body)).toBe(true);
+        expect(resProducts.body.length).toBeGreaterThan(0);
+        expect(resProducts.body[0]).toHaveProperty('sku');
+        expect(resProducts.body[0]).toHaveProperty('name');
+        expect(resProducts.body[0].base_price).toBeUndefined();
+        expect(resProducts.body[0].cost_price).toBeUndefined();
+
+        const resCustomers = await request(app.getHttpServer())
+          .get('/api/lookups/customers')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resCustomers.status).toBe(200);
+        expect(Array.isArray(resCustomers.body)).toBe(true);
+        expect(resCustomers.body.length).toBeGreaterThan(0);
+        expect(resCustomers.body[0]).toHaveProperty('code');
+        expect(resCustomers.body[0]).toHaveProperty('name');
+        expect(resCustomers.body[0].credit_limit).toBeUndefined();
+        expect(resCustomers.body[0].current_debt).toBeUndefined();
+
+        const resSuppliers = await request(app.getHttpServer())
+          .get('/api/lookups/suppliers')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resSuppliers.status).toBe(200);
+        expect(Array.isArray(resSuppliers.body)).toBe(true);
+        expect(resSuppliers.body.length).toBeGreaterThan(0);
+        expect(resSuppliers.body[0]).toHaveProperty('code');
+        expect(resSuppliers.body[0]).toHaveProperty('name');
+        expect(resSuppliers.body[0].debt).toBeUndefined();
+
+        const resEmployees = await request(app.getHttpServer())
+          .get('/api/lookups/employees')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resEmployees.status).toBe(200);
+        expect(Array.isArray(resEmployees.body)).toBe(true);
+        expect(resEmployees.body.length).toBeGreaterThan(0);
+        expect(resEmployees.body[0]).toHaveProperty('full_name');
+        expect(resEmployees.body[0].base_salary).toBeUndefined();
+
+        const resWarehouses = await request(app.getHttpServer())
+          .get('/api/lookups/warehouses')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resWarehouses.status).toBe(200);
+        expect(resWarehouses.body.length).toBe(4);
+
+        // 2. Full endpoints blocked (403) at ENFORCE
+        const resStocks = await request(app.getHttpServer())
+          .get('/api/inventory/stocks')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resStocks.status).toBe(403);
+
+        const resHrEmployees = await request(app.getHttpServer())
+          .get('/api/hr/employees')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resHrEmployees.status).toBe(403);
+
+        const resHrPayslips = await request(app.getHttpServer())
+          .get('/api/hr/payslips')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resHrPayslips.status).toBe(403);
+      });
+
+      it('/hr/me tự xem 200 / người khác 403-404 (cả user có HR:view)', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        const tokenHrA = jwtService.sign({
+          sub: 12,
+          username: 'hr_user_a',
+          group_id: 6,
+          tid: 'tenant_a',
+        });
+
+        // 1. Regular staff viewing own attendances and payslips returns 200
+        const resMyAttendances = await request(app.getHttpServer())
+          .get('/api/hr/me/attendances')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resMyAttendances.status).toBe(200);
+        expect(Array.isArray(resMyAttendances.body)).toBe(true);
+        expect(resMyAttendances.body.length).toBeGreaterThan(0);
+        expect(Number(resMyAttendances.body[0].employee_id)).toBe(100);
+
+        const resMyPayslips = await request(app.getHttpServer())
+          .get('/api/hr/me/payslips')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resMyPayslips.status).toBe(200);
+        expect(Array.isArray(resMyPayslips.body)).toBe(true);
+        expect(resMyPayslips.body.length).toBeGreaterThan(0);
+        expect(Number(resMyPayslips.body[0].employee_id)).toBe(100);
+
+        const resMyPayslipId = await request(app.getHttpServer())
+          .get('/api/hr/me/payslips/2001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resMyPayslipId.status).toBe(200);
+        expect(Number(resMyPayslipId.body.id)).toBe(2001);
+
+        // 2. Regular staff accessing someone else's payslip by ID returns 403
+        const resOtherPayId = await request(app.getHttpServer())
+          .get('/api/hr/me/payslips/2002')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resOtherPayId.status).toBe(403);
+
+        // 3. User WITH HR:view calling /hr/me/payslips/:id of someone else STILL returns 403
+        const resHrUserOtherPay = await request(app.getHttpServer())
+          .get('/api/hr/me/payslips/2001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenHrA}`);
+        expect(resHrUserOtherPay.status).toBe(403);
+
+        // 4. User WITH HR:view calling own payslip via /hr/me returns 200
+        const resHrUserOwnPay = await request(app.getHttpServer())
+          .get('/api/hr/me/payslips/2003')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenHrA}`);
+        expect(resHrUserOwnPay.status).toBe(200);
+
+        // 5. Company-wide list returns 403 for staff without HR, 200 for HR user
+        const resAllPayslips = await request(app.getHttpServer())
+          .get('/api/hr/payslips')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resAllPayslips.status).toBe(403);
+      });
+
+      it('projects 403 không quyền', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        // User without PROJECTS permission calling /projects endpoints -> 403
+        const resGetProjects = await request(app.getHttpServer())
+          .get('/api/projects')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resGetProjects.status).toBe(403);
+
+        const resGetProjectDetail = await request(app.getHttpServer())
+          .get('/api/projects/3001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resGetProjectDetail.status).toBe(403);
+
+        const resCostSummary = await request(app.getHttpServer())
+          .get('/api/projects/3001/cost-summary')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resCostSummary.status).toBe(403);
+
+        const resDeleteProject = await request(app.getHttpServer())
+          .delete('/api/projects/3001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resDeleteProject.status).toBe(403);
+      });
+
+      it('tasks không sửa/xoá được task người khác', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        const tokenProdA = jwtService.sign({
+          sub: 10,
+          username: 'prod_user_a',
+          group_id: 3,
+          tid: 'tenant_a',
+        });
+
+        // User 11 tries to update task 4001 (created by user 10) -> 403
+        const resUpdate = await request(app.getHttpServer())
+          .put('/api/tasks/4001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`)
+          .send({ title: 'Hacked Title' });
+        expect(resUpdate.status).toBe(403);
+
+        // User 11 tries to delete task 4001 (created by user 10) -> 403
+        const resDelete = await request(app.getHttpServer())
+          .delete('/api/tasks/4001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resDelete.status).toBe(403);
+
+        // Creator (user 10) can update own task -> 200
+        const resOwnerUpdate = await request(app.getHttpServer())
+          .put('/api/tasks/4001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenProdA}`)
+          .send({ title: 'Updated By Creator' });
+        expect(resOwnerUpdate.status).toBe(200);
+        expect(resOwnerUpdate.body.title).toBe('Updated By Creator');
+      });
+
+      it('user không có PROJECTS gọi /lookups/projects -> 200 chỉ đúng các khoá cho phép', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        // User without PROJECTS permission calls /lookups/projects -> 200
+        const resLookupsProjects = await request(app.getHttpServer())
+          .get('/api/lookups/projects')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+
+        expect(resLookupsProjects.status).toBe(200);
+        expect(Array.isArray(resLookupsProjects.body)).toBe(true);
+        expect(resLookupsProjects.body.length).toBeGreaterThan(0);
+
+        const projectItem = resLookupsProjects.body.find((p: any) => p.id === 3001);
+        expect(projectItem).toBeDefined();
+        expect(projectItem).toHaveProperty('id', 3001);
+        expect(projectItem).toHaveProperty('name', 'Du an Mau A');
+        expect(projectItem).toHaveProperty('title', 'Du an Mau A');
+        expect(projectItem).toHaveProperty('code');
+        expect(projectItem).toHaveProperty('status', 'PLANNING');
+
+        // Sensitive / unauthorized fields must NOT be present
+        expect(projectItem.budget).toBeUndefined();
+        expect(projectItem.cost).toBeUndefined();
+        expect(projectItem.sales_order).toBeUndefined();
+        expect(projectItem.sales_order_id).toBeUndefined();
+        expect(projectItem.customer).toBeUndefined();
+        expect(projectItem.manager).toBeUndefined();
+        expect(projectItem.manager_id).toBeUndefined();
+        expect(projectItem.created_by_id).toBeUndefined();
+        expect(projectItem.members).toBeUndefined();
+        expect(projectItem.tasks).toBeUndefined();
+        expect(projectItem.milestones).toBeUndefined();
+      });
+
+      it('staff gọi GET /tasks/:id/logs và start-timer task của người khác -> 403', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        const tokenProdA = jwtService.sign({
+          sub: 10,
+          username: 'prod_user_a',
+          group_id: 3,
+          tid: 'tenant_a',
+        });
+
+        // 1. Staff calls GET /tasks/:id/logs of another user's task -> 403
+        const resLogsOther = await request(app.getHttpServer())
+          .get('/api/tasks/4001/logs')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resLogsOther.status).toBe(403);
+
+        // 2. Staff calls POST /tasks/:id/start-timer of another user's task -> 403
+        const resStartTimerOther = await request(app.getHttpServer())
+          .post('/api/tasks/4001/start-timer')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resStartTimerOther.status).toBe(403);
+
+        // 3. Staff calls POST /tasks/:id/stop-timer of another user's task -> 403
+        const resStopTimerOther = await request(app.getHttpServer())
+          .post('/api/tasks/4001/stop-timer')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`)
+          .send({ description: 'Stopping other timer' });
+        expect(resStopTimerOther.status).toBe(403);
+
+        // 4. Non-existent task returns 404
+        const resNotFoundLogs = await request(app.getHttpServer())
+          .get('/api/tasks/99999/logs')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenProdA}`);
+        expect(resNotFoundLogs.status).toBe(404);
+
+        const resNotFoundTimer = await request(app.getHttpServer())
+          .post('/api/tasks/99999/start-timer')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenProdA}`);
+        expect(resNotFoundTimer.status).toBe(404);
+
+        // 5. Task creator/assignee can start timer and read logs
+        const resStartTimerOwner = await request(app.getHttpServer())
+          .post('/api/tasks/4001/start-timer')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenProdA}`);
+        expect([200, 201]).toContain(resStartTimerOwner.status);
+
+        const resLogsOwner = await request(app.getHttpServer())
+          .get('/api/tasks/4001/logs')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenProdA}`);
+        expect(resLogsOwner.status).toBe(200);
+        expect(Array.isArray(resLogsOwner.body)).toBe(true);
+      });
+
+      it('user không có PROJECTS gọi /lookups/project-tasks -> 200 chỉ đúng { id, title }, thiếu project_id -> 400', async () => {
+        if (!dbAvailable) return;
+
+        const tokenSalesA = jwtService.sign({
+          sub: 11,
+          username: 'sales_user_a',
+          group_id: 4,
+          tid: 'tenant_a',
+        });
+
+        // 1. Calling with valid project_id returns 200 with only id and title
+        const resTasks = await request(app.getHttpServer())
+          .get('/api/lookups/project-tasks?project_id=3001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+
+        expect(resTasks.status).toBe(200);
+        expect(Array.isArray(resTasks.body)).toBe(true);
+        expect(resTasks.body.length).toBeGreaterThan(0);
+
+        const taskItem = resTasks.body.find((t: any) => t.id === 4002);
+        expect(taskItem).toBeDefined();
+        expect(taskItem).toEqual({
+          id: 4002,
+          title: 'Cong viec Du an 3001',
+        });
+        expect((taskItem as any).estimated_cost).toBeUndefined();
+        expect((taskItem as any).actual_cost).toBeUndefined();
+        expect((taskItem as any).estimated_hours).toBeUndefined();
+        expect((taskItem as any).assignee).toBeUndefined();
+        expect((taskItem as any).assignee_id).toBeUndefined();
+        expect((taskItem as any).project_id).toBeUndefined();
+        expect((taskItem as any).priority).toBeUndefined();
+        expect((taskItem as any).status).toBeUndefined();
+
+        // 2. Missing project_id -> 400
+        const resMissing = await request(app.getHttpServer())
+          .get('/api/lookups/project-tasks')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resMissing.status).toBe(400);
+
+        // 3. Invalid project_id -> 400
+        const resInvalid = await request(app.getHttpServer())
+          .get('/api/lookups/project-tasks?project_id=abc')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenSalesA}`);
+        expect(resInvalid.status).toBe(400);
+      });
+
+      it('user thuộc nhóm id 1 nhưng không phải admin và không có PROJECTS:update -> không thấy dự án của người khác', async () => {
+        if (!dbAvailable) return;
+
+        const tokenGroup1Staff = jwtService.sign({
+          sub: 13,
+          username: 'group1_staff',
+          group_id: 1,
+          tid: 'tenant_a',
+        });
+
+        const tokenAdmin = jwtService.sign({
+          sub: 1,
+          username: 'admin',
+          group_id: 1,
+          tid: 'tenant_a',
+        });
+
+        // 1. group1_staff has PROJECTS:view so GET /projects returns 200, but cannot see project 3001 (created by user 10)
+        const resListStaff = await request(app.getHttpServer())
+          .get('/api/projects')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenGroup1Staff}`);
+        expect(resListStaff.status).toBe(200);
+        expect(Array.isArray(resListStaff.body)).toBe(true);
+        expect(resListStaff.body.some((p: any) => p.id === 3001)).toBe(false);
+
+        // 2. group1_staff accessing project 3001 directly returns 404 (access denied / not found)
+        const resDetailStaff = await request(app.getHttpServer())
+          .get('/api/projects/3001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenGroup1Staff}`);
+        expect(resDetailStaff.status).toBe(404);
+
+        // 3. admin (username === 'admin') sees project 3001
+        const resListAdmin = await request(app.getHttpServer())
+          .get('/api/projects')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenAdmin}`);
+        expect(resListAdmin.status).toBe(200);
+        expect(resListAdmin.body.some((p: any) => p.id === 3001)).toBe(true);
+
+        const resDetailAdmin = await request(app.getHttpServer())
+          .get('/api/projects/3001')
+          .set('X-Test-Tenant', 'tenant_a')
+          .set('Authorization', `Bearer ${tokenAdmin}`);
+        expect(resDetailAdmin.status).toBe(200);
+        expect(resDetailAdmin.body.id).toBe(3001);
+      });
+    });
+  });

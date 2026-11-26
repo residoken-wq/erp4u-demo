@@ -61,6 +61,28 @@ const PurchasingPage: React.FC = () => {
     const [products, setProducts] = useState<any[]>([]); // All Products for Relinking
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [projects, setProjects] = useState<any[]>([]);
+    const [projectTasks, setProjectTasks] = useState<any[]>([]);
+
+    const loadProjectTasks = async (projectId?: number | string) => {
+        if (!projectId) {
+            setProjectTasks([]);
+            return;
+        }
+        try {
+            const res = await api.get(`/lookups/project-tasks?project_id=${projectId}`);
+            setProjectTasks(Array.isArray(res.data) ? res.data : []);
+        } catch {
+            setProjectTasks([]);
+        }
+    };
+
+    useEffect(() => {
+        if (currentPO?.project_id) {
+            loadProjectTasks(currentPO.project_id);
+        } else {
+            setProjectTasks([]);
+        }
+    }, [currentPO?.project_id]);
     const [companyConfig, setCompanyConfig] = useState<any>(null);
 
     // --- MỚI: Print Designs ---
@@ -85,8 +107,8 @@ const PurchasingPage: React.FC = () => {
     useEffect(() => {
         fetchData();
         api.get(`/products`).then(res => setProducts(res.data)).catch(console.error);
-        api.get(`/suppliers`).then(res => setSuppliers(res.data)).catch(console.error);
-        api.get(`/projects`).then(res => setProjects(res.data)).catch(console.error);
+        api.get(`/lookups/suppliers`).then(res => setSuppliers(res.data)).catch(console.error);
+        api.get(`/lookups/projects`).then(res => setProjects(res.data)).catch(console.error);
         api.get(`/system/company`).then(res => setCompanyConfig(res.data)).catch(console.error);
         api.get(`/designs/print-designs`).then(res => setPrintDesigns(res.data)).catch(console.error);
     }, []);
@@ -350,6 +372,11 @@ const PurchasingPage: React.FC = () => {
             const poDetail = res.data;
 
             setCurrentPO(poDetail);
+            if (poDetail.project_id) {
+                loadProjectTasks(poDetail.project_id);
+            } else {
+                setProjectTasks([]);
+            }
 
             // --- POOLED PO: Lấy dữ liệu gộp từ child POs ---
             if (poDetail.type === 'POOLED') {
@@ -1195,7 +1222,7 @@ const PurchasingPage: React.FC = () => {
                                 value={currentPO?.project_id}
                                 onChange={(val) => setCurrentPO({ ...currentPO, project_id: val, task_id: null })}
                             >
-                                {projects.map(p => <Select.Option key={p.id} value={p.id}>{p.title}</Select.Option>)}
+                                {projects.map(p => <Select.Option key={p.id} value={p.id}>{p.title || p.name}</Select.Option>)}
                             </Select>
                             <Select 
                                 allowClear 
@@ -1205,7 +1232,7 @@ const PurchasingPage: React.FC = () => {
                                 value={currentPO?.task_id}
                                 onChange={(val) => setCurrentPO({ ...currentPO, task_id: val })}
                             >
-                                {currentPO?.project_id && projects.find(p => p.id === currentPO.project_id)?.tasks?.map((t: any) =>
+                                {projectTasks.map((t: any) =>
                                     <Select.Option key={t.id} value={t.id}>{t.title}</Select.Option>
                                 )}
                             </Select>
