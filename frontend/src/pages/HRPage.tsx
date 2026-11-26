@@ -57,7 +57,7 @@ const HRPage: React.FC = () => {
 
     const loadUsers = async () => {
         try {
-            const res = await api.get('/users');
+            const res = await api.get('/lookups/users').catch(() => ({ data: [] }));
             setUsers(res.data);
         } catch (e) { console.error(e); }
     };

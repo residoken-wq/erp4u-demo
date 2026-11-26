@@ -69,6 +69,7 @@ import { buildDataSourceOptions } from './database/data-source';
 import { TENANT_SEEDERS, TenantSeeder } from './common/tenancy/tenant-seeder.interface';
 import { TenantSeedRunner } from './common/tenancy/tenant-seed-runner.service';
 import { RbacSeedService } from './auth/rbac-seed.service';
+import { DefaultGroupsSeedService } from './auth/default-groups-seed.service';
 import { HrReviewQuestionsSeedService } from './hr/hr-review-questions-seed.service';
 import { normalizeProviderOverride, ProviderOverride } from './common/utils/provider-override.util';
 
@@ -258,13 +259,15 @@ export class Erp4uCoreModule implements OnModuleInit {
           : {
               provide: TENANT_SEEDERS,
               useFactory: (
+                defaultGroups: DefaultGroupsSeedService,
                 rbac: RbacSeedService,
                 hr: HrReviewQuestionsSeedService,
               ): TenantSeeder[] => {
-                const coreSeeders: TenantSeeder[] = [rbac, hr];
+                const coreSeeders: TenantSeeder[] = [defaultGroups, rbac, hr];
                 return [...coreSeeders, ...(options.extraSeeders || [])];
               },
               inject: [
+                DefaultGroupsSeedService,
                 RbacSeedService,
                 HrReviewQuestionsSeedService,
               ],

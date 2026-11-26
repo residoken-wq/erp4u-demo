@@ -49,7 +49,7 @@ const ProjectDetailPage: React.FC = () => {
         try {
             const [resProject, resUsers, resCostSummary] = await Promise.all([
                 api.get(`/projects/${id}`),
-                api.get('/lookups/users'),
+                api.get('/lookups/users').catch(() => ({ data: [] })),
                 api.get(`/projects/${id}/cost-summary`).catch(() => ({ data: null }))
             ]);
             setProject(resProject.data);

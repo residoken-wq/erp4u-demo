@@ -3,6 +3,7 @@ import { Table, Button, Modal, Form, Input, Select, DatePicker, InputNumber, Row
 import { UserOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ManOutlined, WomanOutlined } from '@ant-design/icons';
 import api from '../../utils/api';
 import dayjs from 'dayjs';
+import usePermission from '../../hooks/usePermission';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -15,6 +16,7 @@ interface Props {
 }
 
 const EmployeesTab: React.FC<Props> = ({ employees, users, shifts, onRefresh }) => {
+    const { canCreate, canUpdate, canDelete } = usePermission('HR');
     const [modal, setModal] = useState(false);
     const [form] = Form.useForm();
     const [editing, setEditing] = useState<any>(null);
@@ -99,10 +101,10 @@ const EmployeesTab: React.FC<Props> = ({ employees, users, shifts, onRefresh }) 
             title: 'Thao tác',
             render: (_: any, r: any) => (
                 <Space>
-                    <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
-                    <Popconfirm title="Xóa nhân viên này?" onConfirm={() => handleDelete(r.id)}>
+                    {canUpdate && <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)} />}
+                    {canDelete && <Popconfirm title="Xóa nhân viên này?" onConfirm={() => handleDelete(r.id)}>
                         <Button size="small" danger icon={<DeleteOutlined />} />
-                    </Popconfirm>
+                    </Popconfirm>}
                 </Space>
             )
         }
@@ -110,9 +112,9 @@ const EmployeesTab: React.FC<Props> = ({ employees, users, shifts, onRefresh }) 
 
     return (
         <>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModal(true); }} style={{ marginBottom: 16 }}>
+            {canCreate && <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); form.resetFields(); setModal(true); }} style={{ marginBottom: 16 }}>
                 Thêm nhân viên
-            </Button>
+            </Button>}
             <Table
                 dataSource={employees}
                 columns={columns}

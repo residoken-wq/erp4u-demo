@@ -264,7 +264,51 @@ export class UsersService {
     return this.groupRepo.findOne({ where: { id }, relations: ['permissions'] });
   }
 
-  async createGroup(data: any) {
+  async assertPermissionsNotExceedingActor(actorGroupId: number | undefined, targetPermissions: any[]): Promise<void> {
+    const actorPerms = actorGroupId
+      ? await this.permRepo.find({ where: { group_id: actorGroupId } })
+      : [];
+
+    for (const p of targetPermissions) {
+      const mod = p.module_code || p.moduleCode;
+      const actorPerm = actorPerms.find((ap) => ap.module_code === mod);
+
+      if (p.can_view && !actorPerm?.can_view) {
+        throw new ForbiddenException(
+          `Bạn không có quyền xem (can_view) trong module "${mod}" để cấp cho nhóm khác`,
+        );
+      }
+      if (p.can_create && !actorPerm?.can_create) {
+        throw new ForbiddenException(
+          `Bạn không có quyền tạo (can_create) trong module "${mod}" để cấp cho nhóm khác`,
+        );
+      }
+      if (p.can_update && !actorPerm?.can_update) {
+        throw new ForbiddenException(
+          `Bạn không có quyền sửa (can_update) trong module "${mod}" để cấp cho nhóm khác`,
+        );
+      }
+      if (p.can_delete && !actorPerm?.can_delete) {
+        throw new ForbiddenException(
+          `Bạn không có quyền xoá (can_delete) trong module "${mod}" để cấp cho nhóm khác`,
+        );
+      }
+      if (p.view_cost_price && !actorPerm?.view_cost_price) {
+        throw new ForbiddenException(
+          `Bạn không có quyền xem giá vốn (view_cost_price) trong module "${mod}" để cấp cho nhóm khác`,
+        );
+      }
+    }
+  }
+
+  async createGroup(data: any, actor?: any) {
+    if (actor && actor.username !== 'admin') {
+      const actorGroupId = actor.groupId || actor.group_id;
+      if (data.permissions && Array.isArray(data.permissions) && data.permissions.length > 0) {
+        await this.assertPermissionsNotExceedingActor(actorGroupId, data.permissions);
+      }
+    }
+
     const group = this.groupRepo.create({ name: data.name, description: data.description });
     const saved = await this.groupRepo.save(group);
 
@@ -281,9 +325,20 @@ export class UsersService {
     return saved;
   }
 
-  async updateGroupPermissions(groupId: number, data: any) {
+  async updateGroupPermissions(groupId: number, data: any, actor?: any) {
     const group = await this.groupRepo.findOne({ where: { id: groupId } });
     if (!group) throw new NotFoundException('Không tìm thấy nhóm');
+
+    if (actor && actor.username !== 'admin') {
+      const actorGroupId = actor.groupId || actor.group_id;
+      if (actorGroupId && Number(actorGroupId) === Number(groupId)) {
+        throw new ForbiddenException('Không thể tự chỉnh sửa quyền nhóm của chính mình');
+      }
+
+      if (data.permissions && Array.isArray(data.permissions) && data.permissions.length > 0) {
+        await this.assertPermissionsNotExceedingActor(actorGroupId, data.permissions);
+      }
+    }
 
     if (data.name) await this.groupRepo.update(groupId, { name: data.name, description: data.description });
 

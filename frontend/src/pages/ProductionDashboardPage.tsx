@@ -20,7 +20,7 @@ const ProductionDashboardPage: React.FC = () => {
         try {
             const [plansRes, posRes, qcRes, assignRes] = await Promise.all([
                 api.get('/planning'),
-                api.get('/purchasing'),
+                api.get('/purchasing').catch(() => ({ data: [] })),
                 api.get('/qc/summary').catch(() => ({ data: null })),
                 api.get('/production/assignments').catch(() => ({ data: [] }))
             ]);

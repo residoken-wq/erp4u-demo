@@ -15,6 +15,7 @@ import PfoDetailTabs from '../components/planning/PfoDetailTabs';
 import MaterialDemandDashboard from '../components/planning/MaterialDemandDashboard';
 import ProductDemandDashboard from '../components/planning/ProductDemandDashboard';
 import useAiDraft from '../hooks/useAiDraft';
+import usePermission from '../hooks/usePermission';
 import DraftProductionOrderModal from '../components/planning/DraftProductionOrderModal';
 
 const { RangePicker } = DatePicker;
@@ -24,6 +25,7 @@ const PlanningPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('CONTROL_TOWER');
     const [loading, setLoading] = useState(false);
     const isMobile = !!useMobile();
+    const { canCreate, canUpdate, canDelete } = usePermission('PRODUCTION');
 
     // Data State
     const [pendingOrders, setPendingOrders] = useState<any[]>([]);
@@ -363,23 +365,23 @@ const PlanningPage: React.FC = () => {
                 open={isDrawerOpen}
                 extra={
                     <Space>
-                        <Button 
+                        {canDelete && <Button 
                             danger 
                             icon={<DeleteOutlined />}
                             onClick={handleDeletePfo}
                             loading={loading}
                         >
                             Xóa Lệnh
-                        </Button>
-                        <Button 
+                        </Button>}
+                        {canUpdate && <Button 
                             type="primary" 
                             icon={<CalculatorOutlined />}
                             onClick={() => handleCalculateBom(false)}
                             loading={loading}
                         >
                             Tính BOM theo SO
-                        </Button>
-                        <Button 
+                        </Button>}
+                        {canUpdate && <Button 
                             type="primary" 
                             ghost
                             icon={<CalculatorOutlined />}
@@ -387,8 +389,8 @@ const PlanningPage: React.FC = () => {
                             loading={loading}
                         >
                             Tính BOM theo KHSX
-                        </Button>
-                        <Button 
+                        </Button>}
+                        {canUpdate && <Button 
                             type="primary" 
                             ghost
                             icon={<ShoppingCartOutlined />}
@@ -396,7 +398,7 @@ const PlanningPage: React.FC = () => {
                             loading={loading}
                         >
                             Phát Hành Các PO (Gate 4)
-                        </Button>
+                        </Button>}
                     </Space>
                 }
             >

@@ -25,7 +25,12 @@ export async function seedUsers(dataSource: DataSource) {
 
   for (const u of demoUsers) {
     let user = await userRepo.findOne({ where: { username: u.username } });
-    const groupId = groupMap.get(u.groupName);
+    const groupId = groupMap.get(u.groupName)
+      || (u.groupName === 'Admin' ? groupMap.get('Quản trị') : undefined)
+      || (u.groupName === 'Kinh Doanh' ? groupMap.get('Kinh doanh') : undefined)
+      || (u.groupName === 'Quản Lý Kho' ? groupMap.get('Kho') : undefined)
+      || (u.groupName === 'Kế Toán' ? groupMap.get('Kế toán') : undefined)
+      || (u.groupName === 'Nhân Sự' ? groupMap.get('Nhân sự') : undefined);
 
     if (!user) {
       user = userRepo.create({
