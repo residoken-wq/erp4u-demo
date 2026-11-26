@@ -552,15 +552,18 @@ const FinancePage: React.FC = () => {
         },
         { title: <span style={{ color: '#fa8c16' }}>Tổng Chi Dự Kiến</span>, dataIndex: 'expected_cost', align: 'right' as const, width: 140,
             render: (_: any, r: any) => {
+                if (r.expected_bom_cost == null && r.expected_stock_cost == null && r.expected_routing_cost == null && r.expected_logistic_cost == null) {
+                    return '—';
+                }
                 const total = Number(r.expected_bom_cost||0) + Number(r.expected_stock_cost||0) + Number(r.expected_routing_cost||0) + Number(r.expected_logistic_cost||0);
                 return (
                     <Tooltip color="#fff" title={
                         <div style={{ color: '#333', fontSize: 13, minWidth: 150 }}>
                             <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Chi tiết dự kiến:</div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#888' }}>- NPL:</span> <b style={{ color: '#fa8c16' }}>{Number(r.expected_bom_cost || 0).toLocaleString()}</b></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#888' }}>- Hàng có sẵn:</span> <b style={{ color: '#fa8c16' }}>{Number(r.expected_stock_cost || 0).toLocaleString()}</b></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#888' }}>- Gia công:</span> <b style={{ color: '#fa8c16' }}>{Number(r.expected_routing_cost || 0).toLocaleString()}</b></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#888' }}>- Logistics:</span> <b style={{ color: '#fa8c16' }}>{Number(r.expected_logistic_cost || 0).toLocaleString()}</b></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#888' }}>- NPL:</span> <b style={{ color: '#fa8c16' }}>{r.expected_bom_cost != null ? Number(r.expected_bom_cost).toLocaleString() : '—'}</b></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#888' }}>- Hàng có sẵn:</span> <b style={{ color: '#fa8c16' }}>{r.expected_stock_cost != null ? Number(r.expected_stock_cost).toLocaleString() : '—'}</b></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#888' }}>- Gia công:</span> <b style={{ color: '#fa8c16' }}>{r.expected_routing_cost != null ? Number(r.expected_routing_cost).toLocaleString() : '—'}</b></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#888' }}>- Logistics:</span> <b style={{ color: '#fa8c16' }}>{r.expected_logistic_cost != null ? Number(r.expected_logistic_cost).toLocaleString() : '—'}</b></div>
                         </div>
                     }>
                         <b style={{ color: '#fa8c16', cursor: 'help' }}>{total.toLocaleString()}</b>
@@ -569,18 +572,18 @@ const FinancePage: React.FC = () => {
             }
         },
         { title: <span style={{ color: '#cf1322' }}>Thực chi</span>, dataIndex: 'real_expense', align: 'right' as const, width: 130,
-            render: (v: any) => <b style={{ color: '#cf1322' }}>{Number(v).toLocaleString()}</b>
+            render: (v: any) => v != null ? <b style={{ color: '#cf1322' }}>{Number(v).toLocaleString()}</b> : '—'
         },
         { title: 'LN Dự kiến', dataIndex: 'expected_profit', align: 'right' as const, width: 120,
-            render: (v: any) => <b style={{ color: Number(v) >= 0 ? '#389e0d' : '#cf1322', fontSize: 14 }}>{Number(v).toLocaleString()}</b>
+            render: (v: any) => v != null ? <b style={{ color: Number(v) >= 0 ? '#389e0d' : '#cf1322', fontSize: 14 }}>{Number(v).toLocaleString()}</b> : '—'
         },
         { title: 'LN Thực tế', dataIndex: 'profit', align: 'right' as const, width: 120,
-            render: (v: any) => <b style={{ color: Number(v) >= 0 ? '#389e0d' : '#cf1322', fontSize: 14 }}>{Number(v).toLocaleString()}</b>
+            render: (v: any) => v != null ? <b style={{ color: Number(v) >= 0 ? '#389e0d' : '#cf1322', fontSize: 14 }}>{Number(v).toLocaleString()}</b> : '—'
         },
         { title: <Tooltip title="Biên LN = Lợi nhuận / Thực thu × 100">Biên LN (%)</Tooltip>, dataIndex: 'margin', align: 'right' as const, width: 100,
             render: (v: any, r: any) => {
                 const val = Number(v);
-                if (Number(r.real_income) === 0) return <span style={{ color: '#bbb' }}>N/A</span>;
+                if (v == null || r.profit == null || Number(r.real_income) === 0) return <span style={{ color: '#bbb' }}>—</span>;
                 return <b style={{ color: val >= 20 ? '#389e0d' : val >= 0 ? '#d48806' : '#cf1322' }}>{val.toFixed(1)}%</b>;
             }
         },
@@ -1182,13 +1185,18 @@ const FinancePage: React.FC = () => {
                                         </Card>
                                     </Col>
                                     <Col span={6}>
-                                        {(() => { const totalProfit = filteredSOProfitData.reduce((s, r) => s + Number(r.profit || 0), 0); return (
-                                        <Card size="small" bordered={false} style={{ background: totalProfit >= 0 ? 'linear-gradient(135deg, #e6f7ff 0%, #91d5ff 100%)' : 'linear-gradient(135deg, #fff2e8 0%, #ffbb96 100%)', borderRadius: 10 }}>
-                                            <Statistic title={<span style={{ color: '#272F72', fontWeight: 600, fontSize: 12 }}>Tổng Lợi Nhuận</span>}
-                                                value={totalProfit}
-                                                precision={0} valueStyle={{ color: totalProfit >= 0 ? '#272F72' : '#cf1322', fontWeight: 'bold', fontSize: 20 }}
-                                                prefix={<WalletOutlined />} />
-                                        </Card>); })()}
+                                        {(() => { 
+                                            const hasAnyProfit = filteredSOProfitData.some(r => r.profit != null);
+                                            const totalProfit = filteredSOProfitData.reduce((s, r) => s + Number(r.profit || 0), 0); 
+                                            return (
+                                                <Card size="small" bordered={false} style={{ background: totalProfit >= 0 ? 'linear-gradient(135deg, #e6f7ff 0%, #91d5ff 100%)' : 'linear-gradient(135deg, #fff2e8 0%, #ffbb96 100%)', borderRadius: 10 }}>
+                                                    <Statistic title={<span style={{ color: '#272F72', fontWeight: 600, fontSize: 12 }}>Tổng Lợi Nhuận</span>}
+                                                        value={hasAnyProfit ? totalProfit : '—'}
+                                                        precision={hasAnyProfit ? 0 : undefined} valueStyle={{ color: totalProfit >= 0 ? '#272F72' : '#cf1322', fontWeight: 'bold', fontSize: 20 }}
+                                                        prefix={hasAnyProfit ? <WalletOutlined /> : undefined} />
+                                                </Card>
+                                            ); 
+                                        })()}
                                     </Col>
                                     <Col span={6}>
                                         <Card size="small" bordered={false} style={{ background: 'linear-gradient(135deg, #f9f0ff 0%, #d3adf7 100%)', borderRadius: 10 }}>

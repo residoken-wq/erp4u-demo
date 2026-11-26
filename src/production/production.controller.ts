@@ -3,9 +3,14 @@ import { Controller, Post, Get, Put, Delete, Body, Param, Query } from '@nestjs/
 import { ProductionService } from './production.service';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('production')
 @RequiresPackage(PackageKey.PRODUCTION)
+@CostVisible({
+  modules: ['PRODUCTION', 'PURCHASE', 'FINANCE'],
+  purchaseKeys: ['unit_price'],
+})
 export class ProductionController {
   constructor(private readonly productionService: ProductionService) {}
 

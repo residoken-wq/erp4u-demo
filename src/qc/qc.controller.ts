@@ -3,9 +3,11 @@ import { Controller, Get, Post, Delete, Param, Body, Query } from '@nestjs/commo
 import { QCService } from './qc.service';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('qc')
 @RequiresPackage(PackageKey.PRODUCTION)
+@CostVisible({ modules: ['PRODUCTION', 'PURCHASE', 'FINANCE'] })
 export class QCController {
   constructor(private readonly qcService: QCService) { }
 

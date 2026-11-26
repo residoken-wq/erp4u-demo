@@ -3,6 +3,7 @@ import { Card, Row, Col, Typography, Tag, Tabs, Table, Statistic, Divider, Butto
 import { DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../../utils/api';
+import { usePermission } from '../../hooks/usePermission';
 import MaterialMatrix from './MaterialMatrix';
 import PfoProcessRouting from './PfoProcessRouting';
 import PfoGanttChart from './PfoGanttChart';
@@ -28,6 +29,7 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
     handleSaveRouting, handleSaveReqs, handleGeneratePo, handleCalculateBom,
     onRefreshDetails
 }) => {
+    const { canViewCost } = usePermission(['PRODUCTION', 'PURCHASE', 'FINANCE']);
     // --- PO GC BTP Modal State ---
     const [isBtpModalOpen, setIsBtpModalOpen] = React.useState(false);
     const [selectedPoGc, setSelectedPoGc] = React.useState<any>(null);
@@ -400,11 +402,17 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
             { title: 'Yêu cầu', dataIndex: 'quantity', key: 'quantity', align: 'right' as const, render: (val: any) => Number(val || 0).toLocaleString() },
             { title: 'Thực tế', dataIndex: 'actual_quantity', key: 'actual_quantity', align: 'right' as const, render: (val: any) => <b style={{ color: '#52c41a' }}>{Number(val || 0).toLocaleString()}</b> },
             { title: 'Đơn giá', dataIndex: 'unit_price', key: 'unit_price', align: 'right' as const, render: (val: any, rec: any) => {
-                const price = Number(val || rec.material?.unit_price || rec.product?.unit_price || 0);
+                if (!canViewCost) return '—';
+                const rawPrice = val ?? rec.material?.unit_price ?? rec.product?.unit_price;
+                if (rawPrice == null) return '—';
+                const price = Number(rawPrice);
                 return `${price.toLocaleString()} ₫`;
             }},
             { title: 'Thành tiền', dataIndex: 'total_price', key: 'total_price', align: 'right' as const, render: (val: any, rec: any) => {
-                const price = Number(rec.unit_price || rec.material?.unit_price || rec.product?.unit_price || 0);
+                if (!canViewCost) return '—';
+                const rawPrice = rec.unit_price ?? rec.material?.unit_price ?? rec.product?.unit_price;
+                if (rawPrice == null) return '—';
+                const price = Number(rawPrice);
                 return `${(Number(rec.quantity || 0) * price).toLocaleString()} ₫`;
             }}
         ];
@@ -460,17 +468,17 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Text strong style={{ color: '#fa8c16' }}>Dự Tính Chi Phí Theo BOM</Text>
                             <div style={{ textAlign: 'right', fontWeight: 'normal' }}>
-                                <Text type="secondary" style={{ fontSize: 12 }}>Tổng CP: </Text><Text strong>{totalEstimatedCost.toLocaleString('vi-VN')} ₫</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>Tổng CP: </Text><Text strong>{canViewCost ? `${totalEstimatedCost.toLocaleString('vi-VN')} ₫` : '—'}</Text>
                                 <Divider type="vertical" />
-                                <Text type="secondary" style={{ fontSize: 12 }}>Lợi nhuận: </Text><Text strong style={{ color: (totalRevenue - totalEstimatedCost) < 0 ? '#cf1322' : '#3f8600' }}>{(totalRevenue - totalEstimatedCost).toLocaleString('vi-VN')} ₫</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>Lợi nhuận: </Text><Text strong style={{ color: (totalRevenue - totalEstimatedCost) < 0 ? '#cf1322' : '#3f8600' }}>{canViewCost ? `${(totalRevenue - totalEstimatedCost).toLocaleString('vi-VN')} ₫` : '—'}</Text>
                             </div>
                         </div>
                     } style={{ borderRadius: 10, border: '1px solid #ffd591', background: '#fff7e6' }}>
                         <Row gutter={[16, 16]}>
-                            <Col span={isMobile ? 12 : 8}><Statistic title="CP NPL" value={estimatedBomCost} suffix="₫" valueStyle={{ fontSize: 16 }} /></Col>
-                            <Col span={isMobile ? 12 : 8}><Statistic title="CP Gia Công" value={estimatedRoutingCost} suffix="₫" valueStyle={{ fontSize: 16 }} /></Col>
-                            <Col span={isMobile ? 12 : 8}><Statistic title="CP Vận Chuyển (CP_VC)" value={estimatedLogisticCost} suffix="₫" valueStyle={{ fontSize: 16 }} /></Col>
-                            <Col span={isMobile ? 12 : 8}><Statistic title="% Lợi Nhuận" value={profitMargin} precision={2} suffix="%" valueStyle={{ fontSize: 16, color: profitMargin < 0 ? '#cf1322' : '#3f8600' }} /></Col>
+                            <Col span={isMobile ? 12 : 8}><Statistic title="CP NPL" value={canViewCost ? estimatedBomCost : '—'} precision={canViewCost ? 0 : undefined} suffix={canViewCost ? "₫" : undefined} valueStyle={{ fontSize: 16 }} /></Col>
+                            <Col span={isMobile ? 12 : 8}><Statistic title="CP Gia Công" value={canViewCost ? estimatedRoutingCost : '—'} precision={canViewCost ? 0 : undefined} suffix={canViewCost ? "₫" : undefined} valueStyle={{ fontSize: 16 }} /></Col>
+                            <Col span={isMobile ? 12 : 8}><Statistic title="CP Vận Chuyển (CP_VC)" value={canViewCost ? estimatedLogisticCost : '—'} precision={canViewCost ? 0 : undefined} suffix={canViewCost ? "₫" : undefined} valueStyle={{ fontSize: 16 }} /></Col>
+                            <Col span={isMobile ? 12 : 8}><Statistic title="% Lợi Nhuận" value={canViewCost ? profitMargin : '—'} precision={canViewCost ? 2 : undefined} suffix={canViewCost ? "%" : undefined} valueStyle={{ fontSize: 16, color: profitMargin < 0 ? '#cf1322' : '#3f8600' }} /></Col>
                         </Row>
                     </Card>
                 </Col>
@@ -479,18 +487,18 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Text strong style={{ color: '#389e0d' }}>Chi Phí Thực Tế (Từ PO)</Text>
                             <div style={{ textAlign: 'right', fontWeight: 'normal' }}>
-                                <Text type="secondary" style={{ fontSize: 12 }}>Tổng CP: </Text><Text strong>{totalActualCost.toLocaleString('vi-VN')} ₫</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>Tổng CP: </Text><Text strong>{canViewCost ? `${totalActualCost.toLocaleString('vi-VN')} ₫` : '—'}</Text>
                                 <Divider type="vertical" />
-                                <Text type="secondary" style={{ fontSize: 12 }}>Lợi nhuận: </Text><Text strong style={{ color: (totalRevenue - totalActualCost) < 0 ? '#cf1322' : '#389e0d' }}>{(totalRevenue - totalActualCost).toLocaleString('vi-VN')} ₫</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>Lợi nhuận: </Text><Text strong style={{ color: (totalRevenue - totalActualCost) < 0 ? '#cf1322' : '#389e0d' }}>{canViewCost ? `${(totalRevenue - totalActualCost).toLocaleString('vi-VN')} ₫` : '—'}</Text>
                             </div>
                         </div>
                     } style={{ borderRadius: 10, border: '1px solid #b7eb8f', background: '#f6ffed', height: '100%' }}>
                         <Row gutter={[16, 16]}>
-                            <Col span={isMobile ? 12 : 8}><Statistic title="CP NPL (PO)" value={actualNplCost} suffix="₫" valueStyle={{ fontSize: 16 }} /></Col>
-                            <Col span={isMobile ? 12 : 8}><Statistic title="CP NPL (Từ kho)" value={actualNplInventoryCost} suffix="₫" valueStyle={{ fontSize: 16 }} /></Col>
-                            <Col span={isMobile ? 12 : 8}><Statistic title="CP Gia Công (PO)" value={actualGcCost} suffix="₫" valueStyle={{ fontSize: 16 }} /></Col>
-                            <Col span={isMobile ? 12 : 8}><Statistic title="CP Vận Chuyển" value={actualLogisticCost} suffix="₫" valueStyle={{ fontSize: 16 }} /></Col>
-                            <Col span={isMobile ? 12 : 8}><Statistic title="% Lợi Nhuận Thực Tế" value={actualProfitMargin} precision={2} suffix="%" valueStyle={{ fontSize: 16, color: actualProfitMargin < 0 ? '#cf1322' : '#389e0d' }} /></Col>
+                            <Col span={isMobile ? 12 : 8}><Statistic title="CP NPL (PO)" value={canViewCost ? actualNplCost : '—'} precision={canViewCost ? 0 : undefined} suffix={canViewCost ? "₫" : undefined} valueStyle={{ fontSize: 16 }} /></Col>
+                            <Col span={isMobile ? 12 : 8}><Statistic title="CP NPL (Từ kho)" value={canViewCost ? actualNplInventoryCost : '—'} precision={canViewCost ? 0 : undefined} suffix={canViewCost ? "₫" : undefined} valueStyle={{ fontSize: 16 }} /></Col>
+                            <Col span={isMobile ? 12 : 8}><Statistic title="CP Gia Công (PO)" value={canViewCost ? actualGcCost : '—'} precision={canViewCost ? 0 : undefined} suffix={canViewCost ? "₫" : undefined} valueStyle={{ fontSize: 16 }} /></Col>
+                            <Col span={isMobile ? 12 : 8}><Statistic title="CP Vận Chuyển" value={canViewCost ? actualLogisticCost : '—'} precision={canViewCost ? 0 : undefined} suffix={canViewCost ? "₫" : undefined} valueStyle={{ fontSize: 16 }} /></Col>
+                            <Col span={isMobile ? 12 : 8}><Statistic title="% Lợi Nhuận Thực Tế" value={canViewCost ? actualProfitMargin : '—'} precision={canViewCost ? 2 : undefined} suffix={canViewCost ? "%" : undefined} valueStyle={{ fontSize: 16, color: actualProfitMargin < 0 ? '#cf1322' : '#389e0d' }} /></Col>
                         </Row>
                     </Card>
                 </Col>
@@ -589,7 +597,7 @@ const PfoDetailTabs: React.FC<PfoDetailTabsProps> = ({
                                 columns={[
                                     { title: 'Sản phẩm', dataIndex: 'product_name', key: 'product_name' },
                                     { title: 'Khoản mục', dataIndex: 'name', key: 'name' },
-                                    { title: 'Chi phí (1 SP)', dataIndex: 'cost', key: 'cost', render: (val: any) => `${Number(val).toLocaleString()} ₫` }
+                                    { title: 'Chi phí (1 SP)', dataIndex: 'cost', key: 'cost', render: (val: any) => canViewCost && val != null ? `${Number(val).toLocaleString()} ₫` : '—' }
                                 ]} 
                                 dataSource={pfoDetails?.sales_order?.items?.flatMap((item: any) => {
                                     const logs: any[] = [];

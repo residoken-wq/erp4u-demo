@@ -71,13 +71,30 @@ export class PermissionCacheService {
     if (!groupId) return false;
 
     const permissions = await this.getGroupPermissions(groupId);
-    const modulesToCheck = new Set(['PRODUCT', ...allowedModules]);
+    const targetModules = allowedModules && allowedModules.length > 0 ? allowedModules : ['PRODUCT'];
+    const modulesToCheck = new Set(targetModules);
     for (const p of permissions) {
       if (modulesToCheck.has(p.module_code)) {
         if (p.view_cost_price === true || (p.view_cost_price as any) === 1) {
           return true;
         }
       }
+    }
+    return false;
+  }
+
+  async canViewPurchaseCost(user: any, allowedModules: string[] = ['PURCHASE', 'INVENTORY']): Promise<boolean> {
+    if (!user) return false;
+    if (user.username === 'admin') return true;
+    const canCost = await this.canViewCostPrice(user, allowedModules);
+    if (canCost) return true;
+    const groupId = user.groupId || user.group_id;
+    if (!groupId) return false;
+
+    const permissions = await this.getGroupPermissions(groupId);
+    const purchasePerm = permissions.find((p) => p.module_code === 'PURCHASE');
+    if (purchasePerm && (purchasePerm.can_view === true || (purchasePerm.can_view as any) === 1)) {
+      return true;
     }
     return false;
   }

@@ -2,9 +2,14 @@ import { AnyPerm, AuthOnly } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
 import { SuppliersService } from './suppliers.service';
 import { CorePackage } from '../common/packages/requires-package.decorator';
+import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('suppliers')
 @CorePackage()
+@CostVisible({
+  modules: ['PURCHASE', 'INVENTORY', 'FINANCE'],
+  purchaseKeys: ['cost_per_unit', 'cost_price', 'price'],
+})
 export class SuppliersController {
   constructor(private readonly s: SuppliersService) { }
 

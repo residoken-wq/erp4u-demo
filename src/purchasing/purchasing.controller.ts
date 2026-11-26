@@ -4,9 +4,14 @@ import { Controller, Post, Get, Put, Delete, Body, Param, Query, ParseIntPipe } 
 import { PurchasingService } from './purchasing.service';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('purchasing')
 @RequiresPackage(PackageKey.INVENTORY)
+@CostVisible({
+  modules: ['PURCHASE', 'INVENTORY', 'FINANCE'],
+  purchaseKeys: ['cost_per_unit', 'cost_price', 'unit_price', 'price'],
+})
 export class PurchasingController {
   constructor(private readonly s: PurchasingService) { }
 
@@ -72,19 +77,23 @@ export class PurchasingController {
   receive(@Param('id') id: number, @Body() b: any) { return this.s.createGoodsReceipt(id, b); }
 
   @Public()
+  @CostVisible({ keys: ['cost_price', 'profit_margin', 'total_cost'] })
   @Get('portal/:uuid')
   getPortal(@Param('uuid') uuid: string) { return this.s.getByUuid(uuid); }
 
   @Public()
+  @CostVisible({ keys: ['cost_price', 'profit_margin', 'total_cost'] })
   @Post('portal/:uuid/action')
   portalAction(@Param('uuid') uuid: string, @Body() b: any) { return this.s.supplierAction(uuid, b.action, b); }
 
   // --- SUPPLIER PORTAL ---
   @Public()
+  @CostVisible({ keys: ['cost_price', 'profit_margin', 'total_cost'] })
   @Get('supplier-portal/:uuid')
   getSupplierPortal(@Param('uuid') uuid: string) { return this.s.getSupplierPortalData(uuid); }
 
   @Public()
+  @CostVisible({ keys: ['cost_price', 'profit_margin', 'total_cost'] })
   @Get('supplier-portal/:uuid/outsourcing-materials/:poId')
   getSupplierPortalOutsourcingMaterials(
     @Param('uuid') uuid: string,

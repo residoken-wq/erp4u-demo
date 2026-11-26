@@ -6,6 +6,7 @@ import api from '../utils/api';
 const { Text } = Typography;
 
 const ProductionRoutePage: React.FC = () => {
+  const { canViewCost } = usePermission(['PRODUCTION', 'PRODUCT', 'FINANCE']);
   const [products, setProducts] = useState<any[]>([]);
   const [manufacturers, setManufacturers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -60,11 +61,20 @@ const ProductionRoutePage: React.FC = () => {
   // 3. Save Routing
   const handleSave = async (values: any) => {
       try {
-          await api.post(`/products/${currentProduct.id}/routings`, values.routings);
+          const routings = (values.routings || []).map((r: any) => {
+              if (!canViewCost) {
+                  const { cost, ...rest } = r;
+                  return rest;
+              }
+              return r;
+          });
+          await api.post(`/products/${currentProduct.id}/routings`, routings);
           message.success('Đã lưu quy trình sản xuất');
           setIsModalOpen(false);
-          // Gọi API tính lại giá vốn để update cost_price
-          await api.get(`/products/calculate-cost/${currentProduct.sku}`);
+          // Gọi API tính lại giá vốn để update cost_price nếu có quyền
+          if (canViewCost) {
+              await api.get(`/products/calculate-cost/${currentProduct.sku}`);
+          }
       } catch(e) { message.error('Lỗi lưu'); }
   };
 
@@ -107,7 +117,13 @@ const ProductionRoutePage: React.FC = () => {
                                     <Col span={1}><Form.Item {...restField} name={[name, 'is_required']} valuePropName="checked" noStyle><Checkbox /></Form.Item></Col>
                                     <Col span={8}><Form.Item {...restField} name={[name, 'step_name']} noStyle rules={[{required:true}]}><Input placeholder="Tên công đoạn" /></Form.Item></Col>
                                     <Col span={8}><Form.Item {...restField} name={[name, 'supplier_id']} noStyle><Select placeholder="Đơn vị gia công (Mặc định)" allowClear options={manufacturers} /></Form.Item></Col>
-                                    <Col span={5}><Form.Item {...restField} name={[name, 'cost']} noStyle><InputNumber placeholder="Đơn giá" style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} addonAfter="₫" /></Form.Item></Col>
+                                    <Col span={5}>
+                                        {canViewCost ? (
+                                            <Form.Item {...restField} name={[name, 'cost']} noStyle><InputNumber placeholder="Đơn giá" style={{width:'100%'}} formatter={v => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} addonAfter="₫" /></Form.Item>
+                                        ) : (
+                                            <div style={{ textAlign: 'center', color: '#999' }}>—</div>
+                                        )}
+                                    </Col>
                                     <Col span={2}><DeleteOutlined onClick={() => remove(name)} style={{color:'red', cursor:'pointer'}} /></Col>
                                 </Row>
                             ))}

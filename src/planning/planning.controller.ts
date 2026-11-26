@@ -7,9 +7,15 @@ import { PfoSourcingService } from './pfo-sourcing.service';
 import { PfoExecutionService } from './pfo-execution.service';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { CostVisible, defaultProductCostDetector } from '../auth/cost-visibility';
 
 @Controller('planning')
 @RequiresPackage(PackageKey.PRODUCTION)
+@CostVisible({
+  modules: ['PRODUCTION', 'PURCHASE', 'FINANCE'],
+  purchaseKeys: ['cost_per_unit', 'unit_price'],
+  productCostDetector: defaultProductCostDetector,
+})
 export class PlanningController {
   constructor(
     private readonly planningSvc: PlanningService,

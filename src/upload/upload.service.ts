@@ -520,7 +520,7 @@ export class UploadService {
   }
 
   // 1. IMPORT NGUYEN LIEU
-  async importMaterials(buffer: Buffer) {
+  async importMaterials(buffer: Buffer, canWriteCost = true) {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
     let count = 0;
@@ -550,11 +550,14 @@ export class UploadService {
           unit: unit,
           purchase_unit: purchaseUnit,
           conversion_factor: conversionFactor,
-          cost_per_unit: costPerUnit,
-          cost_price: costPrice,
           quantity_in_stock: qtyInStock,
           supplier_name: supplierName
         };
+
+        if (canWriteCost) {
+          matData.cost_per_unit = costPerUnit;
+          matData.cost_price = costPrice;
+        }
 
         const existing = await this.materialsService.findOneByCode(matData.code);
         if (existing) {
@@ -571,7 +574,7 @@ export class UploadService {
   }
 
   // 2. IMPORT SAN PHAM
-  async importProducts(buffer: Buffer) {
+  async importProducts(buffer: Buffer, canWriteCost = true) {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
     let count = 0;
@@ -617,8 +620,6 @@ export class UploadService {
           product_type: (row['producttype'] || row['product_type'] || row['type'] || row['loai'] || row['loaisp'] || 'Finished').toString().trim(),
           unit: (row['unit'] || row['dvt'] || row['donvitinh'] || 'cai').toString().trim(),
           base_price: basePrice,
-          cost_price: costPrice,
-          profit_margin: profitMargin > 0 ? profitMargin : null,
           quantity_in_stock: qtyInStock,
           customer_description: customerDesc,
           processing_description: processingDesc,
@@ -628,6 +629,11 @@ export class UploadService {
           attributes: attributes,
           is_active: true
         };
+
+        if (canWriteCost) {
+          productData.cost_price = costPrice;
+          productData.profit_margin = profitMargin > 0 ? profitMargin : null;
+        }
 
         if (websiteDisplayName) productData.website_display_name = websiteDisplayName;
 
@@ -978,12 +984,13 @@ export class UploadService {
   }
 
   // 8. TEMPLATES
-  getTemplate(type: string): Buffer {
+  getTemplate(type: string, options?: { canViewCost?: boolean; canViewPurchaseCost?: boolean }): Buffer {
     let headers: string[] = [];
     let sampleData: any[] = [];
 
     if (type === 'materials') {
-      headers = ['Code', 'Name', 'Category', 'Type', 'Unit', 'PurchaseUnit', 'ConversionFactor', 'CostPerUnit', 'CostPrice', 'Qty', 'Supplier'];
+      const showCost = options?.canViewPurchaseCost !== false;
+      headers = ['Code', 'Name', 'Category', 'Type', 'Unit', 'PurchaseUnit', 'ConversionFactor', ...(showCost ? ['CostPerUnit', 'CostPrice'] : []), 'Qty', 'Supplier'];
       sampleData = [
         {
           Code: 'VAI_COTTON_TRANG',
@@ -993,8 +1000,7 @@ export class UploadService {
           Unit: 'm',
           PurchaseUnit: 'Cuộn',
           ConversionFactor: 100,
-          CostPerUnit: 35000,
-          CostPrice: 35000,
+          ...(showCost ? { CostPerUnit: 35000, CostPrice: 35000 } : {}),
           Qty: 500,
           Supplier: 'Nhà cung cấp Mẫu 01'
         },
@@ -1006,14 +1012,14 @@ export class UploadService {
           Unit: 'm',
           PurchaseUnit: 'Cuộn',
           ConversionFactor: 50,
-          CostPerUnit: 25000,
-          CostPrice: 25000,
+          ...(showCost ? { CostPerUnit: 25000, CostPrice: 25000 } : {}),
           Qty: 200,
           Supplier: 'Nhà cung cấp Mẫu 02'
         }
       ];
     } else if (type === 'products') {
-      headers = ['SKU', 'Name', 'Category', 'Type', 'Unit', 'BasePrice', 'CostPrice', 'Qty', 'Color', 'Size', 'Fabric', 'CustomerDescription', 'ProcessingDescription', 'VatDescription', 'Tags', 'ImageUrl'];
+      const showCost = options?.canViewCost !== false;
+      headers = ['SKU', 'Name', 'Category', 'Type', 'Unit', 'BasePrice', ...(showCost ? ['CostPrice'] : []), 'Qty', 'Color', 'Size', 'Fabric', 'CustomerDescription', 'ProcessingDescription', 'VatDescription', 'Tags', 'ImageUrl'];
       sampleData = [
         {
           SKU: 'SP_MAU_A_01',
@@ -1022,7 +1028,7 @@ export class UploadService {
           Type: 'Finished',
           Unit: 'cai',
           BasePrice: 250000,
-          CostPrice: 150000,
+          ...(showCost ? { CostPrice: 150000 } : {}),
           Qty: 50,
           Color: 'Xanh tiêu chuẩn',
           Size: 'Tiêu chuẩn',
@@ -1040,7 +1046,7 @@ export class UploadService {
           Type: 'Finished',
           Unit: 'cai',
           BasePrice: 100000,
-          CostPrice: 60000,
+          ...(showCost ? { CostPrice: 60000 } : {}),
           Qty: 100,
           Color: 'Trắng tiêu chuẩn',
           Size: 'Tiêu chuẩn',

@@ -6,10 +6,12 @@ import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermission, RequireAnyPermission, Perm, AnyPerm } from '../auth/permissions.decorator';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('inventory')
 @RequiresPackage(PackageKey.INVENTORY)
 @UseGuards(JwtAuthGuard, PermissionsGuard)
+@CostVisible({ modules: ['INVENTORY', 'FINANCE'] })
 export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) { }
 

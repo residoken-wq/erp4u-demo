@@ -20,7 +20,7 @@ export interface PermissionFlags {
     canViewCost: boolean;
 }
 
-export const getPermissionFlags = (moduleCode: string): PermissionFlags => {
+export const getPermissionFlags = (moduleCode: string | string[]): PermissionFlags => {
     const userStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user') : null;
     if (!userStr) {
         return { canView: false, canCreate: false, canUpdate: false, canDelete: false, canViewCost: false };
@@ -35,25 +35,26 @@ export const getPermissionFlags = (moduleCode: string): PermissionFlags => {
         }
 
         const permissions = user.permissions || [];
-        const perm = permissions.find((p: any) => p.module_code === moduleCode);
+        const modules = Array.isArray(moduleCode) ? moduleCode : [moduleCode];
+        const matchingPerms = permissions.filter((p: any) => modules.includes(p.module_code));
 
-        if (!perm) {
+        if (matchingPerms.length === 0) {
             return { canView: false, canCreate: false, canUpdate: false, canDelete: false, canViewCost: false };
         }
 
         return {
-            canView: !!(perm.can_view === true || perm.can_view === 1),
-            canCreate: !!(perm.can_create === true || perm.can_create === 1),
-            canUpdate: !!(perm.can_update === true || perm.can_update === 1),
-            canDelete: !!(perm.can_delete === true || perm.can_delete === 1),
-            canViewCost: !!(perm.view_cost_price === true || perm.view_cost_price === 1),
+            canView: matchingPerms.some((p: any) => p.can_view === true || p.can_view === 1),
+            canCreate: matchingPerms.some((p: any) => p.can_create === true || p.can_create === 1),
+            canUpdate: matchingPerms.some((p: any) => p.can_update === true || p.can_update === 1),
+            canDelete: matchingPerms.some((p: any) => p.can_delete === true || p.can_delete === 1),
+            canViewCost: matchingPerms.some((p: any) => p.view_cost_price === true || p.view_cost_price === 1),
         };
     } catch {
         return { canView: false, canCreate: false, canUpdate: false, canDelete: false, canViewCost: false };
     }
 };
 
-export const checkPermission = (moduleCode: string, action: string): boolean => {
+export const checkPermission = (moduleCode: string | string[], action: string): boolean => {
     const flags = getPermissionFlags(moduleCode);
     switch (action) {
         case 'view':
@@ -77,9 +78,9 @@ export const checkPermission = (moduleCode: string, action: string): boolean => 
     }
 };
 
-function usePermission(moduleCode: string): PermissionFlags;
-function usePermission(moduleCode: string, action: string): boolean;
-function usePermission(moduleCode: string, action?: string): PermissionFlags | boolean {
+function usePermission(moduleCode: string | string[]): PermissionFlags;
+function usePermission(moduleCode: string | string[], action: string): boolean;
+function usePermission(moduleCode: string | string[], action?: string): PermissionFlags | boolean {
     const [perms, setPerms] = useState<PermissionFlags>(() => getPermissionFlags(moduleCode));
 
     useEffect(() => {

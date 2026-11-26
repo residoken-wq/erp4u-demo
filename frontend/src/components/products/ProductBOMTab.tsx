@@ -14,9 +14,11 @@ interface ProductBOMTabProps {
 }
 
 // Hàm tính Thành tiền (Giá vốn NPL)
-const calculateItemCost = (record: any): number => {
+const calculateItemCost = (record: any): number | null => {
     // Ưu tiên lấy giá từ trường cost_price hoặc cost_per_unit của material
-    const materialCost = Number(record.material?.cost_price || record.material?.cost_per_unit || 0);
+    const rawCost = record.material?.cost_price ?? record.material?.cost_per_unit;
+    if (rawCost == null) return null;
+    const materialCost = Number(rawCost);
     const quantity = Number(record.quantity || 0);
     const wastePercent = Number(record.waste_percent || 0);
     const wasteFactor = 1 + (wastePercent / 100);
@@ -80,7 +82,16 @@ const ProductBOMTab: React.FC<ProductBOMTabProps> = ({ editingItem, boms, materi
     
     // Tính tổng chi phí NPL
     const totalMaterialCost = useMemo(() => {
-        return boms.reduce((sum, item) => sum + calculateItemCost(item), 0);
+        let hasAnyCost = false;
+        let sum = 0;
+        for (const item of boms) {
+            const cost = calculateItemCost(item);
+            if (cost != null) {
+                hasAnyCost = true;
+                sum += cost;
+            }
+        }
+        return hasAnyCost ? sum : null;
     }, [boms]);
 
 
@@ -117,9 +128,10 @@ const ProductBOMTab: React.FC<ProductBOMTabProps> = ({ editingItem, boms, materi
             key: 'cost',
             width: 120,
             align: 'right' as const,
-            render: (_: any, record: any) => (
-                <b>{calculateItemCost(record).toLocaleString()} ₫</b>
-            )
+            render: (_: any, record: any) => {
+                const cost = calculateItemCost(record);
+                return cost != null ? <b>{cost.toLocaleString()} ₫</b> : '—';
+            }
         },
         // ----------------------------
         
@@ -156,11 +168,11 @@ const ProductBOMTab: React.FC<ProductBOMTabProps> = ({ editingItem, boms, materi
                             <Table.Summary.Cell index={0} colSpan={4}>
                                 <Statistic 
                                     title="TỔNG CHI PHÍ NPL" 
-                                    value={totalMaterialCost} 
-                                    precision={0} 
+                                    value={totalMaterialCost != null ? totalMaterialCost : '—'} 
+                                    precision={totalMaterialCost != null ? 0 : undefined} 
                                     valueStyle={{ color: '#cf1322' }} 
-                                    prefix={<DollarOutlined />}
-                                    suffix="₫"
+                                    prefix={totalMaterialCost != null ? <DollarOutlined /> : undefined} 
+                                    suffix={totalMaterialCost != null ? "₫" : undefined} 
                                 />
                             </Table.Summary.Cell>
                             <Table.Summary.Cell index={1} colSpan={2} /> 

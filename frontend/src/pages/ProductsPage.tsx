@@ -226,6 +226,10 @@ const ProductsPage: React.FC = () => {
     const handleSave = async (values: any) => {
         try {
             const payload = { ...values };
+            if (!canViewCost) {
+                delete payload.cost_price;
+                delete payload.profit_margin;
+            }
             let savedProduct: any;
 
             if (editingItem) {
@@ -637,11 +641,12 @@ const ProductsPage: React.FC = () => {
             title: 'Giá trị tồn', key: 'inventory_value', width: 100, align: 'right' as const,
             render: (r: any) => {
                 if (!canViewCost) return '—';
-                const cost = r.cost_price != null ? Number(r.cost_price) : (r.base_price != null ? Number(r.base_price) : 0);
+                if (r.cost_price == null) return '—';
+                const cost = Number(r.cost_price);
                 const val = Number(r.quantity_in_stock || 0) * cost;
                 return <span style={{ color: '#272F72' }}>{val.toLocaleString()}</span>;
             },
-            sorter: (a: any, b: any) => (Number(a.quantity_in_stock || 0) * Number(a.cost_price || a.base_price || 0)) - (Number(b.quantity_in_stock || 0) * Number(b.cost_price || b.base_price || 0)),
+            sorter: (a: any, b: any) => (Number(a.quantity_in_stock || 0) * Number(a.cost_price || 0)) - (Number(b.quantity_in_stock || 0) * Number(b.cost_price || 0)),
             hidden: !canViewCost
         },
         {
@@ -867,7 +872,7 @@ const ProductsPage: React.FC = () => {
                     <tbody>
                         ${filteredData.map((item, index) => {
                             const available = Number(item.quantity_in_stock || 0) - Number(item.display_approved_booking_stock || 0);
-                            const inventoryValue = Number(item.quantity_in_stock || 0) * Number(item.cost_price || item.base_price || 0);
+                            const inventoryValue = item.cost_price != null ? Number(item.quantity_in_stock || 0) * Number(item.cost_price) : 0;
                             const src = getGoogleDriveImageUrl(item.image_url);
                             const imgHtml = src ? `<img src="${src}" class="product-img" />` : '';
                             
@@ -877,10 +882,10 @@ const ProductsPage: React.FC = () => {
                                 <td class="text-center">${imgHtml}</td>
                                 <td><b>${item.sku || ''}</b></td>
                                 <td>${item.name || ''}</td>
-                                ${option === 1 && canViewCost ? `<td class="text-right">${Number(item.cost_price || 0).toLocaleString()}</td>` : ''}
+                                ${option === 1 && canViewCost ? `<td class="text-right">${item.cost_price != null ? Number(item.cost_price).toLocaleString() : '—'}</td>` : ''}
                                 ${option === 1 ? `<td class="text-right">${Number(item.base_price || 0).toLocaleString()}</td>` : ''}
                                 <td class="text-right">${Number(item.quantity_in_stock || 0).toLocaleString()}</td>
-                                ${option === 1 && canViewCost ? `<td class="text-right">${inventoryValue.toLocaleString()}</td>` : ''}
+                                ${option === 1 && canViewCost ? `<td class="text-right">${item.cost_price != null ? inventoryValue.toLocaleString() : '—'}</td>` : ''}
                                 <td class="text-right">${Number(item.display_booking_stock || 0).toLocaleString()}</td>
                                 <td class="text-right">${Number(item.display_approved_booking_stock || 0).toLocaleString()}</td>
                                 <td class="text-right">${available.toLocaleString()}</td>
@@ -1240,7 +1245,9 @@ const ProductsPage: React.FC = () => {
                                                 )}
                                             </>
                                         )}
-                                        <Form.Item name="profit_margin" label="Lợi nhuận mong muốn (%)" tooltip="Lấy từ Danh mục nếu tạo mới, có thể override tại đây"><InputNumber style={{ width: '100%' }} addonAfter="%" min={0} max={99} /></Form.Item>
+                                        {canViewCost && (
+                                            <Form.Item name="profit_margin" label="Lợi nhuận mong muốn (%)" tooltip="Lấy từ Danh mục nếu tạo mới, có thể override tại đây"><InputNumber style={{ width: '100%' }} addonAfter="%" min={0} max={99} /></Form.Item>
+                                        )}
                                         <Form.Item name="quantity_in_stock" label="Tồn kho"><InputNumber style={{ width: '100%' }} disabled /></Form.Item>
                                     </Col>
 

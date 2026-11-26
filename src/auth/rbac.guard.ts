@@ -78,6 +78,9 @@ export class RbacGuard implements CanActivate {
       // 4. Verify token
       const req = context.switchToHttp().getRequest();
       const user = this.verifyBearer(req);
+      if (user && !req.user) {
+        req.user = user;
+      }
 
       // 5. Decision
       let decision: 'ALLOW' | 'DENY_NO_AUTH' | 'DENY_NO_PERM' | 'ALLOW_SELF' = 'ALLOW';
@@ -181,7 +184,14 @@ export class RbacGuard implements CanActivate {
     }
   }
 
-  private verifyBearer(req: any): { id: number; username: string; groupId: number } | null {
+  private verifyBearer(req: any): {
+    id: number;
+    userId?: number;
+    username: string;
+    full_name?: string;
+    groupId: number;
+    group_id?: number;
+  } | null {
     const authHeader = req.headers['authorization'] || req.headers['Authorization'];
     if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
       return null;
@@ -195,8 +205,11 @@ export class RbacGuard implements CanActivate {
       assertTokenTenant(payload);
       return {
         id: payload.sub,
+        userId: payload.sub,
         username: payload.username,
+        full_name: payload.full_name,
         groupId: payload.group_id,
+        group_id: payload.group_id,
       };
     } catch (err) {
       if (err instanceof UnauthorizedException) {

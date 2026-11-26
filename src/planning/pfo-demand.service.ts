@@ -435,6 +435,7 @@ export class PfoDemandService {
                     stats.details.push({
                         pfo_id: pfo.id,
                         pfo_code: pfo.code,
+                        product_id: prodId,
                         sales_order_id: pfo.sales_order?.id,
                         sales_order_code: pfo.sales_order?.order_code,
                         customer_name: pfo.sales_order?.customer_name || pfo.sales_order?.customer?.name || 'Khách vãng lai',
@@ -481,6 +482,7 @@ export class PfoDemandService {
                             stats.details.push({
                                 pfo_id: pfo.id,
                                 pfo_code: pfo.code,
+                                product_id: prodId,
                                 sales_order_id: pfo.sales_order?.id,
                                 sales_order_code: pfo.sales_order?.order_code,
                                 customer_name: pfo.sales_order?.customer_name || pfo.sales_order?.customer?.name || 'Khách vãng lai',

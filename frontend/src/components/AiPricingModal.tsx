@@ -64,7 +64,7 @@ const AiPricingModal: React.FC<Props> = ({ open, onClose, productName, costPrice
             <div style={{ marginBottom: 20 }}>
                 <Alert
                     message={`Sản phẩm: ${productName}`}
-                    description={<span>Giá vốn hiện tại: <b style={{ color: '#cf1322' }}>{Number(costPrice).toLocaleString()} ₫</b></span>}
+                    description={<span>Giá vốn hiện tại: <b style={{ color: '#cf1322' }}>{costPrice != null && Number(costPrice) > 0 ? `${Number(costPrice).toLocaleString()} ₫` : '—'}</b></span>}
                     type="info"
                     showIcon
                 />

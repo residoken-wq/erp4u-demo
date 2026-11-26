@@ -300,7 +300,7 @@ const ProjectDetailPage: React.FC = () => {
                                                 <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: 500 }}>Tổng chi phí (THỰC / DỰ TOÁN)</div>
                                             </Space>
                                             <div style={{ color: '#fff', fontSize: 24, fontWeight: 700, lineHeight: 1.2 }}>
-                                                {Number(costSummary.total_actual_cost).toLocaleString()} <span style={{ fontSize: 14, fontWeight: 'normal', opacity: 0.8 }}>/ {Number(costSummary.total_estimated_cost).toLocaleString()} đ</span>
+                                                {costSummary.total_actual_cost != null ? Number(costSummary.total_actual_cost).toLocaleString() : '—'} <span style={{ fontSize: 14, fontWeight: 'normal', opacity: 0.8 }}>/ {costSummary.total_estimated_cost != null ? Number(costSummary.total_estimated_cost).toLocaleString() : '—'} đ</span>
                                             </div>
                                         </div>
                                         <div className="cost-blob blob-cost"></div>
@@ -314,7 +314,7 @@ const ProjectDetailPage: React.FC = () => {
                                                     <LineChartOutlined style={{ color: 'rgba(255,255,255,0.9)', fontSize: 16 }} />
                                                     <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: 500 }}>Lợi nhuận dự kiến</div>
                                                 </Space>
-                                                <div style={{ color: '#fff', fontSize: 28, fontWeight: 700 }}>{Number(costSummary.profit).toLocaleString()} <span style={{ fontSize: 16, fontWeight: 'normal', opacity: 0.8 }}>đ</span></div>
+                                                <div style={{ color: '#fff', fontSize: 28, fontWeight: 700 }}>{costSummary.profit != null ? Number(costSummary.profit).toLocaleString() : '—'} <span style={{ fontSize: 16, fontWeight: 'normal', opacity: 0.8 }}>đ</span></div>
                                             </div>
                                             <div className="cost-blob blob-profit"></div>
                                         </Card>
@@ -336,8 +336,8 @@ const ProjectDetailPage: React.FC = () => {
                                     { title: 'Tasks (Done/Total)', render: (r) => (
                                         <Progress percent={r.task_count > 0 ? Math.round((r.done_count / r.task_count) * 100) : 0} size="small" format={() => `${r.done_count}/${r.task_count}`} />
                                     )},
-                                    { title: 'Chi phí Dự toán', dataIndex: 'estimated_cost', align: 'right', render: (c: number) => <Text type="secondary">{c.toLocaleString()} đ</Text> },
-                                    { title: 'Chi phí Thực tế', dataIndex: 'actual_cost', align: 'right', render: (c: number) => <Text strong type="danger">{c.toLocaleString()} đ</Text> },
+                                    { title: 'Chi phí Dự toán', dataIndex: 'estimated_cost', align: 'right', render: (c: number) => <Text type="secondary">{c != null ? `${Number(c).toLocaleString()} đ` : '—'}</Text> },
+                                    { title: 'Chi phí Thực tế', dataIndex: 'actual_cost', align: 'right', render: (c: number) => <Text strong type="danger">{c != null ? `${Number(c).toLocaleString()} đ` : '—'}</Text> },
                                 ]}
                             />
                         </>
