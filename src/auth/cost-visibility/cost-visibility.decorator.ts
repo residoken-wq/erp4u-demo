@@ -18,6 +18,13 @@ export interface CostVisibleOptions {
    * Người có PURCHASE:can_view hoặc view_cost_price ở module route sẽ thấy các khoá này.
    */
   purchaseKeys?: string[];
+
+  /**
+   * Hàm kiểm tra dòng chi phí thành phẩm/bán thành phẩm (nhận diện product cost line).
+   * Dòng thoả mãn hàm này sẽ bị ẩn `unit_price`, `total_cost`, `total_amount` đối với người không có quyền `view_cost_price`,
+   * kể cả khi họ có quyền xem giá mua NVL (`PURCHASE:can_view`).
+   */
+  productCostDetector?: (item: any) => boolean;
 }
 
 export const CostVisible = (options?: CostVisibleOptions): CustomDecorator<string> =>

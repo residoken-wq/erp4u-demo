@@ -1,14 +1,11 @@
 import { AuthOnly, Perm } from '../auth/permissions.decorator';
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CorePackage } from '../common/packages/requires-package.decorator';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/permissions.guard';
 import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('categories')
 @CorePackage()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @CostVisible({ modules: ['PRODUCT', 'SALES', 'FINANCE'], keys: ['profit_margin'] })
 export class CategoriesController {
   constructor(private readonly s: CategoriesService) {}

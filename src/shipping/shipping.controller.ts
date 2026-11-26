@@ -12,9 +12,11 @@ import { FinanceService } from '../finance/finance.service';
 import { Response } from 'express';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('shipping')
 @RequiresPackage(PackageKey.INVENTORY)
+@CostVisible({ modules: ['SALES', 'INVENTORY', 'FINANCE'] })
 export class ShippingController {
     constructor(
         private readonly ghtkService: GhtkService,

@@ -1,15 +1,12 @@
 import { AuthOnly, Perm } from '../auth/permissions.decorator';
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
 import { MaterialsService } from './materials.service';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/permissions.guard';
 import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('materials')
 @RequiresPackage(PackageKey.INVENTORY)
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @CostVisible({
   modules: ['PURCHASE', 'INVENTORY', 'FINANCE'],
   purchaseKeys: ['cost_per_unit', 'cost_price'],

@@ -1,15 +1,12 @@
 import { Perm } from '../auth/permissions.decorator';
-import { Controller, Post, Get, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { ProductionService } from './production.service';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/permissions.guard';
 import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('production')
 @RequiresPackage(PackageKey.PRODUCTION)
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @CostVisible({
   modules: ['PRODUCTION', 'PURCHASE', 'FINANCE'],
   purchaseKeys: ['unit_price'],

@@ -211,9 +211,29 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
        ON CONFLICT DO NOTHING`,
     );
     await adminDs.query(
-      `INSERT INTO "tenant_matrix"."purchase_orders" ("id", "uuid", "po_code", "supplier_id", "type", "status") VALUES
-       (801, 'd0000000-0000-0000-0000-000000000801', 'PO-MTRX-01', 301, 'MATERIAL', 'DRAFT'),
-       (802, 'd0000000-0000-0000-0000-000000000802', 'PO-MTRX-POOLED-01', 301, 'POOLED', 'DRAFT')
+      `INSERT INTO "tenant_matrix"."purchase_orders" ("id", "uuid", "po_code", "supplier_id", "type", "status", "pfo_id") VALUES
+       (801, 'd0000000-0000-0000-0000-000000000801', 'PO-MTRX-01', 301, 'MATERIAL', 'DRAFT', 701),
+       (802, 'd0000000-0000-0000-0000-000000000802', 'PO-MTRX-POOLED-01', 301, 'POOLED', 'DRAFT', NULL)
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_matrix"."purchase_order_items" ("id", "po_id", "material_id", "quantity", "unit_price", "subtotal") VALUES
+       (811, 801, 901, 10, 50000, 500000)
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_matrix"."purchase_order_items" ("id", "po_id", "product_id", "quantity", "unit_price", "subtotal") VALUES
+       (812, 801, 101, 5, 80000, 400000)
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_matrix"."pfo_material_requirements" ("id", "pfo_id", "material_id", "material_code", "material_name", "planned_quantity", "unit_price") VALUES
+       (711, 701, 901, 'NVL-MTRX-01', 'Vat lieu Matrix 01', 10, 50000)
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_matrix"."pfo_material_requirements" ("id", "pfo_id", "product_id", "material_code", "material_name", "planned_quantity", "unit_price") VALUES
+       (712, 701, 101, 'SP-MTRX-01', 'San pham Matrix 01', 5, 70000)
        ON CONFLICT DO NOTHING`,
     );
 
@@ -968,6 +988,120 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
         expect(rows[0].name).toBe('San pham Matrix Updated by Warehouse');
         expect(Number(rows[0].cost_price)).toBe(70000);
         expect(Number(rows[0].profit_margin)).toBe(30);
+      });
+
+      it('P12b3-r2 Mục 2: Kho và Mua hàng gọi GET /purchasing -> không có cost_price/profit_margin trong items[].product, không có total_cost trong pfo.sales_order; Mua hàng có items[].material.cost_per_unit', async () => {
+        if (!dbAvailable) return;
+
+        // 1. Mua hàng gọi GET /purchasing
+        const tokenPurchasing = jwtService.sign({
+          sub: 4,
+          username: 'user_purchasing',
+          groupId: 4,
+          tid: 'tenant_matrix',
+        });
+
+        const resPurchasing = await request(app.getHttpServer())
+          .get('/api/purchasing')
+          .set('X-Test-Tenant', 'tenant_matrix')
+          .set('Authorization', `Bearer ${tokenPurchasing}`);
+
+        expect(resPurchasing.status).toBe(200);
+        const posMuaHang = Array.isArray(resPurchasing.body) ? resPurchasing.body : resPurchasing.body.data;
+        expect(Array.isArray(posMuaHang)).toBe(true);
+        const po801MuaHang = posMuaHang.find((p: any) => p.id === 801);
+        expect(po801MuaHang).toBeDefined();
+
+        // Kiểm tra items.product: cost_price và profit_margin phải bị ẩn
+        const itemProdMH = po801MuaHang.items.find((i: any) => i.product_id === 101);
+        expect(itemProdMH).toBeDefined();
+        expect(itemProdMH.product).toBeDefined();
+        expect(itemProdMH.product).not.toHaveProperty('cost_price');
+        expect(itemProdMH.product).not.toHaveProperty('profit_margin');
+        expect('cost_price' in itemProdMH.product).toBe(false);
+        expect('profit_margin' in itemProdMH.product).toBe(false);
+
+        // Mua hàng phải thấy items.material.cost_per_unit
+        const itemMatMH = po801MuaHang.items.find((i: any) => i.material_id === 901);
+        expect(itemMatMH).toBeDefined();
+        expect(itemMatMH.material).toBeDefined();
+        expect(itemMatMH.material).toHaveProperty('cost_per_unit');
+        expect('cost_per_unit' in itemMatMH.material).toBe(true);
+
+        // Kiểm tra pfo.sales_order: total_cost phải bị ẩn
+        expect(po801MuaHang.pfo).toBeDefined();
+        expect(po801MuaHang.pfo.sales_order).toBeDefined();
+        expect(po801MuaHang.pfo.sales_order).not.toHaveProperty('total_cost');
+        expect('total_cost' in po801MuaHang.pfo.sales_order).toBe(false);
+
+        // 2. Kho gọi GET /purchasing (khi được cấp quyền xem PO nhưng view_cost_price = false)
+        await adminDs.query(
+          `INSERT INTO "tenant_matrix"."group_permissions" ("group_id", "module_code", "can_view", "can_create", "can_update", "can_delete", "view_cost_price")
+           VALUES (3, 'PURCHASE', true, false, false, false, false)
+           ON CONFLICT ("group_id", "module_code") DO UPDATE SET "can_view" = true, "view_cost_price" = false`,
+        );
+        permCacheService.clearAll();
+
+        const tokenWarehouse = jwtService.sign({
+          sub: 3,
+          username: 'user_warehouse',
+          groupId: 3,
+          tid: 'tenant_matrix',
+        });
+
+        const resWarehouse = await request(app.getHttpServer())
+          .get('/api/purchasing')
+          .set('X-Test-Tenant', 'tenant_matrix')
+          .set('Authorization', `Bearer ${tokenWarehouse}`);
+
+        expect(resWarehouse.status).toBe(200);
+        const posWarehouse = Array.isArray(resWarehouse.body) ? resWarehouse.body : resWarehouse.body.data;
+        const po801Warehouse = posWarehouse.find((p: any) => p.id === 801);
+        expect(po801Warehouse).toBeDefined();
+
+        const itemProdWH = po801Warehouse.items.find((i: any) => i.product_id === 101);
+        expect(itemProdWH.product).not.toHaveProperty('cost_price');
+        expect(itemProdWH.product).not.toHaveProperty('profit_margin');
+        expect('cost_price' in itemProdWH.product).toBe(false);
+        expect('profit_margin' in itemProdWH.product).toBe(false);
+
+        expect(po801Warehouse.pfo.sales_order).not.toHaveProperty('total_cost');
+        expect('total_cost' in po801Warehouse.pfo.sales_order).toBe(false);
+      });
+
+      it('P12b3-r2 Mục 3: Mua hàng gọi route PFO có cả dòng NVL và dòng thành phẩm -> dòng NVL có unit_price, dòng thành phẩm không có', async () => {
+        if (!dbAvailable) return;
+
+        const tokenPurchasing = jwtService.sign({
+          sub: 4,
+          username: 'user_purchasing',
+          groupId: 4,
+          tid: 'tenant_matrix',
+        });
+
+        const res = await request(app.getHttpServer())
+          .get('/api/planning/pfo/701')
+          .set('X-Test-Tenant', 'tenant_matrix')
+          .set('Authorization', `Bearer ${tokenPurchasing}`);
+
+        expect(res.status).toBe(200);
+        expect(res.body).toBeDefined();
+        const reqs = res.body.material_requirements;
+        expect(Array.isArray(reqs)).toBe(true);
+        expect(reqs.length).toBeGreaterThanOrEqual(2);
+
+        // Dòng NVL: có unit_price
+        const nvlReq = reqs.find((r: any) => r.material_id === 901);
+        expect(nvlReq).toBeDefined();
+        expect(nvlReq).toHaveProperty('unit_price');
+        expect('unit_price' in nvlReq).toBe(true);
+        expect(Number(nvlReq.unit_price)).toBe(50000);
+
+        // Dòng thành phẩm: KHÔNG có unit_price
+        const prodReq = reqs.find((r: any) => r.product_id === 101);
+        expect(prodReq).toBeDefined();
+        expect(prodReq).not.toHaveProperty('unit_price');
+        expect('unit_price' in prodReq).toBe(false);
       });
     });
   });

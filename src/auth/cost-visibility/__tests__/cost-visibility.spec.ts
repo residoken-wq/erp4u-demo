@@ -7,6 +7,7 @@ import {
   CostVisible,
   DEFAULT_COST_KEYS,
   DEFAULT_PURCHASE_COST_KEYS,
+  defaultProductCostDetector,
 } from '../index';
 
 describe('Cost Visibility Common Helper & Interceptor (Task P12b3)', () => {
@@ -161,6 +162,170 @@ describe('Cost Visibility Common Helper & Interceptor (Task P12b3)', () => {
       expect(result).not.toHaveProperty('cost_price');
       expect(result.child.id).toBe(2);
       expect(result.child).not.toHaveProperty('cost_price');
+    });
+
+    it('P12b3-r2 Mục 2: filters GET /purchasing nested relations (cost_price, profit_margin in items.product, total_cost in pfo.sales_order)', () => {
+      const poResponse = {
+        id: 10,
+        po_code: 'PO-2026-001',
+        total_amount: 1500000,
+        items: [
+          {
+            id: 1,
+            po_id: 10,
+            material_id: 50,
+            quantity: 20,
+            unit_price: 50000,
+            subtotal: 1000000,
+            material: {
+              id: 50,
+              code: 'MAT-50',
+              name: 'Vải Canvas',
+              cost_per_unit: 50000,
+              cost_price: 50000,
+            },
+          },
+          {
+            id: 2,
+            po_id: 10,
+            product_id: 100,
+            quantity: 5,
+            unit_price: 100000,
+            subtotal: 500000,
+            product: {
+              id: 100,
+              sku: 'PROD-100',
+              name: 'Balo Du Lịch',
+              base_price: 250000,
+              cost_price: 120000,
+              profit_margin: 35,
+            },
+          },
+        ],
+        pfo: {
+          id: 5,
+          code: 'PFO-005',
+          sales_order: {
+            id: 20,
+            order_code: 'SO-020',
+            total_amount: 3000000,
+            total_cost: 1800000,
+          },
+        },
+      };
+
+      // Case 2A: Mua hàng (canViewPurchaseCost = true, canViewCost = false)
+      const resMuaHang = stripCostFields(JSON.parse(JSON.stringify(poResponse)), {
+        canViewCost: false,
+        canViewPurchaseCost: true,
+        purchaseKeys: ['cost_per_unit', 'cost_price', 'unit_price', 'price'],
+        productCostDetector: defaultProductCostDetector,
+      });
+
+      // Mua hàng sees NVL prices & PO item unit_price
+      expect(resMuaHang.items[0].unit_price).toBe(50000);
+      expect(resMuaHang.items[0].material.cost_per_unit).toBe(50000);
+      expect(resMuaHang.items[1].unit_price).toBe(100000);
+      // Mua hàng CANNOT see product cost_price, profit_margin or sales_order total_cost
+      expect(resMuaHang.items[1].product).not.toHaveProperty('cost_price');
+      expect(resMuaHang.items[1].product).not.toHaveProperty('profit_margin');
+      expect(resMuaHang.pfo.sales_order).not.toHaveProperty('total_cost');
+
+      // Case 2B: Kho (canViewPurchaseCost = false, canViewCost = false)
+      const resKho = stripCostFields(JSON.parse(JSON.stringify(poResponse)), {
+        canViewCost: false,
+        canViewPurchaseCost: false,
+        purchaseKeys: ['cost_per_unit', 'cost_price', 'unit_price', 'price'],
+        productCostDetector: defaultProductCostDetector,
+      });
+
+      // Kho sees NO cost or purchase price
+      expect(resKho.items[0]).not.toHaveProperty('unit_price');
+      expect(resKho.items[0].material).not.toHaveProperty('cost_per_unit');
+      expect(resKho.items[1]).not.toHaveProperty('unit_price');
+      expect(resKho.items[1].product).not.toHaveProperty('cost_price');
+      expect(resKho.items[1].product).not.toHaveProperty('profit_margin');
+      expect(resKho.pfo.sales_order).not.toHaveProperty('total_cost');
+
+      // Case 2C: Admin (canViewCost = true)
+      const resAdmin = stripCostFields(JSON.parse(JSON.stringify(poResponse)), {
+        canViewCost: true,
+        canViewPurchaseCost: true,
+        purchaseKeys: ['cost_per_unit', 'cost_price', 'unit_price', 'price'],
+        productCostDetector: defaultProductCostDetector,
+      });
+      expect(resAdmin.items[1].product.cost_price).toBe(120000);
+      expect(resAdmin.items[1].product.profit_margin).toBe(35);
+      expect(resAdmin.pfo.sales_order.total_cost).toBe(1800000);
+    });
+
+    it('P12b3-r2 Mục 3: distinguishes product line vs material line in PFO requirements', () => {
+      const pfoData = {
+        id: 101,
+        code: 'PFO-TEST-01',
+        material_requirements: [
+          {
+            id: 1,
+            pfo_id: 101,
+            material_id: 88,
+            material_code: 'NVL-COTTON',
+            material_name: 'Vải Cotton',
+            planned_quantity: 100,
+            unit_price: 45000,
+          },
+          {
+            id: 2,
+            pfo_id: 101,
+            product_id: 99,
+            material_code: 'BTP-THAN-TRUOC',
+            material_name: 'Thân Trước Áo',
+            planned_quantity: 50,
+            unit_price: 120000, // Derived from prod.cost_price
+            total_cost: 6000000,
+          },
+        ],
+      };
+
+      // Mua hàng: canViewPurchaseCost = true, canViewCost = false
+      const resMuaHang = stripCostFields(JSON.parse(JSON.stringify(pfoData)), {
+        canViewCost: false,
+        canViewPurchaseCost: true,
+        purchaseKeys: ['cost_per_unit', 'unit_price'],
+        productCostDetector: defaultProductCostDetector,
+      });
+
+      // Dòng NVL có unit_price
+      expect(resMuaHang.material_requirements[0].unit_price).toBe(45000);
+      expect(resMuaHang.material_requirements[0].material_code).toBe('NVL-COTTON');
+
+      // Dòng thành phẩm / BTP KHÔNG có unit_price và total_cost
+      expect(resMuaHang.material_requirements[1]).not.toHaveProperty('unit_price');
+      expect(resMuaHang.material_requirements[1]).not.toHaveProperty('total_cost');
+      expect(resMuaHang.material_requirements[1].material_code).toBe('BTP-THAN-TRUOC');
+
+      // Admin: có đầy đủ cả 2 dòng
+      const resAdmin = stripCostFields(JSON.parse(JSON.stringify(pfoData)), {
+        canViewCost: true,
+        canViewPurchaseCost: true,
+        purchaseKeys: ['cost_per_unit', 'unit_price'],
+        productCostDetector: defaultProductCostDetector,
+      });
+      expect(resAdmin.material_requirements[0].unit_price).toBe(45000);
+      expect(resAdmin.material_requirements[1].unit_price).toBe(120000);
+      expect(resAdmin.material_requirements[1].total_cost).toBe(6000000);
+    });
+
+    it('defaultProductCostDetector correctly identifies lines', () => {
+      // 1. Material requirement
+      expect(defaultProductCostDetector({ material_id: 10, unit_price: 50000 })).toBe(false);
+      // 2. PO item with product_id (purchase line, not internal cost)
+      expect(defaultProductCostDetector({ po_id: 100, product_id: 5, unit_price: 20000 })).toBe(false);
+      // 3. Sales order item (customer price)
+      expect(defaultProductCostDetector({ sales_order_id: 20, product_id: 5, unit_price: 200000 })).toBe(false);
+      // 4. Product requirement in PFO (internal product cost)
+      expect(defaultProductCostDetector({ pfo_id: 1, product_id: 5, unit_price: 80000 })).toBe(true);
+      // 5. PFO demand dashboard detail
+      expect(defaultProductCostDetector({ pfo_id: 1, product_id: 5, sales_order_id: 20, unit_price: 80000 })).toBe(true);
     });
   });
 

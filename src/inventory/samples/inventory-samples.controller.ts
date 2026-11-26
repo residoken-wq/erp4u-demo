@@ -4,9 +4,11 @@ import { InventorySamplesService } from './inventory-samples.service';
 import { SampleTransactionType } from './sample-transaction.entity';
 import { RequiresPackage } from '../../common/packages/requires-package.decorator';
 import { PackageKey } from '../../common/packages/package.registry';
+import { CostVisible } from '../../auth/cost-visibility';
 
 @Controller('inventory/samples')
 @RequiresPackage(PackageKey.INVENTORY)
+@CostVisible({ modules: ['INVENTORY', 'FINANCE'] })
 export class InventorySamplesController {
     constructor(private readonly samplesService: InventorySamplesService) {}
 

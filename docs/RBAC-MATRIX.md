@@ -182,18 +182,30 @@ Hệ thống bảo vệ dữ liệu giá vốn (`cost_price`, `cost_per_unit`), 
 | `GET /finance/so-profit`<br>`GET /finance/summary` | `profit`<br>`expected_cost`<br>`expected_bom_cost`<br>`margin` | `FINANCE` | Quản trị, Kế toán | Kinh doanh, Kho, Mua hàng, Sản xuất, Nhân sự |
 | `GET /projects/:id/cost-summary` | `total_actual_cost`<br>`total_estimated_cost`<br>`profit` | `PROJECTS`<br>`FINANCE` | Quản trị, Kế toán | Kinh doanh, Kho, Mua hàng, Sản xuất, Nhân sự |
 | `GET /production/assignments` | `unit_price`<br>`total_cost` | `PRODUCTION`<br>`PURCHASE`<br>`FINANCE` | Quản trị, Kế toán | Kinh doanh, Kho, Mua hàng, Sản xuất, Nhân sự |
+| `GET /purchasing`<br>`GET /purchasing/:id` | `items[].product.cost_price`<br>`items[].product.profit_margin`<br>`pfo.sales_order.total_cost`<br>(`items[].material.cost_per_unit` ẩn với nhóm thiếu PURCHASE) | `PURCHASE`<br>`INVENTORY`<br>`FINANCE` | Quản trị, Kế toán (full); Mua hàng (chỉ giá mua NVL & PO unit_price) | Kinh doanh, Kho, Sản xuất, Nhân sự |
+| `GET /inventory/samples/transactions` | `items[].product.cost_price`<br>`items[].product.profit_margin` | `INVENTORY`<br>`FINANCE` | Quản trị, Kế toán | Kinh doanh, Kho, Mua hàng, Sản xuất, Nhân sự |
+| `GET /finance/cash-flow/summary`<br>`GET /finance/cash-flow/chart`<br>`GET /finance/cash-flow/receivables`<br>`GET /finance/cash-flow/payables` | Các chỉ số dòng tiền, thu chi, công nợ chi tiết | `FINANCE` | Quản trị, Kế toán | Kinh doanh, Kho, Mua hàng, Sản xuất, Nhân sự |
+| `GET /shipping/deliveries` | `so.total_cost`<br>`so_items[].product.cost_price` | `SALES`<br>`INVENTORY`<br>`FINANCE` | Quản trị, Kế toán | Kinh doanh, Kho, Mua hàng, Sản xuất, Nhân sự |
 
 ### 6.3. Quyết Định Quy Tắc Nghiệp Vụ Đặc Thù
 
 1. **Quy tắc Mua Hàng & Giá Nguyên Vật Liệu (NVL)**:
    - Người dùng có quyền `PURCHASE:can_view` hoặc có cờ `view_cost_price` trong route liên quan được phép xem đơn giá mua NPL (`materials.cost_per_unit`, `materials.cost_price`, bảng giá NCC `suppliers.price`) nhằm phục vụ việc tạo đơn PO và đàm phán giá mua.
    - Các nhóm khác (Kho, Sản xuất, Kinh doanh) bị ẩn hoàn toàn giá mua NPL.
-   - **Tuyệt đối phân tách**: Quyền `PURCHASE:can_view` KHÔNG mang lại quyền xem giá vốn thành phẩm (`product.cost_price`, `product.profit_margin`). Nhóm Mua hàng khi xem danh sách sản phẩm (`GET /products`) vẫn bị ẩn `cost_price` và `profit_margin`.
+   - **Tuyệt đối phân tách**: Quyền `PURCHASE:can_view` KHÔNG mang lại quyền xem giá vốn thành phẩm (`product.cost_price`, `product.profit_margin`). Nhóm Mua hàng khi xem danh sách sản phẩm (`GET /products`) hoặc đơn mua hàng (`GET /purchasing`) vẫn bị ẩn `cost_price` và `profit_margin` của thành phẩm, đồng thời không thấy `sales_order.total_cost`.
 
 2. **Quy tắc Lệnh Kế Hoạch & Sản Xuất (PFO Rule)**:
    - **Nhóm Sản xuất**: Chỉ quản lý công đoạn, số lượng và tiến độ; toàn bộ thông tin giá vốn, tổng chi phí dự kiến (`total_cost`, `totalEstimatedCost`) và lợi nhuận được ẩn hoàn toàn.
    - **Nhóm Mua hàng**: Xem được giá mua nguyên vật liệu và tổng chi phí mua hàng NPL của đơn hàng để triển khai PO vật tư.
    - **Nhóm Kế toán & Quản trị**: Toàn quyền xem chi tiết toàn bộ các cấu phần chi phí BOM, chi phí gia công, chi phí thực tế và biên lợi nhuận của lệnh PFO.
+
+3. **Quy tắc Phân Biệt Đơn Giá Thành Phẩm vs NVL trong PFO (P12b3-r2)**:
+   - **Dòng NVL** (`material_id` hoặc quan hệ `material`): `unit_price` là đơn giá mua NVL, hiển thị cho người có quyền `PURCHASE:can_view` hoặc `view_cost_price`.
+   - **Dòng thành phẩm / bán thành phẩm** (`product_id` hoặc quan hệ `product`, không phải NVL và không phải PO item): `unit_price` được gán từ giá vốn thành phẩm (`prod.cost_price`). Để ngăn Mua hàng suy ra giá vốn thành phẩm, bộ lọc `@CostVisible` áp dụng `productCostDetector` ẩn triệt để `unit_price`, `total_cost`, `total_amount` của dòng thành phẩm đối với bất kỳ ai không có quyền `view_cost_price`.
+
+4. **Hệ Quả Nghiệp Vụ Khi Ghi Dữ Liệu (Write Protection Business Impact)**:
+   - Cơ chế bảo vệ ghi tự động loại bỏ các trường giá vốn (`cost_price`, `profit_margin`, `cost_per_unit`, `unit_price`) khỏi request `POST`/`PUT`/`PATCH` khi người thực hiện không có quyền xem giá vốn tương ứng.
+   - **Hệ quả đối với phiếu gia công**: Nhóm Sản xuất khi tạo phiếu giao việc gia công (`POST /production/assignments`) sẽ **không** nhập được đơn giá gia công (`outsourcing-assignment.unit_price`) do nhóm này không có quyền `PURCHASE:can_view` hay `view_cost_price`. Đơn giá gia công này sẽ để trống và do nhóm Mua hàng hoặc Kế toán bổ sung sau khi thẩm định hợp đồng với xưởng gia công.
 
 ### 6.4. Quy Chuẩn Hiển Thị Trên Giao Diện (Frontend)
 - Khi người dùng không có quyền xem giá vốn hoặc giá trị trường là `null`/`undefined`, giao diện hiển thị ký hiệu gạch ngang `—` trung tính.

@@ -72,6 +72,7 @@ export class CostVisibilityInterceptor implements NestInterceptor {
           canViewPurchaseCost,
           costKeys: meta.keys,
           purchaseKeys: meta.purchaseKeys,
+          productCostDetector: meta.productCostDetector,
         }),
       ),
     );

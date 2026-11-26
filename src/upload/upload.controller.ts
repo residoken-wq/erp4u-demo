@@ -19,8 +19,8 @@ export class UploadController {
     private readonly uploadService: UploadService,
     @InjectRepository(Product) private productRepo: Repository<Product>,
     @InjectRepository(SystemConfig) private configRepo: Repository<SystemConfig>,
+    @Inject(forwardRef(() => PermissionCacheService)) private readonly permCacheService: PermissionCacheService,
     @Optional() @Inject(WEBSITE_SERVICE) private websiteService?: WebsiteMediaUsageBridge,
-    @Optional() @Inject(forwardRef(() => PermissionCacheService)) private readonly permCacheService?: PermissionCacheService,
   ) { }
 
   @Perm('CMS', 'view')
@@ -129,7 +129,7 @@ export class UploadController {
     if (!file) throw new BadRequestException('Chua chon file!');
     const canViewPurchaseCost = this.permCacheService
       ? await this.permCacheService.canViewPurchaseCost(req?.user, ['PURCHASE', 'INVENTORY', 'FINANCE'])
-      : true;
+      : false;
     return this.uploadService.importMaterials(file.buffer, canViewPurchaseCost);
   }
 
@@ -155,7 +155,7 @@ export class UploadController {
           'INVENTORY',
           'FINANCE',
         ])
-      : true;
+      : false;
     return this.uploadService.importProducts(file.buffer, canViewCost);
   }
 
@@ -283,10 +283,10 @@ export class UploadController {
           'INVENTORY',
           'FINANCE',
         ])
-      : true;
+      : false;
     const canViewPurchaseCost = this.permCacheService
       ? await this.permCacheService.canViewPurchaseCost(req?.user, ['PURCHASE', 'INVENTORY', 'FINANCE'])
-      : true;
+      : false;
     const buffer = this.uploadService.getTemplate(type, { canViewCost, canViewPurchaseCost });
 
     res.set({

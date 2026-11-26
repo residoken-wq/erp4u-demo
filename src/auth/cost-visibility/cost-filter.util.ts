@@ -5,6 +5,33 @@ export interface StripCostOptions {
   canViewPurchaseCost?: boolean;
   costKeys?: readonly string[] | string[];
   purchaseKeys?: readonly string[] | string[];
+  productCostDetector?: (item: any) => boolean;
+}
+
+/**
+ * Nhận diện dòng chi phí thành phẩm / bán thành phẩm (product cost line).
+ * Trong PFO/Kế hoạch sản xuất, các dòng thành phẩm/BTP có đơn giá lấy từ giá vốn sản phẩm (prod.cost_price).
+ * Các dòng này KHÔNG phải là dòng mua NVL hay dòng đơn mua hàng (PO item), và không phải dòng đơn bán (SO item).
+ */
+export function defaultProductCostDetector(item: any): boolean {
+  if (!item || typeof item !== 'object') return false;
+  // Dòng chi tiết đơn mua hàng (PO item) là giá mua/gia công thoả thuận với NCC
+  if ('po_id' in item || 'purchase_order' in item) {
+    return false;
+  }
+  // Dòng NVL (có material_id hoặc material relation) là chi phí mua NVL
+  if (item.material_id || item.material) {
+    return false;
+  }
+  // Dòng đơn bán (sales order item) không gắn pfo_id là giá bán khách hàng
+  if (('sales_order_id' in item || 'order_id' in item || 'sales_order' in item || 'so_id' in item) && !('pfo_id' in item)) {
+    return false;
+  }
+  // Dòng thành phẩm / bán thành phẩm (có product_id hoặc product relation)
+  if (item.product_id || item.product) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -43,9 +70,12 @@ export function stripCostFields<T>(
     return data;
   }
 
-  const { canViewCost, canViewPurchaseCost = canViewCost } = options;
+  const { canViewCost, canViewPurchaseCost = canViewCost, productCostDetector } = options;
   const costKeys = options.costKeys || DEFAULT_COST_KEYS;
   const purchaseKeys = options.purchaseKeys || [];
+
+  // Nhận diện dòng chi phí thành phẩm / BTP
+  const isProdCostLine = productCostDetector ? productCostDetector(data) : false;
 
   // 1. Strip general cost keys if cannot view cost
   if (!canViewCost) {
@@ -59,10 +89,22 @@ export function stripCostFields<T>(
         }
 
         // If this key is also a purchaseKey and user CAN view purchase cost, do not delete
-        if (purchaseKeys.includes(key) && canViewPurchaseCost) {
+        // EXCEPT if this is a product cost line where purchase keys represent internal product cost
+        if (purchaseKeys.includes(key) && canViewPurchaseCost && !isProdCostLine) {
           continue;
         }
         delete (data as any)[key];
+      }
+    }
+
+    // Trên dòng thành phẩm/BTP (ví dụ PFO demand/requirements), đơn giá lấy từ giá vốn sản phẩm (prod.cost_price)
+    // Ẩn unit_price, total_cost, total_amount khi người dùng không có view_cost_price
+    if (isProdCostLine) {
+      const prodCostKeysToStrip = ['unit_price', 'total_cost', 'total_amount'];
+      for (const key of prodCostKeysToStrip) {
+        if (key in (data as any)) {
+          delete (data as any)[key];
+        }
       }
     }
   }

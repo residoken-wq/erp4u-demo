@@ -4,10 +4,12 @@ import { CashFlowService } from './cash-flow.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('finance/cash-flow')
 @RequiresPackage(PackageKey.FINANCE)
 @UseGuards(JwtAuthGuard)
+@CostVisible({ modules: ['FINANCE'] })
 export class CashFlowController {
     constructor(private readonly cashFlowService: CashFlowService) { }
 
