@@ -105,12 +105,14 @@ const InventoryPage: React.FC = () => {
     const itemType = Form.useWatch('itemType', form);
 
     const { canCreate, canUpdate, canDelete } = usePermission('INVENTORY');
+    const { canView: canViewPurchasing } = usePermission('PURCHASE');
+    const { canView: canViewPlanning } = usePermission('PRODUCTION');
 
     const fetchData = async () => {
         setLoading(true);
         try {
             const [pRes, mRes, sRes, hRes, grRes, dRes, cdRes, cRes, giRes, supRes, poRes, pfoRes] = await Promise.all([
-                api.get('/products').catch(() => ({ data: [] })),
+                api.get('/lookups/products').catch(() => ({ data: [] })),
                 api.get('/materials').catch(() => ({ data: [] })),
                 api.get('/inventory/stocks'),
                 api.get('/inventory/history').catch(() => ({ data: [] })),
@@ -120,8 +122,8 @@ const InventoryPage: React.FC = () => {
                 api.get('/inventory/shipping-carriers').catch(() => ({ data: [] })),
                 api.get('/inventory/goods-issue').catch(() => ({ data: [] })),
                 api.get('/lookups/suppliers').catch(() => ({ data: [] })),
-                api.get('/purchasing').catch(() => ({ data: [] })),
-                api.get('/planning').catch(() => ({ data: [] }))
+                canViewPurchasing ? api.get('/purchasing').catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+                canViewPlanning ? api.get('/planning').catch(() => ({ data: [] })) : Promise.resolve({ data: [] })
             ]);
             setProducts(pRes.data);
             setMaterials(mRes.data);

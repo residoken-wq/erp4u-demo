@@ -85,6 +85,11 @@ export class ProductsController {
     return this.service.createVariant(createVariantDto);
   }
 
+  @RequireAnyPermission(
+    ['PRODUCT', 'can_view'],
+    ['PRODUCTION', 'can_view'],
+    ['PURCHASE', 'can_view'],
+  )
   @AnyPerm(
     ['PRODUCT', 'view'],
     ['PRODUCTION', 'view'],
@@ -169,6 +174,10 @@ export class ProductsController {
     return this.service.copySemiFinished(body.sourceSku, body.targetSku);
   }
 
+  @RequireAnyPermission(
+    ['PRODUCT', 'can_view'],
+    ['PRODUCTION', 'can_view'],
+  )
   @AnyPerm(
     ['PRODUCT', 'view'],
     ['PRODUCTION', 'view'],

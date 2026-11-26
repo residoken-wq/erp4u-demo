@@ -1,4 +1,4 @@
-import { Perm } from '../auth/permissions.decorator';
+import { Perm, AnyPerm } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Put, Param, Body, Delete, Query } from '@nestjs/common';
 import { PlanningService } from './planning.service';
 import { PfoDemandService } from './pfo-demand.service';
@@ -80,7 +80,7 @@ export class PlanningController {
   // ============================================================
 
   // --- PFO Detail ---
-  @Perm('PRODUCTION', 'view')
+  @AnyPerm(['PRODUCTION', 'view'], ['PURCHASE', 'view'])
   @Get('pfo/:id')
   getPfoDetails(@Param('id') id: string) {
     return this.demandSvc.getPfoDetails(Number(id));

@@ -194,6 +194,21 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
        (501, 'Du an Matrix', 2, 'ACTIVE')
        ON CONFLICT DO NOTHING`,
     );
+    await adminDs.query(
+      `INSERT INTO "tenant_matrix"."sales_orders" ("id", "uuid", "order_code", "customer_id", "status") VALUES
+       (601, 'b0000000-0000-0000-0000-000000000601', 'SO-MTRX-01', 201, 'SO_PENDING')
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_matrix"."production_fulfillment_orders" ("id", "code", "sales_order_id", "status") VALUES
+       (701, 'PFO-MTRX-01', 601, 'DRAFT')
+       ON CONFLICT DO NOTHING`,
+    );
+    await adminDs.query(
+      `INSERT INTO "tenant_matrix"."purchase_orders" ("id", "uuid", "po_code", "supplier_id", "type", "status") VALUES
+       (801, 'd0000000-0000-0000-0000-000000000801', 'PO-MTRX-01', 301, 'MATERIAL', 'DRAFT')
+       ON CONFLICT DO NOTHING`,
+    );
 
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -242,19 +257,71 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
       mainApis: [
         '/api/users',
         '/api/users/groups',
+        '/api/users/online',
         '/api/auth/rbac/mode',
         '/api/auth/rbac/readiness',
+        '/api/system/company',
+        '/api/system/templates',
+        '/api/system/logs?limit=5',
+        '/api/system/dashboard/stats',
         '/api/sales',
+        '/api/sales/601',
         '/api/customers',
+        '/api/customers/201',
+        '/api/customers/201/orders',
+        '/api/projects',
+        '/api/projects/501',
+        '/api/projects/501/cost-summary',
         '/api/products',
         '/api/purchasing',
+        '/api/purchasing/801',
+        '/api/purchasing/available-for-pooling',
+        '/api/purchasing/pooled/801/aggregate',
         '/api/inventory/stocks',
+        '/api/inventory/history',
+        '/api/inventory/goods-receipt/pending',
+        '/api/inventory/goods-receipt/po/801',
+        '/api/inventory/deliveries/pending',
+        '/api/inventory/deliveries/completed',
+        '/api/inventory/shipping-carriers',
+        '/api/inventory/goods-issue',
+        '/api/materials',
         '/api/planning',
+        '/api/planning/pfo/suggestions',
+        '/api/planning/pfo/701',
+        '/api/planning/pfo/701/pos',
+        '/api/planning/pfo/701/pxks',
+        '/api/planning/pfo/701/preview-btp',
+        '/api/production/assignments',
+        '/api/qc/summary',
+        '/api/products/101/routings',
+        '/api/products/calculate-cost/SKU-MTRX-01',
         '/api/finance/transactions',
+        '/api/finance/categories',
+        '/api/finance/summary',
+        '/api/finance/so-profit',
         '/api/hr/employees',
+        '/api/hr/attendances',
+        '/api/hr/leaves',
+        '/api/hr/shifts',
+        '/api/hr/assets',
+        '/api/hr/payslips',
+        '/api/hr/trainings',
+        '/api/hr/balance/401',
+        '/api/hr/me/reviews',
+        '/api/hr/recruitment/jobs',
+        '/api/hr/recruitment/candidates',
+        '/api/hr/recruitment/interviews',
+        '/api/hr/review-questions',
+        '/api/hr/review-campaigns',
+        '/api/auth/me',
+        '/api/notifications',
+        '/api/announcements/user/active',
+        '/api/discussions',
+        '/api/tasks',
       ],
       deniedApis: [],
-      lookupApis: ['/api/lookups/users', '/api/lookups/customers', '/api/lookups/products'],
+      lookupApis: ['/api/lookups/users', '/api/lookups/customers', '/api/lookups/products', '/api/lookups/suppliers', '/api/lookups/warehouses'],
     },
     {
       roleName: 'Kinh doanh',
@@ -263,12 +330,27 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
       groupId: 2,
       mainApis: [
         '/api/sales',
+        '/api/sales/601',
         '/api/customers',
+        '/api/customers/201',
+        '/api/customers/201/orders',
         '/api/projects',
+        '/api/projects/501',
+        '/api/projects/501/cost-summary',
+        '/api/products',
+        '/api/system/company',
+        '/api/system/templates',
+        '/api/system/dashboard/stats',
+        '/api/tasks',
+        '/api/auth/me',
+        '/api/notifications',
+        '/api/announcements/user/active',
+        '/api/discussions',
       ],
       deniedApis: [
         '/api/purchasing',
         '/api/inventory/stocks',
+        '/api/planning',
         '/api/finance/transactions',
         '/api/hr/employees',
         '/api/users/groups',
@@ -289,8 +371,17 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
         '/api/inventory/stocks',
         '/api/inventory/history',
         '/api/inventory/goods-receipt/pending',
-        '/api/inventory/goods-issue',
+        '/api/inventory/deliveries/pending',
+        '/api/inventory/deliveries/completed',
         '/api/inventory/shipping-carriers',
+        '/api/inventory/goods-issue',
+        '/api/materials',
+        '/api/system/dashboard/stats',
+        '/api/tasks',
+        '/api/auth/me',
+        '/api/notifications',
+        '/api/announcements/user/active',
+        '/api/discussions',
       ],
       deniedApis: [
         '/api/sales',
@@ -303,6 +394,7 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
         '/api/lookups/warehouses',
         '/api/lookups/suppliers',
         '/api/lookups/products',
+        '/api/lookups/materials',
       ],
     },
     {
@@ -312,7 +404,19 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
       groupId: 4,
       mainApis: [
         '/api/purchasing',
+        '/api/purchasing/801',
+        '/api/purchasing/available-for-pooling',
+        '/api/purchasing/pooled/801/aggregate',
+        '/api/inventory/goods-receipt/po/801',
+        '/api/planning/pfo/701',
         '/api/products',
+        '/api/system/company',
+        '/api/system/dashboard/stats',
+        '/api/tasks',
+        '/api/auth/me',
+        '/api/notifications',
+        '/api/announcements/user/active',
+        '/api/discussions',
       ],
       deniedApis: [
         '/api/sales',
@@ -334,8 +438,24 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
       groupId: 5,
       mainApis: [
         '/api/planning',
+        '/api/planning/pfo/suggestions',
+        '/api/planning/pfo/701',
+        '/api/planning/pfo/701/pos',
+        '/api/planning/pfo/701/pxks',
+        '/api/planning/pfo/701/preview-btp',
+        '/api/production/assignments',
+        '/api/qc/summary',
         '/api/products',
+        '/api/products/101/routings',
+        '/api/products/calculate-cost/SKU-MTRX-01',
         '/api/inventory/stocks',
+        '/api/materials',
+        '/api/system/dashboard/stats',
+        '/api/tasks',
+        '/api/auth/me',
+        '/api/notifications',
+        '/api/announcements/user/active',
+        '/api/discussions',
       ],
       deniedApis: [
         '/api/sales',
@@ -359,8 +479,17 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
         '/api/finance/transactions',
         '/api/finance/categories',
         '/api/finance/summary',
+        '/api/finance/so-profit',
         '/api/sales',
+        '/api/sales/601',
         '/api/purchasing',
+        '/api/purchasing/801',
+        '/api/system/dashboard/stats',
+        '/api/tasks',
+        '/api/auth/me',
+        '/api/notifications',
+        '/api/announcements/user/active',
+        '/api/discussions',
       ],
       deniedApis: [
         '/api/hr/employees',
@@ -386,6 +515,20 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
         '/api/hr/shifts',
         '/api/hr/assets',
         '/api/hr/payslips',
+        '/api/hr/trainings',
+        '/api/hr/balance/401',
+        '/api/hr/me/reviews',
+        '/api/hr/recruitment/jobs',
+        '/api/hr/recruitment/candidates',
+        '/api/hr/recruitment/interviews',
+        '/api/hr/review-questions',
+        '/api/hr/review-campaigns',
+        '/api/system/dashboard/stats',
+        '/api/tasks',
+        '/api/auth/me',
+        '/api/notifications',
+        '/api/announcements/user/active',
+        '/api/discussions',
       ],
       deniedApis: [
         '/api/sales',
@@ -404,7 +547,7 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
 
   describe('Table-driven Role Matrix Verification at ENFORCE', () => {
     for (const testRole of MATRIX_TEST_ROLES) {
-      it(`Nhóm [${testRole.roleName}]: màn hình chính 200, module ngoài 403, lookups 200`, async () => {
+      it(`Nhóm [${testRole.roleName}]: màn hình chính 200 (${testRole.mainApis.length} APIs), module ngoài 403 (${testRole.deniedApis.length} APIs), lookups 200 (${testRole.lookupApis.length} APIs)`, async () => {
         if (!dbAvailable) return;
 
         const token = jwtService.sign({
@@ -445,6 +588,10 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
           expect(res.status).toBe(200);
           expect(Array.isArray(res.body)).toBe(true);
         }
+
+        console.log(
+          `[RoleMatrix] Nhóm [${testRole.roleName}]: OK - Đã thử ${testRole.mainApis.length} API màn hình chính (0 bị 403), ${testRole.deniedApis.length} API chặn (403), ${testRole.lookupApis.length} API lookup (200)`,
+        );
       });
     }
 

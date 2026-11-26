@@ -28,6 +28,7 @@ const PurchasingPage: React.FC = () => {
     const [hideDelivered, setHideDelivered] = useState<boolean>(true);
     const isMobile = useMobile();
     const { canCreate, canUpdate, canDelete } = usePermission('PURCHASE');
+    const { canView: canViewDesign } = usePermission('DESIGN');
 
     const [isAiDraftModalOpen, setIsAiDraftModalOpen] = useState(false);
     const [aiDraftData, setAiDraftData] = useState<any>(null);
@@ -112,8 +113,10 @@ const PurchasingPage: React.FC = () => {
         api.get(`/lookups/suppliers`).then(res => setSuppliers(res.data)).catch(console.error);
         api.get(`/lookups/projects`).then(res => setProjects(res.data)).catch(console.error);
         api.get(`/system/company`).then(res => setCompanyConfig(res.data)).catch(console.error);
-        api.get(`/designs/print-designs`).then(res => setPrintDesigns(res.data)).catch(console.error);
-    }, []);
+        if (canViewDesign) {
+            api.get(`/designs/print-designs`).then(res => setPrintDesigns(res.data)).catch(() => ({ data: [] }));
+        }
+    }, [canViewDesign]);
 
     const handleStatusChange = async (id: number, status: string) => {
         try {
