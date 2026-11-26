@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import dayjs from 'dayjs';
 import useMobile from '../hooks/useMobile';
+import usePermission from '../hooks/usePermission';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
@@ -44,13 +45,14 @@ const ProjectsPage: React.FC = () => {
 
     const navigate = useNavigate();
     const isMobile = useMobile();
+    const { canCreate, canUpdate, canDelete } = usePermission('PROJECTS');
 
     const fetchData = async () => {
         setLoading(true);
         try {
             const [resProjects, resUsers] = await Promise.all([
                 api.get('/projects'),
-                api.get('/lookups/users')
+                api.get('/lookups/users').catch(() => ({ data: [] }))
             ]);
             setProjects(resProjects.data);
             setManagers(resUsers.data);
@@ -169,17 +171,17 @@ const ProjectsPage: React.FC = () => {
             render: (r: any) => {
                 const menu = (
                     <Menu>
-                        <Menu.Item key="1" icon={<EditOutlined />} onClick={() => {
+                        {canUpdate && <Menu.Item key="1" icon={<EditOutlined />} onClick={() => {
                             setEditingProject(r);
                             form.setFieldsValue({ ...r, start_date: r.start_date ? dayjs(r.start_date) : null, end_date: r.end_date ? dayjs(r.end_date) : null });
                             setIsModalOpen(true);
                         }}>
                             Edit Project
-                        </Menu.Item>
-                        <Menu.Divider />
-                        <Menu.Item key="2" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r.id)}>
+                        </Menu.Item>}
+                        {canUpdate && canDelete && <Menu.Divider />}
+                        {canDelete && <Menu.Item key="2" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r.id)}>
                             Delete Project
-                        </Menu.Item>
+                        </Menu.Item>}
                     </Menu>
                 );
                 return (
@@ -284,13 +286,13 @@ const ProjectsPage: React.FC = () => {
                             <Radio.Button value="grid"><AppstoreOutlined /></Radio.Button>
                             <Radio.Button value="list"><BarsOutlined /></Radio.Button>
                         </Radio.Group>
-                        <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+                        {canCreate && <Button type="primary" icon={<PlusOutlined />} onClick={() => {
                             setEditingProject(null);
                             form.resetFields();
                             setIsModalOpen(true);
                         }}>
                             New Project
-                        </Button>
+                        </Button>}
                     </Col>
                 </Row>
 

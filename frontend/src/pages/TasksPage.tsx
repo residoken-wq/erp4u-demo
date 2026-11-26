@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import { API_URL } from '../config';
 import useMobile from '../hooks/useMobile';
 import useAiDraft from '../hooks/useAiDraft';
+import usePermission from '../hooks/usePermission';
 
 const { Option } = Select;
 
@@ -23,6 +24,7 @@ const TasksPage: React.FC = () => {
     const [projects, setProjects] = useState<any[]>([]);
     const [selectedProject, setSelectedProject] = useState<number | null>(null);
     const isMobile = useMobile();
+    const { canCreate, canUpdate, canDelete } = usePermission('PROJECTS');
 
     const { isAiDraft, warningBanner, confirm: confirmAiDraft } = useAiDraft({
         expectedKind: 'task',
@@ -45,8 +47,8 @@ const TasksPage: React.FC = () => {
         try {
             const [resTasks, resUsers, resProjects] = await Promise.all([
                 api.get('/tasks'),
-                api.get('/lookups/users'),
-                api.get('/lookups/projects')
+                api.get('/lookups/users').catch(() => ({ data: [] })),
+                api.get('/lookups/projects').catch(() => ({ data: [] }))
             ]);
             setTasks(resTasks.data);
             setUsers(resUsers.data);
@@ -189,17 +191,24 @@ const TasksPage: React.FC = () => {
         },
         {
             title: '', key: 'act', width: 100, align: 'right' as const,
-            render: (r: any) => (
-                <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end' }}>
-                    <Button size="small" icon={<EditOutlined />} onClick={() => {
-                        setEditingTask(r);
-                        setSelectedProject(r.project_id || null);
-                        form.setFieldsValue({ ...r, due_date: r.due_date ? dayjs(r.due_date) : null });
-                        setIsModalOpen(true);
-                    }} />
-                    <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r.id)} />
-                </div>
-            )
+            render: (r: any) => {
+                const isCreator = Number(r.creator_id) === Number(currentUser?.id);
+                return (
+                    <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end' }}>
+                        {(canUpdate || isCreator) && (
+                            <Button size="small" icon={<EditOutlined />} onClick={() => {
+                                setEditingTask(r);
+                                setSelectedProject(r.project_id || null);
+                                form.setFieldsValue({ ...r, due_date: r.due_date ? dayjs(r.due_date) : null });
+                                setIsModalOpen(true);
+                            }} />
+                        )}
+                        {(canDelete || isCreator) && (
+                            <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(r.id)} />
+                        )}
+                    </div>
+                );
+            }
         }
     ];
 

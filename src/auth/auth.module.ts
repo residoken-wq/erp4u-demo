@@ -15,6 +15,7 @@ import { RbacModeService } from './rbac-mode.service';
 import { RbacAccessLogService } from './rbac-access-log.service';
 import { PermissionCacheService } from './permission-cache.service';
 import { RbacSeedService } from './rbac-seed.service';
+import { DefaultGroupsSeedService } from './default-groups-seed.service';
 import { GroupPermission } from '../users/entities/group-permission.entity';
 import { User } from '../users/entities/user.entity';
 import { UserGroup } from '../users/entities/user-group.entity';
@@ -51,6 +52,7 @@ import { getJwtSecret } from '../common/security/secrets';
     PermissionCacheService,
     RbacAccessLogService,
     RbacSeedService,
+    DefaultGroupsSeedService,
     {
       provide: APP_GUARD,
       useClass: RbacGuard,
@@ -68,6 +70,7 @@ import { getJwtSecret } from '../common/security/secrets';
     PermissionCacheService,
     RbacAccessLogService,
     RbacSeedService,
+    DefaultGroupsSeedService,
     TypeOrmModule,
   ],
 })

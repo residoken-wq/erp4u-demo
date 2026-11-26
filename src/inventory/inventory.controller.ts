@@ -3,7 +3,7 @@ import { InventoryService } from './inventory.service';
 import { CreateInventoryDto } from './create-inventory.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
-import { RequirePermission, Perm } from '../auth/permissions.decorator';
+import { RequirePermission, RequireAnyPermission, Perm, AnyPerm } from '../auth/permissions.decorator';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
 
@@ -81,7 +81,8 @@ export class InventoryController {
   @Get('goods-receipt/pending')
   getPendingGoodsReceipts() { return this.inventoryService.getPendingReceipts(); }
 
-  @Perm('INVENTORY', 'view')
+  @RequireAnyPermission(['INVENTORY', 'can_view'], ['PURCHASE', 'can_view'])
+  @AnyPerm(['INVENTORY', 'view'], ['PURCHASE', 'view'])
   @Get('goods-receipt/po/:poId')
   getReceiptsByPo(@Param('poId') poId: number) { return this.inventoryService.getReceiptsByPo(poId); }
 

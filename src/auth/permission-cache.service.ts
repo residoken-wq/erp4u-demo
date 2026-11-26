@@ -64,6 +64,24 @@ export class PermissionCacheService {
     return false;
   }
 
+  async canViewCostPrice(user: any, allowedModules: string[] = ['PRODUCT']): Promise<boolean> {
+    if (!user) return false;
+    if (user.username === 'admin') return true;
+    const groupId = user.groupId || user.group_id;
+    if (!groupId) return false;
+
+    const permissions = await this.getGroupPermissions(groupId);
+    const modulesToCheck = new Set(['PRODUCT', ...allowedModules]);
+    for (const p of permissions) {
+      if (modulesToCheck.has(p.module_code)) {
+        if (p.view_cost_price === true || (p.view_cost_price as any) === 1) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
 
   invalidateGroup(groupId?: number): void {
     const tenantId = TenantContext.current().tenantId;

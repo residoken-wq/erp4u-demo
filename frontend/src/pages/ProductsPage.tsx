@@ -619,8 +619,8 @@ const ProductsPage: React.FC = () => {
         },
         {
             title: 'Giá vốn', dataIndex: 'cost_price', width: 100, align: 'right' as const,
-            render: (v: number) => <span style={{ fontWeight: 'bold', color: 'red' }}>{Number(v).toLocaleString()}</span>,
-            sorter: (a: any, b: any) => Number(a.cost_price) - Number(b.cost_price),
+            render: (v: any) => v != null && !isNaN(Number(v)) ? <span style={{ fontWeight: 'bold', color: 'red' }}>{Number(v).toLocaleString()}</span> : '—',
+            sorter: (a: any, b: any) => Number(a.cost_price || 0) - Number(b.cost_price || 0),
             hidden: !canViewCost // Ẩn cột nếu không có quyền
         },
         {
@@ -636,7 +636,9 @@ const ProductsPage: React.FC = () => {
         {
             title: 'Giá trị tồn', key: 'inventory_value', width: 100, align: 'right' as const,
             render: (r: any) => {
-                const val = Number(r.quantity_in_stock || 0) * Number(r.cost_price || r.base_price || 0);
+                if (!canViewCost) return '—';
+                const cost = r.cost_price != null ? Number(r.cost_price) : (r.base_price != null ? Number(r.base_price) : 0);
+                const val = Number(r.quantity_in_stock || 0) * cost;
                 return <span style={{ color: '#272F72' }}>{val.toLocaleString()}</span>;
             },
             sorter: (a: any, b: any) => (Number(a.quantity_in_stock || 0) * Number(a.cost_price || a.base_price || 0)) - (Number(b.quantity_in_stock || 0) * Number(b.cost_price || b.base_price || 0)),

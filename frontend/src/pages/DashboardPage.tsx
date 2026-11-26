@@ -61,18 +61,23 @@ const DashboardPage: React.FC = () => {
                 }
             });
 
-        // 2. Fetch Logs (5 items limit, minimal fields)
-        api.get('/system/logs?limit=5')
-            .then((res) => {
-                if (isMounted) {
-                    const data = res.data?.data || res.data || [];
-                    setRecentLogs(Array.isArray(data) ? data : []);
-                }
-            })
-            .catch((e) => console.error('Logs load error:', e))
-            .finally(() => {
-                if (isMounted) setLoadingLogs(false);
-            });
+        // 2. Fetch Logs (5 items limit, minimal fields) - chỉ tải khi có quyền USERS
+        if (hasPerm('USERS')) {
+            api.get('/system/logs?limit=5')
+                .then((res) => {
+                    if (isMounted) {
+                        const data = res.data?.data || res.data || [];
+                        setRecentLogs(Array.isArray(data) ? data : []);
+                    }
+                })
+                .catch((e) => console.error('Logs load error:', e))
+                .finally(() => {
+                    if (isMounted) setLoadingLogs(false);
+                });
+        } else {
+            setLoadingLogs(false);
+            setRecentLogs([]);
+        }
 
         // 3. Fetch My Tasks (server filtered)
         const userId = user?.id;
@@ -97,24 +102,29 @@ const DashboardPage: React.FC = () => {
                 if (isMounted) setLoadingTasks(false);
             });
 
-        // 4. Fetch Incomplete Leads (compact mode, 5 items limit)
-        api.get('/customers?type=LEAD&limit=5&compact=true')
-            .then((res) => {
-                if (!isMounted) return;
-                const allCustomers = res.data?.data || res.data || [];
-                const leads = Array.isArray(allCustomers)
-                    ? allCustomers.filter((c: any) =>
-                        c.type === 'LEAD' && (!c.orders || c.orders.length === 0 || c.orders.every((o: any) => o.status === 'QUOTATION'))
-                    )
-                    : [];
-                setIncompleteLeads(leads.slice(0, 5));
-            })
-            .catch(() => {
-                if (isMounted) setIncompleteLeads([]);
-            })
-            .finally(() => {
-                if (isMounted) setLoadingLeads(false);
-            });
+        // 4. Fetch Incomplete Leads (compact mode, 5 items limit) - chỉ tải khi có quyền SALES
+        if (hasPerm('SALES')) {
+            api.get('/customers?type=LEAD&limit=5&compact=true')
+                .then((res) => {
+                    if (!isMounted) return;
+                    const allCustomers = res.data?.data || res.data || [];
+                    const leads = Array.isArray(allCustomers)
+                        ? allCustomers.filter((c: any) =>
+                            c.type === 'LEAD' && (!c.orders || c.orders.length === 0 || c.orders.every((o: any) => o.status === 'QUOTATION'))
+                        )
+                        : [];
+                    setIncompleteLeads(leads.slice(0, 5));
+                })
+                .catch(() => {
+                    if (isMounted) setIncompleteLeads([]);
+                })
+                .finally(() => {
+                    if (isMounted) setLoadingLeads(false);
+                });
+        } else {
+            setLoadingLeads(false);
+            setIncompleteLeads([]);
+        }
 
         return () => {
             isMounted = false;

@@ -12,6 +12,7 @@ import DocumentScanButton from '../components/documents/DocumentScanButton';
 import ScanReviewGoodsReceiptModal from '../components/documents/ScanReviewGoodsReceiptModal';
 import OriginalDocumentLink from '../components/documents/OriginalDocumentLink';
 import useAiScan from '../hooks/useAiScan';
+import usePermission from '../hooks/usePermission';
 
 
 const { Option } = Select;
@@ -103,22 +104,26 @@ const InventoryPage: React.FC = () => {
     const adjustmentType = Form.useWatch('type', form);
     const itemType = Form.useWatch('itemType', form);
 
+    const { canCreate, canUpdate, canDelete, canViewCost } = usePermission('INVENTORY');
+    const { canView: canViewPurchasing } = usePermission('PURCHASE');
+    const { canView: canViewPlanning } = usePermission('PRODUCTION');
+
     const fetchData = async () => {
         setLoading(true);
         try {
             const [pRes, mRes, sRes, hRes, grRes, dRes, cdRes, cRes, giRes, supRes, poRes, pfoRes] = await Promise.all([
-                api.get('/products'),
-                api.get('/materials'),
+                api.get('/products').catch(() => ({ data: [] })),
+                api.get('/materials').catch(() => ({ data: [] })),
                 api.get('/inventory/stocks'),
-                api.get('/inventory/history'),
-                api.get('/inventory/goods-receipt/pending'),
-                api.get('/inventory/deliveries/pending'),
-                api.get('/inventory/deliveries/completed'),
-                api.get('/inventory/shipping-carriers'),
-                api.get('/inventory/goods-issue'),
-                api.get('/suppliers'),
-                api.get('/purchasing'),
-                api.get('/planning')
+                api.get('/inventory/history').catch(() => ({ data: [] })),
+                api.get('/inventory/goods-receipt/pending').catch(() => ({ data: [] })),
+                api.get('/inventory/deliveries/pending').catch(() => ({ data: [] })),
+                api.get('/inventory/deliveries/completed').catch(() => ({ data: [] })),
+                api.get('/inventory/shipping-carriers').catch(() => ({ data: [] })),
+                api.get('/inventory/goods-issue').catch(() => ({ data: [] })),
+                api.get('/lookups/suppliers').catch(() => ({ data: [] })),
+                canViewPurchasing ? api.get('/purchasing').catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+                canViewPlanning ? api.get('/planning').catch(() => ({ data: [] })) : Promise.resolve({ data: [] })
             ]);
             setProducts(pRes.data);
             setMaterials(mRes.data);
@@ -785,7 +790,7 @@ const InventoryPage: React.FC = () => {
                     ) : (
                         <Space>
                             <Tag color="gold" style={{ fontSize: 14, padding: '5px 10px' }}>
-                                Tổng giá trị: <b>{filteredMasterData.reduce((sum, item) => sum + (Number(item.quantity_in_stock || 0) * Number(item.cost_price || item.cost_per_unit || 0)), 0).toLocaleString()} ₫</b>
+                                Tổng giá trị: <b>{canViewCost ? `${filteredMasterData.reduce((sum, item) => sum + (Number(item.quantity_in_stock || 0) * Number(item.cost_price || item.cost_per_unit || 0)), 0).toLocaleString()} ₫` : '—'}</b>
                             </Tag>
                             <Divider type="vertical" />
                             <Input.Search
@@ -994,7 +999,7 @@ const InventoryPage: React.FC = () => {
                                             {r.status === 'DRAFT' && (
                                                 <Button type="primary" size="small" icon={<CheckCircleOutlined />} onClick={() => openConfirmGiModal(r)}>Xác nhận xuất</Button>
                                             )}
-                                            <Button size="small" icon={<EditOutlined />} onClick={() => openEditGiModal(r)}>Sửa</Button>
+                                            {canUpdate && <Button size="small" icon={<EditOutlined />} onClick={() => openEditGiModal(r)}>Sửa</Button>}
                                             {r.status === 'CONFIRMED' && (
                                                 <Popconfirm title="Đã giao đến NCC thành công?" onConfirm={async () => {
                                                     try {
@@ -1008,7 +1013,7 @@ const InventoryPage: React.FC = () => {
                                                     <Button style={{backgroundColor:'#52c41a', color:'#fff'}} size="small" icon={<CarOutlined />}>Đã giao NCC</Button>
                                                 </Popconfirm>
                                             )}
-                                            <Popconfirm
+                                            {canDelete && <Popconfirm
                                                 title="Xóa phiếu xuất kho này? (Nếu phiếu bị trùng hoặc không dùng)"
                                                 okText="Xóa"
                                                 cancelText="Hủy"
@@ -1024,7 +1029,7 @@ const InventoryPage: React.FC = () => {
                                                 }}
                                             >
                                                 <Button size="small" danger icon={<DeleteOutlined />}>Xóa</Button>
-                                            </Popconfirm>
+                                            </Popconfirm>}
                                         </Space>
                                     )
                                 }
@@ -1387,7 +1392,7 @@ const InventoryPage: React.FC = () => {
                     {/* TAB ĐƠN VỊ VẬN CHUYỂN */}
                     <Tabs.TabPane tab={<span><CarOutlined /> Đơn vị vận chuyển</span>} key="CARRIERS">
                         <div style={{ marginBottom: 10 }}>
-                            <Button type="primary" icon={<PlusOutlined />} onClick={() => openCarrierModal()}>Thêm ĐVVC</Button>
+                            {canCreate && <Button type="primary" icon={<PlusOutlined />} onClick={() => openCarrierModal()}>Thêm ĐVVC</Button>}
                         </div>
                         <Table
                             dataSource={shippingCarriers}
@@ -1402,10 +1407,10 @@ const InventoryPage: React.FC = () => {
                                 {
                                     title: '', width: 100, render: (_: any, r: any) => (
                                         <Space>
-                                            <Button size="small" icon={<EditOutlined />} onClick={() => openCarrierModal(r)} />
-                                            <Popconfirm title="Xóa đơn vị này?" onConfirm={() => handleDeleteCarrier(r.id)}>
+                                            {canUpdate && <Button size="small" icon={<EditOutlined />} onClick={() => openCarrierModal(r)} />}
+                                            {canDelete && <Popconfirm title="Xóa đơn vị này?" onConfirm={() => handleDeleteCarrier(r.id)}>
                                                 <Button size="small" danger icon={<DeleteOutlined />} />
-                                            </Popconfirm>
+                                            </Popconfirm>}
                                         </Space>
                                     )
                                 }

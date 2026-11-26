@@ -251,7 +251,7 @@ const CombosPage: React.FC = () => {
     const columns = [
         { title: 'Mã Combo', dataIndex: 'sku', render: (t: any) => <b>{t}</b> },
         { title: 'Tên Combo', dataIndex: 'name' },
-        { title: 'Giá vốn', dataIndex: 'cost_price', align: 'right' as const, render: (v: any) => <span style={{ color: 'red' }}>{Number(v).toLocaleString()} ₫</span>, hidden: !canViewCost },
+        { title: 'Giá vốn', dataIndex: 'cost_price', align: 'right' as const, render: (v: any) => v != null && !isNaN(Number(v)) ? <span style={{ color: 'red' }}>{Number(v).toLocaleString()} ₫</span> : '—', hidden: !canViewCost },
         { title: 'Giá bán', dataIndex: 'base_price', align: 'right' as const, render: (v: any) => <Tag color="green" style={{ fontSize: 14 }}>{Number(v).toLocaleString()} ₫</Tag> },
         { title: 'Tồn kho thật', dataIndex: 'quantity_in_stock', align: 'right' as const, render: (v: any) => <span style={{ color: '#595959', fontWeight: 'bold' }}>{Number(v || 0).toLocaleString()}</span> },
         {

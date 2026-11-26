@@ -4,6 +4,7 @@ import { ReloadOutlined, EyeOutlined, DeleteOutlined, SendOutlined, CheckCircleO
 import api from '../utils/api';
 import dayjs from 'dayjs';
 import useMobile from '../hooks/useMobile';
+import usePermission from '../hooks/usePermission';
 import OutsourcingMaterialIssueModal from '../components/purchasing/OutsourcingMaterialIssueModal';
 import POPayments from '../components/purchasing/POPayments';
 import POBtpTab from '../components/purchasing/POBtpTab';
@@ -26,6 +27,8 @@ const PurchasingPage: React.FC = () => {
     const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
     const [hideDelivered, setHideDelivered] = useState<boolean>(true);
     const isMobile = useMobile();
+    const { canCreate, canUpdate, canDelete } = usePermission('PURCHASE');
+    const { canView: canViewDesign } = usePermission('DESIGN');
 
     const [isAiDraftModalOpen, setIsAiDraftModalOpen] = useState(false);
     const [aiDraftData, setAiDraftData] = useState<any>(null);
@@ -110,8 +113,10 @@ const PurchasingPage: React.FC = () => {
         api.get(`/lookups/suppliers`).then(res => setSuppliers(res.data)).catch(console.error);
         api.get(`/lookups/projects`).then(res => setProjects(res.data)).catch(console.error);
         api.get(`/system/company`).then(res => setCompanyConfig(res.data)).catch(console.error);
-        api.get(`/designs/print-designs`).then(res => setPrintDesigns(res.data)).catch(console.error);
-    }, []);
+        if (canViewDesign) {
+            api.get(`/designs/print-designs`).then(res => setPrintDesigns(res.data)).catch(() => ({ data: [] }));
+        }
+    }, [canViewDesign]);
 
     const handleStatusChange = async (id: number, status: string) => {
         try {
@@ -650,7 +655,7 @@ const PurchasingPage: React.FC = () => {
                 <Space>
                     {r.type === 'OUTSOURCING' && (<Tooltip title="Xuất Kho NPL"><Button size="small" style={{ color: '#fa8c16', borderColor: '#fa8c16' }} icon={<CarOutlined />} onClick={() => { setIssueModalPO(r); setIsIssueModalOpen(true); }} /></Tooltip>)}
                     <Tooltip title="Xem"><Button size="small" icon={<EyeOutlined />} onClick={() => viewDetail(r)} /></Tooltip>
-                    {r.status === 'DRAFT' && (<Popconfirm title="Xóa?" onConfirm={() => handleDelete(r.id)}><Button size="small" danger icon={<DeleteOutlined />} /></Popconfirm>)}
+                    {r.status === 'DRAFT' && canDelete && (<Popconfirm title="Xóa?" onConfirm={() => handleDelete(r.id)}><Button size="small" danger icon={<DeleteOutlined />} /></Popconfirm>)}
                 </Space>
             )
         }
@@ -952,9 +957,9 @@ const PurchasingPage: React.FC = () => {
                                     setIsAiScanModalOpen(true);
                                 }}
                             />
-                            {(activeTab === 'REQ_NPL' || activeTab === 'REQ_GC') && <Button type="primary" onClick={handleCreatePooledPO} disabled={selectedReqs.length === 0}>+ Tạo PO Gộp ({selectedReqs.length})</Button>}
-                            {(activeTab === 'MATERIAL' || activeTab === 'OUTSOURCING') && <Button type="primary" onClick={handleCreatePooledPO} disabled={selectedMainRows.length === 0} icon={<LinkOutlined />}>Gộp PO ({selectedMainRows.length})</Button>}
-                            {(activeTab === 'MATERIAL' || activeTab === 'OUTSOURCING') && selectedMainRows.length > 0 && (
+                            {canCreate && (activeTab === 'REQ_NPL' || activeTab === 'REQ_GC') && <Button type="primary" onClick={handleCreatePooledPO} disabled={selectedReqs.length === 0}>+ Tạo PO Gộp ({selectedReqs.length})</Button>}
+                            {canCreate && (activeTab === 'MATERIAL' || activeTab === 'OUTSOURCING') && <Button type="primary" onClick={handleCreatePooledPO} disabled={selectedMainRows.length === 0} icon={<LinkOutlined />}>Gộp PO ({selectedMainRows.length})</Button>}
+                            {canDelete && (activeTab === 'MATERIAL' || activeTab === 'OUTSOURCING') && selectedMainRows.length > 0 && (
                                 <Popconfirm title={`Xóa ${selectedMainRows.length} PO đã chọn?`} onConfirm={() => handleBatchDelete(selectedMainRows.map(r => r.id))}>
                                     <Button danger icon={<DeleteOutlined />}>Xóa PO ({selectedMainRows.length})</Button>
                                 </Popconfirm>
@@ -1849,8 +1854,8 @@ const PurchasingPage: React.FC = () => {
                                                     style={{ width: '100%', minWidth: 400 }}
                                                     value={r.print_design_id || r.print_design?.id}
                                                     onDropdownVisibleChange={(open) => {
-                                                        if (open) {
-                                                            api.get(`/designs/print-designs`).then(res => setPrintDesigns(res.data)).catch(console.error);
+                                                        if (open && canViewDesign) {
+                                                            api.get(`/designs/print-designs`).then(res => setPrintDesigns(res.data)).catch(() => ({ data: [] }));
                                                         }
                                                     }}
                                                     onChange={(val) => {

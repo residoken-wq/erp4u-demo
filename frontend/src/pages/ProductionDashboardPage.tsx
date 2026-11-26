@@ -7,8 +7,10 @@ import {
 } from '@ant-design/icons';
 import api from '../utils/api';
 import dayjs from 'dayjs';
+import usePermission from '../hooks/usePermission';
 
 const ProductionDashboardPage: React.FC = () => {
+    const { canView: canViewPurchasing } = usePermission('PURCHASE');
     const [loading, setLoading] = useState(true);
     const [plans, setPlans] = useState<any[]>([]);
     const [pos, setPOs] = useState<any[]>([]);
@@ -20,7 +22,7 @@ const ProductionDashboardPage: React.FC = () => {
         try {
             const [plansRes, posRes, qcRes, assignRes] = await Promise.all([
                 api.get('/planning'),
-                api.get('/purchasing'),
+                canViewPurchasing ? api.get('/purchasing').catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
                 api.get('/qc/summary').catch(() => ({ data: null })),
                 api.get('/production/assignments').catch(() => ({ data: [] }))
             ]);

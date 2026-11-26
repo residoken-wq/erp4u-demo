@@ -125,10 +125,10 @@ const FinancePage: React.FC = () => {
                 api.get(`/finance/transactions?month=${monthStr}`),
                 api.get(`/finance/categories`),
                 api.get(`/finance/summary`),
-                api.get(`/lookups/customers`), // <--- Fetch Customers
-                api.get(`/lookups/suppliers`),  // <--- Fetch Suppliers
-                api.get(`/lookups/projects`),
-                api.get(`/sales`)
+                api.get(`/lookups/customers`).catch(() => ({ data: [] })),
+                api.get(`/lookups/suppliers`).catch(() => ({ data: [] })),
+                api.get(`/lookups/projects`).catch(() => ({ data: [] })),
+                api.get(`/sales`).catch(() => ({ data: [] }))
             ]);
             setTransactions(Array.isArray(resTrans.data) ? resTrans.data : []);
             setCategories(Array.isArray(resCat.data) ? resCat.data : []);

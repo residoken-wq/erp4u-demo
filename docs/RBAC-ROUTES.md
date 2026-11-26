@@ -1,6 +1,6 @@
 # Bảng Kiểm Kê Phân Quyền Route (RBAC Route Inventory)
 
-> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-25T15:22:33.915Z
+> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-26T03:00:00.744Z
 
 ## Tổng quan theo tầng
 
@@ -177,23 +177,23 @@
 | `PUT` | `/hr/trainings/:id` | `PERM` | HR:update | `HR` | [src/hr/hr.controller.ts:293](../src/hr/hr.controller.ts:293) |
 | `POST` | `/inventory/adjust` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:27](../src/inventory/inventory.controller.ts:27) |
 | `POST` | `/inventory/convert-btp` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:64](../src/inventory/inventory.controller.ts:64) |
-| `POST` | `/inventory/deliveries/:id/confirm` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:113](../src/inventory/inventory.controller.ts:113) |
-| `GET` | `/inventory/deliveries/completed` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:107](../src/inventory/inventory.controller.ts:107) |
-| `GET` | `/inventory/deliveries/pending` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:101](../src/inventory/inventory.controller.ts:101) |
-| `GET` | `/inventory/goods-issue` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:178](../src/inventory/inventory.controller.ts:178) |
-| `POST` | `/inventory/goods-issue` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:152](../src/inventory/inventory.controller.ts:152) |
-| `DELETE` | `/inventory/goods-issue/:id` | `PERM` | INVENTORY:delete | `INVENTORY` | [src/inventory/inventory.controller.ts:205](../src/inventory/inventory.controller.ts:205) |
-| `GET` | `/inventory/goods-issue/:id` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:187](../src/inventory/inventory.controller.ts:187) |
-| `PUT` | `/inventory/goods-issue/:id` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:159](../src/inventory/inventory.controller.ts:159) |
-| `POST` | `/inventory/goods-issue/:id/confirm` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:193](../src/inventory/inventory.controller.ts:193) |
-| `POST` | `/inventory/goods-issue/:id/delivered` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:199](../src/inventory/inventory.controller.ts:199) |
-| `POST` | `/inventory/goods-issue/:id/link-po` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:172](../src/inventory/inventory.controller.ts:172) |
-| `GET` | `/inventory/goods-issue/unlinked/:pfoId` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:166](../src/inventory/inventory.controller.ts:166) |
-| `DELETE` | `/inventory/goods-receipt/:id` | `PERM` | INVENTORY:delete | `INVENTORY` | [src/inventory/inventory.controller.ts:94](../src/inventory/inventory.controller.ts:94) |
-| `POST` | `/inventory/goods-receipt/:id/confirm` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:88](../src/inventory/inventory.controller.ts:88) |
+| `POST` | `/inventory/deliveries/:id/confirm` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:114](../src/inventory/inventory.controller.ts:114) |
+| `GET` | `/inventory/deliveries/completed` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:108](../src/inventory/inventory.controller.ts:108) |
+| `GET` | `/inventory/deliveries/pending` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:102](../src/inventory/inventory.controller.ts:102) |
+| `GET` | `/inventory/goods-issue` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:179](../src/inventory/inventory.controller.ts:179) |
+| `POST` | `/inventory/goods-issue` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:153](../src/inventory/inventory.controller.ts:153) |
+| `DELETE` | `/inventory/goods-issue/:id` | `PERM` | INVENTORY:delete | `INVENTORY` | [src/inventory/inventory.controller.ts:206](../src/inventory/inventory.controller.ts:206) |
+| `GET` | `/inventory/goods-issue/:id` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:188](../src/inventory/inventory.controller.ts:188) |
+| `PUT` | `/inventory/goods-issue/:id` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:160](../src/inventory/inventory.controller.ts:160) |
+| `POST` | `/inventory/goods-issue/:id/confirm` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:194](../src/inventory/inventory.controller.ts:194) |
+| `POST` | `/inventory/goods-issue/:id/delivered` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:200](../src/inventory/inventory.controller.ts:200) |
+| `POST` | `/inventory/goods-issue/:id/link-po` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:173](../src/inventory/inventory.controller.ts:173) |
+| `GET` | `/inventory/goods-issue/unlinked/:pfoId` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:167](../src/inventory/inventory.controller.ts:167) |
+| `DELETE` | `/inventory/goods-receipt/:id` | `PERM` | INVENTORY:delete | `INVENTORY` | [src/inventory/inventory.controller.ts:95](../src/inventory/inventory.controller.ts:95) |
+| `POST` | `/inventory/goods-receipt/:id/confirm` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:89](../src/inventory/inventory.controller.ts:89) |
 | `POST` | `/inventory/goods-receipt/draft` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:74](../src/inventory/inventory.controller.ts:74) |
 | `GET` | `/inventory/goods-receipt/pending` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:80](../src/inventory/inventory.controller.ts:80) |
-| `GET` | `/inventory/goods-receipt/po/:poId` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:84](../src/inventory/inventory.controller.ts:84) |
+| `GET` | `/inventory/goods-receipt/po/:poId` | `PERM` | INVENTORY:view | PURCHASE:view | `INVENTORY` | [src/inventory/inventory.controller.ts:84](../src/inventory/inventory.controller.ts:84) |
 | `GET` | `/inventory/history` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:16](../src/inventory/inventory.controller.ts:16) |
 | `POST` | `/inventory/reset` | `PERM` | INVENTORY:delete | `INVENTORY` | [src/inventory/inventory.controller.ts:45](../src/inventory/inventory.controller.ts:45) |
 | `GET` | `/inventory/samples/stocks` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/samples/inventory-samples.controller.ts:72](../src/inventory/samples/inventory-samples.controller.ts:72) |
@@ -203,13 +203,13 @@
 | `GET` | `/inventory/samples/transactions/:id` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/samples/inventory-samples.controller.ts:54](../src/inventory/samples/inventory-samples.controller.ts:54) |
 | `PUT` | `/inventory/samples/transactions/:id` | `PERM` | INVENTORY:update | `INVENTORY` | [src/inventory/samples/inventory-samples.controller.ts:37](../src/inventory/samples/inventory-samples.controller.ts:37) |
 | `POST` | `/inventory/samples/transactions/:id/confirm` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/samples/inventory-samples.controller.ts:60](../src/inventory/samples/inventory-samples.controller.ts:60) |
-| `GET` | `/inventory/shipping-carriers` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:124](../src/inventory/inventory.controller.ts:124) |
-| `POST` | `/inventory/shipping-carriers` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:130](../src/inventory/inventory.controller.ts:130) |
-| `DELETE` | `/inventory/shipping-carriers/:id` | `PERM` | INVENTORY:delete | `INVENTORY` | [src/inventory/inventory.controller.ts:142](../src/inventory/inventory.controller.ts:142) |
-| `PUT` | `/inventory/shipping-carriers/:id` | `PERM` | INVENTORY:update | `INVENTORY` | [src/inventory/inventory.controller.ts:136](../src/inventory/inventory.controller.ts:136) |
+| `GET` | `/inventory/shipping-carriers` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:125](../src/inventory/inventory.controller.ts:125) |
+| `POST` | `/inventory/shipping-carriers` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:131](../src/inventory/inventory.controller.ts:131) |
+| `DELETE` | `/inventory/shipping-carriers/:id` | `PERM` | INVENTORY:delete | `INVENTORY` | [src/inventory/inventory.controller.ts:143](../src/inventory/inventory.controller.ts:143) |
+| `PUT` | `/inventory/shipping-carriers/:id` | `PERM` | INVENTORY:update | `INVENTORY` | [src/inventory/inventory.controller.ts:137](../src/inventory/inventory.controller.ts:137) |
 | `GET` | `/inventory/stocks` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:22](../src/inventory/inventory.controller.ts:22) |
-| `GET` | `/inventory/supplier-stocks/:supplierId` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:222](../src/inventory/inventory.controller.ts:222) |
-| `GET` | `/inventory/supplier-stocks/all` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:216](../src/inventory/inventory.controller.ts:216) |
+| `GET` | `/inventory/supplier-stocks/:supplierId` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:223](../src/inventory/inventory.controller.ts:223) |
+| `GET` | `/inventory/supplier-stocks/all` | `PERM` | INVENTORY:view | `INVENTORY` | [src/inventory/inventory.controller.ts:217](../src/inventory/inventory.controller.ts:217) |
 | `POST` | `/inventory/transfer` | `PERM` | INVENTORY:create | `INVENTORY` | [src/inventory/inventory.controller.ts:53](../src/inventory/inventory.controller.ts:53) |
 | `GET` | `/lookups/categories` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:48](../src/lookups/lookups.controller.ts:48) |
 | `GET` | `/lookups/customers` | `AUTH` | AUTH | `CORE` | [src/lookups/lookups.controller.ts:24](../src/lookups/lookups.controller.ts:24) |
@@ -260,7 +260,7 @@
 | `GET` | `/planning/demand/npl` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/planning/planning.controller.ts:43](../src/planning/planning.controller.ts:43) |
 | `GET` | `/planning/gantt` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/planning/planning.controller.ts:37](../src/planning/planning.controller.ts:37) |
 | `DELETE` | `/planning/pfo/:id` | `PERM` | PRODUCTION:delete | `PRODUCTION` | [src/planning/planning.controller.ts:89](../src/planning/planning.controller.ts:89) |
-| `GET` | `/planning/pfo/:id` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/planning/planning.controller.ts:83](../src/planning/planning.controller.ts:83) |
+| `GET` | `/planning/pfo/:id` | `PERM` | PRODUCTION:view | PURCHASE:view | `PRODUCTION` | [src/planning/planning.controller.ts:83](../src/planning/planning.controller.ts:83) |
 | `POST` | `/planning/pfo/:id/assign-vendor` | `PERM` | PRODUCTION:create | `PRODUCTION` | [src/planning/planning.controller.ts:143](../src/planning/planning.controller.ts:143) |
 | `POST` | `/planning/pfo/:id/calculate-bom` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/planning/planning.controller.ts:120](../src/planning/planning.controller.ts:120) |
 | `PUT` | `/planning/pfo/:id/custom-quantities` | `PERM` | PRODUCTION:update | `PRODUCTION` | [src/planning/planning.controller.ts:107](../src/planning/planning.controller.ts:107) |
@@ -298,38 +298,38 @@
 | `PUT` | `/production/steps/:stepId/status` | `PERM` | PRODUCTION:update | `PRODUCTION` | [src/production/production.controller.ts:49](../src/production/production.controller.ts:49) |
 | `GET` | `/production/work-orders/:id` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/production/production.controller.ts:43](../src/production/production.controller.ts:43) |
 | `GET` | `/production/work-orders/plan/:pfoId` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/production/production.controller.ts:37](../src/production/production.controller.ts:37) |
-| `GET` | `/products` | `PERM` | PRODUCT:view | PURCHASE:view | PRODUCTION:view | SALES:view | `CORE` | [src/products/products.controller.ts:49](../src/products/products.controller.ts:49) |
-| `POST` | `/products` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:77](../src/products/products.controller.ts:77) |
-| `DELETE` | `/products/:id` | `PERM` | PRODUCT:delete | `CORE` | [src/products/products.controller.ts:79](../src/products/products.controller.ts:79) |
-| `GET` | `/products/:id` | `PERM` | PRODUCT:view | PURCHASE:view | PRODUCTION:view | SALES:view | `CORE` | [src/products/products.controller.ts:63](../src/products/products.controller.ts:63) |
-| `PUT` | `/products/:id` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:78](../src/products/products.controller.ts:78) |
-| `POST` | `/products/:id/boms` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:124](../src/products/products.controller.ts:124) |
-| `POST` | `/products/:id/components` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:142](../src/products/products.controller.ts:142) |
-| `GET` | `/products/:id/logistics` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:97](../src/products/products.controller.ts:97) |
-| `POST` | `/products/:id/logistics` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:99](../src/products/products.controller.ts:99) |
-| `GET` | `/products/:id/pattern` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:103](../src/products/products.controller.ts:103) |
-| `POST` | `/products/:id/pattern` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:105](../src/products/products.controller.ts:105) |
-| `GET` | `/products/:id/routings` | `PERM` | PRODUCT:view | PRODUCTION:view | PURCHASE:view | `CORE` | [src/products/products.controller.ts:88](../src/products/products.controller.ts:88) |
-| `POST` | `/products/:id/routings` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:94](../src/products/products.controller.ts:94) |
-| `GET` | `/products/:id/sales-history` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:184](../src/products/products.controller.ts:184) |
-| `POST` | `/products/:id/sync-variants` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:127](../src/products/products.controller.ts:127) |
-| `GET` | `/products/:id/website-config` | `PERM` | PRODUCT:view | `WEBSITE` | [src/products/products.controller.ts:109](../src/products/products.controller.ts:109) |
-| `POST` | `/products/:id/website-config` | `PERM` | PRODUCT:update | `WEBSITE` | [src/products/products.controller.ts:112](../src/products/products.controller.ts:112) |
-| `GET` | `/products/:sku/boms` | `PERM` | PRODUCT:view | PURCHASE:view | PRODUCTION:view | SALES:view | `CORE` | [src/products/products.controller.ts:117](../src/products/products.controller.ts:117) |
-| `POST` | `/products/calculate-all-costs` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:178](../src/products/products.controller.ts:178) |
-| `GET` | `/products/calculate-cost/:sku` | `PERM` | PRODUCT:view | PRODUCTION:view | `CORE` | [src/products/products.controller.ts:172](../src/products/products.controller.ts:172) |
-| `GET` | `/products/combo/:sku` | `PERM` | PRODUCT:view | PURCHASE:view | PRODUCTION:view | SALES:view | `CORE` | [src/products/products.controller.ts:130](../src/products/products.controller.ts:130) |
-| `POST` | `/products/combo/add` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:137](../src/products/products.controller.ts:137) |
-| `DELETE` | `/products/combo/item/:id` | `PERM` | PRODUCT:delete | `CORE` | [src/products/products.controller.ts:139](../src/products/products.controller.ts:139) |
-| `POST` | `/products/copy-bom` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:148](../src/products/products.controller.ts:148) |
-| `POST` | `/products/copy-logistics` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:160](../src/products/products.controller.ts:160) |
-| `POST` | `/products/copy-routings` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:154](../src/products/products.controller.ts:154) |
-| `POST` | `/products/copy-semi-finished` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:166](../src/products/products.controller.ts:166) |
-| `POST` | `/products/create-variant` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:82](../src/products/products.controller.ts:82) |
-| `GET` | `/products/packing-specs` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:17](../src/products/products.controller.ts:17) |
-| `POST` | `/products/packing-specs` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:27](../src/products/products.controller.ts:27) |
-| `DELETE` | `/products/packing-specs/:id` | `PERM` | PRODUCT:delete | `CORE` | [src/products/products.controller.ts:41](../src/products/products.controller.ts:41) |
-| `PUT` | `/products/packing-specs/:id` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:34](../src/products/products.controller.ts:34) |
+| `GET` | `/products` | `PERM` | PRODUCT:view | PURCHASE:view | PRODUCTION:view | SALES:view | INVENTORY:view | `CORE` | [src/products/products.controller.ts:54](../src/products/products.controller.ts:54) |
+| `POST` | `/products` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:115](../src/products/products.controller.ts:115) |
+| `DELETE` | `/products/:id` | `PERM` | PRODUCT:delete | `CORE` | [src/products/products.controller.ts:117](../src/products/products.controller.ts:117) |
+| `GET` | `/products/:id` | `PERM` | PRODUCT:view | PURCHASE:view | PRODUCTION:view | SALES:view | INVENTORY:view | `CORE` | [src/products/products.controller.ts:84](../src/products/products.controller.ts:84) |
+| `PUT` | `/products/:id` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:116](../src/products/products.controller.ts:116) |
+| `POST` | `/products/:id/boms` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:189](../src/products/products.controller.ts:189) |
+| `POST` | `/products/:id/components` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:229](../src/products/products.controller.ts:229) |
+| `GET` | `/products/:id/logistics` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:140](../src/products/products.controller.ts:140) |
+| `POST` | `/products/:id/logistics` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:142](../src/products/products.controller.ts:142) |
+| `GET` | `/products/:id/pattern` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:146](../src/products/products.controller.ts:146) |
+| `POST` | `/products/:id/pattern` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:148](../src/products/products.controller.ts:148) |
+| `GET` | `/products/:id/routings` | `PERM` | PRODUCT:view | PRODUCTION:view | PURCHASE:view | `CORE` | [src/products/products.controller.ts:126](../src/products/products.controller.ts:126) |
+| `POST` | `/products/:id/routings` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:137](../src/products/products.controller.ts:137) |
+| `GET` | `/products/:id/sales-history` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:275](../src/products/products.controller.ts:275) |
+| `POST` | `/products/:id/sync-variants` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:192](../src/products/products.controller.ts:192) |
+| `GET` | `/products/:id/website-config` | `PERM` | PRODUCT:view | `WEBSITE` | [src/products/products.controller.ts:152](../src/products/products.controller.ts:152) |
+| `POST` | `/products/:id/website-config` | `PERM` | PRODUCT:update | `WEBSITE` | [src/products/products.controller.ts:155](../src/products/products.controller.ts:155) |
+| `GET` | `/products/:sku/boms` | `PERM` | PRODUCT:view | PURCHASE:view | PRODUCTION:view | SALES:view | INVENTORY:view | `CORE` | [src/products/products.controller.ts:160](../src/products/products.controller.ts:160) |
+| `POST` | `/products/calculate-all-costs` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:269](../src/products/products.controller.ts:269) |
+| `GET` | `/products/calculate-cost/:sku` | `PERM` | PRODUCT:view | PRODUCTION:view | `CORE` | [src/products/products.controller.ts:259](../src/products/products.controller.ts:259) |
+| `GET` | `/products/combo/:sku` | `PERM` | PRODUCT:view | PURCHASE:view | PRODUCTION:view | SALES:view | INVENTORY:view | `CORE` | [src/products/products.controller.ts:195](../src/products/products.controller.ts:195) |
+| `POST` | `/products/combo/add` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:224](../src/products/products.controller.ts:224) |
+| `DELETE` | `/products/combo/item/:id` | `PERM` | PRODUCT:delete | `CORE` | [src/products/products.controller.ts:226](../src/products/products.controller.ts:226) |
+| `POST` | `/products/copy-bom` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:235](../src/products/products.controller.ts:235) |
+| `POST` | `/products/copy-logistics` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:247](../src/products/products.controller.ts:247) |
+| `POST` | `/products/copy-routings` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:241](../src/products/products.controller.ts:241) |
+| `POST` | `/products/copy-semi-finished` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:253](../src/products/products.controller.ts:253) |
+| `POST` | `/products/create-variant` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:120](../src/products/products.controller.ts:120) |
+| `GET` | `/products/packing-specs` | `PERM` | PRODUCT:view | `CORE` | [src/products/products.controller.ts:22](../src/products/products.controller.ts:22) |
+| `POST` | `/products/packing-specs` | `PERM` | PRODUCT:create | `CORE` | [src/products/products.controller.ts:32](../src/products/products.controller.ts:32) |
+| `DELETE` | `/products/packing-specs/:id` | `PERM` | PRODUCT:delete | `CORE` | [src/products/products.controller.ts:46](../src/products/products.controller.ts:46) |
+| `PUT` | `/products/packing-specs/:id` | `PERM` | PRODUCT:update | `CORE` | [src/products/products.controller.ts:39](../src/products/products.controller.ts:39) |
 | `GET` | `/projects` | `PERM` | PROJECTS:view | `PROJECTS` | [src/projects/projects.controller.ts:34](../src/projects/projects.controller.ts:34) |
 | `POST` | `/projects` | `PERM` | PROJECTS:create | `PROJECTS` | [src/projects/projects.controller.ts:48](../src/projects/projects.controller.ts:48) |
 | `DELETE` | `/projects/:id` | `PERM` | PROJECTS:delete | `PROJECTS` | [src/projects/projects.controller.ts:62](../src/projects/projects.controller.ts:62) |

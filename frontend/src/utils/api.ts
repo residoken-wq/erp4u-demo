@@ -5,6 +5,13 @@ import { handleUnauthorized } from './authSession';
 
 export { handleUnauthorized };
 
+let last403ToastTime = 0;
+const THROTTLE_403_MS = 3000;
+
+export function reset403Throttle(): void {
+    last403ToastTime = 0;
+}
+
 const api = axios.create({
     baseURL: API_URL,
     headers: {
@@ -39,9 +46,13 @@ api.interceptors.response.use(
             );
         }
         if (error.response?.status === 403) {
-            // Permission denied - show server message
-            const msg = error.response?.data?.message || 'Bạn không có quyền thực hiện thao tác này.';
-            import('antd').then(({ message }) => message.error(msg));
+            // Permission denied - show server message (gộp nhiều 403 cùng lúc thành 1 thông báo trong ~3s)
+            const now = Date.now();
+            if (now - last403ToastTime > THROTTLE_403_MS) {
+                last403ToastTime = now;
+                const msg = error.response?.data?.message || 'Bạn không có quyền thực hiện thao tác này.';
+                import('antd').then(({ message }) => message.error(msg));
+            }
         }
         if (error.response?.status === 429) {
             // Rate limited - display friendly notice

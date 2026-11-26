@@ -110,10 +110,12 @@ const RootProductChildrenTable: React.FC<RootProductChildrenTableProps> = ({
             width: 100,
             align: 'right' as const,
             hidden: !canViewCost,
-            render: (v: number) => (
-                <span style={{ color: '#cf1322', fontWeight: 500 }}>
-                    {Number(v || 0).toLocaleString()} ₫
-                </span>
+            render: (v: any) => (
+                v != null && !isNaN(Number(v)) ? (
+                    <span style={{ color: '#cf1322', fontWeight: 500 }}>
+                        {Number(v).toLocaleString()} ₫
+                    </span>
+                ) : '—'
             )
         },
         {

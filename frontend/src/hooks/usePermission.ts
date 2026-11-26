@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react';
  * Hook phân quyền CRUD cho từng module.
  * 
  * @param moduleCode - Mã module (VD: 'SALES', 'PRODUCT', 'INVENTORY', 'FINANCE', 'PRODUCTION', 'HR', 'USERS')
- * @returns Object chứa các cờ quyền: canView, canCreate, canUpdate, canDelete, canViewCost
+ * @param action - Tuỳ chọn: 'view' | 'create' | 'update' | 'delete' | 'view_cost_price'
+ * @returns Object chứa các cờ quyền nếu không truyền action, hoặc boolean nếu có action.
  * 
  * @example
  * const { canCreate, canDelete } = usePermission('SALES');
- * // Sử dụng:
- * {canCreate && <Button>Thêm mới</Button>}
+ * // hoặc:
+ * const canCreate = usePermission('SALES', 'create');
  */
 export interface PermissionFlags {
     canView: boolean;
@@ -19,8 +20,8 @@ export interface PermissionFlags {
     canViewCost: boolean;
 }
 
-const getPermissionFlags = (moduleCode: string): PermissionFlags => {
-    const userStr = localStorage.getItem('user');
+export const getPermissionFlags = (moduleCode: string): PermissionFlags => {
+    const userStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user') : null;
     if (!userStr) {
         return { canView: false, canCreate: false, canUpdate: false, canDelete: false, canViewCost: false };
     }
@@ -52,7 +53,33 @@ const getPermissionFlags = (moduleCode: string): PermissionFlags => {
     }
 };
 
-const usePermission = (moduleCode: string): PermissionFlags => {
+export const checkPermission = (moduleCode: string, action: string): boolean => {
+    const flags = getPermissionFlags(moduleCode);
+    switch (action) {
+        case 'view':
+        case 'canView':
+            return flags.canView;
+        case 'create':
+        case 'canCreate':
+            return flags.canCreate;
+        case 'update':
+        case 'canUpdate':
+            return flags.canUpdate;
+        case 'delete':
+        case 'canDelete':
+            return flags.canDelete;
+        case 'view_cost_price':
+        case 'viewCost':
+        case 'canViewCost':
+            return flags.canViewCost;
+        default:
+            return false;
+    }
+};
+
+function usePermission(moduleCode: string): PermissionFlags;
+function usePermission(moduleCode: string, action: string): boolean;
+function usePermission(moduleCode: string, action?: string): PermissionFlags | boolean {
     const [perms, setPerms] = useState<PermissionFlags>(() => getPermissionFlags(moduleCode));
 
     useEffect(() => {
@@ -60,21 +87,24 @@ const usePermission = (moduleCode: string): PermissionFlags => {
             setPerms(getPermissionFlags(moduleCode));
         };
 
-        // Recompute on mount / moduleCode change
         update();
 
-        window.addEventListener('erp4u:auth-updated', update);
-        window.addEventListener('storage', update);
+        if (typeof window !== 'undefined') {
+            window.addEventListener('erp4u:auth-updated', update);
+            window.addEventListener('storage', update);
 
-        return () => {
-            window.removeEventListener('erp4u:auth-updated', update);
-            window.removeEventListener('storage', update);
-        };
+            return () => {
+                window.removeEventListener('erp4u:auth-updated', update);
+                window.removeEventListener('storage', update);
+            };
+        }
     }, [moduleCode]);
 
+    if (action) {
+        return checkPermission(moduleCode, action);
+    }
     return perms;
-};
+}
 
 export { usePermission };
 export default usePermission;
-

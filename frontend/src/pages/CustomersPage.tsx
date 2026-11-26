@@ -61,7 +61,7 @@ const CustomersPage: React.FC = () => {
         try {
             const [res, resUsers] = await Promise.all([
                 api.get('/customers'),
-                api.get('/lookups/users')
+                api.get('/lookups/users').catch(() => ({ data: [] }))
             ]);
             setCustomers(res.data);
             setUsers(resUsers.data);

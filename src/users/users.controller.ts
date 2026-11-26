@@ -117,7 +117,7 @@ export class UsersController {
   @Post('groups')
   async createGroup(@Body() body: any, @Req() req: any) {
     await assertPermission(req?.user, this.permCacheService, 'USERS', 'create');
-    return this.service.createGroup(body);
+    return this.service.createGroup(body, req?.user);
   }
 
   // Update Group + Permission (Gọi service updateGroupPermissions)
@@ -130,7 +130,7 @@ export class UsersController {
     @Req() req: any,
   ) {
     await assertPermission(req?.user, this.permCacheService, 'USERS', 'create');
-    return this.service.updateGroupPermissions(+id, body);
+    return this.service.updateGroupPermissions(+id, body, req?.user);
   }
 
   // API dự phòng nếu frontend gọi route cũ
@@ -143,6 +143,6 @@ export class UsersController {
     @Req() req: any,
   ) {
     await assertPermission(req?.user, this.permCacheService, 'USERS', 'create');
-    return this.service.updateGroupPermissions(+id, body);
+    return this.service.updateGroupPermissions(+id, body, req?.user);
   }
 }

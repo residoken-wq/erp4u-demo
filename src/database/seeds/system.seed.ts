@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { UserGroup } from '../../users/entities/user-group.entity';
 import { GroupPermission } from '../../users/entities/group-permission.entity';
 import { SystemConfig } from '../../system/system-config.entity';
+import { DEFAULT_GROUP_TEMPLATES } from '../../auth/default-group-templates';
 
 export async function seedSystem(dataSource: DataSource) {
   const groupRepo = dataSource.getRepository(UserGroup);
@@ -27,43 +28,28 @@ export async function seedSystem(dataSource: DataSource) {
     }
   }
 
-  console.log('  -> Seeding User Groups & Permissions...');
-  const groupsData = [
-    { name: 'Admin', description: 'Toàn quyền quản trị hệ thống ERP4U' },
-    { name: 'Kinh Doanh', description: 'Quản lý bán hàng, báo giá, CRM khách hàng' },
-    { name: 'Quản Lý Kho', description: 'Quản lý tồn kho nguyên vật liệu, thành phẩm, nhập xuất kho' },
-    { name: 'Kế Toán', description: 'Quản lý thu chi, công nợ, hóa đơn, báo cáo tài chính' },
-    { name: 'Nhân Sự', description: 'Quản lý nhân viên, chấm công, bảng lương, tuyển dụng' },
-  ];
-
-  const modules = ['SALES', 'PRODUCT', 'CUSTOMER', 'SUPPLIER', 'INVENTORY', 'PRODUCTION', 'PURCHASING', 'FINANCE', 'HR', 'SYSTEM'];
-
-  for (const g of groupsData) {
-    let group = await groupRepo.findOne({ where: { name: g.name } });
+  console.log('  -> Seeding User Groups & Permissions (Default Templates)...');
+  for (const template of DEFAULT_GROUP_TEMPLATES) {
+    let group = await groupRepo.findOne({ where: { name: template.name } });
     if (!group) {
-      group = groupRepo.create(g);
+      group = groupRepo.create({
+        name: template.name,
+        description: template.description,
+      });
       group = await groupRepo.save(group);
     }
 
-    for (const mod of modules) {
-      let perm = await permRepo.findOne({ where: { module_code: mod, group_id: group.id } });
+    for (const p of template.permissions) {
+      let perm = await permRepo.findOne({ where: { module_code: p.module_code, group_id: group.id } });
       if (!perm) {
-        const isAdmin = g.name === 'Admin';
-        const isSales = g.name === 'Kinh Doanh' && ['SALES', 'PRODUCT', 'CUSTOMER'].includes(mod);
-        const isWarehouse = g.name === 'Quản Lý Kho' && ['INVENTORY', 'PRODUCT', 'SUPPLIER', 'PURCHASING'].includes(mod);
-        const isFinance = g.name === 'Kế Toán' && ['FINANCE', 'CUSTOMER', 'SUPPLIER', 'SALES'].includes(mod);
-        const isHr = g.name === 'Nhân Sự' && ['HR', 'SYSTEM'].includes(mod);
-
-        const canAccess = isAdmin || isSales || isWarehouse || isFinance || isHr;
-
         perm = permRepo.create({
-          module_code: mod,
+          module_code: p.module_code,
           group_id: group.id,
-          can_view: canAccess,
-          can_create: isAdmin || isSales || isWarehouse || isFinance || isHr,
-          can_update: isAdmin || isSales || isWarehouse || isFinance || isHr,
-          can_delete: isAdmin,
-          view_cost_price: isAdmin || isFinance || isWarehouse,
+          can_view: !!p.can_view,
+          can_create: !!p.can_create,
+          can_update: !!p.can_update,
+          can_delete: !!p.can_delete,
+          view_cost_price: !!p.view_cost_price,
         });
         await permRepo.save(perm);
       }

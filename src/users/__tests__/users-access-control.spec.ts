@@ -48,6 +48,7 @@ describe('UsersAccessControl (Unit Test)', () => {
     };
 
     mockPermRepo = {
+      find: jest.fn().mockResolvedValue([]),
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
       create: jest.fn().mockImplementation((p) => p),
       save: jest.fn().mockImplementation((p) => Promise.resolve(p)),
@@ -426,6 +427,105 @@ describe('UsersAccessControl (Unit Test)', () => {
       mockUserRepo.findOne.mockResolvedValue({ id: 1, username: 'admin' });
       await expect(service.deleteUser(1)).rejects.toThrow(ForbiddenException);
       expect(mockUserRepo.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('UsersService Group Permission Self-Escalation Hardening (P12b2)', () => {
+    const actorStaff = { id: 10, username: 'staff1', groupId: 3 };
+    const actorAdmin = { id: 1, username: 'admin', groupId: 1 };
+
+    it('non-admin CANNOT update permissions of their own group (403)', async () => {
+      mockGroupRepo.findOne.mockResolvedValue({ id: 3, name: 'Own Group' });
+
+      await expect(
+        service.updateGroupPermissions(3, {
+          permissions: [{ module_code: 'USERS', can_view: true }]
+        }, actorStaff),
+      ).rejects.toThrow(new ForbiddenException('Không thể tự chỉnh sửa quyền nhóm của chính mình'));
+
+      expect(mockPermRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('non-admin CANNOT grant permissions they do not possess to another group (403)', async () => {
+      mockGroupRepo.findOne.mockResolvedValue({ id: 5, name: 'Target Group' });
+      // Actor group 3 only has SALES:view, but tries to grant HR:view
+      mockPermRepo.find.mockResolvedValue([
+        { module_code: 'SALES', can_view: true, can_create: true, can_update: false, can_delete: false, view_cost_price: false }
+      ]);
+
+      await expect(
+        service.updateGroupPermissions(5, {
+          permissions: [{ module_code: 'HR', can_view: true }]
+        }, actorStaff),
+      ).rejects.toThrow(ForbiddenException);
+
+      await expect(
+        service.updateGroupPermissions(5, {
+          permissions: [{ module_code: 'HR', can_view: true }]
+        }, actorStaff),
+      ).rejects.toThrow(/Bạn không có quyền xem \(can_view\) trong module "HR"/);
+
+      expect(mockPermRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('non-admin CANNOT grant higher flag (e.g. can_delete) in a module where they only have can_view (403)', async () => {
+      mockGroupRepo.findOne.mockResolvedValue({ id: 5, name: 'Target Group' });
+      mockPermRepo.find.mockResolvedValue([
+        { module_code: 'SALES', can_view: true, can_create: false, can_update: false, can_delete: false, view_cost_price: false }
+      ]);
+
+      await expect(
+        service.updateGroupPermissions(5, {
+          permissions: [{ module_code: 'SALES', can_view: true, can_delete: true }]
+        }, actorStaff),
+      ).rejects.toThrow(/Bạn không có quyền xoá \(can_delete\) trong module "SALES"/);
+    });
+
+    it('non-admin CAN grant permissions that they DO possess to another group (200)', async () => {
+      mockGroupRepo.findOne.mockResolvedValue({ id: 5, name: 'Target Group' });
+      mockPermRepo.find.mockResolvedValue([
+        { module_code: 'SALES', can_view: true, can_create: true, can_update: false, can_delete: false, view_cost_price: false }
+      ]);
+
+      const res = await service.updateGroupPermissions(5, {
+        permissions: [{ module_code: 'SALES', can_view: true, can_create: true }]
+      }, actorStaff);
+
+      expect(res).toEqual({ success: true });
+      expect(mockPermRepo.delete).toHaveBeenCalledWith({ group_id: 5 });
+      expect(mockPermRepo.save).toHaveBeenCalled();
+    });
+
+    it('admin can update permissions of any group including own group without restriction (200)', async () => {
+      mockGroupRepo.findOne.mockResolvedValue({ id: 1, name: 'Admin' });
+
+      const res = await service.updateGroupPermissions(1, {
+        permissions: [{ module_code: 'USERS', can_view: true, can_create: true, can_delete: true }]
+      }, actorAdmin);
+
+      expect(res).toEqual({ success: true });
+      expect(mockPermRepo.delete).toHaveBeenCalledWith({ group_id: 1 });
+    });
+
+    it('createGroup: non-admin cannot grant permissions they do not have (403), admin can grant any (200)', async () => {
+      mockPermRepo.find.mockResolvedValue([
+        { module_code: 'SALES', can_view: true }
+      ]);
+
+      await expect(
+        service.createGroup({
+          name: 'New Rogue Group',
+          permissions: [{ module_code: 'HR', can_view: true }]
+        }, actorStaff),
+      ).rejects.toThrow(ForbiddenException);
+
+      const resAdmin = await service.createGroup({
+        name: 'New Admin Created Group',
+        permissions: [{ module_code: 'HR', can_view: true, can_create: true }]
+      }, actorAdmin);
+
+      expect(resAdmin).toBeDefined();
+      expect(mockGroupRepo.save).toHaveBeenCalled();
     });
   });
 });

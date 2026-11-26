@@ -119,7 +119,8 @@ describe('TASK H1 - UsersController Access Control & Privilege Escalation Harden
        (2, 'Staff No Perm', 'Staff without user permissions'),
        (3, 'Staff With Users Update', 'Has USERS:update permission'),
        (4, 'Peer Manager Group', 'Has USERS:update permission'),
-       (5, 'Staff With Users View', 'Has USERS:view permission')
+       (5, 'Staff With Users View', 'Has USERS:view permission'),
+       (6, 'Staff With Users Create', 'Has USERS:create and SALES:view')
        ON CONFLICT DO NOTHING`,
     );
 
@@ -127,7 +128,9 @@ describe('TASK H1 - UsersController Access Control & Privilege Escalation Harden
       `INSERT INTO "tenant_users_h1"."group_permissions" ("group_id", "module_code", "can_view", "can_create", "can_update", "can_delete") VALUES
        (3, 'USERS', false, false, true, false),
        (4, 'USERS', false, false, true, false),
-       (5, 'USERS', true, false, false, false)
+       (5, 'USERS', true, false, false, false),
+       (6, 'USERS', true, true, false, false),
+       (6, 'SALES', true, false, false, false)
        ON CONFLICT DO NOTHING`,
     );
 
@@ -138,7 +141,8 @@ describe('TASK H1 - UsersController Access Control & Privilege Escalation Harden
        (3, 'staff_users_update', '${passStaffUpdate}', 'Staff Users Update', 3, true, 'staff_users_update@example.com', '127.0.0.3', NOW()),
        (4, 'staff_regular', '${passRegular}', 'Staff Regular Target', 2, true, 'staff_regular@example.com', '127.0.0.4', NOW()),
        (5, 'peer_manager', '${passPeer}', 'Peer Manager Target', 4, true, 'peer_manager@example.com', '127.0.0.5', NOW()),
-       (6, 'staff_users_view', '${passRegular}', 'Staff Users View Target', 5, true, 'staff_users_view@example.com', '127.0.0.6', NOW())
+       (6, 'staff_users_view', '${passRegular}', 'Staff Users View Target', 5, true, 'staff_users_view@example.com', '127.0.0.6', NOW()),
+       (7, 'staff_users_create', '${passStaffUpdate}', 'Staff Users Create Target', 6, true, 'staff_users_create@example.com', '127.0.0.7', NOW())
        ON CONFLICT DO NOTHING`,
     );
 
@@ -471,5 +475,68 @@ describe('TASK H1 - UsersController Access Control & Privilege Escalation Harden
         group_id: 2,
       });
     expect([200, 201]).toContain(resCreateUser.status);
+  });
+
+  describe('Group Permission Self-Escalation Hardening (P12b2 H1 Fix)', () => {
+    it('user with USERS:create CANNOT update permissions of their own group (403)', async () => {
+      if (!dbAvailable) return;
+
+      const tokenCreator = jwtService.sign({
+        sub: 7,
+        username: 'staff_users_create',
+        group_id: 6,
+        tid: 'tenant_users_h1',
+      });
+
+      const res = await request(app.getHttpServer())
+        .post('/api/users/groups/6/permissions')
+        .set('X-Test-Tenant', 'tenant_users_h1')
+        .set('Authorization', `Bearer ${tokenCreator}`)
+        .send({ permissions: [{ module_code: 'USERS', can_view: true, can_create: true, can_delete: true }] });
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toContain('Không thể tự chỉnh sửa quyền nhóm của chính mình');
+    });
+
+    it('user with USERS:create CANNOT grant permissions they do not have to another group (403)', async () => {
+      if (!dbAvailable) return;
+
+      const tokenCreator = jwtService.sign({
+        sub: 7,
+        username: 'staff_users_create',
+        group_id: 6,
+        tid: 'tenant_users_h1',
+      });
+
+      // Group 6 has SALES:view, but NOT HR
+      const res = await request(app.getHttpServer())
+        .post('/api/users/groups/2/permissions')
+        .set('X-Test-Tenant', 'tenant_users_h1')
+        .set('Authorization', `Bearer ${tokenCreator}`)
+        .send({ permissions: [{ module_code: 'HR', can_view: true }] });
+
+      expect(res.status).toBe(403);
+      expect(res.body.message).toContain('HR');
+    });
+
+    it('user with USERS:create CAN grant permissions they DO have to another group (200)', async () => {
+      if (!dbAvailable) return;
+
+      const tokenCreator = jwtService.sign({
+        sub: 7,
+        username: 'staff_users_create',
+        group_id: 6,
+        tid: 'tenant_users_h1',
+      });
+
+      // Group 6 has SALES:view
+      const res = await request(app.getHttpServer())
+        .post('/api/users/groups/2/permissions')
+        .set('X-Test-Tenant', 'tenant_users_h1')
+        .set('Authorization', `Bearer ${tokenCreator}`)
+        .send({ permissions: [{ module_code: 'SALES', can_view: true }] });
+
+      expect([200, 201]).toContain(res.status);
+    });
   });
 });
