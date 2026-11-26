@@ -84,8 +84,8 @@ const MrpSummaryDashboardTab: React.FC<MrpSummaryDashboardTabProps> = ({ isMobil
         { title: 'Công Đoạn', dataIndex: 'step_name' },
         { title: 'Nhà Gia Công', dataIndex: 'supplier_name' },
         { title: 'Tổng Số Lượng', dataIndex: 'quantity', align: 'right' as const, render: (v: any) => <b>{Number(v || 0).toLocaleString()}</b> },
-        { title: 'Đơn Giá', dataIndex: 'unit_price', align: 'right' as const, render: (v: any) => Number(v || 0).toLocaleString() },
-        { title: 'Thành Tiền', dataIndex: 'total_cost', align: 'right' as const, render: (v: any) => <b style={{ color: '#d46b08' }}>{Number(v || 0).toLocaleString()}</b> }
+        { title: 'Đơn Giá', dataIndex: 'unit_price', align: 'right' as const, render: (v: any) => v != null ? Number(v || 0).toLocaleString() : '—' },
+        { title: 'Thành Tiền', dataIndex: 'total_cost', align: 'right' as const, render: (v: any) => v != null ? <b style={{ color: '#d46b08' }}>{Number(v || 0).toLocaleString()}</b> : '—' }
     ];
 
     return (
@@ -201,6 +201,7 @@ const MrpSummaryDashboardTab: React.FC<MrpSummaryDashboardTabProps> = ({ isMobil
                                 pagination={{ pageSize: 50 }}
                                 scroll={{ x: isMobile ? 800 : undefined, y: 500 }}
                                 summary={(pageData) => {
+                                    const hasAnyCost = pageData.some(p => p.total_cost != null);
                                     const totalAmount = pageData.reduce((prev, current) => prev + Number(current.total_cost || 0), 0);
                                     return (
                                         <Table.Summary.Row style={{ background: '#fafafa' }}>
@@ -208,7 +209,9 @@ const MrpSummaryDashboardTab: React.FC<MrpSummaryDashboardTabProps> = ({ isMobil
                                                 <Text strong>Tổng Thành Tiền Gia Công:</Text>
                                             </Table.Summary.Cell>
                                             <Table.Summary.Cell index={1} align="right">
-                                                <Text strong style={{ color: '#d46b08', fontSize: '1.1em' }}>{totalAmount.toLocaleString()}</Text>
+                                                {hasAnyCost ? (
+                                                    <Text strong style={{ color: '#d46b08', fontSize: '1.1em' }}>{totalAmount.toLocaleString()}</Text>
+                                                ) : '—'}
                                             </Table.Summary.Cell>
                                         </Table.Summary.Row>
                                     );

@@ -2,10 +2,15 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Table, Tag, Button, message, Card, Row, Col, Modal, Form, Input, InputNumber, Select, Popconfirm, Space, Divider, Tabs, Tooltip } from 'antd';
 import { ReloadOutlined, PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined, SearchOutlined } from '@ant-design/icons';
 import api from '../utils/api';
+import usePermission from '../hooks/usePermission';
 
 const MaterialsPage: React.FC = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const permPurchase = usePermission('PURCHASE');
+  const permInventory = usePermission('INVENTORY');
+  const permFinance = usePermission('FINANCE');
+  const canViewCost = permPurchase.canView || permInventory.canViewCost || permFinance.canViewCost;
   
   // --- MỚI: STATE CHO TÌM KIẾM ---
   const [searchText, setSearchText] = useState('');
@@ -30,11 +35,16 @@ const MaterialsPage: React.FC = () => {
 
   const handleSave = async (values: any) => {
     try {
+      const payload = { ...values };
+      if (!canViewCost) {
+        delete payload.cost_per_unit;
+        delete payload.cost_price;
+      }
       if (editingItem) {
-        await api.put(`/materials/${editingItem.id}`, values);
+        await api.put(`/materials/${editingItem.id}`, payload);
         message.success('Cập nhật thành công');
       } else {
-        await api.post('/materials', values);
+        await api.post('/materials', payload);
         message.success('Thêm mới thành công');
       }
       setIsModalOpen(false);
@@ -106,7 +116,8 @@ const MaterialsPage: React.FC = () => {
     },
     { 
       title: 'Giá Vốn', dataIndex: 'cost_per_unit', align: 'right' as const, width: 120,
-      render: (v:any) => Number(v).toLocaleString()
+      hidden: !canViewCost,
+      render: (v:any) => v != null && !isNaN(Number(v)) ? Number(v).toLocaleString() : '—'
     },
     { 
       title: 'Tồn Kho', dataIndex: 'quantity_in_stock', align: 'right' as const, width: 120,
@@ -140,13 +151,17 @@ const MaterialsPage: React.FC = () => {
     },
     { 
         title: 'Giá Mua (Tham khảo)', key: 'purchase_price', align: 'right' as const,
+        hidden: !canViewCost,
         render: (r:any) => {
-            const purchasePrice = Number(r.cost_per_unit) * Number(r.conversion_factor);
+            if (!canViewCost || r.cost_per_unit == null || isNaN(Number(r.cost_per_unit))) {
+                return '—';
+            }
+            const purchasePrice = Number(r.cost_per_unit) * Number(r.conversion_factor || 1);
             return (
-                <Tooltip title={`= ${Number(r.cost_per_unit).toLocaleString()} * ${r.conversion_factor}`}>
-                    {purchasePrice.toLocaleString()} / {r.purchase_unit}
+                <Tooltip title={`= ${Number(r.cost_per_unit).toLocaleString()} * ${r.conversion_factor || 1}`}>
+                    {purchasePrice.toLocaleString()} / {r.purchase_unit || r.unit}
                 </Tooltip>
-            )
+            );
         }
     },
     {
@@ -217,8 +232,10 @@ const MaterialsPage: React.FC = () => {
 
           <div style={{ background: '#f0f5ff', padding: '10px', borderRadius: 4, marginBottom: 20 }}>
              <Row gutter={16}>
-                <Col span={12}><Form.Item name="cost_per_unit" label="Giá Vốn (trên 1 ĐVT Gốc)" style={{marginBottom:0}}><InputNumber style={{width:'100%'}} formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item></Col>
-                <Col span={12}><Form.Item name="quantity_in_stock" label="Số lượng Tồn (ĐVT Gốc)" style={{marginBottom:0}}><InputNumber style={{width:'100%'}} /></Form.Item></Col>
+                {canViewCost && (
+                  <Col span={12}><Form.Item name="cost_per_unit" label="Giá Vốn (trên 1 ĐVT Gốc)" style={{marginBottom:0}}><InputNumber style={{width:'100%'}} formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} /></Form.Item></Col>
+                )}
+                <Col span={canViewCost ? 12 : 24}><Form.Item name="quantity_in_stock" label="Số lượng Tồn (ĐVT Gốc)" style={{marginBottom:0}}><InputNumber style={{width:'100%'}} /></Form.Item></Col>
              </Row>
           </div>
         </Form>

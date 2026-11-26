@@ -6,10 +6,12 @@ import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermission, Perm } from '../auth/permissions.decorator';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('sales')
 @RequiresPackage(PackageKey.SALES)
 @UseGuards(JwtAuthGuard, PermissionsGuard)
+@CostVisible({ modules: ['SALES', 'FINANCE'] })
 export class SalesController {
     constructor(
         private readonly s: SalesService

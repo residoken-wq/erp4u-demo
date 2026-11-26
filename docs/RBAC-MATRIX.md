@@ -157,3 +157,48 @@ Khi triển khai môi trường Production, nếu phát hiện lỗi phân quy�
 2. Khởi động lại dịch vụ backend (NestJS API).
 3. **Hiệu lực**: Biến này sẽ **ghi đè tức thì chế độ của tất cả các tenant** về `SHADOW`, mở lại quyền truy cập tạm thời cho toàn bộ người dùng để tiến hành điều tra.
 4. Sau khi khắc phục xong, gỡ bỏ biến `RBAC_FORCE_MODE` (hoặc đặt giá trị rỗng) và restart lại backend để khôi phục cấu hình riêng của từng tenant.
+
+---
+
+## 6. Cơ Chế Ẩn Giá Vốn & Lợi Nhuận (Cost Visibility Matrix)
+
+### 6.1. Nguyên Tắc Bảo Mật 2 Lớp (Server-Side Filtering & Write Protection)
+Hệ thống bảo vệ dữ liệu giá vốn (`cost_price`, `cost_per_unit`), chi phí (`total_cost`, `expected_cost`) và lợi nhuận (`profit`, `margin`) nghiêm ngặt qua 2 lớp độc lập:
+1. **Server-Side Filtering**: Interceptor toàn cục `CostVisibilityInterceptor` kết hợp decorator `@CostVisible` tự động lọc bỏ đệ quy các trường giá vốn khỏi response trước khi gửi về client, bảo vệ cả cấu trúc phân trang `{ data, total }` hay các object lồng nhau.
+2. **Write Protection**: Khi người dùng không có quyền xem giá vốn thực hiện thêm/sửa (`POST`, `PUT`, `PATCH`) hoặc tải lên Excel/CSV, hệ thống tự động loại bỏ các khoá giá vốn khỏi payload nhằm ngăn chặn việc vô tình ghi đè hoặc đặt lại giá vốn về 0 hoặc null.
+3. **Super Admin Bypass**: Tài khoản `admin` (`username === 'admin'`) luôn có toàn quyền xem giá vốn trên mọi module và route.
+
+### 6.2. Ma Trận Hiển Thị Giá Vốn Theo Tuyến Đường (API Route)
+
+| Tuyến Đường (API Route) | Khoá Giá Vốn Bị Ẩn | Module Quyết Định | Nhóm Mẫu Thấy | Nhóm Mẫu Bị Ẩn |
+|---|---|---|---|---|
+| `GET /products`<br>`GET /products/:id`<br>`GET /products/:sku/sku` | `cost_price`<br>`profit_margin` | `PRODUCT`<br>`SALES`<br>`FINANCE` | Quản trị, Kế toán | Kinh doanh, Kho, Mua hàng, Sản xuất, Nhân sự |
+| `GET /categories`<br>`GET /categories/:id` | `profit_margin` | `PRODUCT`<br>`SALES`<br>`FINANCE` | Quản trị, Kế toán | Kinh doanh, Kho, Mua hàng, Sản xuất, Nhân sự |
+| `GET /materials`<br>`GET /materials/:id` | `cost_per_unit`<br>`cost_price` | `PURCHASE`<br>`INVENTORY`<br>`FINANCE` | Quản trị, Kế toán, Mua hàng | Kinh doanh, Kho, Sản xuất, Nhân sự |
+| `GET /suppliers`<br>`GET /suppliers/:id` | `cost_per_unit`<br>`cost_price`<br>`price` | `PURCHASE`<br>`INVENTORY`<br>`FINANCE` | Quản trị, Kế toán, Mua hàng | Kinh doanh, Kho, Sản xuất, Nhân sự |
+| `GET /inventory/stocks` | `cost_price`<br>`total_cost`<br>`total_stock_value` | `INVENTORY`<br>`FINANCE` | Quản trị, Kế toán | Kinh doanh, Kho, Mua hàng, Sản xuất, Nhân sự |
+| `GET /sales`<br>`GET /sales/:id` | `total_cost`<br>`cost_price`<br>`profit` | `SALES`<br>`FINANCE` | Quản trị, Kế toán | Kinh doanh, Kho, Mua hàng, Sản xuất, Nhân sự |
+| `GET /planning`<br>`GET /planning/pfo/:id` | `total_cost`<br>`unit_price`<br>`cost_per_unit` | `PRODUCTION`<br>`PURCHASE`<br>`FINANCE` | Quản trị, Kế toán, Mua hàng (chỉ giá mua NPL) | Kinh doanh, Kho, Sản xuất (không thấy cost), Nhân sự |
+| `GET /finance/so-profit`<br>`GET /finance/summary` | `profit`<br>`expected_cost`<br>`expected_bom_cost`<br>`margin` | `FINANCE` | Quản trị, Kế toán | Kinh doanh, Kho, Mua hàng, Sản xuất, Nhân sự |
+| `GET /projects/:id/cost-summary` | `total_actual_cost`<br>`total_estimated_cost`<br>`profit` | `PROJECTS`<br>`FINANCE` | Quản trị, Kế toán | Kinh doanh, Kho, Mua hàng, Sản xuất, Nhân sự |
+| `GET /production/assignments` | `unit_price`<br>`total_cost` | `PRODUCTION`<br>`PURCHASE`<br>`FINANCE` | Quản trị, Kế toán | Kinh doanh, Kho, Mua hàng, Sản xuất, Nhân sự |
+
+### 6.3. Quyết Định Quy Tắc Nghiệp Vụ Đặc Thù
+
+1. **Quy tắc Mua Hàng & Giá Nguyên Vật Liệu (NVL)**:
+   - Người dùng có quyền `PURCHASE:can_view` hoặc có cờ `view_cost_price` trong route liên quan được phép xem đơn giá mua NPL (`materials.cost_per_unit`, `materials.cost_price`, bảng giá NCC `suppliers.price`) nhằm phục vụ việc tạo đơn PO và đàm phán giá mua.
+   - Các nhóm khác (Kho, Sản xuất, Kinh doanh) bị ẩn hoàn toàn giá mua NPL.
+   - **Tuyệt đối phân tách**: Quyền `PURCHASE:can_view` KHÔNG mang lại quyền xem giá vốn thành phẩm (`product.cost_price`, `product.profit_margin`). Nhóm Mua hàng khi xem danh sách sản phẩm (`GET /products`) vẫn bị ẩn `cost_price` và `profit_margin`.
+
+2. **Quy tắc Lệnh Kế Hoạch & Sản Xuất (PFO Rule)**:
+   - **Nhóm Sản xuất**: Chỉ quản lý công đoạn, số lượng và tiến độ; toàn bộ thông tin giá vốn, tổng chi phí dự kiến (`total_cost`, `totalEstimatedCost`) và lợi nhuận được ẩn hoàn toàn.
+   - **Nhóm Mua hàng**: Xem được giá mua nguyên vật liệu và tổng chi phí mua hàng NPL của đơn hàng để triển khai PO vật tư.
+   - **Nhóm Kế toán & Quản trị**: Toàn quyền xem chi tiết toàn bộ các cấu phần chi phí BOM, chi phí gia công, chi phí thực tế và biên lợi nhuận của lệnh PFO.
+
+### 6.4. Quy Chuẩn Hiển Thị Trên Giao Diện (Frontend)
+- Khi người dùng không có quyền xem giá vốn hoặc giá trị trường là `null`/`undefined`, giao diện hiển thị ký hiệu gạch ngang `—` trung tính.
+- Tuyệt đối không để xảy ra các lỗi:
+  - Văng lỗi JavaScript hoặc sập component.
+  - Hiển thị `NaN` hoặc `NaN ₫`.
+  - Hiển thị giá trị giả `0 ₫` gây nhầm lẫn là hàng miễn phí hoặc không tốn chi phí.
+- Trong form tạo/chỉnh sửa, các trường nhập giá vốn (`cost_price`, `profit_margin`, `cost`) được ẩn hoặc vô hiệu hoá, đồng thời frontend chủ động loại bỏ khoá khỏi payload trước khi gửi request lên server.

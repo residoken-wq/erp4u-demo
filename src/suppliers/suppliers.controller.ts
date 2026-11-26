@@ -1,10 +1,18 @@
 import { AnyPerm, AuthOnly } from '../auth/permissions.decorator';
-import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards } from '@nestjs/common';
 import { SuppliersService } from './suppliers.service';
 import { CorePackage } from '../common/packages/requires-package.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('suppliers')
 @CorePackage()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@CostVisible({
+  modules: ['PURCHASE', 'INVENTORY', 'FINANCE'],
+  purchaseKeys: ['cost_per_unit', 'cost_price', 'price'],
+})
 export class SuppliersController {
   constructor(private readonly s: SuppliersService) { }
 

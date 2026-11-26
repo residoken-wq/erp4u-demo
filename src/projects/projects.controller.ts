@@ -19,10 +19,12 @@ import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
 import { PermissionCacheService } from '../auth/permission-cache.service';
 import { assertPermission } from '../auth/rbac-assert.helper';
+import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('projects')
 @RequiresPackage(PackageKey.PROJECTS)
 @UseGuards(JwtAuthGuard)
+@CostVisible({ modules: ['PROJECTS', 'FINANCE'] })
 export class ProjectsController {
   constructor(
     private readonly service: ProjectsService,

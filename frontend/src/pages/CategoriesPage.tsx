@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Table, Button, message, Card, Modal, Form, Input, InputNumber, Popconfirm, Space } from 'antd';
 import { ReloadOutlined, PlusOutlined, EditOutlined, DeleteOutlined, PercentageOutlined, AppstoreOutlined } from '@ant-design/icons';
 import api from '../utils/api';
+import usePermission from '../hooks/usePermission';
 
 const CategoriesPage: React.FC = () => {
   const [data, setData] = useState<any[]>([]);
@@ -9,6 +10,7 @@ const CategoriesPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [form] = Form.useForm();
+  const { canViewCost } = usePermission(['PRODUCT', 'FINANCE']);
 
   const fetchData = async () => {
     setLoading(true);
@@ -21,8 +23,12 @@ const CategoriesPage: React.FC = () => {
 
   const handleSave = async (values: any) => {
       try {
-          if(editingItem) await api.put(`/categories/${editingItem.id}`, values);
-          else await api.post('/categories', values);
+          const payload = { ...values };
+          if (!canViewCost) {
+              delete payload.profit_margin;
+          }
+          if(editingItem) await api.put(`/categories/${editingItem.id}`, payload);
+          else await api.post('/categories', payload);
           message.success('Thành công. Giá sản phẩm sẽ được tự động cập nhật!');
           setIsModalOpen(false); fetchData();
       } catch(e: any) { message.error(e.response?.data?.message || 'Lỗi lưu'); }
@@ -48,7 +54,8 @@ const CategoriesPage: React.FC = () => {
       { title: 'Kích thước', dataIndex: 'size' },
       { 
           title: '% Biên Lợi Nhuận (Mong muốn)', dataIndex: 'profit_margin', align: 'center' as const,
-          render: (v:any) => v != null && !isNaN(Number(v)) ? <span style={{color: '#272F72', fontWeight:'bold', fontSize:16}}>{v}%</span> : '—'
+          render: (v:any) => v != null && !isNaN(Number(v)) ? <span style={{color: '#272F72', fontWeight:'bold', fontSize:16}}>{v}%</span> : '—',
+          hidden: !canViewCost,
       },
       { 
           title: '', key: 'act', align: 'right' as const, width: 140,
@@ -74,9 +81,11 @@ const CategoriesPage: React.FC = () => {
                 <Form.Item name="name" label="Tên Danh Mục" rules={[{required:true}]}><Input /></Form.Item>
                 <Form.Item name="outsourcing_category_name" label="Tên Danh Mục (Portal NCC)"><Input placeholder="Ví dụ: Sản phẩm A, Phụ kiện, Vỏ hộp..." /></Form.Item>
                 <Form.Item name="size" label="Kích thước" help="Có thể đồng bộ kích thước này cho các sản phẩm (đang để trống kích thước) bằng nút Đồng bộ ở ngoài bảng."><Input placeholder="Ví dụ: 120x60cm, 50x70cm..." /></Form.Item>
-                <Form.Item name="profit_margin" label="% Biên Lợi Nhuận Gộp (Margin)" help="Công thức: Giá Bán = Giá Vốn / (1 - %Margin). Thay đổi ở đây sẽ cập nhật giá tất cả SP thuộc danh mục." rules={[{required:true}]}>
-                    <InputNumber min={0} max={90} style={{width:'100%'}} suffix={<PercentageOutlined />} />
-                </Form.Item>
+                {canViewCost && (
+                    <Form.Item name="profit_margin" label="% Biên Lợi Nhuận Gộp (Margin)" help="Công thức: Giá Bán = Giá Vốn / (1 - %Margin). Thay đổi ở đây sẽ cập nhật giá tất cả SP thuộc danh mục." rules={[{required:true}]}>
+                        <InputNumber min={0} max={90} style={{width:'100%'}} suffix={<PercentageOutlined />} />
+                    </Form.Item>
+                )}
             </Form>
         </Modal>
     </div>

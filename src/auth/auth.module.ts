@@ -23,6 +23,7 @@ import { SystemConfig } from '../system/system-config.entity';
 import { RbacAccessLog } from './entities/rbac-access-log.entity';
 import { ActivityLog } from '../system/entities/activity-log.entity';
 import { getJwtSecret } from '../common/security/secrets';
+import { CostVisibilityInterceptor } from './cost-visibility';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { getJwtSecret } from '../common/security/secrets';
     RbacAccessLogService,
     RbacSeedService,
     DefaultGroupsSeedService,
+    CostVisibilityInterceptor,
     {
       provide: APP_GUARD,
       useClass: RbacGuard,
@@ -71,6 +73,7 @@ import { getJwtSecret } from '../common/security/secrets';
     RbacAccessLogService,
     RbacSeedService,
     DefaultGroupsSeedService,
+    CostVisibilityInterceptor,
     TypeOrmModule,
   ],
 })

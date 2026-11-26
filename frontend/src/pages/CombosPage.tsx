@@ -212,14 +212,16 @@ const CombosPage: React.FC = () => {
             let comboProduct = editingItem;
 
             // FIX: Payload gửi đầy đủ thông tin giống ProductsPage
-            const payload = {
+            const payload: any = {
                 sku,
                 name,
                 base_price: Number(base_price), // Giá bán chính thức
-                cost_price: Number(metrics.totalRefCost), // Giá vốn (tự động tính)
                 product_type: 'COMBO',
                 is_active: true
             };
+            if (canViewCost) {
+                payload.cost_price = Number(metrics.totalRefCost); // Giá vốn (tự động tính)
+            }
 
             if (!comboProduct) {
                 const res = await api.post(`/products`, payload);

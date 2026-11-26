@@ -43,6 +43,7 @@ import { QCModule } from './qc/qc.module';
 import { ShippingModule } from './shipping/shipping.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { CommonModule } from './common/common.module';
+import { CostVisibilityInterceptor } from './auth/cost-visibility';
 import { TenancyModule } from './common/tenancy/tenancy.module';
 import { installTenantConnectionHook } from './common/tenancy/tenant-connection.hook';
 import { TenantResolver } from './common/tenancy/tenant-resolver.interface';
@@ -249,6 +250,10 @@ export class Erp4uCoreModule implements OnModuleInit {
         {
           provide: 'APP_INTERCEPTOR',
           useClass: UserContextInterceptor, // Must run first to set context
+        },
+        {
+          provide: 'APP_INTERCEPTOR',
+          useClass: CostVisibilityInterceptor, // Cost & profit visibility filtering
         },
         {
           provide: 'APP_INTERCEPTOR',

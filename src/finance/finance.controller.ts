@@ -5,10 +5,12 @@ import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermission, Perm } from '../auth/permissions.decorator';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('finance')
 @RequiresPackage(PackageKey.FINANCE)
 @UseGuards(JwtAuthGuard, PermissionsGuard)
+@CostVisible({ modules: ['FINANCE'] })
 export class FinanceController {
   constructor(private readonly s: FinanceService) { }
 

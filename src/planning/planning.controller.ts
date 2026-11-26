@@ -1,5 +1,5 @@
 import { Perm, AnyPerm } from '../auth/permissions.decorator';
-import { Controller, Get, Post, Put, Param, Body, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Body, Delete, Query, UseGuards } from '@nestjs/common';
 import { PlanningService } from './planning.service';
 import { PfoDemandService } from './pfo-demand.service';
 import { PfoBomEngineService } from './pfo-bom-engine.service';
@@ -7,9 +7,17 @@ import { PfoSourcingService } from './pfo-sourcing.service';
 import { PfoExecutionService } from './pfo-execution.service';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
 import { PackageKey } from '../common/packages/package.registry';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { CostVisible } from '../auth/cost-visibility';
 
 @Controller('planning')
 @RequiresPackage(PackageKey.PRODUCTION)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@CostVisible({
+  modules: ['PRODUCTION', 'PURCHASE', 'FINANCE'],
+  purchaseKeys: ['cost_per_unit', 'unit_price'],
+})
 export class PlanningController {
   constructor(
     private readonly planningSvc: PlanningService,

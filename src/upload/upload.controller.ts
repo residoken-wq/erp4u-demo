@@ -1,5 +1,5 @@
 import { Perm, AnyPerm, AuthOnly } from '../auth/permissions.decorator';
-import { Controller, Post, Get, Delete, Param, Res, Body, UseInterceptors, UploadedFile, BadRequestException, Query, Inject, Optional } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Res, Body, Req, UseInterceptors, UploadedFile, BadRequestException, Query, Inject, Optional, forwardRef } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
 import { Response } from 'express';
@@ -10,6 +10,7 @@ import { Product } from '../products/product.entity';
 import { SystemConfig } from '../system/system-config.entity';
 import { CorePackage } from '../common/packages/requires-package.decorator';
 import { WEBSITE_SERVICE, WebsiteMediaUsageBridge } from '../common/extension-points';
+import { PermissionCacheService } from '../auth/permission-cache.service';
 
 @Controller('upload')
 @CorePackage()
@@ -19,6 +20,7 @@ export class UploadController {
     @InjectRepository(Product) private productRepo: Repository<Product>,
     @InjectRepository(SystemConfig) private configRepo: Repository<SystemConfig>,
     @Optional() @Inject(WEBSITE_SERVICE) private websiteService?: WebsiteMediaUsageBridge,
+    @Optional() @Inject(forwardRef(() => PermissionCacheService)) private readonly permCacheService?: PermissionCacheService,
   ) { }
 
   @Perm('CMS', 'view')
@@ -123,9 +125,12 @@ export class UploadController {
   @AnyPerm(['INVENTORY', 'create'], ['PRODUCT', 'create'])
   @Post('materials')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadMaterials(@UploadedFile() file: Express.Multer.File) {
+  async uploadMaterials(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
     if (!file) throw new BadRequestException('Chua chon file!');
-    return this.uploadService.importMaterials(file.buffer);
+    const canViewPurchaseCost = this.permCacheService
+      ? await this.permCacheService.canViewPurchaseCost(req?.user, ['PURCHASE', 'INVENTORY', 'FINANCE'])
+      : true;
+    return this.uploadService.importMaterials(file.buffer, canViewPurchaseCost);
   }
 
   @AuthOnly()
@@ -139,9 +144,19 @@ export class UploadController {
   @Perm('PRODUCT', 'create')
   @Post('products')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadProducts(@UploadedFile() file: Express.Multer.File) {
+  async uploadProducts(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
     if (!file) throw new BadRequestException('Chua chon file!');
-    return this.uploadService.importProducts(file.buffer);
+    const canViewCost = this.permCacheService
+      ? await this.permCacheService.canViewCostPrice(req?.user, [
+          'PRODUCT',
+          'PURCHASE',
+          'PRODUCTION',
+          'SALES',
+          'INVENTORY',
+          'FINANCE',
+        ])
+      : true;
+    return this.uploadService.importProducts(file.buffer, canViewCost);
   }
 
   @AnyPerm(['INVENTORY', 'create'], ['PRODUCT', 'create'])
@@ -258,8 +273,21 @@ export class UploadController {
 
   @AuthOnly()
   @Get('template/:type')
-  async downloadTemplate(@Param('type') type: string, @Res() res: Response) {
-    const buffer = this.uploadService.getTemplate(type);
+  async downloadTemplate(@Param('type') type: string, @Res() res: Response, @Req() req: any) {
+    const canViewCost = this.permCacheService
+      ? await this.permCacheService.canViewCostPrice(req?.user, [
+          'PRODUCT',
+          'PURCHASE',
+          'PRODUCTION',
+          'SALES',
+          'INVENTORY',
+          'FINANCE',
+        ])
+      : true;
+    const canViewPurchaseCost = this.permCacheService
+      ? await this.permCacheService.canViewPurchaseCost(req?.user, ['PURCHASE', 'INVENTORY', 'FINANCE'])
+      : true;
+    const buffer = this.uploadService.getTemplate(type, { canViewCost, canViewPurchaseCost });
 
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

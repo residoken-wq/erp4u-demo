@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import ProductionStatusTab from './ProductionStatusTab';
 import VersionHistoryModal from './VersionHistoryModal';
 import api from '../../utils/api';
+import { usePermission } from '../../hooks/usePermission';
 
 const { Option } = Select;
 
@@ -37,6 +38,7 @@ const PlanDashboardTab: React.FC<PlanDashboardTabProps> = ({
     isDashboardOpen, setIsDashboardOpen,
     onRunMrp, onDeletePlan, onConfirmBookings, onDataChange, onDetailDataChange, onToggleStock, onGeneratePOs, onSaveAnalysis, onUpdateStatus, onForceRunMrp
 }) => {
+    const { canViewCost } = usePermission(['PRODUCTION', 'PURCHASE', 'FINANCE']);
     const [historyOpen, setHistoryOpen] = React.useState(false);
 
     const handleSyncBOD = async (planId: number) => {
@@ -150,20 +152,20 @@ const PlanDashboardTab: React.FC<PlanDashboardTabProps> = ({
                     <Row gutter={24} style={{ textAlign: 'center' }}>
                         <Col span={4}><Statistic title="Doanh Thu" value={totalRevenue} prefix={<DollarOutlined />} suffix="đ" valueStyle={{ fontSize: 15 }} /></Col>
                         <Col span={4}>
-                            <Statistic title="CP Mua NPL" value={estMaterialCost} prefix={<ShoppingCartOutlined />} suffix="đ" valueStyle={{ color: '#cf1322', fontSize: 15 }} />
+                            <Statistic title="CP Mua NPL" value={canViewCost ? estMaterialCost : '—'} precision={canViewCost ? 0 : undefined} prefix={<ShoppingCartOutlined />} suffix={canViewCost ? "đ" : undefined} valueStyle={{ color: '#cf1322', fontSize: 15 }} />
                             <small style={{ color: '#888', fontSize: 11 }}>({costBasis === 'REFERENCE' ? 'Theo giá NCC' : 'Theo PO'})</small>
                         </Col>
-                        <Col span={4}><Statistic title="CP Hàng Có Sẵn" value={totalStockCost} prefix={<AppstoreAddOutlined />} suffix="đ" valueStyle={{ color: '#531dab', fontSize: 15 }} />
+                        <Col span={4}><Statistic title="CP Hàng Có Sẵn" value={canViewCost ? totalStockCost : '—'} precision={canViewCost ? 0 : undefined} prefix={<AppstoreAddOutlined />} suffix={canViewCost ? "đ" : undefined} valueStyle={{ color: '#531dab', fontSize: 15 }} />
                             <small style={{ color: '#888', fontSize: 11 }}>(Thành phẩm + NPL kho)</small>
                         </Col>
-                        <Col span={4}><Statistic title="CP Gia Công" value={estOutsourceCost} prefix={<ScissorOutlined />} suffix="đ" valueStyle={{ color: '#d46b08', fontSize: 15 }} /></Col>
-                        <Col span={4}><Statistic title="CP Logistics" value={estLogisticsCost} prefix={<TruckOutlined />} suffix="đ" valueStyle={{ color: '#096dd9', fontSize: 15 }} /></Col>
+                        <Col span={4}><Statistic title="CP Gia Công" value={canViewCost ? estOutsourceCost : '—'} precision={canViewCost ? 0 : undefined} prefix={<ScissorOutlined />} suffix={canViewCost ? "đ" : undefined} valueStyle={{ color: '#d46b08', fontSize: 15 }} /></Col>
+                        <Col span={4}><Statistic title="CP Logistics" value={canViewCost ? estLogisticsCost : '—'} precision={canViewCost ? 0 : undefined} prefix={<TruckOutlined />} suffix={canViewCost ? "đ" : undefined} valueStyle={{ color: '#096dd9', fontSize: 15 }} /></Col>
                         <Col span={4}>
-                            <Statistic title="CP Hao Hụt" value={estWastageCost} prefix={<FallOutlined />} suffix="đ" valueStyle={{ color: '#fa8c16', fontSize: 15 }} />
+                            <Statistic title="CP Hao Hụt" value={canViewCost ? estWastageCost : '—'} precision={canViewCost ? 0 : undefined} prefix={<FallOutlined />} suffix={canViewCost ? "đ" : undefined} valueStyle={{ color: '#fa8c16', fontSize: 15 }} />
                             <small style={{ color: '#888', fontSize: 11 }}>(Đã tính trong NPL)</small>
                         </Col>
                     </Row>
-                    {(() => {
+                    {canViewCost && (() => {
                         // Doanh thu (totalRevenue) đã bao gồm VAT
                         // Lợi nhuận gộp trước thuế GTGT = Doanh thu (gồm VAT) - Tổng chi phí
                         const grossProfitBeforeVat = totalRevenue - estMaterialCost - estOutsourceCost - estLogisticsCost - totalStockCost;
@@ -348,10 +350,10 @@ const PlanDashboardTab: React.FC<PlanDashboardTabProps> = ({
                                             title: 'Đơn Giá', dataIndex: 'unit_price', width: 120,
                                             render: (v: any, r: any, i: number) => (
                                                 <InputNumber value={v} min={0} formatter={val => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                                                    onChange={(val) => onDataChange('OUTSOURCING', i, 'unit_price', val)} style={{ width: '100%' }} />
+                                                    onChange={(val) => onDataChange('OUTSOURCING', i, 'unit_price', val)} style={{ width: '100%' }} disabled={!canViewCost} />
                                             )
                                         },
-                                        { title: 'Thành Tiền', dataIndex: 'total_cost', align: 'right' as const, width: 120, render: (v: any) => <b>{Number(v).toLocaleString()}</b> },
+                                        { title: 'Thành Tiền', dataIndex: 'total_cost', align: 'right' as const, width: 120, render: (v: any) => canViewCost && v != null ? <b>{Number(v).toLocaleString()}</b> : '—' },
                                         {
                                             title: 'Ghi chú PO',
                                             render: (t: any, r: any, i: number) => <Input size="small" value={r.note} onChange={(e) => onDataChange('OUTSOURCING', i, 'note', e.target.value)} placeholder="Ghi chú đơn hàng..." />
@@ -370,17 +372,17 @@ const PlanDashboardTab: React.FC<PlanDashboardTabProps> = ({
                                     columns={[
                                         { title: 'Mã SKU', dataIndex: 'product_sku', render: (t: any) => <b>{t}</b> },
                                         { title: 'Khoản Mục', dataIndex: 'name' },
-                                        { title: 'Đơn Giá', dataIndex: 'cost', align: 'right' as const, render: (v: any) => Number(v).toLocaleString() },
+                                        { title: 'Đơn Giá', dataIndex: 'cost', align: 'right' as const, render: (v: any) => canViewCost && v != null ? Number(v).toLocaleString() : '—' },
                                         { title: 'Số Lượng', dataIndex: 'quantity', align: 'center' as const },
-                                        { title: 'Thành Tiền', dataIndex: 'total_cost', align: 'right' as const, render: (v: any) => <b style={{ color: '#096dd9' }}>{Number(v).toLocaleString()}</b> },
+                                        { title: 'Thành Tiền', dataIndex: 'total_cost', align: 'right' as const, render: (v: any) => canViewCost && v != null ? <b style={{ color: '#096dd9' }}>{Number(v).toLocaleString()}</b> : '—' },
                                         { title: 'Ghi chú', dataIndex: 'note' }
                                     ]}
                                     summary={(pageData) => {
-                                        const total = pageData.reduce((prev, current) => prev + Number(current.total_cost), 0);
+                                        const total = pageData.reduce((prev, current) => prev + Number(current.total_cost || 0), 0);
                                         return (
                                             <Table.Summary.Row>
                                                 <Table.Summary.Cell index={0} colSpan={4} align="right"><b>Tổng:</b></Table.Summary.Cell>
-                                                <Table.Summary.Cell index={1} align="right"><b>{total.toLocaleString()}</b></Table.Summary.Cell>
+                                                <Table.Summary.Cell index={1} align="right">{canViewCost ? <b>{total.toLocaleString()}</b> : '—'}</Table.Summary.Cell>
                                                 <Table.Summary.Cell index={2} />
                                             </Table.Summary.Row>
                                         );
