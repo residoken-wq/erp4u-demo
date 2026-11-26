@@ -952,6 +952,12 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
       it('Write protection: user Kho có quyền update sản phẩm nhưng không có view_cost_price gửi PUT /products/101 -> DB cost_price không đổi', async () => {
         if (!dbAvailable) return;
 
+        // Đảm bảo product 101 có cost_price = 70000 trước khi test write protection
+        // (tránh trường hợp route calculate-cost trong bảng test trước đó tính lại thành 0 do fixture không có BOM)
+        await adminDs.query(
+          `UPDATE "tenant_matrix"."products" SET "cost_price" = 70000, "profit_margin" = 30.00 WHERE "id" = 101`,
+        );
+
         // Cấp quyền PRODUCT:can_update cho group 3 (Kho), nhưng view_cost_price = false
         await adminDs.query(
           `DELETE FROM "tenant_matrix"."group_permissions" WHERE "group_id" = 3 AND "module_code" = 'PRODUCT'`,
