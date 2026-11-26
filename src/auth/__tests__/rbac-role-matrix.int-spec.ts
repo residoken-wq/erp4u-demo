@@ -954,9 +954,11 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
 
         // Cấp quyền PRODUCT:can_update cho group 3 (Kho), nhưng view_cost_price = false
         await adminDs.query(
+          `DELETE FROM "tenant_matrix"."group_permissions" WHERE "group_id" = 3 AND "module_code" = 'PRODUCT'`,
+        );
+        await adminDs.query(
           `INSERT INTO "tenant_matrix"."group_permissions" ("group_id", "module_code", "can_view", "can_create", "can_update", "can_delete", "view_cost_price")
-           VALUES (3, 'PRODUCT', true, false, true, false, false)
-           ON CONFLICT ("group_id", "module_code") DO UPDATE SET "can_update" = true, "view_cost_price" = false`,
+           VALUES (3, 'PRODUCT', true, false, true, false, false)`,
         );
         permCacheService.clearAll();
 
@@ -997,7 +999,7 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
         const tokenPurchasing = jwtService.sign({
           sub: 4,
           username: 'user_purchasing',
-          groupId: 4,
+          group_id: 4,
           tid: 'tenant_matrix',
         });
 
@@ -1036,16 +1038,18 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
 
         // 2. Kho gọi GET /purchasing (khi được cấp quyền xem PO nhưng view_cost_price = false)
         await adminDs.query(
+          `DELETE FROM "tenant_matrix"."group_permissions" WHERE "group_id" = 3 AND "module_code" = 'PURCHASE'`,
+        );
+        await adminDs.query(
           `INSERT INTO "tenant_matrix"."group_permissions" ("group_id", "module_code", "can_view", "can_create", "can_update", "can_delete", "view_cost_price")
-           VALUES (3, 'PURCHASE', true, false, false, false, false)
-           ON CONFLICT ("group_id", "module_code") DO UPDATE SET "can_view" = true, "view_cost_price" = false`,
+           VALUES (3, 'PURCHASE', true, false, false, false, false)`,
         );
         permCacheService.clearAll();
 
         const tokenWarehouse = jwtService.sign({
           sub: 3,
           username: 'user_warehouse',
-          groupId: 3,
+          group_id: 3,
           tid: 'tenant_matrix',
         });
 
@@ -1075,7 +1079,7 @@ describe('RBAC Role Matrix at ENFORCE Mode (Integration - Task P12b2 D4)', () =>
         const tokenPurchasing = jwtService.sign({
           sub: 4,
           username: 'user_purchasing',
-          groupId: 4,
+          group_id: 4,
           tid: 'tenant_matrix',
         });
 

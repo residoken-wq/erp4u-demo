@@ -1,6 +1,6 @@
 # Bảng Kiểm Kê Phân Quyền Route (RBAC Route Inventory)
 
-> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-26T08:31:28.101Z
+> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-26T08:53:29.733Z
 
 ## Tổng quan theo tầng
 
@@ -241,7 +241,7 @@
 | `GET` | `/marketing/workflows/:id` | `PERM` | MARKETING:view | `MARKETING` | [src/marketing/marketing.controller.ts:125](../src/marketing/marketing.controller.ts:125) |
 | `PUT` | `/marketing/workflows/:id` | `PERM` | MARKETING:update | `MARKETING` | [src/marketing/marketing.controller.ts:137](../src/marketing/marketing.controller.ts:137) |
 | `PUT` | `/marketing/workflows/:id/status` | `PERM` | MARKETING:update | `MARKETING` | [src/marketing/marketing.controller.ts:146](../src/marketing/marketing.controller.ts:146) |
-| `GET` | `/materials` | `PERM` | INVENTORY:view | `INVENTORY` | [src/materials/materials.controller.ts:17](../src/materials/materials.controller.ts:17) |
+| `GET` | `/materials` | `PERM` | INVENTORY:view | PURCHASE:view | `INVENTORY` | [src/materials/materials.controller.ts:17](../src/materials/materials.controller.ts:17) |
 | `POST` | `/materials` | `PERM` | INVENTORY:create | `INVENTORY` | [src/materials/materials.controller.ts:21](../src/materials/materials.controller.ts:21) |
 | `DELETE` | `/materials/:id` | `PERM` | INVENTORY:delete | `INVENTORY` | [src/materials/materials.controller.ts:29](../src/materials/materials.controller.ts:29) |
 | `PUT` | `/materials/:id` | `PERM` | INVENTORY:update | `INVENTORY` | [src/materials/materials.controller.ts:25](../src/materials/materials.controller.ts:25) |

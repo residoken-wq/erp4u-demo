@@ -1,4 +1,4 @@
-import { AuthOnly, Perm } from '../auth/permissions.decorator';
+import { AuthOnly, Perm, AnyPerm } from '../auth/permissions.decorator';
 import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
 import { MaterialsService } from './materials.service';
 import { RequiresPackage } from '../common/packages/requires-package.decorator';
@@ -14,7 +14,7 @@ import { CostVisible } from '../auth/cost-visibility';
 export class MaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
 
-  @Perm('INVENTORY', 'view')
+  @AnyPerm(['INVENTORY', 'view'], ['PURCHASE', 'view'])
   @Get()
   findAll() { return this.materialsService.findAll(); }
 
