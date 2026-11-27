@@ -384,7 +384,7 @@ describeSuite('Internal Communications Security (Integration - Real DB & Migrati
         .expect(403);
     });
 
-    it('Moderator (SYSTEM:update) sửa thảo luận và ghim thảo luận trả về 200', async () => {
+    it('Moderator (SYSTEM:update) sửa thảo luận của người khác trả về 403, nhưng ghim thảo luận trả về 200', async () => {
       // User 6 has group 3 which has SYSTEM:update
       const tokenMod = createToken({ id: 6, username: 'mod_user', full_name: 'Moderator Hệ thống', group_id: 3 });
 
@@ -393,7 +393,7 @@ describeSuite('Internal Communications Security (Integration - Real DB & Migrati
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenMod}`)
         .send({ title: 'Moderator updated title' })
-        .expect(200);
+        .expect(403);
 
       await request(app!.getHttpServer())
         .put(`/api/discussions/${discAId}/pin`)
