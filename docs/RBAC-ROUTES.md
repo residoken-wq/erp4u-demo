@@ -1,12 +1,12 @@
 # Bảng Kiểm Kê Phân Quyền Route (RBAC Route Inventory)
 
-> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-27T08:09:40.485Z
+> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-27T11:44:56.953Z
 
 ## Tổng quan theo tầng
 
-- **Tổng số route**: 551
+- **Tổng số route**: 552
 - **PERM** (Phân quyền chi tiết): 449
-- **AUTH** (Chỉ cần đăng nhập): 61
+- **AUTH** (Chỉ cần đăng nhập): 62
 - **PUBLIC** (Công khai): 36
 - **APIKEY** (Xác thực qua API Key): 5
 - **LEGACY** (Decorator cũ @RequirePermission): 0
@@ -247,9 +247,10 @@
 | `DELETE` | `/materials/:id` | `PERM` | INVENTORY:delete | `INVENTORY` | [src/materials/materials.controller.ts:29](../src/materials/materials.controller.ts:29) |
 | `PUT` | `/materials/:id` | `PERM` | INVENTORY:update | `INVENTORY` | [src/materials/materials.controller.ts:25](../src/materials/materials.controller.ts:25) |
 | `GET` | `/me/entitlements` | `AUTH` | AUTH | `CORE` | [src/common/packages/me-entitlements.controller.ts:59](../src/common/packages/me-entitlements.controller.ts:59) |
-| `GET` | `/notifications` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:14](../src/notifications/notifications.controller.ts:14) |
-| `POST` | `/notifications/:id/read` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:19](../src/notifications/notifications.controller.ts:19) |
-| `POST` | `/notifications/read-all` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:25](../src/notifications/notifications.controller.ts:25) |
+| `GET` | `/notifications` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:90](../src/notifications/notifications.controller.ts:90) |
+| `POST` | `/notifications/:id/read` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:95](../src/notifications/notifications.controller.ts:95) |
+| `POST` | `/notifications/read-all` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:101](../src/notifications/notifications.controller.ts:101) |
+| `GET` | `/notifications/stream` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:31](../src/notifications/notifications.controller.ts:31) |
 | `GET` | `/planning` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/planning/planning.controller.ts:33](../src/planning/planning.controller.ts:33) |
 | `GET` | `/planning/:id/booking-items` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/planning/planning.controller.ts:194](../src/planning/planning.controller.ts:194) |
 | `POST` | `/planning/:id/confirm-bookings` | `PERM` | PRODUCTION:update | `PRODUCTION` | [src/planning/planning.controller.ts:196](../src/planning/planning.controller.ts:196) |

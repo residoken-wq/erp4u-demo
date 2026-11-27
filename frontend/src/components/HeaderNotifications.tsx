@@ -1,31 +1,31 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Badge, Popover, List, Avatar, Button, Typography, Empty, Spin } from 'antd';
 import { BellOutlined, CheckCircleOutlined, InfoCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import { API_URL } from '../config';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
-
-// Firebase imports
-import { database } from '../utils/firebaseConfig';
-import { ref, onValue, off, query, orderByChild, limitToLast, DataSnapshot } from 'firebase/database';
+import {
+    NotificationItem,
+    openNotificationStream,
+    decideStreamTransition,
+    INITIAL_STREAM_STATE,
+    StreamState,
+    StreamEvent,
+    mergeNotificationItem,
+    mergeNotificationLists,
+    countUnreadNotifications,
+    FALLBACK_POLL_INTERVAL_MS,
+    STREAM_RECONNECT_INTERVAL_MS,
+    HIDDEN_TAB_DISCONNECT_MS,
+} from '../utils/notificationStreamHelper';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
 
 const { Text } = Typography;
-
-interface NotificationItem {
-    id: number;
-    title: string;
-    message: string;
-    type: string;
-    is_read: boolean;
-    link?: string;
-    created_at: string;
-    timestamp?: number;
-}
 
 const HeaderNotifications: React.FC = () => {
     const navigate = useNavigate();
@@ -34,20 +34,22 @@ const HeaderNotifications: React.FC = () => {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [hasNew, setHasNew] = useState(false);
-
-    // Check if Firebase is valid or running in demo mode
-    const isFirebaseAvailable = () => {
-        if (import.meta.env.VITE_ENABLE_FIREBASE === 'false') return false;
-        const dbUrl = (database as any)?.app?.options?.databaseURL || '';
-        if (dbUrl.includes('erp4u') || dbUrl.includes('demo') || !dbUrl) return false;
-        return true;
-    };
-
-    const [useFirebase, setUseFirebase] = useState(isFirebaseAvailable);
+    const [isConnected, setIsConnected] = useState(false);
 
     // Get user ID from localStorage
     const userStr = localStorage.getItem('user');
     const userId = userStr ? JSON.parse(userStr).id : null;
+
+    // Refs for lifecycle, timers, and abort control
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const fallbackPollTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const retryStreamTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const hiddenTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const isClosedDueToHiddenRef = useRef<boolean>(false);
+    const streamStateRef = useRef<StreamState>({ ...INITIAL_STREAM_STATE });
+    const connectStreamRef = useRef<() => void>(() => {});
+    const isMountedRef = useRef<boolean>(true);
 
     // Sound notification
     const playNotificationSound = useCallback(() => {
@@ -58,85 +60,239 @@ const HeaderNotifications: React.FC = () => {
         } catch (e) { }
     }, []);
 
-    // Firebase real-time listener
-    useEffect(() => {
-        if (!userId || !useFirebase) return;
-
-        const notificationsRef = ref(database, `notifications/user_${userId}`);
-        const notificationsQuery = query(notificationsRef, orderByChild('timestamp'), limitToLast(50));
-
-        const unsubscribe = onValue(notificationsQuery, (snapshot: DataSnapshot) => {
-            setLoading(false);
-
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                const notifications: NotificationItem[] = Object.values(data);
-
-                // Sort by timestamp descending
-                notifications.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-                const newUnread = notifications.filter(n => !n.is_read).length;
-
-                // Check if new notification arrived
-                if (newUnread > unreadCount && list.length > 0) {
-                    setHasNew(true);
-                    playNotificationSound();
-                    setTimeout(() => setHasNew(false), 3000);
-                }
-
-                setList(notifications);
-                setUnreadCount(newUnread);
-            } else {
-                setList([]);
-                setUnreadCount(0);
+    const fetchNotifications = useCallback(async () => {
+        try {
+            const res = await api.get('/notifications');
+            const data: NotificationItem[] = Array.isArray(res.data) ? res.data : [];
+            if (isMountedRef.current) {
+                setList((prev) => {
+                    const merged = prev.length === 0 ? data : mergeNotificationLists(prev, data);
+                    setUnreadCount(countUnreadNotifications(merged));
+                    return merged;
+                });
+                setLoading(false);
             }
-        }, (error: Error) => {
-            console.error('Firebase listener error:', error);
-            // Fallback to polling if Firebase fails
-            setUseFirebase(false);
-        });
+        } catch (e) {
+            console.error('[HeaderNotifications] Failed to fetch notifications:', e);
+            if (isMountedRef.current) {
+                setLoading(false);
+            }
+        }
+    }, []);
+
+    // Helper to stop all timers
+    const clearAllTimers = useCallback(() => {
+        if (reconnectTimerRef.current) {
+            clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = null;
+        }
+        if (fallbackPollTimerRef.current) {
+            clearInterval(fallbackPollTimerRef.current);
+            fallbackPollTimerRef.current = null;
+        }
+        if (retryStreamTimerRef.current) {
+            clearInterval(retryStreamTimerRef.current);
+            retryStreamTimerRef.current = null;
+        }
+        if (hiddenTimerRef.current) {
+            clearTimeout(hiddenTimerRef.current);
+            hiddenTimerRef.current = null;
+        }
+    }, []);
+
+    // Handle stream state transitions and actions via pure helper
+    const handleStreamEvent = useCallback(async (event: StreamEvent) => {
+        if (!isMountedRef.current || !userId || isClosedDueToHiddenRef.current) return;
+
+        const decision = decideStreamTransition(streamStateRef.current, event);
+        streamStateRef.current = decision.nextState;
+
+        if (decision.action === 'open') {
+            setIsConnected(true);
+            if (reconnectTimerRef.current) {
+                clearTimeout(reconnectTimerRef.current);
+                reconnectTimerRef.current = null;
+            }
+            if (fallbackPollTimerRef.current) {
+                clearInterval(fallbackPollTimerRef.current);
+                fallbackPollTimerRef.current = null;
+            }
+            if (retryStreamTimerRef.current) {
+                clearInterval(retryStreamTimerRef.current);
+                retryStreamTimerRef.current = null;
+            }
+            return;
+        }
+
+        setIsConnected(false);
+
+        if (decision.action === 'backoff_reconnect') {
+            if (reconnectTimerRef.current) {
+                clearTimeout(reconnectTimerRef.current);
+                reconnectTimerRef.current = null;
+            }
+            console.info(`[HeaderNotifications] Reconnecting stream in ${decision.delayMs}ms (errors: ${decision.nextState.consecutiveErrors})...`);
+            reconnectTimerRef.current = setTimeout(() => {
+                connectStreamRef.current();
+            }, decision.delayMs);
+        } else if (decision.action === 'refresh_auth') {
+            // HTTP 401/403: không thử lại stream theo backoff.
+            // Gọi một lần GET /notifications qua api (để interceptor xử lý làm mới token / đăng xuất);
+            // nếu sau đó vẫn đăng nhập thì kết nối lại một lần, còn 401 nữa thì chuyển hẳn sang poll 60 giây.
+            if (reconnectTimerRef.current) {
+                clearTimeout(reconnectTimerRef.current);
+                reconnectTimerRef.current = null;
+            }
+            try {
+                await fetchNotifications();
+                const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+                if (isMountedRef.current && token) {
+                    connectStreamRef.current();
+                }
+            } catch (e) {
+                console.error('[HeaderNotifications] Auth refresh fetch failed:', e);
+            }
+        } else if (decision.action === 'poll_fallback') {
+            // Khi đã fallback: chỉ có MỘT cơ chế chạy tại một thời điểm:
+            // poll 60s + thử stream mỗi 5 phút; lần thử 5 phút thất bại không khởi động lại chuỗi backoff 1s/2s/5s.
+            if (reconnectTimerRef.current) {
+                clearTimeout(reconnectTimerRef.current);
+                reconnectTimerRef.current = null;
+            }
+            if (!fallbackPollTimerRef.current) {
+                console.warn('[HeaderNotifications] Fallback to 60s polling mode.');
+                fallbackPollTimerRef.current = setInterval(() => {
+                    fetchNotifications();
+                }, FALLBACK_POLL_INTERVAL_MS);
+            }
+            if (!retryStreamTimerRef.current) {
+                retryStreamTimerRef.current = setInterval(() => {
+                    console.info('[HeaderNotifications] Attempting periodic 5m stream reconnect...');
+                    connectStreamRef.current();
+                }, STREAM_RECONNECT_INTERVAL_MS);
+            }
+        }
+    }, [userId, fetchNotifications]);
+
+    // Main stream connector
+    const connectStream = useCallback(() => {
+        if (!isMountedRef.current || !userId) return;
+
+        // Abort any active stream before starting a new one
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        const streamUrl = `${API_URL}/notifications/stream`;
+
+        openNotificationStream({
+            streamUrl,
+            signal: controller.signal,
+            onOpen: () => {
+                if (!isMountedRef.current || controller.signal.aborted) return;
+                handleStreamEvent({ type: 'opened' });
+            },
+            onNotification: (noti: NotificationItem) => {
+                if (!isMountedRef.current) return;
+                setList((prev) => {
+                    const next = mergeNotificationItem(prev, noti);
+                    setUnreadCount(countUnreadNotifications(next));
+                    return next;
+                });
+                setHasNew(true);
+                playNotificationSound();
+                setTimeout(() => {
+                    if (isMountedRef.current) setHasNew(false);
+                }, 3000);
+            },
+        })
+            .then(() => {
+                // Connection ended normally (or closed by server/jwt expiry)
+                if (!isMountedRef.current || controller.signal.aborted) return;
+                handleStreamEvent({ type: 'closed' });
+            })
+            .catch((err) => {
+                if (!isMountedRef.current || controller.signal.aborted) return;
+                console.error('[HeaderNotifications] Stream error:', err);
+                const status = (err && typeof err === 'object' && 'status' in err) ? (err as any).status : undefined;
+                handleStreamEvent({ type: 'failed', status });
+            });
+    }, [userId, playNotificationSound, handleStreamEvent]);
+
+    useEffect(() => {
+        connectStreamRef.current = connectStream;
+    }, [connectStream]);
+
+    // Initial load and stream lifecycle
+    useEffect(() => {
+        isMountedRef.current = true;
+        if (!userId) {
+            setList([]);
+            setUnreadCount(0);
+            setLoading(false);
+            return;
+        }
+
+        fetchNotifications();
+        connectStream();
+
+        // Handle tab visibility (hidden > 5 minutes -> close stream)
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                hiddenTimerRef.current = setTimeout(() => {
+                    isClosedDueToHiddenRef.current = true;
+                    if (abortControllerRef.current) {
+                        abortControllerRef.current.abort();
+                    }
+                    clearAllTimers();
+                    setIsConnected(false);
+                }, HIDDEN_TAB_DISCONNECT_MS);
+            } else {
+                if (hiddenTimerRef.current) {
+                    clearTimeout(hiddenTimerRef.current);
+                    hiddenTimerRef.current = null;
+                }
+                if (isClosedDueToHiddenRef.current) {
+                    isClosedDueToHiddenRef.current = false;
+                    streamStateRef.current = { ...INITIAL_STREAM_STATE };
+                    clearAllTimers();
+                    // Catch up missed events
+                    fetchNotifications();
+                    // Reopen stream
+                    connectStream();
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
 
         return () => {
-            off(notificationsRef);
-        };
-    }, [userId, useFirebase, playNotificationSound]);
-
-    // Fallback: API polling (only if Firebase fails)
-    useEffect(() => {
-        if (!userId || useFirebase) return;
-
-        const fetchNoti = async () => {
-            try {
-                const res = await api.get('/notifications');
-                const data = Array.isArray(res.data) ? res.data : [];
-                setList(data);
-                setUnreadCount(data.filter((n: any) => !n.is_read).length);
-                setLoading(false);
-            } catch (e) {
-                console.error("Failed to fetch notifications:", e);
+            isMountedRef.current = false;
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            clearAllTimers();
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
             }
         };
-
-        fetchNoti();
-        const interval = setInterval(fetchNoti, 15000);
-        return () => clearInterval(interval);
-    }, [userId, useFirebase]);
+    }, [userId, fetchNotifications, connectStream, clearAllTimers]);
 
     const handleRead = async (item: NotificationItem) => {
         if (!item.is_read) {
             try {
                 await api.post(`/notifications/${item.id}/read`);
-                // Firebase will auto-update via listener
-                if (!useFirebase) {
-                    setList(prev => prev.map(n => n.id === item.id ? { ...n, is_read: true } : n));
-                    setUnreadCount(prev => Math.max(0, prev - 1));
-                }
+                setList((prev) => {
+                    const next = prev.map((n) => (n.id === item.id ? { ...n, is_read: true } : n));
+                    setUnreadCount(countUnreadNotifications(next));
+                    return next;
+                });
             } catch (e) {
-                console.error("Failed to mark read:", e);
+                console.error('[HeaderNotifications] Failed to mark read:', e);
             }
         }
 
-        // Navigate to the linked content
         if (item.link) {
             setOpen(false);
             if (item.link.startsWith('/')) {
@@ -150,13 +306,10 @@ const HeaderNotifications: React.FC = () => {
     const handleReadAll = async () => {
         try {
             await api.post('/notifications/read-all');
-            // Firebase will auto-update via listener
-            if (!useFirebase) {
-                setList(prev => prev.map(n => ({ ...n, is_read: true })));
-                setUnreadCount(0);
-            }
+            setList((prev) => prev.map((n) => ({ ...n, is_read: true })));
+            setUnreadCount(0);
         } catch (e) {
-            console.error("Failed to read all:", e);
+            console.error('[HeaderNotifications] Failed to read all:', e);
         }
     };
 
@@ -172,7 +325,7 @@ const HeaderNotifications: React.FC = () => {
             }}>
                 <Text strong style={{ color: 'white', fontSize: 15 }}>🔔 Thông báo</Text>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {useFirebase && (
+                    {isConnected && (
                         <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11 }}>
                             ⚡ Real-time
                         </Text>
