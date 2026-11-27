@@ -375,7 +375,8 @@ describeSuite('Internal Communications UX & Logic (Integration - Real DB & Migra
     it('tìm kiếm theo tiêu đề không phân biệt hoa thường', async () => {
       const tokenA = createToken({ id: 2, username: 'staff_a', full_name: 'Nhân viên A', group_id: 1 });
       const res = await request(app!.getHttpServer())
-        .get('/api/discussions?q=tHảo LuẬn')
+        .get('/api/discussions')
+        .query({ q: 'tHảo LuẬn' })
         .set('x-test-tenant', TEST_SCHEMA)
         .set('Authorization', `Bearer ${tokenA}`)
         .expect(200);
