@@ -4,30 +4,34 @@ import { CalendarOutlined, MessageOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import TasksPage from './TasksPage';
 import DiscussionsPage from './DiscussionsPage';
+import { useEntitlements } from '../hooks/useEntitlements';
+import { PackageKey } from '../config/packages';
+import { getWorkspaceTabKeys } from '../utils/discussionUi';
 
 const WorkSpacePage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState('tasks');
+    const { isEnabled } = useEntitlements();
+    const hasProjects = isEnabled(PackageKey.PROJECTS);
+    const allowedTabs = getWorkspaceTabKeys(hasProjects);
 
     useEffect(() => {
-        // Sync tab with URL query param or path if needed
         const searchParams = new URLSearchParams(location.search);
         const tab = searchParams.get('tab');
-        if (tab === 'discussions') {
-            setActiveTab('discussions');
+        if (tab && allowedTabs.includes(tab)) {
+            setActiveTab(tab);
         } else {
             setActiveTab('tasks');
         }
-    }, [location]);
+    }, [location, allowedTabs]);
 
     const handleTabChange = (key: string) => {
         setActiveTab(key);
-        // Optional: Update URL without reloading to keep state linkable
         navigate(`?tab=${key}`, { replace: true });
     };
 
-    const items = [
+    const allItems = [
         {
             key: 'tasks',
             label: (<span><CalendarOutlined /> Công việc & Nhắc nhở</span>),
@@ -35,10 +39,12 @@ const WorkSpacePage: React.FC = () => {
         },
         {
             key: 'discussions',
-            label: (<span><MessageOutlined /> Thảo luận & Thông báo</span>),
+            label: (<span><MessageOutlined /> Thảo luận</span>),
             children: <div style={{ paddingTop: 10 }}><DiscussionsPage /></div>,
-        }
+        },
     ];
+
+    const items = allItems.filter(item => allowedTabs.includes(item.key));
 
     return (
         <div style={{ padding: '0 10px' }}>

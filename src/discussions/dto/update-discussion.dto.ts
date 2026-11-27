@@ -9,4 +9,11 @@ export class UpdateDiscussionDto {
   @IsOptional()
   @IsString()
   content?: string;
+
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @IsOptional()
+  mentioned_user_ids?: any;
 }

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import SafeHtml from './SafeHtml';
 import { Alert, Button, Modal, List, Typography, Tag, Space, Badge } from 'antd';
-import { NotificationOutlined, CloseOutlined, CheckOutlined } from '@ant-design/icons';
+import { NotificationOutlined, CheckOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../../utils/api';
+import { brandColors } from '../../theme/brand';
 
 const { Title, Paragraph } = Typography;
 
@@ -38,52 +39,28 @@ const AnnouncementBanner: React.FC = () => {
 
     const loadAnnouncements = async () => {
         try {
-            const [annRes, discRes] = await Promise.all([
-                api.get('/announcements/user/active').catch(() => ({ data: [] })),
-                api.get('/discussions').catch(() => ({ data: [] }))
-            ]);
-
+            const annRes = await api.get('/announcements/user/active').catch(() => ({ data: [] }));
             const normalAnnouncements = Array.isArray(annRes.data) ? annRes.data : [];
-            const allDiscussions = Array.isArray(discRes.data) ? discRes.data : [];
-
-            // Extract pinned discussions to show as global announcements
-            const pinnedDiscussions = allDiscussions
-                .filter((d: any) => d.is_pinned || d.is_pinned === 1 || d.is_pinned === '1' || d.is_pinned === 'true')
-                .map((d: any) => ({
-                    id: `disc_${d.id}`,
-                    title: `[Thảo luận] ${d.title}`,
-                    content: d.content || d.description || '(Xem chi tiết trong thảo luận)',
-                    type: d.type === 'ANNOUNCEMENT' ? 'IMPORTANT' : 'INFO',
-                    priority: 'HIGH',
-                    is_pinned: true,
-                    is_read: true, // We don't track read state for discussions globally here
-                    created_at: d.created_at,
-                    is_discussion: true,
-                    original_id: d.id
-                }));
-
-            const combined = [...normalAnnouncements, ...pinnedDiscussions];
-            setAnnouncements(combined);
+            setAnnouncements(normalAnnouncements);
             setUnreadCount(normalAnnouncements.filter((a: any) => !a.is_read).length);
         } catch (e) {
-            console.error('Failed to load announcements:', e);
+            console.error('Không thể tải thông báo:', e);
         }
     };
 
     useEffect(() => {
         loadAnnouncements();
-        // Refresh every 5 minutes
+        // Cập nhật mỗi 5 phút
         const interval = setInterval(loadAnnouncements, 5 * 60 * 1000);
         return () => clearInterval(interval);
     }, []);
 
     const handleMarkAsRead = async (id: number | string) => {
-        if (typeof id === 'string' && id.startsWith('disc_')) return;
         try {
             await api.post(`/announcements/${id}/read`);
             loadAnnouncements();
         } catch (e) {
-            console.error('Failed to mark as read:', e);
+            console.error('Không thể đánh dấu đã đọc:', e);
         }
     };
 
@@ -92,7 +69,7 @@ const AnnouncementBanner: React.FC = () => {
             await api.post('/announcements/user/read-all');
             loadAnnouncements();
         } catch (e) {
-            console.error('Failed to mark all as read:', e);
+            console.error('Không thể đánh dấu tất cả đã đọc:', e);
         }
     };
 
@@ -104,14 +81,14 @@ const AnnouncementBanner: React.FC = () => {
         }
     };
 
-    // Show pinned announcements as alerts at top - always show during validity regardless of read status
+    // Hiển thị thông báo ghim ở đầu
     const pinnedImportant = announcements.filter(a => a.is_pinned);
 
     if (announcements.length === 0) return null;
 
     return (
         <>
-            {/* Pinned alerts */}
+            {/* Danh sách thông báo ghim */}
             {pinnedImportant.map(a => (
                 <Alert
                     key={a.id}
@@ -135,7 +112,7 @@ const AnnouncementBanner: React.FC = () => {
                 />
             ))}
 
-            {/* Notification bell/button */}
+            {/* Nút chuông thông báo nổi */}
             {unreadCount > 0 && (
                 <div
                     style={{
@@ -158,6 +135,7 @@ const AnnouncementBanner: React.FC = () => {
                             style={{
                                 width: 56,
                                 height: 56,
+                                backgroundColor: brandColors.navy,
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                             }}
                         />
@@ -165,7 +143,7 @@ const AnnouncementBanner: React.FC = () => {
                 </div>
             )}
 
-            {/* Modal for viewing announcements */}
+            {/* Modal xem chi tiết thông báo */}
             <Modal
                 title={
                     selectedAnnouncement
@@ -198,13 +176,6 @@ const AnnouncementBanner: React.FC = () => {
                             html={selectedAnnouncement.content}
                             style={{ lineHeight: 1.8 }}
                         />
-                        {(selectedAnnouncement as any).is_discussion && (
-                            <div style={{ marginTop: 24, textAlign: 'center' }}>
-                                <Button type="primary" onClick={() => window.location.href = `/workspace/discussions/${(selectedAnnouncement as any).original_id}`}>
-                                    Đi đến trang Thảo luận
-                                </Button>
-                            </div>
-                        )}
                     </div>
                 ) : (
                     <List

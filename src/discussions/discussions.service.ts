@@ -5,21 +5,26 @@ import {
     BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Discussion } from './entities/discussion.entity';
 import { DiscussionComment } from './entities/discussion-comment.entity';
+import { DiscussionRead } from './entities/discussion-read.entity';
+import { User } from '../users/entities/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PermissionCacheService } from '../auth/permission-cache.service';
 import { sanitizeHtmlContent } from '../common/security/html-sanitizer';
 import { CreateDiscussionDto } from './dto/create-discussion.dto';
 import { UpdateDiscussionDto } from './dto/update-discussion.dto';
 import { AddDiscussionCommentDto } from './dto/add-comment.dto';
+import { UpdateDiscussionCommentDto } from './dto/update-comment.dto';
 
 @Injectable()
 export class DiscussionsService {
     constructor(
         @InjectRepository(Discussion) private repo: Repository<Discussion>,
         @InjectRepository(DiscussionComment) private commentRepo: Repository<DiscussionComment>,
+        @InjectRepository(DiscussionRead) private readRepo: Repository<DiscussionRead>,
+        @InjectRepository(User) private userRepo: Repository<User>,
         private readonly notificationsService: NotificationsService,
         private readonly permCache: PermissionCacheService,
     ) { }
@@ -37,40 +42,159 @@ export class DiscussionsService {
         return this.permCache.hasAny(groupId, [{ module: 'SYSTEM', action: 'update' }]);
     }
 
-    async findAll(user: any, groupId?: number) {
-        const query = this.repo.createQueryBuilder('d')
-            .leftJoinAndSelect('d.creator', 'creator')
-            .leftJoinAndSelect('d.group', 'group')
-            .leftJoinAndSelect('d.comments', 'comments')
-            .orderBy('d.is_pinned', 'DESC')
-            .addOrderBy('d.created_at', 'DESC');
+    /**
+     * Filter mentioned users ensuring they exist, are active, and have permission to view discussion
+     */
+    async filterValidMentionedUsers(rawMentioned: any, groupId?: number | null, senderId?: number): Promise<User[]> {
+        if (!rawMentioned) return [];
+        const rawArray = Array.isArray(rawMentioned) ? rawMentioned : String(rawMentioned).split(',');
+        const ids: number[] = rawArray
+            .map((s: any) => parseInt(String(s).trim(), 10))
+            .filter((n: number) => !isNaN(n) && n > 0 && n !== senderId);
+
+        if (ids.length === 0) return [];
+
+        const activeUsers = await this.userRepo.find({
+            where: { id: In(ids), is_active: true },
+        });
+
+        if (activeUsers.length === 0) return [];
+
+        if (!groupId) {
+            return activeUsers;
+        }
+
+        const validUsers: User[] = [];
+        for (const u of activeUsers) {
+            if (u.group_id === groupId) {
+                validUsers.push(u);
+            } else {
+                const isMod = await this.isModerator(u);
+                if (isMod) {
+                    validUsers.push(u);
+                }
+            }
+        }
+        return validUsers;
+    }
+
+    async findAll(user: any, options?: { page?: number; limit?: number; q?: string; group_id?: number }) {
+        const page = Math.max(1, Number(options?.page) || 1);
+        const rawLimit = Number(options?.limit) || 20;
+        const limit = Math.min(Math.max(1, rawLimit), 50);
+        const offset = (page - 1) * limit;
 
         const isMod = await this.isModerator(user);
+        const query = this.repo.createQueryBuilder('d')
+            .leftJoinAndSelect('d.creator', 'creator')
+            .leftJoinAndSelect('d.group', 'group');
+
         if (isMod) {
-            if (groupId) {
-                query.andWhere('d.group_id = :groupId', { groupId });
+            if (options?.group_id) {
+                query.andWhere('d.group_id = :groupId', { groupId: options.group_id });
             }
         } else {
-            const userGroupId = user?.groupId;
+            const userGroupId = user?.groupId || user?.group_id;
             if (userGroupId) {
                 query.andWhere('(d.group_id IS NULL OR d.group_id = :userGroupId)', { userGroupId });
             } else {
                 query.andWhere('d.group_id IS NULL');
             }
-            if (groupId) {
-                query.andWhere('d.group_id = :groupId', { groupId });
+            if (options?.group_id) {
+                query.andWhere('d.group_id = :groupId', { groupId: options.group_id });
             }
         }
 
-        const items = await query.getMany();
-        return items.map(i => ({
-            ...i,
-            comment_count: i.comments?.length || 0,
-            comments: undefined,
-            can_edit: isMod || (user && i.creator_id === user.id),
-            can_delete: isMod || (user && i.creator_id === user.id),
-            can_pin: isMod,
-        }));
+        if (options?.q && options.q.trim()) {
+            query.andWhere('LOWER(d.title) LIKE LOWER(:q)', { q: `%${options.q.trim()}%` });
+        }
+
+        const currentUserId = Number(user?.id || 0);
+
+        query.addSelect(
+            '(SELECT COUNT(c.id)::int FROM discussion_comments c WHERE c.discussion_id = d.id)',
+            'd_comment_count',
+        );
+        query.addSelect(
+            '(SELECT COUNT(r.id)::int FROM discussion_reads r WHERE r.discussion_id = d.id)',
+            'd_view_count',
+        );
+        query.addSelect(
+            '(SELECT MAX(c.created_at) FROM discussion_comments c WHERE c.discussion_id = d.id)',
+            'd_latest_comment_at',
+        );
+        query.addSelect(
+            '(SELECT r.last_read_at FROM discussion_reads r WHERE r.discussion_id = d.id AND r.user_id = :currentUserId LIMIT 1)',
+            'd_user_last_read_at',
+        );
+        query.setParameter('currentUserId', currentUserId);
+
+        query.addSelect(
+            'GREATEST(COALESCE(d.edited_at, d.created_at), COALESCE((SELECT MAX(c.created_at) FROM discussion_comments c WHERE c.discussion_id = d.id), d.created_at))',
+            'd_last_activity',
+        );
+
+        query.orderBy('d.is_pinned', 'DESC')
+            .addOrderBy('d_last_activity', 'DESC');
+
+        const total = await query.getCount();
+        query.skip(offset).take(limit);
+
+        let data: any[] = [];
+        if (typeof query.getRawAndEntities === 'function') {
+            const { entities, raw } = await query.getRawAndEntities();
+            data = entities.map((item, idx) => {
+                const rawRow = raw[idx] || {};
+                const commentCount = Number(rawRow.d_comment_count ?? 0);
+                const viewCount = Number(rawRow.d_view_count ?? 0);
+                const latestCommentAt = rawRow.d_latest_comment_at ? new Date(rawRow.d_latest_comment_at) : null;
+                const userLastReadAt = rawRow.d_user_last_read_at ? new Date(rawRow.d_user_last_read_at) : null;
+
+                const discussionOwnActivity = item.edited_at ? new Date(item.edited_at) : new Date(item.created_at);
+                const lastActivity = latestCommentAt && latestCommentAt > discussionOwnActivity
+                    ? latestCommentAt
+                    : discussionOwnActivity;
+
+                let isNew = false;
+                if (user?.id) {
+                    if (!userLastReadAt) {
+                        isNew = true;
+                    } else if (lastActivity > userLastReadAt) {
+                        isNew = true;
+                    }
+                }
+
+                return {
+                    ...item,
+                    comment_count: commentCount,
+                    view_count: viewCount,
+                    views_count: viewCount,
+                    is_new: isNew,
+                    can_edit: Boolean(user?.id && item.creator_id === user.id),
+                    can_delete: isMod || Boolean(user && item.creator_id === user.id),
+                    can_pin: isMod,
+                };
+            });
+        } else {
+            const items = await query.getMany();
+            data = items.map((i) => ({
+                ...i,
+                comment_count: i.comments?.length || 0,
+                view_count: i.views_count || 0,
+                views_count: i.views_count || 0,
+                is_new: false,
+                can_edit: Boolean(user?.id && i.creator_id === user.id),
+                can_delete: isMod || Boolean(user && i.creator_id === user.id),
+                can_pin: isMod,
+            }));
+        }
+
+        return {
+            data,
+            total,
+            page,
+            limit,
+        };
     }
 
     async findOne(id: number, user: any) {
@@ -82,32 +206,57 @@ export class DiscussionsService {
 
         const isMod = await this.isModerator(user);
         // Group scope check: other group discussion -> 404
-        if (discussion.group_id && (!user || discussion.group_id !== user.groupId) && !isMod) {
+        if (discussion.group_id && (!user || discussion.group_id !== (user.groupId || user.group_id)) && !isMod) {
             throw new NotFoundException('Discussion not found');
         }
 
         // Sort comments by date ASC
-        discussion.comments.sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
+        if (discussion.comments) {
+            discussion.comments.sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
+        }
 
-        // Increment view count
-        await this.repo.increment({ id }, 'views_count', 1);
+        // Upsert read record for user
+        if (user?.id) {
+            const existingRead = await this.readRepo.findOne({
+                where: { discussion_id: id, user_id: user.id }
+            });
+            if (existingRead) {
+                existingRead.last_read_at = new Date();
+                await this.readRepo.save(existingRead);
+            } else {
+                await this.readRepo.save(this.readRepo.create({
+                    discussion_id: id,
+                    user_id: user.id,
+                    last_read_at: new Date(),
+                }));
+            }
+        }
 
-        const canEdit = isMod || (user && discussion.creator_id === user.id);
-        const canDelete = isMod || (user && discussion.creator_id === user.id);
+        const viewCount = await this.readRepo.count({ where: { discussion_id: id } });
+
+        const canEdit = Boolean(user?.id && discussion.creator_id === user.id);
+        const canDelete = isMod || Boolean(user && discussion.creator_id === user.id);
 
         return {
             ...discussion,
+            view_count: viewCount,
+            views_count: viewCount,
             can_edit: canEdit,
             can_delete: canDelete,
             can_pin: isMod,
-            comments: discussion.comments.map(c => ({
+            comments: (discussion.comments || []).map(c => ({
                 ...c,
-                can_delete: isMod || (user && c.user_id === user.id),
+                can_edit: Boolean(user && c.user_id === user.id),
+                can_delete: isMod || Boolean(user && c.user_id === user.id),
             })),
         };
     }
 
     async create(dto: CreateDiscussionDto, user: any) {
+        if (dto.type === 'ANNOUNCEMENT') {
+            throw new BadRequestException('Loại ANNOUNCEMENT không còn được hỗ trợ cho thảo luận');
+        }
+
         const cleanContent = sanitizeHtmlContent(dto.content).trim();
         if (!cleanContent) {
             throw new BadRequestException('Nội dung không được để trống');
@@ -127,20 +276,71 @@ export class DiscussionsService {
             is_pinned: false,
             type: 'GENERAL',
         });
-        return this.repo.save(discussion);
+        const saved = await this.repo.save(discussion);
+
+        // Record creator as read
+        if (user?.id) {
+            await this.readRepo.save(this.readRepo.create({
+                discussion_id: saved.id,
+                user_id: user.id,
+                last_read_at: new Date(),
+            }));
+        }
+
+        const notifiedUserIds = new Set<number>();
+
+        // Handle @mentions
+        const validMentioned = await this.filterValidMentionedUsers(dto.mentioned_user_ids, dto.group_id, user.id);
+        for (const target of validMentioned) {
+            await this.notificationsService.create({
+                user_id: target.id,
+                title: '📢 Có người nhắc đến bạn',
+                message: `${user.full_name || user.username || 'Ai đó'} đã nhắc đến bạn trong thảo luận "${saved.title}"`,
+                type: 'INFO',
+                link: `/workspace/discussions/${saved.id}`,
+                is_read: false,
+            });
+            notifiedUserIds.add(target.id);
+        }
+
+        // Notify active members of group_id (except creator and already notified mentions)
+        if (dto.group_id) {
+            const groupMembers = await this.userRepo.find({
+                where: { group_id: dto.group_id, is_active: true }
+            });
+            for (const member of groupMembers) {
+                if (member.id !== user.id && !notifiedUserIds.has(member.id)) {
+                    await this.notificationsService.create({
+                        user_id: member.id,
+                        title: '💬 Thảo luận mới trong nhóm',
+                        message: `${user.full_name || user.username || 'Ai đó'} đã tạo thảo luận mới "${saved.title}" trong nhóm của bạn`,
+                        type: 'INFO',
+                        link: `/workspace/discussions/${saved.id}`,
+                        is_read: false,
+                    });
+                }
+            }
+        }
+
+        return saved;
     }
 
     async update(id: number, dto: UpdateDiscussionDto, user: any) {
+        if (dto.type === 'ANNOUNCEMENT') {
+            throw new BadRequestException('Loại ANNOUNCEMENT không còn được hỗ trợ cho thảo luận');
+        }
+
         const discussion = await this.repo.findOne({ where: { id } });
         if (!discussion) throw new NotFoundException('Discussion not found');
 
         const isMod = await this.isModerator(user);
-        if (discussion.group_id && (!user || discussion.group_id !== user.groupId) && !isMod) {
+        if (discussion.group_id && (!user || discussion.group_id !== (user.groupId || user.group_id)) && !isMod) {
             throw new NotFoundException('Discussion not found');
         }
 
-        if (discussion.creator_id !== user?.id && !isMod) {
-            throw new ForbiddenException('Bạn không có quyền sửa thảo luận này');
+        // Strictly only discussion creator can edit (even moderator/admin cannot edit other's discussion)
+        if (!user?.id || discussion.creator_id !== user.id) {
+            throw new ForbiddenException('Chỉ người tạo mới có quyền sửa thảo luận này');
         }
 
         if (dto.title !== undefined) {
@@ -152,6 +352,8 @@ export class DiscussionsService {
             discussion.content = clean;
         }
 
+        discussion.edited_at = new Date();
+
         await this.repo.save(discussion);
         return this.findOne(id, user);
     }
@@ -161,7 +363,7 @@ export class DiscussionsService {
         if (!discussion) throw new NotFoundException('Discussion not found');
 
         const isMod = await this.isModerator(user);
-        if (discussion.group_id && (!user || discussion.group_id !== user.groupId) && !isMod) {
+        if (discussion.group_id && (!user || discussion.group_id !== (user.groupId || user.group_id)) && !isMod) {
             throw new NotFoundException('Discussion not found');
         }
 
@@ -169,6 +371,7 @@ export class DiscussionsService {
             throw new ForbiddenException('Bạn không có quyền xóa thảo luận này');
         }
 
+        await this.readRepo.delete({ discussion_id: id });
         await this.commentRepo.delete({ discussion_id: id });
         return this.repo.delete(id);
     }
@@ -191,7 +394,7 @@ export class DiscussionsService {
         if (!discussion) throw new NotFoundException('Discussion not found');
 
         const isMod = await this.isModerator(user);
-        if (discussion.group_id && (!user || discussion.group_id !== user.groupId) && !isMod) {
+        if (discussion.group_id && (!user || discussion.group_id !== (user.groupId || user.group_id)) && !isMod) {
             throw new NotFoundException('Discussion not found');
         }
 
@@ -207,19 +410,104 @@ export class DiscussionsService {
         });
         await this.commentRepo.save(comment);
 
-        // Notify discussion creator if someone else comments via NotificationsService
-        if (discussion.creator_id !== user.id) {
+        // Update sender's read record
+        if (user?.id) {
+            const userRead = await this.readRepo.findOne({
+                where: { discussion_id: discussionId, user_id: user.id }
+            });
+            if (userRead) {
+                userRead.last_read_at = new Date();
+                await this.readRepo.save(userRead);
+            } else {
+                await this.readRepo.save(this.readRepo.create({
+                    discussion_id: discussionId,
+                    user_id: user.id,
+                    last_read_at: new Date(),
+                }));
+            }
+        }
+
+        const notifiedUserIds = new Set<number>();
+
+        // Handle @mentions
+        const validMentioned = await this.filterValidMentionedUsers(dto.mentioned_user_ids, discussion.group_id, user.id);
+        for (const target of validMentioned) {
             await this.notificationsService.create({
-                title: '💬 Bình luận mới',
-                message: `Có bình luận mới trong thảo luận "${discussion.title}"`,
+                user_id: target.id,
+                title: '📢 Có người nhắc đến bạn',
+                message: `${user.full_name || user.username || 'Ai đó'} đã nhắc đến bạn trong thảo luận "${discussion.title}"`,
                 type: 'INFO',
-                user_id: discussion.creator_id,
                 link: `/workspace/discussions/${discussionId}`,
                 is_read: false,
             });
+            notifiedUserIds.add(target.id);
+        }
+
+        // Notify creator + previous commenters, excluding sender and already notified mentions
+        // Recipients must be active users and still allowed to view discussion (group member or moderator)
+        const candidateRecipientIds = new Set<number>();
+        if (discussion.creator_id !== user.id) {
+            candidateRecipientIds.add(discussion.creator_id);
+        }
+
+        const previousComments = await this.commentRepo.find({
+            where: { discussion_id: discussionId },
+            select: ['user_id']
+        });
+        for (const c of previousComments) {
+            if (c.user_id !== user.id) {
+                candidateRecipientIds.add(c.user_id);
+            }
+        }
+
+        const validRecipients = await this.filterValidMentionedUsers(
+            Array.from(candidateRecipientIds),
+            discussion.group_id,
+            user.id,
+        );
+
+        for (const recipient of validRecipients) {
+            if (!notifiedUserIds.has(recipient.id)) {
+                await this.notificationsService.create({
+                    user_id: recipient.id,
+                    title: '💬 Bình luận mới',
+                    message: `${user.full_name || user.username || 'Ai đó'} đã bình luận trong thảo luận "${discussion.title}"`,
+                    type: 'INFO',
+                    link: `/workspace/discussions/${discussionId}`,
+                    is_read: false,
+                });
+                notifiedUserIds.add(recipient.id);
+            }
         }
 
         return this.findOne(discussionId, user);
+    }
+
+    async updateComment(commentId: number, dto: UpdateDiscussionCommentDto, user: any) {
+        const comment = await this.commentRepo.findOne({ where: { id: commentId } });
+        if (!comment) throw new NotFoundException('Comment not found');
+
+        const discussion = await this.repo.findOne({ where: { id: comment.discussion_id } });
+        if (!discussion) throw new NotFoundException('Discussion not found');
+
+        const isMod = await this.isModerator(user);
+        if (discussion.group_id && (!user || discussion.group_id !== (user.groupId || user.group_id)) && !isMod) {
+            throw new NotFoundException('Discussion not found');
+        }
+
+        // Strictly comment author can edit
+        if (comment.user_id !== user?.id) {
+            throw new ForbiddenException('Chỉ người viết mới có quyền sửa bình luận này');
+        }
+
+        const cleanContent = sanitizeHtmlContent(dto.content).trim();
+        if (!cleanContent) {
+            throw new BadRequestException('Nội dung bình luận không được để trống');
+        }
+
+        comment.content = cleanContent;
+        comment.edited_at = new Date();
+        return this.commentRepo.save(comment);
     }
 
     async removeComment(commentId: number, user: any) {
@@ -230,7 +518,7 @@ export class DiscussionsService {
         if (!discussion) throw new NotFoundException('Discussion not found');
 
         const isMod = await this.isModerator(user);
-        if (discussion.group_id && (!user || discussion.group_id !== user.groupId) && !isMod) {
+        if (discussion.group_id && (!user || discussion.group_id !== (user.groupId || user.group_id)) && !isMod) {
             throw new NotFoundException('Discussion not found');
         }
 
