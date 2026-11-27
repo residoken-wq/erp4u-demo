@@ -4,26 +4,28 @@ import { CalendarOutlined, MessageOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import TasksPage from './TasksPage';
 import DiscussionsPage from './DiscussionsPage';
+import { useEntitlements } from '../hooks/useEntitlements';
+import { PackageKey } from '../config/packages';
 
 const WorkSpacePage: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState('tasks');
+    const { isEnabled } = useEntitlements();
+    const hasProjects = isEnabled(PackageKey.PROJECTS);
 
     useEffect(() => {
-        // Sync tab with URL query param or path if needed
         const searchParams = new URLSearchParams(location.search);
         const tab = searchParams.get('tab');
-        if (tab === 'discussions') {
+        if (tab === 'discussions' && hasProjects) {
             setActiveTab('discussions');
         } else {
             setActiveTab('tasks');
         }
-    }, [location]);
+    }, [location, hasProjects]);
 
     const handleTabChange = (key: string) => {
         setActiveTab(key);
-        // Optional: Update URL without reloading to keep state linkable
         navigate(`?tab=${key}`, { replace: true });
     };
 
@@ -33,12 +35,15 @@ const WorkSpacePage: React.FC = () => {
             label: (<span><CalendarOutlined /> Công việc & Nhắc nhở</span>),
             children: <div style={{ paddingTop: 10 }}><TasksPage /></div>,
         },
-        {
-            key: 'discussions',
-            label: (<span><MessageOutlined /> Thảo luận & Thông báo</span>),
-            children: <div style={{ paddingTop: 10 }}><DiscussionsPage /></div>,
-        }
     ];
+
+    if (hasProjects) {
+        items.push({
+            key: 'discussions',
+            label: (<span><MessageOutlined /> Thảo luận</span>),
+            children: <div style={{ paddingTop: 10 }}><DiscussionsPage /></div>,
+        });
+    }
 
     return (
         <div style={{ padding: '0 10px' }}>

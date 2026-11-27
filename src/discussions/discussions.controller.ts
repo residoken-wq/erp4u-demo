@@ -19,6 +19,7 @@ import { PackageKey } from '../common/packages/package.registry';
 import { CreateDiscussionDto } from './dto/create-discussion.dto';
 import { UpdateDiscussionDto } from './dto/update-discussion.dto';
 import { AddDiscussionCommentDto } from './dto/add-comment.dto';
+import { UpdateDiscussionCommentDto } from './dto/update-comment.dto';
 import { PinDiscussionDto } from './dto/pin-discussion.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -31,8 +32,19 @@ export class DiscussionsController {
 
     @AuthOnly()
     @Get()
-    findAll(@Req() req: any, @Query('group_id') groupId?: number) {
-        return this.service.findAll(req.user, groupId ? Number(groupId) : undefined);
+    findAll(
+        @Req() req: any,
+        @Query('page') page?: number,
+        @Query('limit') limit?: number,
+        @Query('q') q?: string,
+        @Query('group_id') groupId?: number,
+    ) {
+        return this.service.findAll(req.user, {
+            page: page ? Number(page) : undefined,
+            limit: limit ? Number(limit) : undefined,
+            q,
+            group_id: groupId ? Number(groupId) : undefined,
+        });
     }
 
     @AuthOnly()
@@ -70,6 +82,12 @@ export class DiscussionsController {
     @Post(':id/comments')
     addComment(@Param('id') id: number, @Body() body: AddDiscussionCommentDto, @Req() req: any) {
         return this.service.addComment(Number(id), body, req.user);
+    }
+
+    @AuthOnly()
+    @Put('comments/:commentId')
+    updateComment(@Param('commentId') commentId: number, @Body() body: UpdateDiscussionCommentDto, @Req() req: any) {
+        return this.service.updateComment(Number(commentId), body, req.user);
     }
 
     @AuthOnly()

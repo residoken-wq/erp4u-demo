@@ -1,12 +1,12 @@
 # Bảng Kiểm Kê Phân Quyền Route (RBAC Route Inventory)
 
-> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-26T08:53:29.733Z
+> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-27T07:39:24.522Z
 
 ## Tổng quan theo tầng
 
-- **Tổng số route**: 550
+- **Tổng số route**: 551
 - **PERM** (Phân quyền chi tiết): 449
-- **AUTH** (Chỉ cần đăng nhập): 60
+- **AUTH** (Chỉ cần đăng nhập): 61
 - **PUBLIC** (Công khai): 36
 - **APIKEY** (Xác thực qua API Key): 5
 - **LEGACY** (Decorator cũ @RequirePermission): 0
@@ -60,14 +60,15 @@
 | `GET` | `/customers/:id/orders` | `PERM` | SALES:view | `CORE` | [src/customers/customers.controller.ts:45](../src/customers/customers.controller.ts:45) |
 | `GET` | `/customers/:id/portrait-360` | `PERM` | SALES:view | `CORE` | [src/customers/customers.controller.ts:84](../src/customers/customers.controller.ts:84) |
 | `PUT` | `/customers/:id/portrait-notes` | `PERM` | SALES:update | `CORE` | [src/customers/customers.controller.ts:90](../src/customers/customers.controller.ts:90) |
-| `GET` | `/discussions` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:32](../src/discussions/discussions.controller.ts:32) |
-| `POST` | `/discussions` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:44](../src/discussions/discussions.controller.ts:44) |
-| `DELETE` | `/discussions/:id` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:56](../src/discussions/discussions.controller.ts:56) |
-| `GET` | `/discussions/:id` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:38](../src/discussions/discussions.controller.ts:38) |
-| `PUT` | `/discussions/:id` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:50](../src/discussions/discussions.controller.ts:50) |
-| `POST` | `/discussions/:id/comments` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:69](../src/discussions/discussions.controller.ts:69) |
-| `PUT` | `/discussions/:id/pin` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:62](../src/discussions/discussions.controller.ts:62) |
-| `DELETE` | `/discussions/comments/:commentId` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:75](../src/discussions/discussions.controller.ts:75) |
+| `GET` | `/discussions` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:33](../src/discussions/discussions.controller.ts:33) |
+| `POST` | `/discussions` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:56](../src/discussions/discussions.controller.ts:56) |
+| `DELETE` | `/discussions/:id` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:68](../src/discussions/discussions.controller.ts:68) |
+| `GET` | `/discussions/:id` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:50](../src/discussions/discussions.controller.ts:50) |
+| `PUT` | `/discussions/:id` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:62](../src/discussions/discussions.controller.ts:62) |
+| `POST` | `/discussions/:id/comments` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:81](../src/discussions/discussions.controller.ts:81) |
+| `PUT` | `/discussions/:id/pin` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:74](../src/discussions/discussions.controller.ts:74) |
+| `DELETE` | `/discussions/comments/:commentId` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:93](../src/discussions/discussions.controller.ts:93) |
+| `PUT` | `/discussions/comments/:commentId` | `AUTH` | AUTH | `PROJECTS` | [src/discussions/discussions.controller.ts:87](../src/discussions/discussions.controller.ts:87) |
 | `GET` | `/finance/cash-flow/alerts` | `PERM` | FINANCE:view | `FINANCE` | [src/finance/cash-flow.controller.ts:61](../src/finance/cash-flow.controller.ts:61) |
 | `GET` | `/finance/cash-flow/chart` | `PERM` | FINANCE:view | `FINANCE` | [src/finance/cash-flow.controller.ts:30](../src/finance/cash-flow.controller.ts:30) |
 | `GET` | `/finance/cash-flow/payables` | `PERM` | FINANCE:view | `FINANCE` | [src/finance/cash-flow.controller.ts:51](../src/finance/cash-flow.controller.ts:51) |

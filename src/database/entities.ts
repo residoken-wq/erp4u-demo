@@ -58,6 +58,7 @@ import { Project } from '../projects/entities/project.entity';
 import { Milestone } from '../projects/entities/milestone.entity';
 import { Discussion } from '../discussions/entities/discussion.entity';
 import { DiscussionComment } from '../discussions/entities/discussion-comment.entity';
+import { DiscussionRead } from '../discussions/entities/discussion-read.entity';
 
 import { Supplier } from '../suppliers/supplier.entity';
 import { SupplierMaterial } from '../suppliers/supplier-material.entity';
@@ -157,7 +158,7 @@ export const CORE_ENTITIES = [
   QualityInspection, QCDefectItem,
   Transaction, TransactionCategory,
   Task, TaskTimeLog, Notification,
-  Project, Milestone, Discussion, DiscussionComment,
+  Project, Milestone, Discussion, DiscussionComment, DiscussionRead,
   Supplier, SupplierMaterial, SupplierContact,
   Customer, CustomerContact, CustomerComment, CustomerCredit,
   ProductionFulfillmentOrder, PfoMaterialRequirement, PfoMilestone, PfoQcRecord, Process, Category,

@@ -32,19 +32,19 @@ export class Discussion {
     views_count: number;
 
     @Column({ default: false })
-    is_reviewed: boolean;
-
-    @Column({ default: false })
     is_pinned: boolean;
 
     @Column({ default: 'GENERAL' })
-    type: string; // 'GENERAL' or 'ANNOUNCEMENT'
+    type: string; // 'GENERAL'
 
     @OneToMany(() => DiscussionComment, (comment) => comment.discussion)
     comments: DiscussionComment[];
 
     @Column({ default: true })
     is_active: boolean;
+
+    @Column({ type: 'timestamp', nullable: true })
+    edited_at?: Date;
 
     @CreateDateColumn() created_at: Date;
     @UpdateDateColumn() updated_at: Date;

@@ -244,37 +244,32 @@ const SalesComments: React.FC<SalesCommentsProps> = ({ orderId, defaultTab, high
         }
     };
 
-    // --- PASTE EVENT HANDLER ---
-    useEffect(() => {
-        const handlePaste = async (e: ClipboardEvent) => {
-            const items = e.clipboardData?.items;
-            if (!items) return;
+    // --- PASTE EVENT HANDLER (only captures paste inside editor, not document-wide) ---
+    const handleEditorPaste = async (e: React.ClipboardEvent) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
 
-            for (let i = 0; i < items.length; i++) {
-                const item = items[i];
-                if (item.type.startsWith('image/')) {
-                    e.preventDefault();
-                    const file = item.getAsFile();
-                    if (file) {
-                        const url = await uploadImage(file);
-                        if (url) {
-                            const quill = (quillRef.current as any)?.getEditor();
-                            const range = quill?.getSelection();
-                            if (quill) {
-                                const index = range ? range.index : quill.getLength();
-                                quill.insertEmbed(index, 'image', url);
-                                quill.setSelection(index + 1);
-                            }
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            if (item.type.startsWith('image/')) {
+                e.preventDefault();
+                const file = item.getAsFile();
+                if (file) {
+                    const url = await uploadImage(file);
+                    if (url) {
+                        const quill = (quillRef.current as any)?.getEditor();
+                        const range = quill?.getSelection();
+                        if (quill) {
+                            const index = range ? range.index : quill.getLength();
+                            quill.insertEmbed(index, 'image', url);
+                            quill.setSelection(index + 1);
                         }
                     }
-                    break;
                 }
+                break;
             }
-        };
-
-        document.addEventListener('paste', handlePaste);
-        return () => document.removeEventListener('paste', handlePaste);
-    }, []);
+        }
+    };
 
     // --- IMAGE BUTTON HANDLER ---
     const imageHandler = useCallback(() => {
@@ -431,7 +426,7 @@ const SalesComments: React.FC<SalesCommentsProps> = ({ orderId, defaultTab, high
             </div>
 
             {/* Editor Section */}
-            <div className="editor-section">
+            <div className="editor-section" onPaste={handleEditorPaste}>
                 {/* Mentioned users preview (for Internal chat) */}
                 {activeTab === 'INTERNAL' && mentionedUserIds.size > 0 && (
                     <div className="mentioned-preview">

@@ -13,4 +13,11 @@ export class CreateDiscussionDto {
   @IsOptional()
   @IsInt()
   group_id?: number;
+
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @IsOptional()
+  mentioned_user_ids?: any;
 }

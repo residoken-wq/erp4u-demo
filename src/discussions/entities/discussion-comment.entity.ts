@@ -24,5 +24,8 @@ export class DiscussionComment {
     @Column()
     user_id: number;
 
+    @Column({ type: 'timestamp', nullable: true })
+    edited_at?: Date;
+
     @CreateDateColumn() created_at: Date;
 }
