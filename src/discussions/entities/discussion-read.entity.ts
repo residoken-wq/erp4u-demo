@@ -24,6 +24,6 @@ export class DiscussionRead {
     @Column()
     user_id: number;
 
-    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+    @Column({ type: 'timestamp', default: () => 'now()' })
     last_read_at: Date;
 }

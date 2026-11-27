@@ -43,9 +43,9 @@ export class Discussion {
     @Column({ default: true })
     is_active: boolean;
 
-    @Column({ type: 'timestamp', nullable: true })
-    edited_at?: Date;
-
     @CreateDateColumn() created_at: Date;
     @UpdateDateColumn() updated_at: Date;
+
+    @Column({ type: 'timestamp', nullable: true })
+    edited_at?: Date;
 }

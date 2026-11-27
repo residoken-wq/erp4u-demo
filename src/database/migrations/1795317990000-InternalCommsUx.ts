@@ -26,7 +26,7 @@ export class InternalCommsUx1795317990000 implements MigrationInterface {
 
     // 5. Create table discussion_reads
     await queryRunner.query(
-      `CREATE TABLE "discussion_reads" ("id" SERIAL NOT NULL, "discussion_id" integer NOT NULL, "user_id" integer NOT NULL, "last_read_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "UQ_7f67553957ebe4fe64693e91374" UNIQUE ("discussion_id", "user_id"), CONSTRAINT "PK_e913c6e125bed646337294b65a5" PRIMARY KEY ("id"))`,
+      `CREATE TABLE "discussion_reads" ("id" SERIAL NOT NULL, "discussion_id" integer NOT NULL, "user_id" integer NOT NULL, "last_read_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "UQ_7f67553957ebe4fe64693e91374" UNIQUE ("discussion_id", "user_id"), CONSTRAINT "PK_e913c6e125bed646337294b65a5" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
       `CREATE INDEX "IDX_fdcaebf1c2c834208ace451352" ON "discussion_reads" ("discussion_id") `,
