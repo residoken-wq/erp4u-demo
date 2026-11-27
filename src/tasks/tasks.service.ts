@@ -12,7 +12,7 @@ import { Repository, LessThan, IsNull } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Task } from './task.entity';
 import { TaskTimeLog } from './task-time-log.entity';
-import { Notification } from '../notifications/notification.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 import { DEFAULT_TENANT_CONTEXT, TenantContext } from '../common/tenancy/tenant-context';
 import { TENANT_REGISTRY, TenantRegistry } from '../common/tenancy/tenant-registry.interface';
 import { PermissionCacheService } from '../auth/permission-cache.service';
@@ -44,7 +44,7 @@ export class TasksService {
 
     constructor(
         @InjectRepository(Task) private taskRepo: Repository<Task>,
-        @InjectRepository(Notification) private notiRepo: Repository<Notification>,
+        private readonly notificationsService: NotificationsService,
         @InjectRepository(TaskTimeLog) private timeLogRepo: Repository<TaskTimeLog>,
         @Optional()
         @Inject(TENANT_REGISTRY)
@@ -114,7 +114,7 @@ export class TasksService {
 
         // Notify assignee when assigned
         if (task.assignee_id && task.assignee_id !== task.creator_id) {
-            await this.notiRepo.save({
+            await this.notificationsService.create({
                 title: '📋 Bạn được giao việc mới',
                 message: `Công việc "${task.title}" đã được giao cho bạn.`,
                 type: 'INFO',
@@ -158,7 +158,7 @@ export class TasksService {
 
         // Notify if assignee changed
         if (sanitized.assignee_id && sanitized.assignee_id !== oldAssigneeId && sanitized.assignee_id !== updatedTask?.creator_id) {
-            await this.notiRepo.save({
+            await this.notificationsService.create({
                 title: '📋 Bạn được giao việc mới',
                 message: `Công việc "${updatedTask?.title}" đã được giao cho bạn.`,
                 type: 'INFO',
@@ -181,7 +181,7 @@ export class TasksService {
 
             // Notify creator (if different from who changed it)
             if (updatedTask?.creator_id && updatedTask.creator_id !== updatedTask.assignee_id) {
-                await this.notiRepo.save({
+                await this.notificationsService.create({
                     title: '🔄 Cập nhật trạng thái công việc',
                     message: `Công việc "${updatedTask.title}" đã chuyển sang: ${statusLabel}`,
                     type: sanitized.status === 'DONE' ? 'SUCCESS' : 'INFO',
@@ -194,7 +194,7 @@ export class TasksService {
 
             // Notify assignee (if different from who changed it and different from creator)
             if (updatedTask?.assignee_id && updatedTask.assignee_id !== updatedTask.creator_id) {
-                await this.notiRepo.save({
+                await this.notificationsService.create({
                     title: '🔄 Cập nhật trạng thái công việc',
                     message: `Công việc "${updatedTask.title}" đã chuyển sang: ${statusLabel}`,
                     type: sanitized.status === 'DONE' ? 'SUCCESS' : 'INFO',
@@ -338,7 +338,7 @@ export class TasksService {
                     for (const task of tasks) {
                         if (task.assignee) {
                             // Tạo thông báo
-                            await this.notiRepo.save({
+                            await this.notificationsService.create({
                                 title: '⏰ Nhắc nhở công việc',
                                 message: `Công việc "${task.title}" sắp đến hạn hoặc đã quá hạn!`,
                                 type: 'WARNING',

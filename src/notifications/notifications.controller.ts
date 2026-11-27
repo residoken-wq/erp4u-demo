@@ -1,15 +1,81 @@
-import { Controller, Get, Post, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Post,
+    Param,
+    UseGuards,
+    Request,
+    Res,
+    UnauthorizedException,
+    Optional,
+} from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthOnly } from '../auth/permissions.decorator';
 import { CorePackage } from '../common/packages/requires-package.decorator';
+import { Response } from 'express';
+import { JwtService } from '@nestjs/jwt';
+import { TenantContext, DEFAULT_TENANT_CONTEXT } from '../common/tenancy/tenant-context';
 
 @Controller('notifications')
 @CorePackage()
 @UseGuards(JwtAuthGuard) // <--- SECURE ENDPOINT
 @AuthOnly()
 export class NotificationsController {
-    constructor(private readonly service: NotificationsService) { }
+    constructor(
+        private readonly service: NotificationsService,
+        @Optional() private readonly jwtService?: JwtService,
+    ) { }
+
+    @Get('stream')
+    stream(
+        @Request() req: any,
+        @Res() res: Response,
+    ) {
+        if (req.query?.token || req.query?.access_token) {
+            throw new UnauthorizedException('Token via query string is not accepted');
+        }
+
+        const userId = req.user?.id || req.user?.userId;
+        let tenantId = DEFAULT_TENANT_CONTEXT.tenantId;
+        try {
+            tenantId = TenantContext.current()?.tenantId || DEFAULT_TENANT_CONTEXT.tenantId;
+        } catch {
+            tenantId = DEFAULT_TENANT_CONTEXT.tenantId;
+        }
+
+        let jwtExp: number | undefined;
+        const authHeader = req.headers?.authorization || req.headers?.Authorization;
+        if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.slice(7).trim();
+            try {
+                if (this.jwtService) {
+                    const decoded: any = this.jwtService.decode(token);
+                    if (decoded && typeof decoded.exp === 'number') {
+                        jwtExp = decoded.exp;
+                    }
+                } else {
+                    const parts = token.split('.');
+                    if (parts.length === 3) {
+                        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+                        if (payload && typeof payload.exp === 'number') {
+                            jwtExp = payload.exp;
+                        }
+                    }
+                }
+            } catch {
+                // ignore
+            }
+        }
+
+        this.service.subscribeClient({
+            tenantId,
+            userId: Number(userId),
+            req,
+            res,
+            jwtExp,
+        });
+    }
 
     @Get()
     findAll(@Request() req: any) {
