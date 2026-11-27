@@ -124,12 +124,13 @@ export class DiscussionsService {
             'd_latest_comment_at',
         );
         query.addSelect(
-            `(SELECT r.last_read_at FROM discussion_reads r WHERE r.discussion_id = d.id AND r.user_id = ${currentUserId} LIMIT 1)`,
+            '(SELECT r.last_read_at FROM discussion_reads r WHERE r.discussion_id = d.id AND r.user_id = :currentUserId LIMIT 1)',
             'd_user_last_read_at',
         );
+        query.setParameter('currentUserId', currentUserId);
 
         query.addSelect(
-            'GREATEST(d.updated_at, COALESCE((SELECT MAX(c.created_at) FROM discussion_comments c WHERE c.discussion_id = d.id), d.updated_at))',
+            'GREATEST(COALESCE(d.edited_at, d.created_at), COALESCE((SELECT MAX(c.created_at) FROM discussion_comments c WHERE c.discussion_id = d.id), d.created_at))',
             'd_last_activity',
         );
 
@@ -149,9 +150,10 @@ export class DiscussionsService {
                 const latestCommentAt = rawRow.d_latest_comment_at ? new Date(rawRow.d_latest_comment_at) : null;
                 const userLastReadAt = rawRow.d_user_last_read_at ? new Date(rawRow.d_user_last_read_at) : null;
 
-                const lastActivity = latestCommentAt && latestCommentAt > item.updated_at
+                const discussionOwnActivity = item.edited_at ? new Date(item.edited_at) : new Date(item.created_at);
+                const lastActivity = latestCommentAt && latestCommentAt > discussionOwnActivity
                     ? latestCommentAt
-                    : item.updated_at;
+                    : discussionOwnActivity;
 
                 let isNew = false;
                 if (user?.id) {
@@ -168,7 +170,7 @@ export class DiscussionsService {
                     view_count: viewCount,
                     views_count: viewCount,
                     is_new: isNew,
-                    can_edit: isMod || Boolean(user && item.creator_id === user.id),
+                    can_edit: Boolean(user?.id && item.creator_id === user.id),
                     can_delete: isMod || Boolean(user && item.creator_id === user.id),
                     can_pin: isMod,
                 };
@@ -181,7 +183,7 @@ export class DiscussionsService {
                 view_count: i.views_count || 0,
                 views_count: i.views_count || 0,
                 is_new: false,
-                can_edit: Boolean(user && i.creator_id === user.id),
+                can_edit: Boolean(user?.id && i.creator_id === user.id),
                 can_delete: isMod || Boolean(user && i.creator_id === user.id),
                 can_pin: isMod,
             }));
@@ -232,7 +234,7 @@ export class DiscussionsService {
 
         const viewCount = await this.readRepo.count({ where: { discussion_id: id } });
 
-        const canEdit = isMod || Boolean(user && discussion.creator_id === user.id);
+        const canEdit = Boolean(user?.id && discussion.creator_id === user.id);
         const canDelete = isMod || Boolean(user && discussion.creator_id === user.id);
 
         return {
@@ -336,9 +338,9 @@ export class DiscussionsService {
             throw new NotFoundException('Discussion not found');
         }
 
-        // Only creator or moderator can edit discussion
-        if (discussion.creator_id !== user?.id && !isMod) {
-            throw new ForbiddenException('Bạn không có quyền sửa thảo luận này');
+        // Strictly only discussion creator can edit (even moderator/admin cannot edit other's discussion)
+        if (!user?.id || discussion.creator_id !== user.id) {
+            throw new ForbiddenException('Chỉ người tạo mới có quyền sửa thảo luận này');
         }
 
         if (dto.title !== undefined) {
@@ -442,9 +444,10 @@ export class DiscussionsService {
         }
 
         // Notify creator + previous commenters, excluding sender and already notified mentions
-        const recipients = new Set<number>();
+        // Recipients must be active users and still allowed to view discussion (group member or moderator)
+        const candidateRecipientIds = new Set<number>();
         if (discussion.creator_id !== user.id) {
-            recipients.add(discussion.creator_id);
+            candidateRecipientIds.add(discussion.creator_id);
         }
 
         const previousComments = await this.commentRepo.find({
@@ -453,20 +456,27 @@ export class DiscussionsService {
         });
         for (const c of previousComments) {
             if (c.user_id !== user.id) {
-                recipients.add(c.user_id);
+                candidateRecipientIds.add(c.user_id);
             }
         }
 
-        for (const recipientId of recipients) {
-            if (!notifiedUserIds.has(recipientId)) {
+        const validRecipients = await this.filterValidMentionedUsers(
+            Array.from(candidateRecipientIds),
+            discussion.group_id,
+            user.id,
+        );
+
+        for (const recipient of validRecipients) {
+            if (!notifiedUserIds.has(recipient.id)) {
                 await this.notificationsService.create({
-                    user_id: recipientId,
+                    user_id: recipient.id,
                     title: '💬 Bình luận mới',
                     message: `${user.full_name || user.username || 'Ai đó'} đã bình luận trong thảo luận "${discussion.title}"`,
                     type: 'INFO',
                     link: `/workspace/discussions/${discussionId}`,
                     is_read: false,
                 });
+                notifiedUserIds.add(recipient.id);
             }
         }
 

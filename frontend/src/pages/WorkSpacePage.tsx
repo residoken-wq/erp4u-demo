@@ -6,6 +6,7 @@ import TasksPage from './TasksPage';
 import DiscussionsPage from './DiscussionsPage';
 import { useEntitlements } from '../hooks/useEntitlements';
 import { PackageKey } from '../config/packages';
+import { getWorkspaceTabKeys } from '../utils/discussionUi';
 
 const WorkSpacePage: React.FC = () => {
     const navigate = useNavigate();
@@ -13,37 +14,37 @@ const WorkSpacePage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('tasks');
     const { isEnabled } = useEntitlements();
     const hasProjects = isEnabled(PackageKey.PROJECTS);
+    const allowedTabs = getWorkspaceTabKeys(hasProjects);
 
     useEffect(() => {
         const searchParams = new URLSearchParams(location.search);
         const tab = searchParams.get('tab');
-        if (tab === 'discussions' && hasProjects) {
-            setActiveTab('discussions');
+        if (tab && allowedTabs.includes(tab)) {
+            setActiveTab(tab);
         } else {
             setActiveTab('tasks');
         }
-    }, [location, hasProjects]);
+    }, [location, allowedTabs]);
 
     const handleTabChange = (key: string) => {
         setActiveTab(key);
         navigate(`?tab=${key}`, { replace: true });
     };
 
-    const items = [
+    const allItems = [
         {
             key: 'tasks',
             label: (<span><CalendarOutlined /> Công việc & Nhắc nhở</span>),
             children: <div style={{ paddingTop: 10 }}><TasksPage /></div>,
         },
-    ];
-
-    if (hasProjects) {
-        items.push({
+        {
             key: 'discussions',
             label: (<span><MessageOutlined /> Thảo luận</span>),
             children: <div style={{ paddingTop: 10 }}><DiscussionsPage /></div>,
-        });
-    }
+        },
+    ];
+
+    const items = allItems.filter(item => allowedTabs.includes(item.key));
 
     return (
         <div style={{ padding: '0 10px' }}>

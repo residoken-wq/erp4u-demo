@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --test src/hooks/__tests__/useDemoMode.test.ts src/hooks/__tests__/usePermission.test.ts src/components/__tests__/SubscriptionTag.test.ts src/components/copilot/__tests__/copilot.test.ts src/components/copilot/__tests__/drafts.test.ts src/components/copilot/__tests__/voice.test.ts src/theme/__tests__/brandContrast.test.ts src/utils/__tests__/alertsHelper.test.ts src/components/documents/__tests__/documentScan.test.ts src/utils/__tests__/chartHelpers.test.ts src/components/common/__tests__/safeHtml.test.ts"
+    "test": "node --experimental-strip-types --test src/hooks/__tests__/useDemoMode.test.ts src/hooks/__tests__/usePermission.test.ts src/components/__tests__/SubscriptionTag.test.ts src/components/copilot/__tests__/copilot.test.ts src/components/copilot/__tests__/drafts.test.ts src/components/copilot/__tests__/voice.test.ts src/theme/__tests__/brandContrast.test.ts src/utils/__tests__/alertsHelper.test.ts src/components/documents/__tests__/documentScan.test.ts src/utils/__tests__/chartHelpers.test.ts src/components/common/__tests__/safeHtml.test.ts src/utils/__tests__/discussionUi.test.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
@@ -59,8 +59,7 @@
     "postcss": "^8.4.0",
     "tailwindcss": "^3.3.0",
     "typescript": "^5.2.2",
-    "vite": "^5.0.0",
-    "vitest": "^2.1.8"
+    "vite": "^5.0.0"
   },
   "description": "ERP4U Frontend - React + Vite + Ant Design",
   "license": "AGPL-3.0-or-later"

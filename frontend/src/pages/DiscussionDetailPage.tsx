@@ -9,6 +9,7 @@ import 'dayjs/locale/vi';
 import api from '../utils/api';
 import RichTextEditor from '../components/common/RichTextEditor';
 import { brandColors } from '../theme/brand';
+import { isEditedLabel, canEditDiscussion, canEditComment } from '../utils/discussionUi';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -182,7 +183,7 @@ const DiscussionDetailPage: React.FC = () => {
 
     if (!discussion) return null;
 
-    const isDiscussionOwner = Boolean(currentUser?.id && discussion.creator_id === currentUser.id);
+    const isDiscussionOwner = canEditDiscussion(discussion, currentUser);
 
     return (
         <div style={{ maxWidth: 900, margin: '0 auto', paddingBottom: 50 }}>
@@ -204,9 +205,9 @@ const DiscussionDetailPage: React.FC = () => {
                                     <FlagOutlined style={{ color: brandColors.orange }} />
                                 </Tooltip>
                             )}
-                            {discussion.edited_at && (
+                            {isEditedLabel(discussion) && (
                                 <Text type="secondary" style={{ fontStyle: 'italic', fontSize: 12 }}>
-                                    (đã sửa)
+                                    {isEditedLabel(discussion)}
                                 </Text>
                             )}
                             {discussion.group && <Tag color="blue">{discussion.group.name}</Tag>}
@@ -264,7 +265,7 @@ const DiscussionDetailPage: React.FC = () => {
                     itemLayout="horizontal"
                     locale={{ emptyText: 'Chưa có bình luận nào' }}
                     renderItem={(item: any) => {
-                        const isCommentAuthor = Boolean(currentUser?.id && item.user_id === currentUser.id);
+                        const isCommentAuthor = canEditComment(item, currentUser);
                         return (
                             <Card size="small" style={{ marginBottom: 12, border: 'none', background: '#f9f9f9', borderRadius: 8 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -278,9 +279,9 @@ const DiscussionDetailPage: React.FC = () => {
                                                 <Text type="secondary" style={{ fontSize: 11 }}>
                                                     {dayjs(item.created_at).fromNow()}
                                                 </Text>
-                                                {item.edited_at && (
+                                                {isEditedLabel(item) && (
                                                     <Text type="secondary" style={{ fontStyle: 'italic', fontSize: 11 }}>
-                                                        (đã sửa)
+                                                        {isEditedLabel(item)}
                                                     </Text>
                                                 )}
                                             </Space>

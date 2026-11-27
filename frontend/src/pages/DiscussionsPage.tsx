@@ -8,6 +8,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
 import RichTextEditor from '../components/common/RichTextEditor';
 import { brandColors } from '../theme/brand';
+import { isNewBadge, isEditedLabel } from '../utils/discussionUi';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -180,7 +181,7 @@ const DiscussionsPage: React.FC = () => {
                                 }
                                 title={
                                     <Space wrap>
-                                        {item.is_new && (
+                                        {isNewBadge(item) && (
                                             <Tag color={brandColors.orange} style={{ fontWeight: 600 }}>
                                                 Mới
                                             </Tag>
@@ -191,14 +192,14 @@ const DiscussionsPage: React.FC = () => {
                                                 e.preventDefault();
                                                 navigate(`/workspace/discussions/${item.id}`);
                                             }}
-                                            style={{ color: brandColors.navy, fontWeight: item.is_new ? 600 : 400 }}
+                                            style={{ color: brandColors.navy, fontWeight: isNewBadge(item) ? 600 : 400 }}
                                         >
                                             {item.title}
                                         </a>
                                         {item.is_pinned && <FlagOutlined style={{ color: brandColors.orange }} title="Đã ghim" />}
-                                        {item.edited_at && (
+                                        {isEditedLabel(item) && (
                                             <Text type="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>
-                                                (đã sửa)
+                                                {isEditedLabel(item)}
                                             </Text>
                                         )}
                                     </Space>

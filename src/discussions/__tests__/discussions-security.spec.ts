@@ -145,7 +145,7 @@ describe('Discussions Security & Logic (Tasks P11a & P11b)', () => {
       await expect(service.update(1, { title: 'New' }, userB)).rejects.toThrow(ForbiddenException);
     });
 
-    it('moderator editing user A discussion succeeds and updates edited_at', async () => {
+    it('moderator editing user A discussion returns 403', async () => {
       const savedDiscussion: any = {
         id: 1,
         creator_id: 100,
@@ -157,8 +157,7 @@ describe('Discussions Security & Logic (Tasks P11a & P11b)', () => {
       mockRepo.findOne.mockResolvedValue(savedDiscussion);
 
       const admin = { id: 99, username: 'admin' };
-      await service.update(1, { title: 'Admin edit' }, admin);
-      expect(mockRepo.save).toHaveBeenCalled();
+      await expect(service.update(1, { title: 'Admin edit' }, admin)).rejects.toThrow(ForbiddenException);
     });
 
     it('owner editing own discussion succeeds and updates edited_at', async () => {
@@ -365,6 +364,10 @@ describe('Discussions Security & Logic (Tasks P11a & P11b)', () => {
         { user_id: 100 },
         { user_id: 200 },
         { user_id: 300 },
+      ]);
+      mockUserRepo.find.mockResolvedValueOnce([
+        { id: 100, is_active: true },
+        { id: 300, is_active: true },
       ]);
 
       // User 200 posts a new comment

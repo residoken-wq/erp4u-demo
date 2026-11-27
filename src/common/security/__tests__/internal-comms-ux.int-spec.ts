@@ -247,6 +247,63 @@ describeSuite('Internal Communications UX & Logic (Integration - Real DB & Migra
       `);
       expect(notiStaffA.some((n: any) => n.link === `/workspace/discussions/${createdDiscussionId}`)).toBe(true);
     });
+
+    it('người từng bình luận đã chuyển sang nhóm khác không nhận thông báo bình luận mới trong thảo luận nhóm', async () => {
+      const tokenA = createToken({ id: 2, username: 'staff_a', full_name: 'Nhân viên A', group_id: 1 });
+      const tokenB = createToken({ id: 3, username: 'staff_b', full_name: 'Nhân viên B', group_id: 1 });
+
+      // Create group 1 discussion by Staff A
+      const groupDiscRes = await request(app!.getHttpServer())
+        .post('/api/discussions')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({
+          title: 'Thảo luận kiểm tra chuyển nhóm',
+          content: 'Nội dung phòng kinh doanh',
+          group_id: 1,
+        })
+        .expect(201);
+      const discId = groupDiscRes.body.id;
+
+      // Staff B comments while in Group 1
+      await request(app!.getHttpServer())
+        .post(`/api/discussions/${discId}/comments`)
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenB}`)
+        .send({ content: 'Staff B bình luận khi còn ở Nhóm 1' })
+        .expect(201);
+
+      // Clear notifications so far
+      await adminDs!.query(`DELETE FROM "${TEST_SCHEMA}"."notifications"`);
+
+      // Move Staff B to Group 2 (not a moderator)
+      await adminDs!.query(`
+        UPDATE "${TEST_SCHEMA}"."users"
+        SET group_id = 2
+        WHERE id = 3
+      `);
+
+      // Staff A posts another comment on this group 1 discussion
+      await request(app!.getHttpServer())
+        .post(`/api/discussions/${discId}/comments`)
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ content: 'Staff A bình luận tiếp theo' })
+        .expect(201);
+
+      // Staff B (user 3, now in Group 2) must NOT receive notification
+      const notiStaffB = await adminDs!.query(`
+        SELECT * FROM "${TEST_SCHEMA}"."notifications" WHERE user_id = 3
+      `);
+      expect(notiStaffB.length).toBe(0);
+
+      // Restore Staff B back to Group 1
+      await adminDs!.query(`
+        UPDATE "${TEST_SCHEMA}"."users"
+        SET group_id = 1
+        WHERE id = 3
+      `);
+    });
   });
 
   describe('3. Sửa bình luận và kiểm tra quyền sở hữu', () => {
@@ -303,6 +360,42 @@ describeSuite('Internal Communications UX & Logic (Integration - Real DB & Migra
         `SELECT * FROM "${TEST_SCHEMA}"."discussion_comments" WHERE id = ${commentId}`,
       );
       expect(dbComment[0].edited_at).not.toBeNull();
+    });
+
+    it('moderator sửa thảo luận của người khác trả về 403, nhưng xóa được (200)', async () => {
+      const tokenA = createToken({ id: 2, username: 'staff_a', full_name: 'Nhân viên A', group_id: 1 });
+      const tokenMod = createToken({ id: 5, username: 'mod_user', full_name: 'Moderator Hệ thống', group_id: 3 });
+
+      // Staff A creates discussion
+      const createRes = await request(app!.getHttpServer())
+        .post('/api/discussions')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ title: 'Topic để test moderator edit/delete', content: 'Nội dung gốc' })
+        .expect(201);
+      const discId = createRes.body.id;
+
+      // Moderator attempts to PUT /discussions/:id -> 403
+      await request(app!.getHttpServer())
+        .put(`/api/discussions/${discId}`)
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenMod}`)
+        .send({ title: 'Moderator sửa trái phép' })
+        .expect(403);
+
+      // Moderator deletes /discussions/:id -> 200
+      await request(app!.getHttpServer())
+        .delete(`/api/discussions/${discId}`)
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenMod}`)
+        .expect(200);
+
+      // Verify it is gone
+      await request(app!.getHttpServer())
+        .get(`/api/discussions/${discId}`)
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenMod}`)
+        .expect(404);
     });
   });
 
@@ -385,6 +478,138 @@ describeSuite('Internal Communications UX & Logic (Integration - Real DB & Migra
       for (const d of res.body.data) {
         expect(d.title.toLowerCase()).toContain('thảo luận');
       }
+    });
+
+    it('sắp xếp: C (ghim, cũ nhất), A (cũ), B (mới hơn); bình luận vào A => thứ tự C, A, B', async () => {
+      const tokenAdmin = createToken({ id: 1, username: 'admin', full_name: 'Quản trị viên', group_id: 3 });
+      const tokenA = createToken({ id: 2, username: 'staff_a', full_name: 'Nhân viên A', group_id: 1 });
+      const tokenB = createToken({ id: 3, username: 'staff_b', full_name: 'Nhân viên B', group_id: 1 });
+
+      // Clean existing discussions to isolate order testing
+      await adminDs!.query(`DELETE FROM "${TEST_SCHEMA}"."discussion_reads"`);
+      await adminDs!.query(`DELETE FROM "${TEST_SCHEMA}"."discussion_comments"`);
+      await adminDs!.query(`DELETE FROM "${TEST_SCHEMA}"."discussions"`);
+
+      // Create C (oldest, pinned)
+      const resC = await request(app!.getHttpServer())
+        .post('/api/discussions')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ title: 'Thảo luận C (ghim, cũ nhất)', content: 'Nội dung C' })
+        .expect(201);
+      const idC = resC.body.id;
+
+      // Pin C via admin
+      await request(app!.getHttpServer())
+        .put(`/api/discussions/${idC}/pin`)
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({ pinned: true })
+        .expect(200);
+
+      // Set C created_at to 3 hours ago
+      await adminDs!.query(`
+        UPDATE "${TEST_SCHEMA}"."discussions"
+        SET created_at = NOW() - INTERVAL '3 hours'
+        WHERE id = ${idC}
+      `);
+
+      // Create A (older: 2 hours ago)
+      const resA = await request(app!.getHttpServer())
+        .post('/api/discussions')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ title: 'Thảo luận A (cũ)', content: 'Nội dung A' })
+        .expect(201);
+      const idA = resA.body.id;
+      await adminDs!.query(`
+        UPDATE "${TEST_SCHEMA}"."discussions"
+        SET created_at = NOW() - INTERVAL '2 hours'
+        WHERE id = ${idA}
+      `);
+
+      // Create B (newer: 1 hour ago)
+      const resB = await request(app!.getHttpServer())
+        .post('/api/discussions')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ title: 'Thảo luận B (mới hơn)', content: 'Nội dung B' })
+        .expect(201);
+      const idB = resB.body.id;
+      await adminDs!.query(`
+        UPDATE "${TEST_SCHEMA}"."discussions"
+        SET created_at = NOW() - INTERVAL '1 hour'
+        WHERE id = ${idB}
+      `);
+
+      // Post comment into A (making A's activity = NOW)
+      await request(app!.getHttpServer())
+        .post(`/api/discussions/${idA}/comments`)
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenB}`)
+        .send({ content: 'Bình luận mới nhất vào A' })
+        .expect(201);
+
+      // Fetch list and verify order: C, A, B
+      const listRes = await request(app!.getHttpServer())
+        .get('/api/discussions')
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .expect(200);
+
+      const items = listRes.body.data;
+      expect(items.length).toBe(3);
+      expect(items[0].id).toBe(idC);
+      expect(items[1].id).toBe(idA);
+      expect(items[2].id).toBe(idB);
+    });
+
+    it('total phản ánh đúng khi có tham số q và khi phân trang trang 2', async () => {
+      const tokenA = createToken({ id: 2, username: 'staff_a', full_name: 'Nhân viên A', group_id: 1 });
+
+      // Clean and seed 5 discussions: 3 match "SearchTarget", 2 do not
+      await adminDs!.query(`DELETE FROM "${TEST_SCHEMA}"."discussion_reads"`);
+      await adminDs!.query(`DELETE FROM "${TEST_SCHEMA}"."discussion_comments"`);
+      await adminDs!.query(`DELETE FROM "${TEST_SCHEMA}"."discussions"`);
+
+      for (let i = 1; i <= 3; i++) {
+        await request(app!.getHttpServer())
+          .post('/api/discussions')
+          .set('x-test-tenant', TEST_SCHEMA)
+          .set('Authorization', `Bearer ${tokenA}`)
+          .send({ title: `SearchTarget Thảo luận ${i}`, content: `Content ${i}` })
+          .expect(201);
+      }
+      for (let i = 4; i <= 5; i++) {
+        await request(app!.getHttpServer())
+          .post('/api/discussions')
+          .set('x-test-tenant', TEST_SCHEMA)
+          .set('Authorization', `Bearer ${tokenA}`)
+          .send({ title: `Khác biệt ${i}`, content: `Content ${i}` })
+          .expect(201);
+      }
+
+      // Check total with q
+      const resQ = await request(app!.getHttpServer())
+        .get('/api/discussions')
+        .query({ q: 'SearchTarget' })
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .expect(200);
+      expect(resQ.body.total).toBe(3);
+      expect(resQ.body.data.length).toBe(3);
+
+      // Check pagination page 2 with limit 2 (total must be 5, data length 2)
+      const resPage2 = await request(app!.getHttpServer())
+        .get('/api/discussions')
+        .query({ page: 2, limit: 2 })
+        .set('x-test-tenant', TEST_SCHEMA)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .expect(200);
+      expect(resPage2.body.page).toBe(2);
+      expect(resPage2.body.limit).toBe(2);
+      expect(resPage2.body.total).toBe(5);
+      expect(resPage2.body.data.length).toBe(2);
     });
   });
 
