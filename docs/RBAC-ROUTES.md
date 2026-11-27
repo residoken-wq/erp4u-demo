@@ -1,6 +1,6 @@
 # Bảng Kiểm Kê Phân Quyền Route (RBAC Route Inventory)
 
-> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-27T11:14:31.456Z
+> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-27T11:44:56.953Z
 
 ## Tổng quan theo tầng
 
@@ -247,10 +247,10 @@
 | `DELETE` | `/materials/:id` | `PERM` | INVENTORY:delete | `INVENTORY` | [src/materials/materials.controller.ts:29](../src/materials/materials.controller.ts:29) |
 | `PUT` | `/materials/:id` | `PERM` | INVENTORY:update | `INVENTORY` | [src/materials/materials.controller.ts:25](../src/materials/materials.controller.ts:25) |
 | `GET` | `/me/entitlements` | `AUTH` | AUTH | `CORE` | [src/common/packages/me-entitlements.controller.ts:59](../src/common/packages/me-entitlements.controller.ts:59) |
-| `GET` | `/notifications` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:80](../src/notifications/notifications.controller.ts:80) |
-| `POST` | `/notifications/:id/read` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:85](../src/notifications/notifications.controller.ts:85) |
-| `POST` | `/notifications/read-all` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:91](../src/notifications/notifications.controller.ts:91) |
-| `GET` | `/notifications/stream` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:30](../src/notifications/notifications.controller.ts:30) |
+| `GET` | `/notifications` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:90](../src/notifications/notifications.controller.ts:90) |
+| `POST` | `/notifications/:id/read` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:95](../src/notifications/notifications.controller.ts:95) |
+| `POST` | `/notifications/read-all` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:101](../src/notifications/notifications.controller.ts:101) |
+| `GET` | `/notifications/stream` | `AUTH` | AUTH | `CORE` | [src/notifications/notifications.controller.ts:31](../src/notifications/notifications.controller.ts:31) |
 | `GET` | `/planning` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/planning/planning.controller.ts:33](../src/planning/planning.controller.ts:33) |
 | `GET` | `/planning/:id/booking-items` | `PERM` | PRODUCTION:view | `PRODUCTION` | [src/planning/planning.controller.ts:194](../src/planning/planning.controller.ts:194) |
 | `POST` | `/planning/:id/confirm-bookings` | `PERM` | PRODUCTION:update | `PRODUCTION` | [src/planning/planning.controller.ts:196](../src/planning/planning.controller.ts:196) |

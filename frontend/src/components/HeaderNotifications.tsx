@@ -9,12 +9,14 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
 import {
     NotificationItem,
-    calculateBackoff,
-    shouldFallbackToPolling,
+    openNotificationStream,
+    decideStreamTransition,
+    INITIAL_STREAM_STATE,
+    StreamState,
+    StreamEvent,
     mergeNotificationItem,
     mergeNotificationLists,
     countUnreadNotifications,
-    openNotificationStream,
     FALLBACK_POLL_INTERVAL_MS,
     STREAM_RECONNECT_INTERVAL_MS,
     HIDDEN_TAB_DISCONNECT_MS,
@@ -45,7 +47,8 @@ const HeaderNotifications: React.FC = () => {
     const retryStreamTimerRef = useRef<NodeJS.Timeout | null>(null);
     const hiddenTimerRef = useRef<NodeJS.Timeout | null>(null);
     const isClosedDueToHiddenRef = useRef<boolean>(false);
-    const consecutiveErrorsRef = useRef<number>(0);
+    const streamStateRef = useRef<StreamState>({ ...INITIAL_STREAM_STATE });
+    const connectStreamRef = useRef<() => void>(() => {});
     const isMountedRef = useRef<boolean>(true);
 
     // Sound notification
@@ -97,6 +100,80 @@ const HeaderNotifications: React.FC = () => {
         }
     }, []);
 
+    // Handle stream state transitions and actions via pure helper
+    const handleStreamEvent = useCallback(async (event: StreamEvent) => {
+        if (!isMountedRef.current || !userId || isClosedDueToHiddenRef.current) return;
+
+        const decision = decideStreamTransition(streamStateRef.current, event);
+        streamStateRef.current = decision.nextState;
+
+        if (decision.action === 'open') {
+            setIsConnected(true);
+            if (reconnectTimerRef.current) {
+                clearTimeout(reconnectTimerRef.current);
+                reconnectTimerRef.current = null;
+            }
+            if (fallbackPollTimerRef.current) {
+                clearInterval(fallbackPollTimerRef.current);
+                fallbackPollTimerRef.current = null;
+            }
+            if (retryStreamTimerRef.current) {
+                clearInterval(retryStreamTimerRef.current);
+                retryStreamTimerRef.current = null;
+            }
+            return;
+        }
+
+        setIsConnected(false);
+
+        if (decision.action === 'backoff_reconnect') {
+            if (reconnectTimerRef.current) {
+                clearTimeout(reconnectTimerRef.current);
+                reconnectTimerRef.current = null;
+            }
+            console.info(`[HeaderNotifications] Reconnecting stream in ${decision.delayMs}ms (errors: ${decision.nextState.consecutiveErrors})...`);
+            reconnectTimerRef.current = setTimeout(() => {
+                connectStreamRef.current();
+            }, decision.delayMs);
+        } else if (decision.action === 'refresh_auth') {
+            // HTTP 401/403: không thử lại stream theo backoff.
+            // Gọi một lần GET /notifications qua api (để interceptor xử lý làm mới token / đăng xuất);
+            // nếu sau đó vẫn đăng nhập thì kết nối lại một lần, còn 401 nữa thì chuyển hẳn sang poll 60 giây.
+            if (reconnectTimerRef.current) {
+                clearTimeout(reconnectTimerRef.current);
+                reconnectTimerRef.current = null;
+            }
+            try {
+                await fetchNotifications();
+                const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+                if (isMountedRef.current && token) {
+                    connectStreamRef.current();
+                }
+            } catch (e) {
+                console.error('[HeaderNotifications] Auth refresh fetch failed:', e);
+            }
+        } else if (decision.action === 'poll_fallback') {
+            // Khi đã fallback: chỉ có MỘT cơ chế chạy tại một thời điểm:
+            // poll 60s + thử stream mỗi 5 phút; lần thử 5 phút thất bại không khởi động lại chuỗi backoff 1s/2s/5s.
+            if (reconnectTimerRef.current) {
+                clearTimeout(reconnectTimerRef.current);
+                reconnectTimerRef.current = null;
+            }
+            if (!fallbackPollTimerRef.current) {
+                console.warn('[HeaderNotifications] Fallback to 60s polling mode.');
+                fallbackPollTimerRef.current = setInterval(() => {
+                    fetchNotifications();
+                }, FALLBACK_POLL_INTERVAL_MS);
+            }
+            if (!retryStreamTimerRef.current) {
+                retryStreamTimerRef.current = setInterval(() => {
+                    console.info('[HeaderNotifications] Attempting periodic 5m stream reconnect...');
+                    connectStreamRef.current();
+                }, STREAM_RECONNECT_INTERVAL_MS);
+            }
+        }
+    }, [userId, fetchNotifications]);
+
     // Main stream connector
     const connectStream = useCallback(() => {
         if (!isMountedRef.current || !userId) return;
@@ -114,6 +191,10 @@ const HeaderNotifications: React.FC = () => {
         openNotificationStream({
             streamUrl,
             signal: controller.signal,
+            onOpen: () => {
+                if (!isMountedRef.current || controller.signal.aborted) return;
+                handleStreamEvent({ type: 'opened' });
+            },
             onNotification: (noti: NotificationItem) => {
                 if (!isMountedRef.current) return;
                 setList((prev) => {
@@ -131,52 +212,19 @@ const HeaderNotifications: React.FC = () => {
             .then(() => {
                 // Connection ended normally (or closed by server/jwt expiry)
                 if (!isMountedRef.current || controller.signal.aborted) return;
-                setIsConnected(false);
-                scheduleReconnect();
+                handleStreamEvent({ type: 'closed' });
             })
             .catch((err) => {
                 if (!isMountedRef.current || controller.signal.aborted) return;
                 console.error('[HeaderNotifications] Stream error:', err);
-                setIsConnected(false);
-                scheduleReconnect();
+                const status = (err && typeof err === 'object' && 'status' in err) ? (err as any).status : undefined;
+                handleStreamEvent({ type: 'failed', status });
             });
+    }, [userId, playNotificationSound, handleStreamEvent]);
 
-        // Mark connected once opened
-        setIsConnected(true);
-        consecutiveErrorsRef.current = 0;
-    }, [userId, playNotificationSound]);
-
-    // Reconnection and fallback scheduling
-    const scheduleReconnect = useCallback(() => {
-        if (!isMountedRef.current || !userId || isClosedDueToHiddenRef.current) return;
-
-        consecutiveErrorsRef.current += 1;
-        const errors = consecutiveErrorsRef.current;
-
-        if (shouldFallbackToPolling(errors)) {
-            // Error >= 3: Fallback to poll GET /notifications every 60s
-            console.warn(`[HeaderNotifications] SSE error count ${errors} >= 3. Falling back to 60s polling.`);
-            if (!fallbackPollTimerRef.current) {
-                fallbackPollTimerRef.current = setInterval(() => {
-                    fetchNotifications();
-                }, FALLBACK_POLL_INTERVAL_MS);
-            }
-            // Retry stream reconnection every 5m
-            if (!retryStreamTimerRef.current) {
-                retryStreamTimerRef.current = setInterval(() => {
-                    console.info('[HeaderNotifications] Attempting periodic 5m stream reconnect...');
-                    connectStream();
-                }, STREAM_RECONNECT_INTERVAL_MS);
-            }
-        } else {
-            // Exponential backoff: 1s, 2s, 5s, 10s, max 30s
-            const delay = calculateBackoff(errors);
-            console.info(`[HeaderNotifications] Reconnecting stream in ${delay}ms (attempt ${errors})...`);
-            reconnectTimerRef.current = setTimeout(() => {
-                connectStream();
-            }, delay);
-        }
-    }, [userId, fetchNotifications, connectStream]);
+    useEffect(() => {
+        connectStreamRef.current = connectStream;
+    }, [connectStream]);
 
     // Initial load and stream lifecycle
     useEffect(() => {
@@ -209,7 +257,7 @@ const HeaderNotifications: React.FC = () => {
                 }
                 if (isClosedDueToHiddenRef.current) {
                     isClosedDueToHiddenRef.current = false;
-                    consecutiveErrorsRef.current = 0;
+                    streamStateRef.current = { ...INITIAL_STREAM_STATE };
                     clearAllTimers();
                     // Catch up missed events
                     fetchNotifications();

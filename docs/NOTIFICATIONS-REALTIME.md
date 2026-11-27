@@ -119,3 +119,26 @@ Bổ sung một khối cấu hình riêng cho SSE endpoint vào cấu hình reve
     }
 ```
 *(Lưu ý: Không tự ý sửa đổi file cấu hình trên server thật; đây là tài liệu hướng dẫn bàn giao cho đội ngũ DevOps/SysAdmin khi deploy).*
+
+
+---
+
+## 4. Nếu proxy chưa cấu hình SSE — Hành vi Client & Cơ chế Fallback
+
+Trong trường hợp reverse proxy (Nginx, Traefik, Cloudflare, AWS ALB...) chưa được cấu hình chuẩn cho SSE (ví dụ: bộ đệm buffer chưa tắt làm nghẽn stream, hoặc proxy trả về mã lỗi 502 Bad Gateway / 504 Gateway Timeout):
+
+### Cơ chế tự động bảo vệ tải hệ thống của Client:
+1. **Thử lại theo backoff có kiểm soát:**
+   - Khi stream ngắt hoặc gặp lỗi kết nối ban đầu, client thử kết nối lại với độ trễ tăng dần (lần 1: 1s, lần 2: 2s).
+2. **Chuyển chế độ Fallback Polling sau 3 lỗi liên tiếp:**
+   - Nếu xảy ra **3 lần lỗi liên tiếp** (không lần nào thiết lập kết nối thành công `opened`), client **ngay lập tức dừng thử kết nối liên tục** và kích hoạt cơ chế fallback.
+   - Client chuyển sang chế độ thăm dò nhẹ: gửi request `GET /api/notifications` định kỳ mỗi **60 giây** để cập nhật thông báo chưa đọc.
+3. **Thử lại stream định kỳ mỗi 5 phút:**
+   - Trong khi duy trì chu kỳ poll 60 giây, client chỉ thử kết nối lại stream SSE một lần sau mỗi **5 phút**.
+   - Nếu lần thử sau 5 phút tiếp tục thất bại, client giữ nguyên trạng thái polling 60s và hẹn 5 phút tiếp theo (tuyệt đối không kích hoạt lại chuỗi backoff 1s/2s/5s).
+   - Khi proxy đã được cấu hình đúng và kết nối SSE mở thành công (`opened`), client lập tức huỷ bỏ toàn bộ cơ chế polling và quay lại trạng thái real-time tức thì.
+4. **Xử lý đặc biệt với mã lỗi HTTP 401/403:**
+   - Khi nhận 401/403 từ stream, client không backoff 1 giây mà gọi một lần `GET /notifications` qua axios client (`api`) để kích hoạt interceptor xử lý làm mới phiên hoặc điều hướng đăng xuất.
+   - Nếu phiên đăng nhập vẫn còn hiệu lực, client thử kết nối lại stream một lần; nếu tiếp tục nhận 401/403 thì chuyển hẳn sang chế độ poll 60 giây.
+
+> **Ý nghĩa vận hành:** Đội ngũ SysAdmin / DevOps hoàn toàn có thể yên tâm rằng kể cả khi hệ thống proxy gặp sự cố hoặc chưa hoàn tất cấu hình SSE, lưu lượng từ hàng ngàn trình duyệt người dùng sẽ tự động chuyển thành polling 60s/lần và retry 5 phút/lần, không bao giờ tạo bão request làm sập máy chủ.

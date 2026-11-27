@@ -14,6 +14,165 @@ export const FALLBACK_POLL_INTERVAL_MS = 60_000; // 60 giây
 export const STREAM_RECONNECT_INTERVAL_MS = 300_000; // 5 phút
 export const HIDDEN_TAB_DISCONNECT_MS = 300_000; // 5 phút
 
+export type StreamConnectionState = 'connecting' | 'open' | 'backoff' | 'polling';
+
+export type StreamEvent =
+  | { type: 'opened' }
+  | { type: 'failed'; status?: number }
+  | { type: 'closed' };
+
+export interface StreamState {
+  state: StreamConnectionState;
+  consecutiveErrors: number;
+  authErrorCount: number;
+}
+
+export type StreamNextAction =
+  | 'none'
+  | 'open'
+  | 'backoff_reconnect'
+  | 'refresh_auth'
+  | 'poll_fallback';
+
+export interface StreamDecision {
+  nextState: StreamState;
+  action: StreamNextAction;
+  delayMs: number;
+}
+
+export const INITIAL_STREAM_STATE: Readonly<StreamState> = Object.freeze({
+  state: 'connecting',
+  consecutiveErrors: 0,
+  authErrorCount: 0,
+});
+
+export class StreamHttpError extends Error {
+  status: number;
+  constructor(status: number) {
+    super(`SSE stream HTTP error: ${status}`);
+    this.name = 'StreamHttpError';
+    this.status = status;
+  }
+}
+
+/**
+ * Quyết định chuyển trạng thái kết nối stream và hành động tiếp theo.
+ * Hàm thuần tuý, không có tác dụng phụ.
+ */
+export function decideStreamTransition(
+  currentState: StreamState,
+  event: StreamEvent,
+): StreamDecision {
+  switch (event.type) {
+    case 'opened': {
+      // Kết nối thành công: reset đếm lỗi và số lần lỗi xác thực, chuyển sang open, dừng poll
+      return {
+        nextState: {
+          state: 'open',
+          consecutiveErrors: 0,
+          authErrorCount: 0,
+        },
+        action: 'open',
+        delayMs: 0,
+      };
+    }
+
+    case 'closed': {
+      // Đóng bình thường do server (JWT hết hạn, kết nối thứ 6 bị đóng)
+      // -> kết nối lại sau backoff, không tính là lỗi liên tiếp quá 1 lần
+      if (currentState.state === 'polling') {
+        return {
+          nextState: currentState,
+          action: 'poll_fallback',
+          delayMs: STREAM_RECONNECT_INTERVAL_MS,
+        };
+      }
+      return {
+        nextState: {
+          state: 'backoff',
+          consecutiveErrors: 1, // Luôn gán tối đa 1 để không tích luỹ thành >= 3
+          authErrorCount: 0,
+        },
+        action: 'backoff_reconnect',
+        delayMs: calculateBackoff(1),
+      };
+    }
+
+    case 'failed': {
+      const isAuthError = event.status === 401 || event.status === 403;
+
+      // Khi đã ở chế độ fallback polling:
+      // Lần thử định kỳ 5 phút thất bại không được khởi động lại chuỗi backoff 1s/2s/5s;
+      // Vẫn tiếp tục polling 60s và hẹn thử lại stream sau 5 phút.
+      if (currentState.state === 'polling') {
+        return {
+          nextState: {
+            state: 'polling',
+            consecutiveErrors: currentState.consecutiveErrors + 1,
+            authErrorCount: isAuthError ? currentState.authErrorCount + 1 : currentState.authErrorCount,
+          },
+          action: 'poll_fallback',
+          delayMs: STREAM_RECONNECT_INTERVAL_MS,
+        };
+      }
+
+      // Xử lý lỗi xác thực HTTP 401/403
+      if (isAuthError) {
+        if (currentState.authErrorCount === 0) {
+          // Lần đầu gặp 401/403: không backoff 1 giây; gọi làm mới token một lần
+          return {
+            nextState: {
+              state: 'backoff',
+              consecutiveErrors: currentState.consecutiveErrors + 1,
+              authErrorCount: 1,
+            },
+            action: 'refresh_auth',
+            delayMs: 0,
+          };
+        } else {
+          // Lần thứ 2 vẫn gặp 401/403 -> chuyển hẳn sang polling 60 giây
+          return {
+            nextState: {
+              state: 'polling',
+              consecutiveErrors: currentState.consecutiveErrors + 1,
+              authErrorCount: currentState.authErrorCount + 1,
+            },
+            action: 'poll_fallback',
+            delayMs: STREAM_RECONNECT_INTERVAL_MS,
+          };
+        }
+      }
+
+      // Lỗi thông thường (mạng, proxy 502/504, v.v.)
+      const newErrors = currentState.consecutiveErrors + 1;
+      if (shouldFallbackToPolling(newErrors)) {
+        // >= 3 lần lỗi liên tiếp (không lần nào opened) -> chuyển sang polling
+        return {
+          nextState: {
+            state: 'polling',
+            consecutiveErrors: newErrors,
+            authErrorCount: currentState.authErrorCount,
+          },
+          action: 'poll_fallback',
+          delayMs: STREAM_RECONNECT_INTERVAL_MS,
+        };
+      } else {
+        // Backoff thông thường: lần 1 = 1s, lần 2 = 2s
+        const delayMs = calculateBackoff(newErrors);
+        return {
+          nextState: {
+            state: 'backoff',
+            consecutiveErrors: newErrors,
+            authErrorCount: currentState.authErrorCount,
+          },
+          action: 'backoff_reconnect',
+          delayMs,
+        };
+      }
+    }
+  }
+}
+
 /**
  * Tính thời gian chờ kết nối lại (backoff) theo số lần lỗi liên tiếp:
  * 1s, 2s, 5s, 10s, tối đa 30s.
@@ -135,6 +294,7 @@ export async function openNotificationStream(params: {
   token?: string | null;
   signal: AbortSignal;
   onNotification: (notification: NotificationItem) => void;
+  onOpen?: () => void;
 }): Promise<void> {
   const token = params.token ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null);
 
@@ -148,8 +308,11 @@ export async function openNotificationStream(params: {
   });
 
   if (!response.ok) {
-    throw new Error(`SSE stream HTTP error: ${response.status}`);
+    throw new StreamHttpError(response.status);
   }
+
+  // Chỉ gọi onOpen sau khi response.ok xác nhận thành công
+  params.onOpen?.();
 
   const reader = response.body?.getReader();
   if (!reader) {

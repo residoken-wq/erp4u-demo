@@ -7,6 +7,7 @@ import {
     Request,
     Res,
     UnauthorizedException,
+    BadRequestException,
     Optional,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
@@ -15,7 +16,7 @@ import { AuthOnly } from '../auth/permissions.decorator';
 import { CorePackage } from '../common/packages/requires-package.decorator';
 import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
-import { TenantContext, DEFAULT_TENANT_CONTEXT } from '../common/tenancy/tenant-context';
+import { TenantContext, DEFAULT_TENANT_CONTEXT, isTenancyStrict } from '../common/tenancy/tenant-context';
 
 @Controller('notifications')
 @CorePackage()
@@ -37,11 +38,20 @@ export class NotificationsController {
         }
 
         const userId = req.user?.id || req.user?.userId;
-        let tenantId = DEFAULT_TENANT_CONTEXT.tenantId;
+        let tenantId: string;
         try {
-            tenantId = TenantContext.current()?.tenantId || DEFAULT_TENANT_CONTEXT.tenantId;
-        } catch {
-            tenantId = DEFAULT_TENANT_CONTEXT.tenantId;
+            if (isTenancyStrict() && !TenantContext.getStore()) {
+                throw new UnauthorizedException('Tenant context is required');
+            }
+            if ((req.user?.tid || req.headers?.['x-tenant-id']) && !TenantContext.getStore()) {
+                throw new UnauthorizedException('Tenant context is required');
+            }
+            tenantId = TenantContext.current().tenantId;
+        } catch (err) {
+            if (err instanceof UnauthorizedException || err instanceof BadRequestException) {
+                throw err;
+            }
+            throw new UnauthorizedException('Tenant context is required');
         }
 
         let jwtExp: number | undefined;
