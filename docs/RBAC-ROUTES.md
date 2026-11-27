@@ -1,6 +1,6 @@
 # Bảng Kiểm Kê Phân Quyền Route (RBAC Route Inventory)
 
-> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-27T07:57:44.077Z
+> Tự động tạo bởi `npm run rbac:inventory` vào lúc 2026-11-27T08:09:40.485Z
 
 ## Tổng quan theo tầng
 

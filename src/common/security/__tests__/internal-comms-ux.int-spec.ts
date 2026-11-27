@@ -395,12 +395,13 @@ describeSuite('Internal Communications UX & Logic (Integration - Real DB & Migra
         VALUES (2, 'Link cũ', 'Nội dung thông báo cũ', '/discussions?id=789', false);
       `);
 
-      // Run migration
+      // Run migration down and up to verify link transformation cleanly
       const migration = new InternalCommsUx1795317990000();
       const qr = adminDs!.createQueryRunner();
       try {
         await qr.connect();
         await qr.query(`SET search_path TO "${TEST_SCHEMA}", public`);
+        await migration.down(qr);
         await migration.up(qr);
       } finally {
         await qr.release();

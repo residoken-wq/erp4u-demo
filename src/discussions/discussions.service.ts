@@ -128,8 +128,13 @@ export class DiscussionsService {
             'd_user_last_read_at',
         );
 
+        query.addSelect(
+            'GREATEST(d.updated_at, COALESCE((SELECT MAX(c.created_at) FROM discussion_comments c WHERE c.discussion_id = d.id), d.updated_at))',
+            'd_last_activity',
+        );
+
         query.orderBy('d.is_pinned', 'DESC')
-            .addOrderBy('GREATEST(d.updated_at, COALESCE((SELECT MAX(c.created_at) FROM discussion_comments c WHERE c.discussion_id = d.id), d.updated_at))', 'DESC');
+            .addOrderBy('d_last_activity', 'DESC');
 
         const total = await query.getCount();
         query.skip(offset).take(limit);
@@ -163,7 +168,7 @@ export class DiscussionsService {
                     view_count: viewCount,
                     views_count: viewCount,
                     is_new: isNew,
-                    can_edit: Boolean(user && item.creator_id === user.id),
+                    can_edit: isMod || Boolean(user && item.creator_id === user.id),
                     can_delete: isMod || Boolean(user && item.creator_id === user.id),
                     can_pin: isMod,
                 };
@@ -227,7 +232,7 @@ export class DiscussionsService {
 
         const viewCount = await this.readRepo.count({ where: { discussion_id: id } });
 
-        const canEdit = Boolean(user && discussion.creator_id === user.id);
+        const canEdit = isMod || Boolean(user && discussion.creator_id === user.id);
         const canDelete = isMod || Boolean(user && discussion.creator_id === user.id);
 
         return {
@@ -331,9 +336,9 @@ export class DiscussionsService {
             throw new NotFoundException('Discussion not found');
         }
 
-        // Strictly owner can edit discussion content
-        if (discussion.creator_id !== user?.id) {
-            throw new ForbiddenException('Chỉ người tạo mới có quyền sửa thảo luận này');
+        // Only creator or moderator can edit discussion
+        if (discussion.creator_id !== user?.id && !isMod) {
+            throw new ForbiddenException('Bạn không có quyền sửa thảo luận này');
         }
 
         if (dto.title !== undefined) {

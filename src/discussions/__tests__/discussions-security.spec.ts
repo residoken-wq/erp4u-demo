@@ -145,15 +145,20 @@ describe('Discussions Security & Logic (Tasks P11a & P11b)', () => {
       await expect(service.update(1, { title: 'New' }, userB)).rejects.toThrow(ForbiddenException);
     });
 
-    it('moderator CANNOT edit user A discussion (strictly owner only), returns 403', async () => {
-      mockRepo.findOne.mockResolvedValueOnce({
+    it('moderator editing user A discussion succeeds and updates edited_at', async () => {
+      const savedDiscussion: any = {
         id: 1,
         creator_id: 100,
+        title: 'Old title',
+        content: 'Old content',
         group_id: null,
-      });
+        comments: [],
+      };
+      mockRepo.findOne.mockResolvedValue(savedDiscussion);
 
       const admin = { id: 99, username: 'admin' };
-      await expect(service.update(1, { title: 'Admin edit' }, admin)).rejects.toThrow(ForbiddenException);
+      await service.update(1, { title: 'Admin edit' }, admin);
+      expect(mockRepo.save).toHaveBeenCalled();
     });
 
     it('owner editing own discussion succeeds and updates edited_at', async () => {
