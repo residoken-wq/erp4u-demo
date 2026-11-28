@@ -104,6 +104,7 @@ export class NotificationsService {
                     this.logger.debug(
                         `[NotificationsService] User ${userId} exceeded 5 connections on tenant ${tenantId}. Closing oldest connection ${oldest.id}.`,
                     );
+                    oldest.res.write('event: evicted\ndata: {}\n\n');
                     oldest.cleanup();
                     oldest.res.end();
                 } catch {

@@ -415,8 +415,8 @@ describe('Notifications Real-time SSE Integration (Task P11c)', () => {
     });
   });
 
-  describe('5. Max 5 Concurrent Connections Limit', () => {
-    it('when 6th connection arrives for same user, oldest connection is closed', async () => {
+  describe('5. Max 5 Concurrent Connections Limit & Eviction', () => {
+    it('mở 6 kết nối cùng user -> kết nối cũ nhất nhận chuỗi event: evicted trước khi đóng', async () => {
       const token = createToken(1, 'user1_tenant_sse_a', 'tenant_sse_a');
       const connections: any[] = [];
 
@@ -449,6 +449,11 @@ describe('Notifications Real-time SSE Integration (Task P11c)', () => {
       expect(conn6.res.statusCode).toBe(200);
       connections.push(conn6);
 
+      // Oldest connection should receive event: evicted before closing
+      const evictedChunk = await connections[0].waitForChunk((c: string) => c.includes('event: evicted'), 3000);
+      expect(evictedChunk).toContain('event: evicted');
+      expect(evictedChunk).toContain('data: {}');
+
       // Wait for server to end oldest connection
       await new Promise((r) => setTimeout(r, 150));
 
@@ -459,6 +464,47 @@ describe('Notifications Real-time SSE Integration (Task P11c)', () => {
       for (const c of connections) {
         c.close();
       }
+    });
+
+    it('kết nối đóng vì JWT hết hạn không nhận evicted', async () => {
+      const shortToken = jwtService.sign(
+        {
+          sub: 1,
+          userId: 1,
+          username: 'user1_tenant_sse_a',
+          group_id: 1,
+          tid: 'tenant_sse_a',
+        },
+        { expiresIn: '1s' },
+      );
+
+      const conn = await connectSse({
+        token: shortToken,
+        tenantId: 'tenant_sse_a',
+      });
+      expect(conn.res.statusCode).toBe(200);
+
+      let connClosed = false;
+      conn.res.on('close', () => {
+        connClosed = true;
+      });
+      conn.res.on('end', () => {
+        connClosed = true;
+      });
+
+      // Wait for JWT to expire and connection to close (around 1-2s)
+      const start = Date.now();
+      while (!connClosed && Date.now() - start < 3500) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+
+      expect(connClosed).toBe(true);
+
+      // Ensure NO chunk contains 'event: evicted'
+      const receivedEvicted = conn.chunks.some((c: string) => c.includes('event: evicted') || c.includes('evicted'));
+      expect(receivedEvicted).toBe(false);
+
+      conn.close();
     });
   });
 

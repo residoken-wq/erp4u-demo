@@ -19,7 +19,8 @@ export type StreamConnectionState = 'connecting' | 'open' | 'backoff' | 'polling
 export type StreamEvent =
   | { type: 'opened' }
   | { type: 'failed'; status?: number }
-  | { type: 'closed' };
+  | { type: 'closed' }
+  | { type: 'evicted' };
 
 export interface StreamState {
   state: StreamConnectionState;
@@ -95,6 +96,18 @@ export function decideStreamTransition(
         },
         action: 'backoff_reconnect',
         delayMs: calculateBackoff(1),
+      };
+    }
+
+    case 'evicted': {
+      return {
+        nextState: {
+          state: 'polling',
+          consecutiveErrors: currentState.consecutiveErrors,
+          authErrorCount: currentState.authErrorCount,
+        },
+        action: 'poll_fallback',
+        delayMs: STREAM_RECONNECT_INTERVAL_MS,
       };
     }
 
@@ -249,8 +262,10 @@ export function countUnreadNotifications(list: NotificationItem[]): number {
 export function parseNotificationSseBuffer(buffer: string): {
   events: NotificationItem[];
   remaining: string;
+  evicted: boolean;
 } {
   const events: NotificationItem[] = [];
+  let evicted = false;
   const normalized = buffer.replace(/\r\n/g, '\n');
   const parts = normalized.split('\n\n');
   const remaining = parts.pop() ?? '';
@@ -258,6 +273,7 @@ export function parseNotificationSseBuffer(buffer: string): {
   for (const part of parts) {
     if (!part.trim()) continue;
     const lines = part.split('\n');
+    let eventType = '';
     const dataLines: string[] = [];
 
     for (const line of lines) {
@@ -265,9 +281,16 @@ export function parseNotificationSseBuffer(buffer: string): {
         // Comment / ping heartbeat - bỏ qua
         continue;
       }
-      if (line.startsWith('data:')) {
+      if (line.startsWith('event:')) {
+        eventType = line.slice(6).trim();
+      } else if (line.startsWith('data:')) {
         dataLines.push(line.slice(5).trim());
       }
+    }
+
+    if (eventType === 'evicted') {
+      evicted = true;
+      continue;
     }
 
     if (dataLines.length > 0) {
@@ -283,7 +306,7 @@ export function parseNotificationSseBuffer(buffer: string): {
     }
   }
 
-  return { events, remaining };
+  return { events, remaining, evicted };
 }
 
 /**
@@ -295,6 +318,7 @@ export async function openNotificationStream(params: {
   signal: AbortSignal;
   onNotification: (notification: NotificationItem) => void;
   onOpen?: () => void;
+  onEvicted?: () => void;
 }): Promise<void> {
   const token = params.token ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null);
 
@@ -328,8 +352,12 @@ export async function openNotificationStream(params: {
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
-      const { events, remaining } = parseNotificationSseBuffer(buffer);
+      const { events, remaining, evicted } = parseNotificationSseBuffer(buffer);
       buffer = remaining;
+
+      if (evicted) {
+        params.onEvicted?.();
+      }
 
       for (const ev of events) {
         params.onNotification(ev);
@@ -337,7 +365,10 @@ export async function openNotificationStream(params: {
     }
 
     if (buffer.trim()) {
-      const { events } = parseNotificationSseBuffer(buffer + '\n\n');
+      const { events, evicted } = parseNotificationSseBuffer(buffer + '\n\n');
+      if (evicted) {
+        params.onEvicted?.();
+      }
       for (const ev of events) {
         params.onNotification(ev);
       }
