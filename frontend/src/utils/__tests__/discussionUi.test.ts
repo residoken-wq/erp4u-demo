@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   getWorkspaceTabKeys,
+  resolveWorkspaceTab,
   isEditedLabel,
   isNewBadge,
   canEditDiscussion,
@@ -22,6 +23,27 @@ describe('discussionUi utilities & source scan', () => {
 
     it('returns tasks and discussions when hasProjects is true', () => {
       assert.deepEqual(getWorkspaceTabKeys(true), ['tasks', 'discussions']);
+    });
+  });
+
+  describe('resolveWorkspaceTab', () => {
+    it('returns tab when valid and included in allowedTabs', () => {
+      const allowed = getWorkspaceTabKeys(true); // ['tasks', 'discussions']
+      assert.equal(resolveWorkspaceTab('discussions', allowed), 'discussions');
+      assert.equal(resolveWorkspaceTab('tasks', allowed), 'tasks');
+    });
+
+    it('returns tasks when tab is invalid or not in allowedTabs', () => {
+      const allowed = getWorkspaceTabKeys(true);
+      assert.equal(resolveWorkspaceTab('invalid-tab', allowed), 'tasks');
+      assert.equal(resolveWorkspaceTab(null, allowed), 'tasks');
+      assert.equal(resolveWorkspaceTab(undefined, allowed), 'tasks');
+      assert.equal(resolveWorkspaceTab('', allowed), 'tasks');
+    });
+
+    it('returns tasks when hasProjects is false even if discussions requested', () => {
+      const allowed = getWorkspaceTabKeys(false); // ['tasks']
+      assert.equal(resolveWorkspaceTab('discussions', allowed), 'tasks');
     });
   });
 

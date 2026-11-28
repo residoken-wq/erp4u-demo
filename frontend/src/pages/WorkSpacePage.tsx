@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Tabs } from 'antd';
 import { CalendarOutlined, MessageOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -6,7 +6,7 @@ import TasksPage from './TasksPage';
 import DiscussionsPage from './DiscussionsPage';
 import { useEntitlements } from '../hooks/useEntitlements';
 import { PackageKey } from '../config/packages';
-import { getWorkspaceTabKeys } from '../utils/discussionUi';
+import { getWorkspaceTabKeys, resolveWorkspaceTab } from '../utils/discussionUi';
 
 const WorkSpacePage: React.FC = () => {
     const navigate = useNavigate();
@@ -14,21 +14,19 @@ const WorkSpacePage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('tasks');
     const { isEnabled } = useEntitlements();
     const hasProjects = isEnabled(PackageKey.PROJECTS);
-    const allowedTabs = getWorkspaceTabKeys(hasProjects);
+    const allowedTabs = useMemo(() => getWorkspaceTabKeys(hasProjects), [hasProjects]);
 
     useEffect(() => {
         const searchParams = new URLSearchParams(location.search);
         const tab = searchParams.get('tab');
-        if (tab && allowedTabs.includes(tab)) {
-            setActiveTab(tab);
-        } else {
-            setActiveTab('tasks');
-        }
-    }, [location, allowedTabs]);
+        setActiveTab(resolveWorkspaceTab(tab, allowedTabs));
+    }, [location.search, allowedTabs]);
 
     const handleTabChange = (key: string) => {
         setActiveTab(key);
-        navigate(`?tab=${key}`, { replace: true });
+        const searchParams = new URLSearchParams(location.search);
+        searchParams.set('tab', key);
+        navigate({ search: `?${searchParams.toString()}` }, { replace: true });
     };
 
     const allItems = [

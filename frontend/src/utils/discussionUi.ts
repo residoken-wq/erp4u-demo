@@ -6,6 +6,16 @@ export function getWorkspaceTabKeys(hasProjects: boolean): string[] {
     return hasProjects ? ['tasks', 'discussions'] : ['tasks'];
 }
 
+export function resolveWorkspaceTab(
+    tabParam: string | null | undefined,
+    allowedTabs: string[],
+): string {
+    if (tabParam && allowedTabs.includes(tabParam)) {
+        return tabParam;
+    }
+    return 'tasks';
+}
+
 export function isEditedLabel(item: { edited_at?: string | Date | null } | null | undefined): string | null {
     return item?.edited_at ? '(đã sửa)' : null;
 }

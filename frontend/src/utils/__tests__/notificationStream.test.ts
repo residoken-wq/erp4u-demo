@@ -144,6 +144,32 @@ describe('Notification Stream Helpers (Task P11c & P11c-r2)', () => {
       assert.strictEqual(err.name, 'StreamHttpError');
       assert.strictEqual(err.message, 'SSE stream HTTP error: 502');
     });
+
+    it('evicted -> polling + độ trễ 5 phút', () => {
+      const state: StreamState = {
+        state: 'open',
+        consecutiveErrors: 0,
+        authErrorCount: 0,
+      };
+
+      const step = decideStreamTransition(state, { type: 'evicted' });
+      assert.strictEqual(step.nextState.state, 'polling');
+      assert.strictEqual(step.action, 'poll_fallback');
+      assert.strictEqual(step.delayMs, STREAM_RECONNECT_INTERVAL_MS);
+    });
+
+    it('evicted khi đang polling -> vẫn polling', () => {
+      const state: StreamState = {
+        state: 'polling',
+        consecutiveErrors: 1,
+        authErrorCount: 0,
+      };
+
+      const step = decideStreamTransition(state, { type: 'evicted' });
+      assert.strictEqual(step.nextState.state, 'polling');
+      assert.strictEqual(step.action, 'poll_fallback');
+      assert.strictEqual(step.delayMs, STREAM_RECONNECT_INTERVAL_MS);
+    });
   });
 
   describe('4. Deduplication and merging (mergeNotificationItem & mergeNotificationLists)', () => {
@@ -285,6 +311,14 @@ describe('Notification Stream Helpers (Task P11c & P11c-r2)', () => {
       assert.strictEqual(res2.events[0].id, 10);
       assert.strictEqual(res2.events[0].message, 'dang ve');
       assert.strictEqual(res2.remaining, '');
+    });
+
+    it('parse buffer có event: evicted -> trả cờ evicted, không sinh item', () => {
+      const chunk = `event: evicted\ndata: {}\n\n`;
+      const { events, remaining, evicted } = parseNotificationSseBuffer(chunk);
+      assert.strictEqual(evicted, true);
+      assert.strictEqual(events.length, 0);
+      assert.strictEqual(remaining, '');
     });
   });
 });

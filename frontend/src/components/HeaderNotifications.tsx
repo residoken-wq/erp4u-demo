@@ -195,6 +195,10 @@ const HeaderNotifications: React.FC = () => {
                 if (!isMountedRef.current || controller.signal.aborted) return;
                 handleStreamEvent({ type: 'opened' });
             },
+            onEvicted: () => {
+                if (!isMountedRef.current || controller.signal.aborted) return;
+                handleStreamEvent({ type: 'evicted' });
+            },
             onNotification: (noti: NotificationItem) => {
                 if (!isMountedRef.current) return;
                 setList((prev) => {
